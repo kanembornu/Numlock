@@ -458,7 +458,25 @@
           type: "line",
           data:
           {
-            labels: res.revenueTrend.labels,
+            labels: res.revenueTrend.labels.map(label => {
+              const month = label.split("-")[1];
+
+              return [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "Mei",
+                "Jun",
+                "Jul",
+                "Agu",
+                "Sep",
+                "Okt",
+                "Nov",
+                "Des"
+              ][parseInt(month, 10) - 1];
+            }),
+
             datasets:
             [{
               label: "Revenue",
@@ -476,13 +494,64 @@
           {
             responsive: true,
             maintainAspectRatio: false,
+
             plugins:
             {
               legend:
               {
                 display: false
-              }
+              },
 
+              tooltip:
+              {
+                callbacks:
+                {
+                  label: function(context)
+                  {
+                    return "Revenue : Rp " +
+                      context.raw.toLocaleString("id-ID");
+                  }
+                }
+              }
+            },
+
+            scales:
+            {
+              x:
+              {
+                grid:
+                {
+                  display: false
+                }
+              },
+
+              y:
+              {
+                beginAtZero: true,
+
+                ticks:
+                {
+                  callback: function(value)
+                  {
+                    if (value >= 1000000)
+                    {
+                      return (value / 1000000).toFixed(1) + " M";
+                    }
+
+                    if (value >= 1000)
+                    {
+                      return (value / 1000).toFixed(0) + " K";
+                    }
+
+                    return value;
+                  }
+                },
+
+                grid:
+                {
+                  color: "#f1f5f9"
+                }
+              }
             }
           }
         });
@@ -542,9 +611,60 @@
           maintainAspectRatio: false,
           plugins:
           {
+            tooltip:
+            {
+              callbacks:
+              {
+                label: function(context)
+                {
+                  return "Rp " +
+                    context.raw.toLocaleString("id-ID");
+                }
+              }
+            },
+
             legend:
             {
               display: false
+            }
+          },
+
+          scales:
+          {
+            x:
+            {
+              grid:
+              {
+                display: false
+              }
+            },
+
+            y:
+            {
+              beginAtZero: true,
+
+              ticks:
+              {
+                callback: function(value)
+                {
+                  if (value >= 1000000)
+                  {
+                    return (value / 1000000).toFixed(1) + " M";
+                  }
+
+                  if (value >= 1000)
+                  {
+                    return (value / 1000).toFixed(0) + " K";
+                  }
+
+                  return value;
+                }
+              },
+
+              grid:
+              {
+                color: "#f1f5f9"
+              }
             }
           }
         }
