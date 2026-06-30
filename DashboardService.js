@@ -1486,16 +1486,25 @@ function buildDiagnosis(data, cache) {
 
       diagnosis.push({
 
-        level: "warning",
+      level: "warning",
 
-        message:
-          "Profit margin rendah (" +
-          insights.profitMargin +
-          "%). " +
-          "Target ideal berada di atas 15%. " +
-          "Evaluasi harga jual dan biaya operasional."
+      category: "profit",
 
-      });
+      priority: "critical",
+
+      title: "Profit Margin Rendah",
+
+      description:
+        "Target ideal berada di atas 15%. Evaluasi harga jual dan biaya operasional.",
+
+      message:
+        "Profit margin rendah (" +
+        insights.profitMargin +
+        "%). " +
+        "Target ideal berada di atas 15%. " +
+        "Evaluasi harga jual dan biaya operasional."
+
+    });
 
   } else {
 
@@ -1518,10 +1527,19 @@ function buildDiagnosis(data, cache) {
 
     level: "good",
 
+    category: "sales",
+
+    priority: "opportunity",
+
+    title: "Produk Terlaris",
+
+    description:
+      summary.bestSeller +
+      " merupakan produk terlaris. Pertimbangkan promo bundle atau upselling.",
+
     message:
       summary.bestSeller +
-      " merupakan produk terlaris. " +
-      "Pertimbangkan promo bundle atau upselling."
+      " merupakan produk terlaris. Pertimbangkan promo bundle atau upselling."
 
   });
 
@@ -1531,10 +1549,19 @@ function buildDiagnosis(data, cache) {
 
     level: "good",
 
+    category: "revenue",
+
+    priority: "high",
+
+    title: "Revenue Tertinggi",
+
+    description:
+      summary.topRevenueProduct +
+      " menghasilkan revenue terbesar. Pastikan stok dan kualitas tetap terjaga.",
+
     message:
       summary.topRevenueProduct +
-      " menghasilkan revenue terbesar. " +
-      "Pastikan stok dan kualitas tetap terjaga."
+      " menghasilkan revenue terbesar. Pastikan stok dan kualitas tetap terjaga."
 
   });
 
@@ -1543,6 +1570,18 @@ function buildDiagnosis(data, cache) {
   diagnosis.push({
 
     level: "warning",
+
+    category: "expense",
+
+    priority: "critical",
+
+    title: "Biaya Terbesar",
+
+    description:
+      insights.topExpense.category +
+      " menyumbang biaya terbesar sebesar Rp " +
+      insights.topExpense.amount.toLocaleString("id-ID") +
+      ". Pertimbangkan evaluasi efisiensi.",
 
     message:
       insights.topExpense.category +
@@ -1558,6 +1597,17 @@ function buildDiagnosis(data, cache) {
 
     level: "good",
 
+    category: "revenue",
+
+    priority: "good",
+
+    title: "Revenue per Cup",
+
+    description:
+      "Rata-rata setiap cup menghasilkan Rp " +
+      insights.revenuePerCup.toLocaleString("id-ID") +
+      " revenue.",
+
     message:
       "Setiap cup menghasilkan rata-rata Rp " +
       insights.revenuePerCup.toLocaleString("id-ID") +
@@ -1565,26 +1615,27 @@ function buildDiagnosis(data, cache) {
 
   });
 
-  diagnosis.push({
-
-  level:
-
-    revenueTrend.status === "down"
-      ? "warning"
-      : "good",
-
-  message:
-    revenueTrend.message
-
-  });
+  // Revenue Trend
 
   diagnosis.push({
 
-  level:
-    categoryTrend.level,
+    level:
+      revenueTrend.status === "down"
+        ? "warning"
+        : "good",
 
-  message:
-    categoryTrend.message
+    category: "trend",
+
+    priority:
+      revenueTrend.status === "down"
+        ? "attention"
+        : "good",
+
+    title: "Tren Penjualan",
+
+    description: revenueTrend.message,
+
+    message: revenueTrend.message
 
   });
 
