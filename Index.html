@@ -457,37 +457,66 @@
     //--------------------------------------------------
     // Render Charts
     //--------------------------------------------------
+    function getIntelIcon(category)
+    {
+        switch(category)
+        {
+            case "profit":
+                return "...svg...";
+
+            case "expense":
+                return "...svg...";
+
+            case "revenue":
+                return "...svg...";
+
+            case "sales":
+                return "...svg...";
+
+            case "forecast":
+                return "...svg...";
+
+            default:
+                return "...svg...";
+        }
+    }
+    
     function renderIntelCard(config)
     {
       const theme = {
         slate: {
           bg: "bg-slate-50",
           border: "border-slate-200",
-          icon: "text-slate-600"
+          icon: "text-slate-600",
+          iconBg: "bg-slate-100"
         },
 
         emerald: {
           bg: "bg-emerald-50",
           border: "border-emerald-100",
-          icon: "text-emerald-600"
+          icon: "text-emerald-600",
+          iconBg: "bg-emerald-100"
         },
 
         amber: {
           bg: "bg-amber-50",
           border: "border-amber-100",
-          icon: "text-amber-600"
+          icon: "text-amber-600",
+          iconBg: "bg-amber-100"
         },
 
         rose: {
           bg: "bg-rose-50",
           border: "border-rose-100",
-          icon: "text-rose-600"
+          icon: "text-rose-600",
+          iconBg: "bg-rose-100"
         },
 
         indigo: {
           bg: "bg-indigo-50",
           border: "border-indigo-100",
-          icon: "text-indigo-600"
+          icon: "text-indigo-600",
+          iconBg: "bg-indigo-100"
         }
       };
 
@@ -514,9 +543,11 @@
 
             </div>
 
-            <div class="text-2xl">
+              <div class="w-11 h-11 rounded-2xl ${style.iconBg} flex items-center justify-center">
 
-              ${config.icon}
+                  ${config.icon}
+
+              </div>
 
             </div>
 
@@ -538,6 +569,59 @@
       `;
     }
     
+    function renderActionCard(config)
+    {
+      const theme = {
+        critical: {
+          border: "border-red-200",
+          bg: "bg-red-50",
+          badge: "bg-red-100 text-red-700"
+        },
+
+        warning: {
+          border: "border-amber-200",
+          bg: "bg-amber-50",
+          badge: "bg-amber-100 text-amber-700"
+        },
+
+        opportunity: {
+          border: "border-emerald-200",
+          bg: "bg-emerald-50",
+          badge: "bg-emerald-100 text-emerald-700"
+        }
+      };
+
+      const style = theme[config.priority] || theme.warning;
+
+      return `
+        <div class="${style.bg} ${style.border} border rounded-2xl p-5">
+
+          <div class="flex items-center justify-between">
+
+            <h4 class="font-semibold text-slate-800">
+
+              ${config.title}
+
+            </h4>
+
+            <span class="${style.badge} text-xs font-semibold px-3 py-1 rounded-full">
+
+              ${config.priority.toUpperCase()}
+
+            </span>
+
+          </div>
+
+          <p class="mt-3 text-sm leading-6 text-slate-600">
+
+            ${config.description}
+
+          </p>
+
+        </div>
+      `;
+    }
+
     function renderCharts(res)
     {
       const revenueCtx = document.getElementById("mainChart").getContext("2d");
@@ -1130,30 +1214,30 @@
 
       if (res.recommendations && res.recommendations.length)
       {
-        document.getElementById("recommendationContainer").innerHTML =
-        res.recommendations.map(function(item,index)
-        {
-          var color;
-          if(item.priority === "High")
+          document.getElementById("recommendationContainer").innerHTML =
+          res.recommendations.map(function(item, index)
           {
-            color = "bg-red-50 border-red-200";
-          }
-            else if(item.priority === "Medium")
-            {
-              color = "bg-amber-50 border-amber-200";
-            }
-            else
-            {
-              color = "bg-emerald-50 border-emerald-200";
-            }
+              var priorityMap =
+              {
+                  High: "critical",
+                  Medium: "warning",
+                  Low: "opportunity"
+              };
 
-        return `
-        <div class="border rounded-2xl p-4 ${color}">
-          <div class="font-semibold"> #${index + 1} ${item.priority} Priority </div>
-          <div class="text-sm mt-1"> ${item.message} </div>
-        </div>
-        `;
-        }).join("");
+              return renderActionCard({
+
+                  priority:
+                      priorityMap[item.priority] || "warning",
+
+                  title:
+                      "#" + (index + 1) + " Priority",
+
+                  description:
+                      item.message
+
+              });
+
+          }).join("");
       }
     }
 
