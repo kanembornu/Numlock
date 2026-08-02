@@ -294,12 +294,10 @@ function buildAggregate(data)
         + revenue;
     }
 
-    if(expense > 0)
+    if(row.purchaseCategory)
     {
       var expenseKey =
-        row.purchaseCategory ||
-        row.category ||
-        "Other";
+        row.purchaseCategory;
 
       aggregate.expenseCategory[expenseKey] =
         (aggregate.expenseCategory[expenseKey] || 0)
@@ -1967,6 +1965,101 @@ function buildExpenseBreakdown(data) {
 
 }
 
+function buildExpenseBreakdownFromAggregate(aggregate) {
+
+  return Object.keys(
+    aggregate.expenseCategory
+  )
+  .map(function(category) {
+
+    return {
+      category: category,
+      amount:
+        aggregate.expenseCategory[category]
+    };
+
+  });
+
+}
+
+function validateExpenseBreakdownMigration(data) {
+
+  var legacyExpenses =
+    buildExpenseBreakdown(data);
+
+  var aggregateExpenses =
+    buildExpenseBreakdownFromAggregate(
+      buildAggregate(data)
+    );
+
+  function sortExpenses(expenses) {
+
+    return expenses.slice()
+      .sort(function(a, b) {
+
+        if (a.category < b.category) {
+          return -1;
+        }
+
+        if (a.category > b.category) {
+          return 1;
+        }
+
+        return 0;
+
+      });
+
+  }
+
+  var sortedLegacy =
+    sortExpenses(legacyExpenses);
+
+  var sortedAggregate =
+    sortExpenses(aggregateExpenses);
+
+  if (
+    JSON.stringify(sortedLegacy) !==
+    JSON.stringify(sortedAggregate)
+  ) {
+    throw new Error(
+      "Expense breakdown migration mismatch: legacy=" +
+      JSON.stringify(sortedLegacy) +
+      ", aggregate=" +
+      JSON.stringify(sortedAggregate)
+    );
+  }
+
+  return {
+    passed: true,
+    legacy: legacyExpenses,
+    aggregate: aggregateExpenses
+  };
+
+}
+
+function testExpenseBreakdownMigration() {
+
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  return validateExpenseBreakdownMigration(
+    processed
+  );
+
+}
+
 function buildRecentTransactions(data) {
 
   var recent =
@@ -2009,13 +2102,16 @@ function buildRecentTransactions(data) {
 
 }
 
-function buildInsights(data, summary)
+function buildInsights(cache)
 {
   var expenses =
-    buildExpenseBreakdown(data);
+    cache.expenseBreakdown.slice();
 
   var financial =
-    buildFinancial(data);
+    cache.financial;
+
+  var summary =
+    cache.summary;
 
   expenses.sort(function(a,b)
   {
@@ -2395,11 +2491,13 @@ function buildAnalyticsCache(data) {
       cache.aggregate
     );
 
-  cache.insights =
-    buildInsights(
-      data,
-      cache.summary
+  cache.expenseBreakdown =
+    buildExpenseBreakdownFromAggregate(
+      cache.aggregate
     );
+
+  cache.insights =
+    buildInsights(cache);
 
   cache.revenueTrend =
     buildRevenueTrendFromAggregate(
@@ -2411,9 +2509,6 @@ function buildAnalyticsCache(data) {
       data,
       cache.revenueTrend
     );
-
-  cache.expenseBreakdown =
-    buildExpenseBreakdown(data);
 
   cache.forecast =
     buildForecast(cache);
