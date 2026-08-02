@@ -551,6 +551,91 @@ function buildSummary(data) {
   };
 }
 
+function buildSummaryFromAggregate(aggregate) {
+  var activeDays =
+    aggregate.activeDaysCount || 1;
+
+  return {
+    revenue: aggregate.revenue,
+    expense: aggregate.expense,
+    profit:
+      aggregate.revenue - aggregate.expense,
+    unitsSold: aggregate.unitsSold,
+    bestSeller:
+      aggregate.bestSeller || "",
+    topRevenueProduct:
+      aggregate.topRevenueProduct || "",
+    avgDailyRevenue:
+      Math.round(
+        aggregate.revenue / activeDays
+      ),
+    activeDays: activeDays
+  };
+}
+
+function validateSummaryMigration(data) {
+  var legacySummary =
+    buildSummary(data);
+
+  var aggregateSummary =
+    buildSummaryFromAggregate(
+      buildAggregate(data)
+    );
+
+  var fields = [
+    "revenue",
+    "expense",
+    "unitsSold",
+    "bestSeller",
+    "topRevenueProduct",
+    "activeDays",
+    "avgDailyRevenue",
+    "profit"
+  ];
+
+  fields.forEach(function(field) {
+    if (
+      legacySummary[field] !==
+      aggregateSummary[field]
+    ) {
+      throw new Error(
+        "Summary migration mismatch for " +
+        field +
+        ": legacy=" +
+        legacySummary[field] +
+        ", aggregate=" +
+        aggregateSummary[field]
+      );
+    }
+  });
+
+  return {
+    passed: true,
+    fields: fields,
+    legacy: legacySummary,
+    aggregate: aggregateSummary
+  };
+}
+
+function testSummaryMigration() {
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  return validateSummaryMigration(processed);
+}
+
 function buildFinancial(data)
 {
   data = data || [];
@@ -1836,11 +1921,8 @@ function buildRecentTransactions(data) {
 
 }
 
-function buildInsights(data)
+function buildInsights(data, summary)
 {
-  var summary =
-    buildSummary(data);
-
   var expenses =
     buildExpenseBreakdown(data);
 
@@ -2210,33 +2292,38 @@ function detectCategoryDominance(data) {
 
 function buildAnalyticsCache(data) {
 
-    var cache = {
+  var cache = {
 
     aggregate:
       buildAggregate(data),
 
     financial:
-      buildFinancial(data),
-
-    summary:
-      buildSummary(data),
-
-    insights:
-      buildInsights(data),
-
-    trend:
-      buildTrendEngine(data),
-
-    revenueTrend:
-      buildRevenueTrend(data),
-
-    expenseBreakdown:
-      buildExpenseBreakdown(data),
-
-    forecast:
-      buildForecast(data)
+      buildFinancial(data)
 
   };
+
+  cache.summary =
+    buildSummaryFromAggregate(
+      cache.aggregate
+    );
+
+  cache.insights =
+    buildInsights(
+      data,
+      cache.summary
+    );
+
+  cache.trend =
+    buildTrendEngine(data);
+
+  cache.revenueTrend =
+    buildRevenueTrend(data);
+
+  cache.expenseBreakdown =
+    buildExpenseBreakdown(data);
+
+  cache.forecast =
+    buildForecast(data);
 
   cache.hotColdSplit = 
     buildHotColdSplit(data);
