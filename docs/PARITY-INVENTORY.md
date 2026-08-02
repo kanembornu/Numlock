@@ -6,7 +6,7 @@ This inventory records the disposition of every file found under the reference r
 
 | Reference file | Classification | NUMLOCK equivalent or exclusion reason |
 | --- | --- | --- |
-| `docs/ARCHITECTURE.md` | Applicable | `docs/ARCHITECTURE.md` documents the current monolith, target numbered architecture, and dependency direction. |
+| `docs/ARCHITECTURE.md` | Applicable | `docs/ARCHITECTURE.md` documents the frozen numbered production architecture and dependency direction. |
 | `docs/DEPLOYMENT.md` | Adaptable | `docs/DEPLOYMENT.md` documents NUMLOCK upload, live-test, version, deployment, and browser gates. |
 | `docs/DEVELOPMENT.md` | Adaptable | `docs/DEVELOPMENT-WORKFLOW.md` documents the actual VS Code, Codex, Git, and clasp loop. |
 | `docs/FILE_NUMBERING.md` | Adaptable | Numbering policy is scoped to the approved target in `docs/ARCHITECTURE.md` and `docs/SOURCE-MIGRATION.md`; a second policy file would duplicate ownership. |
@@ -14,8 +14,8 @@ This inventory records the disposition of every file found under the reference r
 | `docs/MAINTENANCE.md` | Not applicable | NUMLOCK has no seed, repair, reset, schema-migration, or maintenance entry points. Creating procedures for nonexistent tools would be misleading. |
 | `docs/PROJECT_HISTORY.md` | Adaptable | Verified milestones are recorded in `docs/CHANGELOG.md`, `docs/ROADMAP.md`, and `docs/DECISIONS.md`; unrelated product history is excluded. |
 | `docs/RELEASE.md` | Not applicable | NUMLOCK has no canonical `VERSION`, release metadata, tag policy, or established release automation. Git and deployment procedures are documented without inventing a release system. |
-| `docs/ROADMAP.md` | Applicable | `docs/ROADMAP.md` records Sprint 5.5, Sprint 5.6 migrations, live tests, and decomposition next steps. |
-| `docs/TESTING_AND_ACCEPTANCE.md` | Adaptable | `docs/TESTING.md` documents NUMLOCK's seven safe live functions and evidence levels. |
+| `docs/ROADMAP.md` | Applicable | `docs/ROADMAP.md` records Sprint 5.5, Sprint 5.6 migrations, completed live acceptance, and later work. |
+| `docs/TESTING_AND_ACCEPTANCE.md` | Adaptable | `docs/TESTING.md` documents NUMLOCK's safe live entry points and evidence levels. |
 
 ## AI context
 

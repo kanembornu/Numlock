@@ -4,6 +4,8 @@
 
 NUMLOCK is a Google Apps Script V8 web application backed by Google Sheets. Its server implementation uses the completed numbered source layout:
 
+This layout is frozen as the production ownership model after successful clasp upload, live backend tests, deployment, and dashboard rendering verification. No application runtime errors were found during final acceptance.
+
 ```text
 Google Sheets
   -> getTransactionData() / getPriceMap()

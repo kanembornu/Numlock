@@ -9,10 +9,10 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 ## Current state
 
 - Sprint 5.5 Dashboard Intelligence: complete.
-- Sprint 5.6 backend refactor: in progress.
+- Sprint 5.6 backend refactor: complete.
 - Aggregate migrations validated live: summary, revenue trend, expense breakdown, products, profit trend, and Hot/Cold split.
-- Numbered source decomposition: complete locally.
-- Next phase: authorized Apps Script runtime and browser validation of the final layout.
+- Numbered source decomposition: complete and frozen as the verified production structure.
+- Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 
 ## Architecture and invariants
 
@@ -31,3 +31,7 @@ Safe live entry points and known failure modes are documented in `docs/TESTING.m
 - Legacy migration oracles remain intentionally.
 - Inline configuration literals have not been classified for `10.Config.js`.
 - No formal release/version metadata system exists.
+- The deployed frontend emits the Tailwind CDN production warning.
+- The Apps Script iframe emits its platform sandbox warning.
+
+The two browser warnings are known and non-blocking. They do not authorize frontend changes.

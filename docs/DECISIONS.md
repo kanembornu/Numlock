@@ -12,7 +12,11 @@ The frontend continues to call `getDashboardData()` and receive the existing pro
 
 ### Use a numbered flat Apps Script layout
 
-The completed structure is defined in `ARCHITECTURE.md` and recorded function-by-function in `SOURCE-MIGRATION.md`. Numeric names communicate ownership and load order. Duplicate globals remain forbidden.
+The completed structure is defined in `ARCHITECTURE.md` and recorded function-by-function in `SOURCE-MIGRATION.md`. It is frozen as the live-validated production architecture. Numeric names communicate ownership and load order. Duplicate globals remain forbidden; architecture changes require an explicitly approved task and synchronized documentation.
+
+### Accept current browser warnings as non-blocking debt
+
+The Tailwind CDN production warning and Apps Script iframe sandbox warning were present during successful deployed-dashboard verification. They are recorded technical debt, not application runtime failures, and do not authorize an incidental frontend change.
 
 ### Keep tests global and validation bounded
 
@@ -29,5 +33,5 @@ Static checks, local mocks, clasp upload, live Apps Script execution, deployment
 ## Deferred decisions
 
 - `10.Config.js` remains unpopulated until a real immutable configuration contract is approved; inline behavioral literals are not extracted during pure moves.
-- Legacy migration oracles are removed only after decomposed live validation is complete.
+- Legacy migration oracles remain until a separately approved cleanup proves they are no longer required for regression coverage.
 - No release/version metadata system is invented until the repository adopts one explicitly.

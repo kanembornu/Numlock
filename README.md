@@ -16,6 +16,8 @@ The application uses the completed numbered, flat Apps Script layout:
 
 The ownership model and completed function migration map are documented in [Architecture](docs/ARCHITECTURE.md) and [Source Migration](docs/SOURCE-MIGRATION.md).
 
+The numbered architecture is frozen as the verified production structure. It has passed local source checks, Apps Script backend validation, deployment, and browser rendering verification. Future changes must preserve file ownership and public behavior unless a separately approved architecture change updates the governing documents.
+
 ## Developer onboarding
 
 Prerequisites are Git, VS Code, Node.js for local syntax checks, the Google `clasp` CLI, and access to the NUMLOCK Apps Script project and backing spreadsheet.

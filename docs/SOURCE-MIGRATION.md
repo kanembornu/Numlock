@@ -4,6 +4,8 @@
 
 This record maps the 59 top-level functions formerly in `DashboardService.js` into the completed numbered flat-file architecture. The migration preserved function names, parameters, bodies, global visibility, formulas, response shapes, spreadsheet access, and Apps Script V8 compatibility.
 
+The map is frozen as the verified production ownership contract. The 59 mapped globals plus `100.Code.js#doGet()` each have exactly one production owner.
+
 The transitional `Code.js`, `DashboardService.js`, and `Index.html` files have been replaced by `100.Code.js`, the numbered backend files, and `190.View.Index.html`.
 
 ## Exact function map
@@ -133,8 +135,8 @@ Rollback must use the scoped task diff or an explicit inverse move. Do not use d
 6. **Commit 007 — dashboard and tests:** move response/cache functions into `90` and test entry points into `95`; update `.claspignore`.
 7. **Entry point and view rename:** atomically moved `Code.js` to `100.Code.js`, moved `Index.html` to `190.View.Index.html`, updated the `HtmlService` filename literal, removed the comment-only monolith, and finalized `.claspignore`.
 
-Each commit is independently validated locally. No `clasp push`, Apps Script execution, deployment, Git commit, or Git push is implied by this sequence.
+Each decomposition commit was independently validated locally. Final acceptance subsequently confirmed a successful clasp upload, `getDashboardData()`, `testAggregate()`, all six migration tests in Apps Script, a new deployment version, and successful dashboard rendering. No application runtime errors were found. Git actions and future external writes remain separately authorized operations.
 
 ## Needs classification
 
-None. All 59 current top-level functions have one target owner. The absence of a current immutable configuration symbol is a deferred file-population question, not an ambiguous function assignment.
+None. All 59 decomposed top-level functions and `doGet()` have one production owner. The absence of a current immutable configuration symbol is a deferred file-population question, not an ambiguous function assignment.
