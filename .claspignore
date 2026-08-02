@@ -1,5 +1,8 @@
 **
 !appsscript.json
+!00.Project.Spec.js
+!20.Data.Source.js
+!25.Data.Processor.js
 !Code.js
 !DashboardService.js
 !Index.html
