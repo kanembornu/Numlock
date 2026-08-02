@@ -213,6 +213,8 @@ function buildAggregate(data)
     revenue:0,
     expense:0,
     unitsSold:0,
+    hotQty:0,
+    coldQty:0,
 
     activeDays:{},
 
@@ -254,6 +256,16 @@ function buildAggregate(data)
     if(row.transactionType === "Sales")
     {
       aggregate.unitsSold += qty;
+
+      if(row.category === "Hot")
+      {
+        aggregate.hotQty += qty;
+      }
+
+      if(row.category === "Cold")
+      {
+        aggregate.coldQty += qty;
+      }
     }
 
     if(revenue > 0)
@@ -889,7 +901,7 @@ function buildTrendEngine(data, cache)
       cache.profitTrend,
 
     hotCold:
-      buildHotColdSplit(data),
+      cache.hotColdSplit,
 
     topProducts:
       cache.topProducts
@@ -1972,6 +1984,75 @@ function buildHotColdSplit(data) {
 
 }
 
+function buildHotColdSplitFromAggregate(aggregate) {
+
+  return {
+    hot: aggregate.hotQty,
+    cold: aggregate.coldQty
+  };
+
+}
+
+function validateHotColdMigration(data) {
+
+  var legacySplit =
+    buildHotColdSplit(data);
+
+  var aggregateSplit =
+    buildHotColdSplitFromAggregate(
+      buildAggregate(data)
+    );
+
+  ["hot", "cold"]
+  .forEach(function(field) {
+
+    if (
+      legacySplit[field] !==
+      aggregateSplit[field]
+    ) {
+      throw new Error(
+        "Hot/Cold migration mismatch for " +
+        field +
+        ": legacy=" +
+        legacySplit[field] +
+        ", aggregate=" +
+        aggregateSplit[field]
+      );
+    }
+
+  });
+
+  return {
+    passed: true,
+    legacy: legacySplit,
+    aggregate: aggregateSplit
+  };
+
+}
+
+function testHotColdMigration() {
+
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  return validateHotColdMigration(
+    processed
+  );
+
+}
+
 function buildTopProducts(data) {
 
   var products = {};
@@ -2326,7 +2407,7 @@ function buildDiagnosis(data, cache) {
     detectRevenueTrend(cache);
 
   var categoryTrend =
-  detectCategoryDominance(data);
+  detectCategoryDominance(cache);
 
   // Profit Margin
 
@@ -2569,10 +2650,10 @@ function detectRevenueTrend(cache) {
 
 }
 
-function detectCategoryDominance(data) {
+function detectCategoryDominance(cache) {
 
   var split =
-    buildHotColdSplit(data);
+    cache.hotColdSplit;
 
   var total =
     split.hot + split.cold;
@@ -2677,6 +2758,11 @@ function buildAnalyticsCache(data) {
       cache.aggregate
     );
 
+  cache.hotColdSplit =
+    buildHotColdSplitFromAggregate(
+      cache.aggregate
+    );
+
   cache.trend =
     buildTrendEngine(
       data,
@@ -2685,9 +2771,6 @@ function buildAnalyticsCache(data) {
 
   cache.forecast =
     buildForecast(cache);
-
-  cache.hotColdSplit = 
-    buildHotColdSplit(data);
 
   cache.productContribution =
     buildProductContribution(cache);
