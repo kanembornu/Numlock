@@ -17,7 +17,17 @@ The following production outputs have been migrated to the single Aggregate Engi
 - profit trend; and
 - Hot/Cold split.
 
-Dedicated migration tests compare legacy and aggregate outputs. The task context records successful live Apps Script runs for `getDashboardData()` and all six dedicated migration tests; future reports must continue to distinguish that runtime evidence from local mocks and uploads.
+Dedicated migration tests compare legacy and aggregate outputs. Live Apps Script validation has passed for:
+
+- `getDashboardData()`
+- `testSummaryMigration()`
+- `testRevenueTrendMigration()`
+- `testExpenseBreakdownMigration()`
+- `testProductMigration()`
+- `testProfitTrendMigration()`
+- `testHotColdMigration()`
+
+Future reports must continue to distinguish live runtime evidence from local mocks and uploads.
 
 ## In progress
 

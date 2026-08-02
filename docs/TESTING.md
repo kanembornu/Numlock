@@ -65,12 +65,12 @@ After every function move:
 ### Live validation and release
 
 1. Confirm the active clasp account and configured NUMLOCK project without exposing the script ID.
-2. Run `clasp status` and verify only approved production files are tracked.
-3. Run `clasp push` only when explicitly requested.
+2. From the VS Code terminal, run `clasp status` and verify only approved production files are tracked.
+3. Run `clasp push` only when explicitly requested. Use `clasp push --force` only when a normal push cannot synchronize the complete reviewed source and force upload is explicitly required.
 4. Run `getDashboardData()` and all six migration tests in Apps Script.
 5. Stop on the first mismatch or runtime error; do not apply speculative fixes.
-6. Create or update a deployment only when explicitly requested after backend tests pass.
-7. Verify the deployed dashboard and browser console.
+6. List the existing Apps Script deployments, create an immutable version, and update the intended deployment only when explicitly requested after backend tests pass.
+7. Hard-refresh the deployed dashboard, verify visible cards/charts/transactions, and inspect the browser console.
 
 ## Safety
 

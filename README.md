@@ -12,6 +12,16 @@ The application currently uses three source files:
 
 The approved target is a numbered, flat Apps Script source layout. The ownership model and exact function migration map are documented in [Architecture](docs/ARCHITECTURE.md) and [Source Migration](docs/SOURCE-MIGRATION.md). Application files have not yet been split or renamed.
 
+## Developer onboarding
+
+Prerequisites are Git, VS Code, Node.js for local syntax checks, the Google `clasp` CLI, and access to the NUMLOCK Apps Script project and backing spreadsheet.
+
+1. Clone the repository and open `Numlock.code-workspace`.
+2. Read `AGENTS.md`, [Project Context](.ai/PROJECT_CONTEXT.md), and [Development Workflow](docs/DEVELOPMENT-WORKFLOW.md).
+3. Confirm `git status --short` and preserve unrelated changes.
+4. Confirm the active clasp account and run `clasp status` before any upload.
+5. Use the testing and deployment gates below; never expose `.clasp.json` or credential files.
+
 ## Development workflow
 
 1. Open `Numlock.code-workspace` in VS Code.
@@ -32,4 +42,16 @@ Keep evidence levels separate:
 4. Deployment: create or update a web-app deployment only after live backend validation passes and deployment is explicitly requested.
 5. Browser verification: open the deployed dashboard, verify visible behavior, and check the browser console.
 
-See [Testing](docs/TESTING.md) for runnable functions and evidence requirements, and [Roadmap](docs/ROADMAP.md) for current progress.
+## Engineering documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Roadmap](docs/ROADMAP.md)
+- [Testing](docs/TESTING.md)
+- [Source Migration](docs/SOURCE-MIGRATION.md)
+- [Development Workflow](docs/DEVELOPMENT-WORKFLOW.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Git Workflow](docs/GIT-WORKFLOW.md)
+- [Decisions](docs/DECISIONS.md)
+- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Changelog](docs/CHANGELOG.md)
+- [Reference Parity Inventory](docs/PARITY-INVENTORY.md)
