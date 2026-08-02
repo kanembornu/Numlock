@@ -9,6 +9,12 @@
 !45.Analytics.Trend.js
 !50.Analytics.Product.js
 !55.Analytics.Expense.js
+!60.Intelligence.Revenue.js
+!65.Intelligence.Profit.js
+!70.Intelligence.Score.js
+!75.Intelligence.Diagnosis.js
+!80.Intelligence.Recommendation.js
+!85.Intelligence.Decision.js
 !Code.js
 !DashboardService.js
 !Index.html
