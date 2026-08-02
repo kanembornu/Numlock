@@ -5,6 +5,10 @@
 !25.Data.Processor.js
 !30.Analytics.Aggregate.js
 !35.Analytics.Financial.js
+!40.Analytics.Summary.js
+!45.Analytics.Trend.js
+!50.Analytics.Product.js
+!55.Analytics.Expense.js
 !Code.js
 !DashboardService.js
 !Index.html
