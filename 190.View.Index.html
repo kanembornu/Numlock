@@ -373,9 +373,6 @@
       google.script.run
         .withSuccessHandler(function(res)
         {
-          console.log(res);
-          console.log(typeof res);
-          console.log(JSON.stringify(res));
           render(res);
         })
         .withFailureHandler(function(err)

@@ -18,6 +18,10 @@ The completed structure is defined in `ARCHITECTURE.md` and recorded function-by
 
 The Tailwind CDN production warning and Apps Script iframe sandbox warning were present during successful deployed-dashboard verification. They are recorded technical debt, not application runtime failures, and do not authorize an incidental frontend change.
 
+### Keep production Console output actionable
+
+Normal successful dashboard loading and rendering must not write application messages to the browser Console. Raw dashboard responses, business-data payloads, generic object dumps, and temporary state tracing must not be logged in production. Preserve concise `console.error` diagnostics for genuine server-load failures and invalid render inputs; actionable warnings may remain only when they intentionally identify a condition an operator or developer can address.
+
 ### Precompile Tailwind into a clasp-tracked HTML partial
 
 For Sprint 5.7 Package 001, the recommended implementation direction is to pin Tailwind 3.4.17 as a local development dependency and compile only the utilities used by `190.View.Index.html` into a generated, minified HTML partial. The partial is a checked-in deployment artifact; Apps Script runs no Node.js tooling. A later, separately approved implementation must include that partial from the existing template, add it to the `.claspignore` allowlist, and remove the Tailwind Play CDN script only after source, upload, live, and browser parity gates pass.
