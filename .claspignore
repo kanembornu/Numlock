@@ -3,6 +3,8 @@
 !00.Project.Spec.js
 !20.Data.Source.js
 !25.Data.Processor.js
+!30.Analytics.Aggregate.js
+!35.Analytics.Financial.js
 !Code.js
 !DashboardService.js
 !Index.html
