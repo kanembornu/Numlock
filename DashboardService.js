@@ -880,12 +880,12 @@ function testRevenueTrendMigration()
   return validateRevenueTrendMigration(processed);
 }
 
-function buildTrendEngine(data, revenueTrend)
+function buildTrendEngine(data, cache)
 {
   return {
 
     revenue:
-      revenueTrend,
+      cache.revenueTrend,
 
     profit:
       buildProfitTrend(data),
@@ -894,7 +894,7 @@ function buildTrendEngine(data, revenueTrend)
       buildHotColdSplit(data),
 
     topProducts:
-      buildTopProducts(data)
+      cache.topProducts
 
   };
 }
@@ -1933,6 +1933,89 @@ function buildTopProducts(data) {
 
 }
 
+function buildTopProductsFromAggregate(aggregate) {
+
+  return Object.keys(
+    aggregate.productQty
+  )
+  .map(function(product) {
+
+    return {
+      name: product,
+      qty: aggregate.productQty[product],
+      revenue:
+        aggregate.productRevenue[product]
+    };
+
+  })
+  .sort(function(a, b) {
+
+    return b.qty - a.qty;
+
+  })
+  .slice(0, 10);
+
+}
+
+function validateProductMigration(data) {
+
+  var legacyProducts =
+    buildTopProducts(data);
+
+  var aggregate =
+    buildAggregate(data);
+
+  var aggregateProducts =
+    buildTopProductsFromAggregate(
+      aggregate
+    );
+
+  if (
+    JSON.stringify(legacyProducts) !==
+    JSON.stringify(aggregateProducts)
+  ) {
+    throw new Error(
+      "Product migration mismatch: legacy=" +
+      JSON.stringify(legacyProducts) +
+      ", aggregate=" +
+      JSON.stringify(aggregateProducts)
+    );
+  }
+
+  return {
+    passed: true,
+    legacy: legacyProducts,
+    aggregate: aggregateProducts,
+    bestSeller: aggregate.bestSeller,
+    topRevenueProduct:
+      aggregate.topRevenueProduct
+  };
+
+}
+
+function testProductMigration() {
+
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  return validateProductMigration(
+    processed
+  );
+
+}
+
 function buildExpenseBreakdown(data) {
 
   var expenses = {};
@@ -2504,10 +2587,15 @@ function buildAnalyticsCache(data) {
       cache.aggregate
     );
 
+  cache.topProducts =
+    buildTopProductsFromAggregate(
+      cache.aggregate
+    );
+
   cache.trend =
     buildTrendEngine(
       data,
-      cache.revenueTrend
+      cache
     );
 
   cache.forecast =
@@ -2515,9 +2603,6 @@ function buildAnalyticsCache(data) {
 
   cache.hotColdSplit = 
     buildHotColdSplit(data);
-
-  cache.topProducts =
-    buildTopProducts(data);
 
   cache.productContribution =
     buildProductContribution(cache);
