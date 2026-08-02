@@ -1,7 +1,7 @@
 function doGet() {
 
   return HtmlService
-    .createTemplateFromFile("Index")
+    .createTemplateFromFile("190.View.Index")
     .evaluate()
     .setTitle("Numlock Dashboard")
     .setXFrameOptionsMode(

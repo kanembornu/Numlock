@@ -12,7 +12,7 @@ The frontend continues to call `getDashboardData()` and receive the existing pro
 
 ### Use a numbered flat Apps Script layout
 
-The approved target structure is defined in `ARCHITECTURE.md` and mapped function-by-function in `SOURCE-MIGRATION.md`. Numeric names communicate ownership and load order. Decomposition is incremental, and duplicate globals are forbidden.
+The completed structure is defined in `ARCHITECTURE.md` and recorded function-by-function in `SOURCE-MIGRATION.md`. Numeric names communicate ownership and load order. Duplicate globals remain forbidden.
 
 ### Keep tests global and validation bounded
 

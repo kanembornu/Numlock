@@ -4,13 +4,17 @@ NUMLOCK is a coffee-shop business-intelligence dashboard built with Google Apps 
 
 ## Repository structure
 
-The application currently uses three source files:
+The application uses the completed numbered, flat Apps Script layout:
 
-- `DashboardService.js` contains spreadsheet access, processing, analytics, intelligence, response composition, and migration tests.
-- `Code.js` contains the `doGet()` web entry point.
-- `Index.html` contains the dashboard UI and browser runtime.
+- `20`–`25`: spreadsheet reads and transaction processing.
+- `30`–`55`: aggregate, financial, summary, trend, product, and expense analytics.
+- `60`–`85`: revenue, profit, score, diagnosis, recommendation, and decision intelligence.
+- `90.Dashboard.Service.js`: cache orchestration and dashboard response composition.
+- `95.Tests.js`: migration and backend test entry points.
+- `100.Code.js`: the `doGet()` web entry point.
+- `190.View.Index.html`: dashboard UI and browser runtime.
 
-The approved target is a numbered, flat Apps Script source layout. The ownership model and exact function migration map are documented in [Architecture](docs/ARCHITECTURE.md) and [Source Migration](docs/SOURCE-MIGRATION.md). Application files have not yet been split or renamed.
+The ownership model and completed function migration map are documented in [Architecture](docs/ARCHITECTURE.md) and [Source Migration](docs/SOURCE-MIGRATION.md).
 
 ## Developer onboarding
 

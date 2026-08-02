@@ -2,13 +2,13 @@
 
 ## Scope and invariants
 
-This blueprint maps the current 59 top-level functions in `DashboardService.js` into the approved numbered flat-file architecture. The migration must preserve function names, parameters, bodies, global visibility, formulas, response shapes, spreadsheet access, and Apps Script V8 compatibility.
+This record maps the 59 top-level functions formerly in `DashboardService.js` into the completed numbered flat-file architecture. The migration preserved function names, parameters, bodies, global visibility, formulas, response shapes, spreadsheet access, and Apps Script V8 compatibility.
 
-No application source is moved by this document-only commit. `Code.js`, `DashboardService.js`, and `Index.html` remain authoritative until an approved migration commit moves their contents.
+The transitional `Code.js`, `DashboardService.js`, and `Index.html` files have been replaced by `100.Code.js`, the numbered backend files, and `190.View.Index.html`.
 
 ## Exact function map
 
-Each current top-level function appears exactly once below.
+Each former-monolith top-level function appears exactly once below.
 
 | Target file | Function | Reason |
 | --- | --- | --- |
@@ -72,7 +72,7 @@ Each current top-level function appears exactly once below.
 | `95.Tests.js` | `testProductMigration()` | Manual product migration test. |
 | `95.Tests.js` | `testExpenseBreakdownMigration()` | Manual expense migration test. |
 
-`Code.js#doGet()` maps to `100.Code.js`. `Index.html` maps to `190.View.Index.html`. They are outside the 59-function `DashboardService.js` count.
+`100.Code.js#doGet()` and `190.View.Index.html` are outside the 59-function former-monolith count.
 
 ## Shared constants and helpers
 
@@ -80,7 +80,7 @@ No top-level shared constants exist in the current source. Category names, sheet
 
 `10.Config.js` is therefore reserved until a separate, explicitly approved constant-extraction task identifies an immutable contract and proves equivalence. `00.Project.Spec.js` may contain comments only as specified; neither file should be created as an empty placeholder during incremental moves.
 
-## Migration order
+## Completed migration order
 
 1. Add `00.Project.Spec.js` only with approved specification comments; defer `10.Config.js` until it has real immutable content.
 2. Move spreadsheet reads to `20.Data.Source.js` and normalization to `25.Data.Processor.js`.
@@ -91,8 +91,8 @@ No top-level shared constants exist in the current source. Category names, sheet
 7. Move revenue, profit, scoring, diagnosis, recommendation, and decision functions in numeric order through `85.Intelligence.Decision.js`.
 8. Move cache orchestration and response composition to `90.Dashboard.Service.js`.
 9. Move manual test entry points to `95.Tests.js`.
-10. Atomically rename `Code.js` to `100.Code.js` and `Index.html` to `190.View.Index.html`, updating `doGet()` from `"Index"` to `"190.View.Index"` in the same commit.
-11. Remove `DashboardService.js` only after it contains no functions and every global exists exactly once in the numbered files.
+10. Atomically renamed `Code.js` to `100.Code.js` and `Index.html` to `190.View.Index.html`, updating `doGet()` from `"Index"` to `"190.View.Index"` in the same change.
+11. Removed the comment-only `DashboardService.js` after every global existed exactly once in numbered files.
 
 At every step, update `.claspignore` in the same commit to allow the newly active production file while retaining files not yet migrated. Do not allow a new file before its functions are removed from the monolith, because duplicate global declarations can change runtime ownership.
 
@@ -123,7 +123,7 @@ Stop and restore the last known-good file placement if any of the following occu
 
 Rollback must use the scoped task diff or an explicit inverse move. Do not use destructive broad resets when unrelated worktree changes exist.
 
-## Proposed commit sequence
+## Completed commit sequence
 
 1. **Commit 002 — data foundations:** add `00.Project.Spec.js`; move source and processor functions into `20` and `25`; update `.claspignore` explicitly.
 2. **Commit 003 — core analytics:** move Aggregate, Financial, and Summary functions into `30`, `35`, and `40`; update `.claspignore`.
@@ -131,7 +131,7 @@ Rollback must use the scoped task diff or an explicit inverse move. Do not use d
 4. **Commit 005 — product and expense analytics:** move functions into `50` and `55`; update `.claspignore`.
 5. **Commit 006 — intelligence layers:** move functions into `60` through `85` in dependency order; update `.claspignore`.
 6. **Commit 007 — dashboard and tests:** move response/cache functions into `90` and test entry points into `95`; update `.claspignore`.
-7. **Commit 008 — entry point and view rename:** atomically move `Code.js` to `100.Code.js`, move `Index.html` to `190.View.Index.html`, update the `HtmlService` filename literal, remove the empty monolith, and finalize `.claspignore`.
+7. **Entry point and view rename:** atomically moved `Code.js` to `100.Code.js`, moved `Index.html` to `190.View.Index.html`, updated the `HtmlService` filename literal, removed the comment-only monolith, and finalized `.claspignore`.
 
 Each commit is independently validated locally. No `clasp push`, Apps Script execution, deployment, Git commit, or Git push is implied by this sequence.
 

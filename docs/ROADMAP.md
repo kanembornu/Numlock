@@ -29,17 +29,16 @@ Dedicated migration tests compare legacy and aggregate outputs. Live Apps Script
 
 Future reports must continue to distinguish live runtime evidence from local mocks and uploads.
 
-## In progress
+## Completed source-file decomposition
 
-Sprint 5.6 backend refactoring remains in progress. The monolithic `DashboardService.js` still owns unrelated data, analytics, intelligence, orchestration, and test functions. Documentation and the migration blueprint are the current structural-refactor deliverable.
+Sprint 5.6 source decomposition is complete locally. All backend functions now live in their approved numbered owners, tests live in `95.Tests.js`, `doGet()` lives in `100.Code.js`, and the frontend lives in `190.View.Index.html`. The transitional monolith and legacy filenames have been removed.
 
-## Next phase — source-file decomposition
+## Next phase — live validation
 
-Move functions incrementally into the approved numbered flat-file architecture described in [Source Migration](SOURCE-MIGRATION.md). Each move must preserve function bodies and public globals, update `.claspignore` deliberately, pass local checks, upload only with explicit authorization, and pass the relevant live Apps Script tests before the next slice.
+Verify the final clasp inventory, upload only with explicit authorization, rerun `getDashboardData()` and all six migration tests in Apps Script, then perform deployment and browser verification only when separately approved.
 
 ## Later work
 
-- Complete source decomposition and final entry-point/frontend renames.
 - Remove legacy migration builders only in a separately approved cleanup after live equivalence remains proven in the decomposed layout.
 - Add release/deployment procedures only when a deployment task is explicitly approved.
 - Select product or UI enhancements from verified business needs; this roadmap promises no unapproved feature work.

@@ -17,6 +17,5 @@
 !85.Intelligence.Decision.js
 !90.Dashboard.Service.js
 !95.Tests.js
-!Code.js
-!DashboardService.js
-!Index.html
+!100.Code.js
+!190.View.Index.html

@@ -25,7 +25,7 @@ Credential files, OAuth tokens, script IDs, and spreadsheet exports containing b
 
 ## Current source transition
 
-The current application remains in `DashboardService.js`, `Code.js`, and `Index.html`. The approved numbered decomposition is documented but has not started. During decomposition, a function must exist in exactly one clasp-tracked file, `.claspignore` must be updated atomically, and every migration test must remain global and runnable.
+The application uses the completed numbered source layout. Every function must continue to exist in exactly one clasp-tracked file, `.claspignore` must remain aligned with the numbered inventory, and every migration test must remain global and runnable.
 
 ## GitHub and clasp separation
 

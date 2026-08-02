@@ -16,6 +16,8 @@ This document records verified engineering milestones. NUMLOCK does not yet main
 - Migrated summary, revenue trend, expense breakdown, product analytics, profit trend, and Hot/Cold split to a single Aggregate Engine cache.
 - Retained throwing legacy-equivalence validators.
 - Completed live Apps Script validation for `getDashboardData()` and all six dedicated migration test entry points.
+- Decomposed the backend into numbered data, analytics, intelligence, orchestration, and test owners.
+- Renamed the web entry point and frontend to `100.Code.js` and `190.View.Index.html`.
 
 ### Sprint 5.5 — Dashboard Intelligence
 
@@ -23,4 +25,4 @@ This document records verified engineering milestones. NUMLOCK does not yet main
 
 ## Next
 
-- Decompose the monolithic server source into the approved numbered files without behavior changes.
+- Validate the final numbered inventory in Apps Script and the deployed dashboard when explicitly authorized.

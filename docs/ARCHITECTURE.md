@@ -2,7 +2,7 @@
 
 ## Current architecture
 
-NUMLOCK is a Google Apps Script V8 web application backed by Google Sheets. Its current server implementation is concentrated in `DashboardService.js`:
+NUMLOCK is a Google Apps Script V8 web application backed by Google Sheets. Its server implementation uses the completed numbered source layout:
 
 ```text
 Google Sheets
@@ -13,10 +13,10 @@ Google Sheets
   -> cached intelligence and decisions
   -> getDashboardData()
   -> google.script.run
-  -> Index.html
+  -> 190.View.Index.html
 ```
 
-`Code.js#doGet()` evaluates `Index.html`. The browser calls the public server function `getDashboardData()`, which returns a serializable dashboard response. Migration test entry points are global because Apps Script editor execution requires global functions; they are not browser APIs.
+`100.Code.js#doGet()` evaluates `190.View.Index.html`. The browser calls the public server function `getDashboardData()` in `90.Dashboard.Service.js`, which returns a serializable dashboard response. Migration test entry points live in `95.Tests.js` and remain global because Apps Script editor execution requires global functions; they are not browser APIs.
 
 ## Aggregate Engine
 
@@ -31,7 +31,7 @@ Google Sheets
 
 `buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`; legacy builders remain only as validation oracles. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows.
 
-## Target numbered architecture
+## Numbered architecture
 
 | File | Ownership |
 | --- | --- |

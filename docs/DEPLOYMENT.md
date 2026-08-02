@@ -15,7 +15,7 @@ These are independent actions. Upload success is not runtime, deployment, or bro
 1. Confirm the reviewed diff and `git status --short`.
 2. Confirm the authorized clasp account can access the configured NUMLOCK project without printing the script ID.
 3. Run syntax and migration validation.
-4. Run `clasp status`; the current layout must show only `appsscript.json`, `Code.js`, `DashboardService.js`, and `Index.html` as tracked production files.
+4. Run `clasp status`; it must show `appsscript.json` and only the approved numbered `.js` and `.html` production files.
 5. Stop if the account or inventory is wrong.
 
 ## Upload and live validation
