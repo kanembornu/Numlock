@@ -24,6 +24,9 @@ function getDashboardData() {
       summary:
         cache.summary,
 
+      financial:
+        cache.financial,
+
       insights:
         cache.insights,
 
@@ -203,6 +206,259 @@ function processTransactions(transactions, priceMap) {
   return result;
 }
 
+function buildAggregate(data)
+{
+  var aggregate =
+  {
+    revenue:0,
+    expense:0,
+    unitsSold:0,
+
+    activeDays:{},
+
+    productQty:{},
+
+    productRevenue:{},
+
+    bestSeller:null,
+
+    topRevenueProduct:null,
+
+    monthlyRevenue:{},
+
+    monthlyExpense:{},
+
+    monthlyProfit:{},
+
+    expenseCategory:{},
+
+    topExpense:null
+
+  };
+
+  data.forEach(function(row)
+  {
+    var revenue =
+      Number(row.revenue || 0);
+
+    var expense =
+      Number(row.expense || 0);
+
+    var qty =
+      Number(row.qty || 0);
+
+    aggregate.revenue += revenue;
+
+    aggregate.expense += expense;
+
+    if(row.transactionType === "Sales")
+    {
+      aggregate.unitsSold += qty;
+    }
+
+    if(revenue > 0)
+    {
+      var d =
+        new Date(row.date);
+
+      var dayKey =
+        d.getFullYear() +
+        "-" +
+        ("0"+(d.getMonth()+1)).slice(-2) +
+        "-" +
+        ("0"+d.getDate()).slice(-2);
+
+      aggregate.activeDays[dayKey] = true;
+        var monthKey =
+          d.getFullYear() +
+          "-" +
+          ("0"+(d.getMonth()+1)).slice(-2);
+
+        aggregate.monthlyRevenue[monthKey] =
+          (aggregate.monthlyRevenue[monthKey] || 0)
+          + revenue;
+
+        aggregate.monthlyExpense[monthKey] =
+          (aggregate.monthlyExpense[monthKey] || 0)
+          + expense;
+    }
+
+    if(row.product)
+    {
+      aggregate.productQty[row.product] =
+        (aggregate.productQty[row.product] || 0)
+        + qty;
+
+      aggregate.productRevenue[row.product] =
+        (aggregate.productRevenue[row.product] || 0)
+        + revenue;
+    }
+
+    if(expense > 0)
+    {
+      var expenseKey =
+        row.purchaseCategory ||
+        row.category ||
+        "Other";
+
+      aggregate.expenseCategory[expenseKey] =
+        (aggregate.expenseCategory[expenseKey] || 0)
+        + expense;
+    }
+  
+  aggregate.activeDaysCount =
+  Object.keys(
+    aggregate.activeDays
+  ).length;
+
+  Object.keys(
+    aggregate.monthlyRevenue
+  ).forEach(function(month)
+  {
+    aggregate.monthlyProfit[month] =
+
+      (aggregate.monthlyRevenue[month] || 0)
+
+      -
+
+      (aggregate.monthlyExpense[month] || 0);
+
+  });
+
+  });
+
+  var maxQty = 0;
+  var maxRevenue = 0;
+
+  Object.keys(aggregate.productQty)
+  .forEach(function(product)
+  {
+    if(aggregate.productQty[product] > maxQty)
+    {
+      maxQty =
+        aggregate.productQty[product];
+
+      aggregate.bestSeller =
+        product;
+    }
+  });
+
+  Object.keys(aggregate.productRevenue)
+  .forEach(function(product)
+  {
+    if(aggregate.productRevenue[product] > maxRevenue)
+    {
+      maxRevenue =
+        aggregate.productRevenue[product];
+
+      aggregate.topRevenueProduct =
+        product;
+    }
+  });
+
+  var highestExpense = 0;
+
+  Object.keys(
+    aggregate.expenseCategory
+  )
+  .forEach(function(category)
+  {
+    if(
+      aggregate.expenseCategory[category]
+      >
+      highestExpense
+    )
+    {
+      highestExpense =
+        aggregate.expenseCategory[category];
+
+      aggregate.topExpense =
+      {
+        category:category,
+        amount:highestExpense
+      };
+    }
+  });
+
+  return aggregate;
+
+}
+
+function validateAggregate(data)
+{
+  var aggregate =
+    buildAggregate(data);
+
+  var summary =
+    buildSummary(data);
+
+  Logger.log("========== Aggregate Validation ==========");
+
+  Logger.log(
+    "Revenue : " +
+    aggregate.revenue +
+    " | " +
+    summary.revenue
+  );
+
+  Logger.log(
+    "Expense : " +
+    aggregate.expense +
+    " | " +
+    summary.expense
+  );
+
+  Logger.log(
+    "Units : " +
+    aggregate.unitsSold +
+    " | " +
+    summary.unitsSold
+  );
+
+  Logger.log(
+    "Best Seller : " +
+    aggregate.bestSeller +
+    " | " +
+    summary.bestSeller
+  );
+
+  Logger.log(
+    "Top Revenue Product : " +
+    aggregate.topRevenueProduct +
+    " | " +
+    summary.topRevenueProduct
+  );
+
+  Logger.log(
+    "Active Days : " +
+    aggregate.activeDaysCount +
+    " | " +
+    summary.activeDays
+  );
+
+  Logger.log("==========================================");
+}
+
+function testAggregate()
+{
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  validateAggregate(processed);
+}
+
 function buildSummary(data) {
   var revenue = 0;
   var uniqueDays = {};
@@ -295,181 +551,392 @@ function buildSummary(data) {
   };
 }
 
-function buildRevenueTrend(data) {
-  var trend = {};
-  data.forEach(function (row) {
-    if (!row.revenue) return;
+function buildFinancial(data)
+{
+  data = data || [];
 
-    var d =
-      new Date(row.date);
+  if(!Array.isArray(data))
+  {
+    return {
+      revenue:0,
+      expense:0,
+      operatingExpense:0,
+      inventoryExpense:0,
+      assetExpense:0,
+      grossProfit:0,
+      operatingProfit:0,
+      netProfit:0,
+      profitMargin:0
+    };
+  }
+
+  var financial = {
+      
+    revenue:0,
+    expense:0,
+
+    operatingExpense:0,
+    inventoryExpense:0,
+    assetExpense:0,
+
+    grossProfit:0,
+    operatingProfit:0,
+    netProfit:0,
+
+    profitMargin:0
+  };
+
+  data.forEach(function(row)
+  {
+    var revenue =
+      Number(row.revenue || 0);
+
+    var expense =
+      Number(row.expense || 0);
+
+    financial.revenue += revenue;
+    financial.expense += expense;
+
+    var category =
+      String(
+        row.category ||
+        row.account ||
+        row.transactionCategory ||
+        ""
+      ).toLowerCase();
+
+    if(
+      category.indexOf("aset")>-1 ||
+      category.indexOf("asset")>-1 ||
+      category.indexOf("equipment")>-1 ||
+      category.indexOf("peralatan")>-1
+    )
+    {
+      financial.assetExpense += expense;
+      return;
+    }
+
+    if(
+      category.indexOf("inventory")>-1 ||
+      category.indexOf("persediaan")>-1 ||
+      category.indexOf("stock")>-1
+    )
+    {
+      financial.inventoryExpense += expense;
+      return;
+    }
+
+    financial.operatingExpense += expense;
+
+  });
+
+  financial.grossProfit =
+    financial.revenue;
+
+  financial.operatingProfit =
+    financial.revenue -
+    financial.operatingExpense;
+
+  financial.netProfit =
+    financial.operatingProfit;
+
+  if(financial.revenue>0)
+  {
+    financial.profitMargin =
+      Number(
+        (
+          financial.netProfit /
+          financial.revenue *
+          100
+        ).toFixed(1)
+      );
+  }
+
+  return financial;
+
+}
+
+function buildRevenueTrend(data)
+{
+  var trend = {};
+
+  var today = new Date();
+
+  var currentMonth =
+    today.getFullYear() +
+    "-" +
+    ("0"+(today.getMonth()+1)).slice(-2);
+
+  data.forEach(function(row)
+  {
+    if(!row.revenue) return;
+
+    var d = new Date(row.date);
+
     var monthKey =
       d.getFullYear() +
       "-" +
-      ("0" + (d.getMonth()+1))
-        .slice(-2);
+      ("0"+(d.getMonth()+1)).slice(-2);
+
+    // abaikan bulan berjalan
+    if(monthKey == currentMonth)
+    {
+      return;
+    }
 
     trend[monthKey] =
       (trend[monthKey] || 0)
       + row.revenue;
+
   });
 
+  var labels =
+    Object.keys(trend).sort();
+
+  var values =
+    labels.map(function(label)
+    {
+      return trend[label];
+    });
+
+  return{
+
+    labels:labels,
+
+    values:values
+
+  };
+
+}
+
+function buildTrendEngine(data)
+{
   return {
-    labels: Object.keys(trend),
-    values: Object.values(trend)
+
+    revenue:
+      buildRevenueTrend(data),
+
+    profit:
+      buildProfitTrend(data),
+
+    hotCold:
+      buildHotColdSplit(data),
+
+    topProducts:
+      buildTopProducts(data)
+
   };
 }
 
-function buildForecast(data) {
+function buildForecast(data)
+{
   var trend =
     buildRevenueTrend(data);
+
   var values =
     trend.values;
 
-  if (values.length < 2) {
-    return {
+  if(values.length<3)
+  {
+    return{
+
       nextMonthRevenue:
-        values.length
-        ? values[0]
-        : 0,
-      growthRate: 0
+      values.length
+      ?values[values.length-1]
+      :0,
+
+      growthRate:0
 
     };
   }
 
-  var recentMonths =
-    values.slice(-3);
-  var avgRevenue =
-    recentMonths.reduce(
-      function(sum,val){
-        return sum + val;
-      },
-      0
-    ) / recentMonths.length;
+  // abaikan bulan berjalan
+
+  var history =
+    values.slice(0,-1);
+
+  var recent =
+    history.slice(-3);
+
+  var avg =
+    recent.reduce(function(a,b){
+
+      return a+b;
+
+    },0)/recent.length;
 
   var forecast =
-    Math.round(avgRevenue);
+    Math.round(avg);
 
-  var growthRate = 0;
+  var last =
+    history[history.length-1];
 
-  if (recentMonths.length >= 2) {
+  var prev =
+    history[history.length-2];
 
-    var first =
-      recentMonths[0];
+  var growth =0;
 
-    var last =
-      recentMonths[
-        recentMonths.length - 1
-      ];
-
-    if (first > 0) {
-
-      growthRate =
-        (
-          (last - first)
-          / first
-        ) * 100;
-    }
+  if(prev>0)
+  {
+    growth=
+    ((last-prev)/prev)*100;
   }
-  return {
+
+  return{
+
     nextMonthRevenue:
-      forecast,
+    forecast,
+
     growthRate:
-      Number(
-        growthRate.toFixed(1)
-      )
+    Number(growth.toFixed(1))
+
   };
+
 }
 
-function buildBusinessScore(cache) {
+function buildBusinessScore(cache)
+{
   var summary =
     cache.summary;
+
+  var financial =
+    cache.financial;
+
   var insights =
     cache.insights;
+
   var score = 100;
 
   // Profit Margin
-  if (insights.profitMargin < 5) {
+
+  if(financial.profitMargin < 5)
+  {
     score -= 35;
-  } else if (insights.profitMargin < 10) {
+  }
+  else if(financial.profitMargin < 10)
+  {
     score -= 25;
-  } else if (insights.profitMargin < 15) {
+  }
+  else if(financial.profitMargin < 15)
+  {
     score -= 10;
   }
 
   // Revenue
-  if (summary.revenue < 1000000) {
+
+  if(financial.revenue < 1000000)
+  {
     score -= 15;
   }
 
   // Units Sold
-  if (summary.unitsSold < 100) {
+
+  if(summary.unitsSold < 100)
+  {
     score -= 10;
   }
 
   score =
-    Math.max(0, score);
+    Math.max(0,Math.round(score));
 
-  var status = "Excellent";
+  var status;
 
-  if (score < 60) {
-    status = "Critical";
-  } else if (score < 75) {
-    status = "Watch";
-  } else if (score < 90) {
+  if(score >= 90)
+  {
+    status = "Excellent";
+  }
+  else if(score >= 75)
+  {
     status = "Healthy";
   }
+  else if(score >= 60)
+  {
+    status = "Watch";
+  }
+  else
+  {
+    status = "Critical";
+  }
 
-  return {
-    score: score,
-    status: status
+  return{
+
+    score:score,
+
+    status:status,
+
+    breakdown:
+    {
+      profitMargin:
+        financial.profitMargin,
+
+      revenue:
+        financial.revenue,
+
+      unitsSold:
+        summary.unitsSold
+    }
+
   };
 
 }
 
-function buildRevenueIntelligence(cache) {
-  var trend =
-    cache.revenueTrend;
-  var values =
-    trend.values;
+function buildRevenueIntelligence(cache)
+{
+  var trend = cache.revenueTrend;
+  var values = trend.values;
 
-  if (values.length < 2) {
-    return {
-      direction: "Stable",
-      growthRate: 0,
-      momentum: "Neutral"
+  if(values.length < 2)
+  {
+    return{
+      direction:"Stable",
+      growthRate:0,
+      momentum:"Neutral"
     };
   }
 
+  // gunakan dua bulan terakhir yang sudah complete
+
   var current =
-    values[values.length - 1];
+    values[values.length-2];
+
   var previous =
-    values[values.length - 2];
-  var growthRate = 0;
-  if (previous > 0) {
-    growthRate =
-      (
-        (current - previous)
-        / previous
-      ) * 100;
+    values[values.length-3];
+
+  if(previous == null)
+  {
+    previous = current;
   }
 
-  return {
+  var growth = 0;
+
+  if(previous > 0)
+  {
+    growth =
+      ((current-previous)/previous)*100;
+  }
+
+  return{
 
     direction:
-      growthRate >= 0
-      ? "Up"
-      : "Down",
+      growth>=0
+      ?"Up"
+      :"Down",
 
     growthRate:
-      Number(
-        growthRate.toFixed(1)
-      ),
+      Number(growth.toFixed(1)),
 
     momentum:
-      Math.abs(growthRate) > 20
-      ? "Strong"
-      : "Moderate"
+
+      Math.abs(growth)>=15
+      ?"Strong"
+
+      :Math.abs(growth)>=5
+      ?"Moderate"
+
+      :"Stable"
+
   };
+
 }
 
 function buildExpenseIntelligence(cache) {
@@ -528,77 +995,48 @@ function buildExpenseIntelligence(cache) {
   };
 }
 
-function buildProfitIntelligence(cache) {
+function buildProfitIntelligence(cache)
+{
+  var financial =
+    cache.financial;
 
-  var revenueValues =
-    cache.revenueTrend.values;
-
-  if (revenueValues.length < 2) {
-
-    return {
-      direction: "Stable",
-      changeRate: 0,
-      status: "Neutral"
+  if(!financial)
+  {
+    return{
+      direction:"Stable",
+      changeRate:0,
+      status:"Neutral"
     };
   }
 
-  var currentProfit =
-    cache.summary.profit;
+  var margin =
+    Number(financial.profitMargin || 0);
 
-  var estimatedPreviousProfit =
-    currentProfit /
-    (
-      1 +
-      (
-        (
-          revenueValues[
-            revenueValues.length - 1
-          ]
-          -
-          revenueValues[
-            revenueValues.length - 2
-          ]
-        )
-        /
-        revenueValues[
-          revenueValues.length - 2
-        ]
-      )
-    );
-
-  var changeRate = 0;
-
-  if (estimatedPreviousProfit > 0) {
-
-    changeRate =
-      (
-        (
-          currentProfit
-          -
-          estimatedPreviousProfit
-        )
-        /
-        estimatedPreviousProfit
-      ) * 100;
-
-  }
-
-  return {
+  return{
 
     direction:
-      changeRate >= 0
+      margin >= 0
       ? "Up"
       : "Down",
 
     changeRate:
-      Number(
-        changeRate.toFixed(1)
-      ),
+      Math.abs(margin),
 
     status:
-      changeRate >= 0
-      ? "Improving"
-      : "Declining"
+
+      margin >= 15
+      ? "Strong"
+
+      : margin >= 10
+      ? "Healthy"
+
+      : margin >= 5
+      ? "Watch"
+
+      : margin >= 0
+      ? "Thin"
+
+      : "Loss"
 
   };
 
@@ -658,78 +1096,96 @@ function buildProfitTrend(data) {
   };
 }
 
-function buildExecutiveSummary(cache) {
-
+function buildExecutiveSummary(cache)
+{
   var score =
-    buildBusinessScore(cache);
+    cache.businessScore;
 
   var revenue =
-    buildRevenueIntelligence(cache);
+    cache.revenueIntelligence;
 
   var profit =
     cache.profitIntelligence;
 
   var summary = [];
 
-  if (revenue.direction === "Up") {
+  // Revenue
 
+  if(revenue.direction === "Up")
+  {
     summary.push(
       "Revenue menunjukkan tren positif."
     );
-
-  } else {
-
+  }
+  else
+  {
     summary.push(
       "Revenue mengalami penurunan dan memerlukan perhatian."
     );
-
   }
 
-  if (profit.direction === "Up") {
+  // Profit
 
+  if(profit.direction === "Up")
+  {
     summary.push(
-      "Profit masih tumbuh sehat."
+      "Profit berada dalam kondisi yang sehat."
     );
-
-  } else {
-
+  }
+  else
+  {
     summary.push(
-      "Profit mengalami tekanan dan perlu dioptimalkan."
+      "Profit memerlukan perhatian karena margin masih rendah."
     );
-
   }
 
-  if (score.score >= 80) {
+  // Business Score
 
-    summary.push(
-      "Kondisi bisnis sangat sehat."
-    );
+  switch(score.status)
+  {
+    case "Excellent":
 
-  } else if (score.score >= 60) {
+      summary.push(
+        "Kondisi bisnis sangat sehat dan layak dipertahankan."
+      );
 
-    summary.push(
-      "Kondisi bisnis cukup sehat namun masih ada ruang perbaikan."
-    );
+      break;
 
-  } else {
+    case "Healthy":
 
-    summary.push(
-      "Bisnis membutuhkan tindakan perbaikan segera."
-    );
+      summary.push(
+        "Kondisi bisnis sehat dengan beberapa peluang peningkatan."
+      );
 
+      break;
+
+    case "Watch":
+
+      summary.push(
+        "Performa bisnis perlu dipantau agar tidak mengalami penurunan."
+      );
+
+      break;
+
+    default:
+
+      summary.push(
+        "Bisnis membutuhkan tindakan perbaikan secepatnya."
+      );
+
+      break;
   }
 
   return summary.join(" ");
-
 }
 
-function buildRecommendationEngine(cache) {
-
+function buildRecommendationEngine(cache)
+{
   var insights =
     cache.insights;
 
   var score =
-    buildBusinessScore(cache);
+    cache.businessScore;
 
   var revenue =
     cache.revenueIntelligence;
@@ -744,135 +1200,146 @@ function buildRecommendationEngine(cache) {
 
   // Profit Margin
 
-  if (Number(insights.profitMargin) < 10) {
-
+  if(Number(insights.profitMargin) < 10)
+  {
     recommendations.push({
 
-      priority: "High",
-      score: 100,
+      priority:"High",
+
+      score:100,
+
       message:
         "Profit margin hanya " +
         insights.profitMargin +
         "%. Evaluasi struktur biaya dan harga jual."
 
     });
-
   }
 
   // Revenue Trend
 
-  if (revenue.direction === "Down") {
-
+  if(revenue.direction === "Down")
+  {
     recommendations.push({
 
-      priority: "High",
-      score: 90,
+      priority:"High",
+
+      score:90,
+
       message:
         "Revenue turun " +
         Math.abs(revenue.growthRate) +
         "%. Fokus pada peningkatan penjualan produk unggulan."
 
     });
-
   }
 
-  if (
-    forecast.growthRate < 0
-  ) {
+  // Forecast
 
+  if(forecast.growthRate < 0)
+  {
     recommendations.push({
 
-      priority: "High",
-      score: 95,
+      priority:"High",
+
+      score:95,
+
       message:
         "Forecast menunjukkan penurunan revenue bulan depan sebesar " +
         Math.abs(forecast.growthRate) +
         "%. Disarankan segera meningkatkan penjualan atau menjalankan promosi."
 
     });
-
   }
-  else {
-
+  else
+  {
     recommendations.push({
 
-      priority: "Low",
-      score: 20,
+      priority:"Low",
+
+      score:20,
+
       message:
         "Forecast menunjukkan pertumbuhan revenue sebesar " +
         forecast.growthRate +
         "%. Pertahankan strategi yang berjalan saat ini."
 
     });
-
   }
 
   // Best Seller
 
-  recommendations.push({
+  if(summary.bestSeller)
+  {
+    recommendations.push({
 
-    priority: "Medium",
-    score: 40,
-    message:
-      summary.bestSeller +
-      " merupakan produk terlaris. Pertimbangkan bundling atau upselling."
+      priority:"Medium",
 
-  });
+      score:40,
+
+      message:
+        summary.bestSeller +
+        " merupakan produk terlaris. Pertimbangkan bundling atau upselling."
+
+    });
+  }
 
   // Top Revenue Product
 
-  recommendations.push({
+  if(summary.topRevenueProduct)
+  {
+    recommendations.push({
 
-    priority: "Medium",
-    score: 35,
-    message:
-      summary.topRevenueProduct +
-      " menghasilkan revenue terbesar. Pastikan stok selalu tersedia."
+      priority:"Medium",
 
-  });
+      score:35,
+
+      message:
+        summary.topRevenueProduct +
+        " menghasilkan revenue terbesar. Pastikan stok selalu tersedia."
+
+    });
+  }
 
   // Top Expense
 
-  if (
-    insights.topExpense &&
-    insights.topExpense.amount > 0
-  ) {
-
+  if(insights.topExpense && insights.topExpense.amount > 0)
+  {
     recommendations.push({
 
-      priority: "Medium",
-      score: 70,
+      priority:"Medium",
+
+      score:70,
+
       message:
         insights.topExpense.category +
         " adalah biaya terbesar. Cari peluang efisiensi tanpa mengganggu operasional."
 
     });
-
   }
 
   // Business Score
 
-  if (score.score < 70) {
-
+  if(score.score < 70)
+  {
     recommendations.push({
 
-      priority: "High",
-      score: 85,
+      priority:"High",
+
+      score:85,
+
       message:
         "Business Score masih di bawah target ideal. Fokus pada profitabilitas dan pertumbuhan revenue."
 
     });
-
   }
 
-  recommendations.sort(function(a,b){
-
+  recommendations.sort(function(a,b)
+  {
     return b.score - a.score;
-
   });
 
   return recommendations;
-
 }
 
 function buildPriorityAction(cache) {
@@ -958,8 +1425,8 @@ function buildPriorityAction(cache) {
 
 }
 
-function buildRiskEngine(cache) {
-
+function buildRiskEngine(cache)
+{
   var risks = [];
 
   var revenue =
@@ -971,78 +1438,57 @@ function buildRiskEngine(cache) {
   var forecast =
     cache.forecast;
 
-  var insights =
-    cache.insights;
+  var financial =
+    cache.financial;
 
   // Revenue Risk
 
-  if (
-    revenue.direction === "Down"
-  ) {
-
+  if(revenue.direction === "Down")
+  {
     risks.push(
       "Revenue turun signifikan"
     );
-
   }
 
   // Profit Margin Risk
 
-  if (
-    Number(
-      insights.profitMargin
-    ) < 10
-  ) {
-
+  if(financial.profitMargin < 10)
+  {
     risks.push(
       "Profit margin rendah"
     );
-
   }
 
   // Forecast Risk
 
-  if (
-    forecast.growthRate < 0
-  ) {
-
+  if(forecast.growthRate < 0)
+  {
     risks.push(
       "Forecast menunjukkan penurunan"
     );
-
   }
 
   // Profit Risk
 
-  if (
-    profit.direction === "Down"
-  ) {
-
+  if(financial.netProfit < 0)
+  {
     risks.push(
-      "Profit sedang menurun"
+      "Bisnis mengalami kerugian"
     );
-
   }
 
-  var level =
-    "Low";
+  var level = "Low";
 
-  if (
-    risks.length >= 3
-  ) {
-
+  if(risks.length >= 3)
+  {
     level = "High";
-
   }
-  else if (
-    risks.length >= 1
-  ) {
-
+  else if(risks.length >= 1)
+  {
     level = "Medium";
-
   }
 
-  return {
+  return{
 
     riskLevel:
       level,
@@ -1057,8 +1503,8 @@ function buildRiskEngine(cache) {
 
 }
 
-function buildGrowthScore(cache) {
-
+function buildGrowthScore(cache)
+{
   var score = 0;
 
   var revenue =
@@ -1067,113 +1513,92 @@ function buildGrowthScore(cache) {
   var forecast =
     cache.forecast;
 
+  var financial =
+    cache.financial;
+
   var insights =
     cache.insights;
 
   // Revenue Trend (30)
 
-  if (
-    revenue.direction === "Up"
-  ) {
-
+  if(revenue.direction === "Up")
+  {
     score += 30;
-
   }
-  else {
-
+  else
+  {
     score += 10;
-
   }
 
   // Forecast (30)
 
-  if (
-    forecast.growthRate > 10
-  ) {
-
+  if(forecast.growthRate >= 10)
+  {
     score += 30;
-
   }
-  else if (
-    forecast.growthRate > 0
-  ) {
-
+  else if(forecast.growthRate >= 0)
+  {
     score += 20;
-
   }
-  else {
-
+  else
+  {
     score += 5;
-
   }
 
   // Profit Margin (20)
 
-  if (
-    Number(insights.profitMargin) >= 15
-  ) {
-
+  if(financial.profitMargin >= 15)
+  {
     score += 20;
-
   }
-  else if (
-    Number(insights.profitMargin) >= 10
-  ) {
-
+  else if(financial.profitMargin >= 10)
+  {
     score += 10;
-
   }
-  else {
-
+  else
+  {
     score += 5;
-
   }
 
-  // Revenue per Cup (20)
+  // Revenue Per Cup (20)
 
-  if (
-    insights.revenuePerCup >= 15000
-  ) {
-
+  if(insights.revenuePerCup >= 15000)
+  {
     score += 20;
-
   }
-  else if (
-    insights.revenuePerCup >= 12000
-  ) {
-
+  else if(insights.revenuePerCup >= 12000)
+  {
     score += 15;
-
   }
-  else {
-
+  else
+  {
     score += 5;
-
   }
 
-  var status =
-    "Low Potential";
+  var status = "Low Potential";
 
-  if (score >= 80) {
-
-    status =
-      "High Potential";
-
+  if(score >= 80)
+  {
+    status = "High Potential";
   }
-  else if (score >= 60) {
-
-    status =
-      "Moderate Potential";
-
+  else if(score >= 60)
+  {
+    status = "Moderate Potential";
   }
 
-  return {
+  return{
 
-    growthScore:
-      score,
+    growthScore:score,
 
-    status:
-      status
+    status:status,
+
+    breakdown:
+    {
+      revenue:revenue.direction,
+      forecast:forecast.growthRate,
+      profitMargin:financial.profitMargin,
+      revenuePerCup:insights.revenuePerCup
+    }
 
   };
 
@@ -1411,42 +1836,33 @@ function buildRecentTransactions(data) {
 
 }
 
-function buildInsights(data) {
-
+function buildInsights(data)
+{
   var summary =
     buildSummary(data);
 
   var expenses =
     buildExpenseBreakdown(data);
 
-  expenses.sort(function(a,b){
+  var financial =
+    buildFinancial(data);
 
+  expenses.sort(function(a,b)
+  {
     return b.amount - a.amount;
-
   });
 
   return {
 
     profitMargin:
-
-      summary.revenue > 0
-
-      ? (
-          summary.profit
-          /
-          summary.revenue
-          * 100
-        ).toFixed(1)
-
-      : 0,
+      financial.profitMargin,
 
     revenuePerCup:
 
       summary.unitsSold > 0
 
       ? Math.round(
-          summary.revenue
-          /
+          financial.revenue /
           summary.unitsSold
         )
 
@@ -1458,7 +1874,10 @@ function buildInsights(data) {
 
       ? expenses[0]
 
-      : null
+      : null,
+
+    financial:
+      financial
 
   };
 
@@ -1488,7 +1907,7 @@ function buildDiagnosis(data, cache) {
 
       level: "warning",
 
-      category: "profit",
+      category: "summary",
 
       priority: "critical",
 
@@ -1595,7 +2014,7 @@ function buildDiagnosis(data, cache) {
 
   diagnosis.push({
 
-    level: "good",
+    level: "attention",
 
     category: "revenue",
 
@@ -1621,10 +2040,10 @@ function buildDiagnosis(data, cache) {
 
     level:
       revenueTrend.status === "down"
-        ? "warning"
+        ? "attention"
         : "good",
 
-    category: "trend",
+    category: "businessCard",
 
     priority:
       revenueTrend.status === "down"
@@ -1638,6 +2057,29 @@ function buildDiagnosis(data, cache) {
     message: revenueTrend.message
 
   });
+
+  // ===============================
+  // Executive Summary Priority
+  // ===============================
+
+  const priority =
+  {
+    warning: 1,
+    attention: 2,
+    good: 3
+  };
+
+  diagnosis =
+  diagnosis
+  .sort(function(a,b)
+  {
+    return priority[a.level] - priority[b.level];
+  })
+  .filter(function(item)
+  {
+    return item.category !== "businessCard";
+  })
+  .slice(0,3);
 
   return diagnosis;
 
@@ -1768,13 +2210,22 @@ function detectCategoryDominance(data) {
 
 function buildAnalyticsCache(data) {
 
-  var cache = {
+    var cache = {
+
+    aggregate:
+      buildAggregate(data),
+
+    financial:
+      buildFinancial(data),
 
     summary:
       buildSummary(data),
 
     insights:
       buildInsights(data),
+
+    trend:
+      buildTrendEngine(data),
 
     revenueTrend:
       buildRevenueTrend(data),
@@ -1814,11 +2265,11 @@ function buildAnalyticsCache(data) {
   cache.profitIntelligence =
     buildProfitIntelligence(cache);
 
+  cache.businessScore =
+    buildBusinessScore(cache);  
+  
   cache.executiveSummary =
     buildExecutiveSummary(cache);
-
-  cache.businessScore =
-    buildBusinessScore(cache);
 
   cache.priorityAction =
     buildPriorityAction(cache);

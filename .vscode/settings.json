@@ -1,0 +1,41 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.detectIndentation": false,
+
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimTrailingWhitespace": true,
+
+  "explorer.confirmDelete": false,
+
+  "javascript.format.enable": false,
+
+  "prettier.singleQuote": true,
+  "prettier.semi": true,
+  "prettier.tabWidth": 2,
+
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+
+  "eslint.validate": ["javascript", "html"],
+
+  "cSpell.language": "en, id",
+  "cSpell.allowCompoundWords": true,
+  "cSpell.words": [
+    "AppScript",
+    "Apps",
+    "CRUD",
+    "Dashboard",
+    "GitLens",
+    "Kanembornu",
+    "Numlock",
+    "Tailwind"
+  ],
+
+  "files.autoSave": "afterDelay"
+}

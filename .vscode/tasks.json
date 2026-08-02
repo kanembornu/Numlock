@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "clasp push",
+      "type": "shell",
+      "command": "clasp push",
+      "problemMatcher": []
+    },
+    {
+      "label": "clasp pull",
+      "type": "shell",
+      "command": "clasp pull",
+      "problemMatcher": []
+    }
+  ]
+}

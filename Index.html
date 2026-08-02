@@ -146,48 +146,84 @@
       </div>
     </div>
 
-    <!-- ANALYTICS ROW -->
-      <div class="bg-white rounded-[32px] p-7 shadow-lg border border-slate-100">
-        <p class="text-xs font-semibold tracking-wider uppercase text-slate-400 mb-2"> EXECUTIVE SUMMARY </p>
-        <h3 class="text-2xl font-bold text-slate-800 mb-2"> Executive Insights </h3>
-        <p class="text-sm text-slate-500 mb-6"> Top business findings this month </p>
-        <div id="diagnosisContainer" class="space-y-4"></div>
-      </div>
+    <!-- ==================================================
+        DASHBOARD INTELLIGENCE
+    ================================================== -->
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
 
-      <p class="text-xs font-semibold tracking-wider uppercase text-slate-400 mb-2"> BUSINESS INTELLIGENCE </p>
-      <h3 class="text-2xl font-bold text-slate-800 mb-2"> Executive Analysis </h3>
-      <p class="text-sm text-slate-500 mb-6"> Revenue, cost, profitability and forecast overview </p>
+      <!-- EXECUTIVE SUMMARY -->
+      <section class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100 flex flex-col">
 
-      <div class="bg-white rounded-[32px] p-7 shadow-lg border border-slate-100">
-        <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3"> Revenue Intelligence </h3>
-        <div id="revenueIntelContainer" class="space-y-3"> </div>
+        <div class="mb-5">
+          <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
+            Executive Summary
+          </p>
 
-        <div class="border-t border-slate-100 my-6"></div>
+          <h2 class="mt-2 text-[2rem] font-bold text-slate-900">
+            Executive Insights
+          </h2>
 
-        <div class="mt-6">
-        <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3"> Expense Intelligence </h3>
-        <div id="expenseIntelContainer" class="space-y-3"> </div>
+          <p class="mt-2 text-[15px] text-slate-500">
+            Most important insights requiring your attention
+          </p>
         </div>
 
-        <div class="border-t border-slate-100 my-6"></div>
+        <div id="diagnosisContainer" class="space-y-4 flex-1"></div>
 
-        <div class="mt-6">
-        <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3"> Profit Intelligence </h3>
-        <div id="profitIntelContainer" class="space-y-3"> </div>
+      </section>
+
+      <!-- BUSINESS INTELLIGENCE -->
+      <section class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100 h-full flex flex-col">
+
+        <div class="mb-6">
+          <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
+            Business Intelligence
+          </p>
+
+          <h2 class="mt-2 text-[2rem] font-bold text-slate-900">
+            Executive Analysis
+          </h2>
+
+          <p class="mt-2 text-[15px] text-slate-500">
+            Revenue, expense, profit and forecast overview
+          </p>
         </div>
 
-        <div class="border-t border-slate-100 my-6"></div>
+        <div class="grid grid-cols-2 gap-5 flex-1 auto-rows-fr">
 
-        <div class="mt-6">
-        <h4 class="text-sm font-semibold uppercase tracking-wide text-slate-500 mb-3"> 30-Days Forecast </h3>
-        <div id="forecastContainer"></div>
+          <div class="self-start" id="revenueIntelContainer"></div>
+
+          <div class="self-start" id="expenseIntelContainer"></div>
+
+          <div class="self-start" id="profitIntelContainer"></div>
+
+          <div class="self-start" id="forecastContainer"></div>
+
         </div>
-      </div>
 
-      <div class="bg-white rounded-[32px] p-7 shadow-lg border border-slate-100">
-        <h3 class="font-semibold mb-4"> Recommended Actions </h3>
-        <div id="recommendationContainer" class="space-y-3"></div>
-      </div>
+      </section>
+
+      <!-- ACTION CENTER -->
+      <section class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100 flex flex-col">
+
+        <div class="mb-6">
+          <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
+            Action Center
+          </p>
+
+          <h2 class="mt-2 text-[2rem] font-bold text-slate-900">
+            Recommended Actions
+          </h2>
+
+          <p class="mt-2 text-[15px] text-slate-500">
+            Prioritized business improvements
+          </p>
+        </div>
+
+        <div id="recommendationContainer" class="mt-6"></div>
+
+      </section>
+
     </div>
 
     <!-- EXECUTIVE DECISION CENTER -->
@@ -481,145 +517,351 @@
         }
     }
     
-    function renderIntelCard(config)
+    function heroIcon(type)
     {
-      const theme = {
-        slate: {
-          bg: "bg-slate-50",
-          border: "border-slate-200",
-          icon: "text-slate-600",
-          iconBg: "bg-slate-100"
-        },
+        const icons =
+        {
+            revenue:`
+    <svg xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-5 h-5 text-indigo-600">
 
-        emerald: {
-          bg: "bg-emerald-50",
-          border: "border-emerald-100",
-          icon: "text-emerald-600",
-          iconBg: "bg-emerald-100"
-        },
+    <path stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M3 17l6-6 4 4 7-7"/>
 
-        amber: {
-          bg: "bg-amber-50",
-          border: "border-amber-100",
-          icon: "text-amber-600",
-          iconBg: "bg-amber-100"
-        },
+    </svg>`,
 
-        rose: {
-          bg: "bg-rose-50",
-          border: "border-rose-100",
-          icon: "text-rose-600",
-          iconBg: "bg-rose-100"
-        },
+            expense:`
+    <svg xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-5 h-5 text-rose-600">
 
-        indigo: {
-          bg: "bg-indigo-50",
-          border: "border-indigo-100",
-          icon: "text-indigo-600",
-          iconBg: "bg-indigo-100"
+    <path stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M2.25 8.25h19.5v7.5H2.25z"/>
+
+    </svg>`,
+
+            profit:`
+    <svg xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-5 h-5 text-amber-600">
+
+    <path stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M3 3v18h18"/>
+
+    <path stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M7 14l4-4 3 3 5-7"/>
+
+    </svg>`,
+
+            forecast:`
+    <svg xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke-width="2"
+    stroke="currentColor"
+    class="w-5 h-5 text-indigo-600">
+
+    <path stroke-linecap="round"
+    stroke-linejoin="round"
+    d="M4.5 19.5L9 12l3 3 7.5-10.5"/>
+
+    </svg>`
+        };
+
+        return icons[type];
+    }
+
+    function renderDiagnosisCard(item)
+    {
+      const config =
+        item.level==="warning"
+        ?
+        {
+        bg:"bg-red-50",
+        border:"border-red-100",
+        badge:"bg-red-100 text-red-700",
+        iconBg:"bg-red-500",
+        icon:"💰",
+        label:"CRITICAL"
         }
-      };
-
-      const style = theme[config.theme] || theme.slate;
+        :
+        item.level==="attention"
+        ?
+        {
+        bg:"bg-amber-50",
+        border:"border-amber-100",
+        badge:"bg-amber-100 text-amber-700",
+        iconBg:"bg-amber-500",
+        icon:"⚠️",
+        label:"ATTENTION"
+        }
+        :
+        {
+        bg:"bg-emerald-50",
+        border:"border-emerald-100",
+        badge:"bg-emerald-100 text-emerald-700",
+        iconBg:"bg-emerald-500",
+        icon:"🏆",
+        label:"OPPORTUNITY"
+        };
 
       return `
-        <div class="${style.bg} ${style.border} border rounded-2xl p-5 h-full">
+      <div class="${config.bg} border ${config.border} rounded-[24px] p-5">
 
-          <div class="flex items-center justify-between mb-4">
+          <div class="flex items-start gap-4">
 
-            <div>
-
-              <p class="text-xs uppercase tracking-wider text-slate-500">
-
-                ${config.label}
-
-              </p>
-
-              <h4 class="text-lg font-bold text-slate-800 mt-1">
-
-                ${config.title}
-
-              </h4>
-
-            </div>
-
-              <div class="w-11 h-11 rounded-2xl ${style.iconBg} flex items-center justify-center">
+              <div class="w-11 h-11 rounded-full ${config.iconBg} flex items-center justify-center text-white shrink-0">
 
                   ${config.icon}
 
               </div>
 
-            </div>
+              <div class="flex-1">
+
+                  <span class="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold tracking-wide ${config.badge}">
+
+                      ${config.label}
+
+                  </span>
+
+                  <h4 class="mt-2 text-lg font-bold text-slate-900">
+
+                      ${item.title}
+
+                  </h4>
+
+                  <p class="mt-2 text-sm leading-6 text-slate-600">
+
+                      ${item.description}
+
+                  </p>
+
+              </div>
 
           </div>
 
-          <div class="text-2xl font-bold text-slate-800">
-
-            ${config.value}
-
-          </div>
-
-          <p class="mt-2 text-sm text-slate-600">
-
-            ${config.subtitle}
-
-          </p>
-
-        </div>
+      </div>
       `;
     }
-    
-    function renderActionCard(config)
+
+    function renderIntelCard(config)
     {
-      const theme = {
-        critical: {
-          border: "border-red-200",
-          bg: "bg-red-50",
-          badge: "bg-red-100 text-red-700"
+      const theme =
+      {
+        indigo:
+        {
+          bg:"bg-indigo-50",
+          border:"border-indigo-100",
+          badge:"bg-indigo-100",
+          value:"text-slate-900"
         },
 
-        warning: {
-          border: "border-amber-200",
-          bg: "bg-amber-50",
-          badge: "bg-amber-100 text-amber-700"
+        rose:
+        {
+          bg:"bg-rose-50",
+          border:"border-rose-100",
+          badge:"bg-rose-100",
+          value:"text-slate-900"
         },
 
-        opportunity: {
-          border: "border-emerald-200",
-          bg: "bg-emerald-50",
-          badge: "bg-emerald-100 text-emerald-700"
+        amber:
+        {
+          bg:"bg-amber-50",
+          border:"border-amber-100",
+          badge:"bg-amber-100",
+          value:"text-slate-900"
+        },
+
+        emerald:
+        {
+          bg:"bg-emerald-50",
+          border:"border-emerald-100",
+          badge:"bg-emerald-100",
+          value:"text-slate-900"
         }
-      };
 
-      const style = theme[config.priority] || theme.warning;
+      }[config.theme];
 
       return `
-        <div class="${style.bg} ${style.border} border rounded-2xl p-5">
 
-          <div class="flex items-center justify-between">
+    <div class="
+    ${theme.bg}
+    border
+    ${theme.border}
+    rounded-[28px]
+    p-6
+    h-full
+    flex
+    flex-col
+    justify-between">
 
-            <h4 class="font-semibold text-slate-800">
+        <div>
 
-              ${config.title}
+            <div class="flex items-start justify-between">
 
-            </h4>
+                <div class="text-[11px]
+                            tracking-[0.25em]
+                            uppercase
+                            font-bold
+                            text-slate-500">
 
-            <span class="${style.badge} text-xs font-semibold px-3 py-1 rounded-full">
+                    ${config.label}
 
-              ${config.priority.toUpperCase()}
+                </div>
 
-            </span>
+                <div class="
+                ${theme.badge}
+                w-11
+                h-11
+                rounded-2xl
+                flex
+                items-center
+                justify-center">
 
-          </div>
+                    ${config.icon}
 
-          <p class="mt-3 text-sm leading-6 text-slate-600">
+                </div>
 
-            ${config.description}
+            </div>
 
-          </p>
+            <div class="mt-8">
+
+                <div class="text-[18px]
+                            font-semibold
+                            text-slate-900">
+
+                    ${config.title}
+
+                </div>
+
+                <div class="
+                            mt-3
+                            text-[24px]
+                            leading-tight
+                            font-extrabold
+                            ${theme.value}">
+
+                    ${config.value}
+
+                </div>
+
+            </div>
 
         </div>
-      `;
+
+        <div class="mt-8
+                    pt-5
+                    border-t
+                    border-slate-200">
+
+            <div class="text-[15px]
+                        text-slate-500
+                        leading-relaxed">
+
+                ${config.subtitle}
+
+            </div>
+
+        </div>
+
+    </div>
+
+    `;
+
+    }
+    
+    function renderTimelineItem(item,index)
+    {
+        var config =
+        {
+            High:
+            {
+                dot:"bg-red-500",
+                badge:"bg-red-100 text-red-700",
+                label:"Critical"
+            },
+
+            Medium:
+            {
+                dot:"bg-amber-500",
+                badge:"bg-amber-100 text-amber-700",
+                label:"Warning"
+            },
+
+            Low:
+            {
+                dot:"bg-emerald-500",
+                badge:"bg-emerald-100 text-emerald-700",
+                label:"Opportunity"
+            }
+        }[item.priority] ||
+        {
+            dot:"bg-slate-400",
+            badge:"bg-slate-100 text-slate-600",
+            label:item.priority
+        };
+
+        return `
+
+        <div class="relative flex gap-4 pb-8">
+
+            ${
+            index < 6
+            ?
+            `<div class="absolute left-[14px] top-8 bottom-0 w-px bg-slate-200"></div>`
+            :
+            ""
+            }
+
+            <div class="relative z-10">
+
+                <div class="w-7 h-7 rounded-full ${config.dot} border-4 border-white shadow"></div>
+
+            </div>
+
+            <div class="flex-1">
+
+                <div class="flex items-center justify-between">
+
+                    <h4 class="font-semibold text-slate-800">
+
+                        Step ${index+1}
+
+                    </h4>
+
+                    <span class="px-3 py-1 rounded-full text-xs font-bold ${config.badge}">
+
+                        ${config.label}
+
+                    </span>
+
+                </div>
+
+                <p class="mt-2 text-[15px] leading-7 text-slate-600">
+
+                    ${item.message}
+
+                </p>
+
+            </div>
+
+        </div>
+
+        `;
     }
 
     function renderCharts(res)
@@ -873,185 +1115,90 @@
     {
       if (res.diagnosis && res.diagnosis.length)
       {
-        document.getElementById("diagnosisContainer").innerHTML = res.diagnosis.map(function(item,index)
-        {
-            var config =
-              item.level === "warning"
-              ?
-              {
-                border: "border-red-100",
-                badge: "bg-red-100 text-red-700",
-                circle: "bg-red-500",
-                title: "Critical"
-              }
-              :
-              {
-                border: "border-emerald-100",
-                badge: "bg-emerald-100 text-emerald-700",
-                circle: "bg-emerald-500",
-                title: "Opportunity"
-              };
-
-            var iconMap = {
-              profit: "💰",
-              revenue: "📈",
-              expense: "💳",
-              sales: "🏆",
-              trend: "📊",
-              product: "☕"
-            };
-
-            var icon = iconMap[item.category] || "📌";
-
-            var badgeMap = {
-              critical: {
-                text: "Critical",
-                badge: "bg-red-100 text-red-700"
-              },
-
-              attention: {
-                text: "Attention",
-                badge: "bg-amber-100 text-amber-700"
-              },
-
-              opportunity: {
-                text: "Opportunity",
-                badge: "bg-emerald-100 text-emerald-700"
-              },
-
-              good: {
-                text: "Healthy",
-                badge: "bg-sky-100 text-sky-700"
-              },
-
-              high: {
-                text: "High Impact",
-                badge: "bg-indigo-100 text-indigo-700"
-              }
-            };
-
-            var badge = badgeMap[item.priority] || badgeMap.good;
-
-            return `
-            <div class="border ${config.border} rounded-3xl p-5 bg-white">
-
-              <div class="flex items-start gap-4">
-
-                <div class="w-11 h-11 rounded-full ${config.circle} flex items-center justify-center text-white text-lg shrink-0">
-
-                  ${icon}
-
-                </div>
-
-                <div class="flex-1">
-
-                  <span class="inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${config.badge}">
-                    ${config.title}
-                  </span>
-
-                  ${item.title
-                  ?
-                  `
-                  <h4 class="mt-3 text-lg font-bold text-slate-800">
-                      ${item.title}
-                  </h4>
-
-                  <p class="mt-2 text-sm leading-6 text-slate-600">
-                      ${item.description}
-                  </p>
-                  `
-                  :
-                  `
-                  <p class="mt-3 text-base leading-6 text-slate-700">
-                      ${item.message}
-                  </p>
-                  `
-                  }
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-            `;
-        }).join("");
+        document.getElementById("diagnosisContainer").innerHTML =
+        res.diagnosis
+        .map(renderDiagnosisCard)
+        .join("");
 
         document.getElementById("revenueIntelContainer").innerHTML =
         renderIntelCard({
 
-            theme: "indigo",
+          theme:"indigo",
 
-            label: "Revenue",
+          label:"Revenue",
 
-            icon:
-              res.revenueIntelligence.direction === "Up"
-              ? "📈"
-              : "📉",
+          icon:heroIcon("revenue"),
 
-            title:
-              res.revenueIntelligence.direction === "Up"
-              ? "Growth"
-              : "Decline",
+          title:"Revenue",
 
-            value:
-              res.revenueIntelligence.growthRate + "%",
+          title:"Revenue",
 
-            subtitle:
-              "Momentum : " +
-              res.revenueIntelligence.momentum
+          value:
+          "Rp " +
+          res.summary.revenue.toLocaleString("id-ID"),
 
-        });
+          subtitle:
+          (res.revenueIntelligence.growthRate>=0 ? "▲ " : "▼ ")
+          +
+          Math.abs(res.revenueIntelligence.growthRate)
+          +
+          "% dibanding periode sebelumnya"
+
+          });
 
         document.getElementById("expenseIntelContainer").innerHTML =
         renderIntelCard({
 
-            theme: "rose",
+          theme:"rose",
 
-            label: "Expense",
+          label:"Expense",
 
-            icon: "💳",
+          icon:heroIcon("expense"),
 
-            title: "Largest Expense",
+          title:
+          res.expenseIntelligence.highestExpense,
 
-            value: res.expenseIntelligence.highestExpense,
+          value:
+          "Rp " +
+          res.expenseIntelligence.highestAmount.toLocaleString("id-ID"),
 
-            subtitle:
-              "Rp " +
-              res.expenseIntelligence.highestAmount.toLocaleString("id-ID") +
-              " • " +
-              res.expenseIntelligence.expenseShare +
-              "% of total"
+          subtitle:
+          res.expenseIntelligence.expenseShare +
+          "% dari total biaya"
 
-        });
+          });
 
         document.getElementById("profitIntelContainer").innerHTML =
         renderIntelCard({
 
-            theme:
-              res.profitIntelligence.direction === "Up"
-              ? "emerald"
-              : "amber",
+          theme:
+          res.summary.profit>=0
+          ?
+          "emerald"
+          :
+          "amber",
 
-            label: "Profit",
+          label:"Profit",
 
-            icon:
-              res.profitIntelligence.direction === "Up"
-              ? "📈"
-              : "📉",
+          icon:heroIcon("profit"),
 
-            title:
-              res.profitIntelligence.direction === "Up"
-              ? "Improving"
-              : "Declining",
+          title:
+          res.summary.profit>=0
+          ?
+          "Net Profit"
+          :
+          "Net Loss",
 
-            value:
-              res.profitIntelligence.changeRate + "%",
+          value:
+          "Rp " +
+          Math.abs(res.summary.profit).toLocaleString("id-ID"),
 
-            subtitle:
-              res.profitIntelligence.status
+          subtitle:
+          "Margin " +
+          res.insights.profitMargin +
+          "%"
 
-        });
+          });
       }
 
       if (res.forecast)
@@ -1064,27 +1211,26 @@
         document.getElementById("forecastContainer").innerHTML =
         renderIntelCard({
 
-            theme: "indigo",
+          theme:"indigo",
 
-            label: "Forecast",
+          label:"Forecast",
 
-            icon:
-              res.forecast.growthRate >= 0
-              ? "📈"
-              : "📉",
+          icon:heroIcon("forecast"),
 
-            title: "Next Month",
+          title:"Next Month",
 
-            value:
-              "Rp " +
-              res.forecast.nextMonthRevenue.toLocaleString("id-ID"),
+          value:
+          "Rp " +
+          res.forecast.nextMonthRevenue.toLocaleString("id-ID"),
 
-            subtitle:
-              "Growth Forecast : " +
-              res.forecast.growthRate +
-              "%"
+          subtitle:
+          (res.forecast.growthRate>=0 ? "▲ " : "▼ ")
+          +
+          Math.abs(res.forecast.growthRate)
+          +
+          "% forecast"
 
-        });
+          });
       }
     }
 
@@ -1215,29 +1361,10 @@
       if (res.recommendations && res.recommendations.length)
       {
           document.getElementById("recommendationContainer").innerHTML =
-          res.recommendations.map(function(item, index)
-          {
-              var priorityMap =
-              {
-                  High: "critical",
-                  Medium: "warning",
-                  Low: "opportunity"
-              };
-
-              return renderActionCard({
-
-                  priority:
-                      priorityMap[item.priority] || "warning",
-
-                  title:
-                      "#" + (index + 1) + " Priority",
-
-                  description:
-                      item.message
-
-              });
-
-          }).join("");
+          res.recommendations
+          .slice(0,6)
+          .map(renderTimelineItem)
+          .join("");
       }
     }
 
