@@ -794,12 +794,100 @@ function buildRevenueTrend(data)
 
 }
 
-function buildTrendEngine(data)
+function buildRevenueTrendFromAggregate(aggregate)
+{
+  var today = new Date();
+
+  var currentMonth =
+    today.getFullYear() +
+    "-" +
+    ("0"+(today.getMonth()+1)).slice(-2);
+
+  var labels =
+    Object.keys(
+      aggregate.monthlyRevenue
+    )
+    .filter(function(label)
+    {
+      return label != currentMonth;
+    })
+    .sort();
+
+  var values =
+    labels.map(function(label)
+    {
+      return aggregate.monthlyRevenue[label];
+    });
+
+  return {
+    labels:labels,
+    values:values
+  };
+}
+
+function validateRevenueTrendMigration(data)
+{
+  var legacyTrend =
+    buildRevenueTrend(data);
+
+  var aggregateTrend =
+    buildRevenueTrendFromAggregate(
+      buildAggregate(data)
+    );
+
+  ["labels", "values"]
+  .forEach(function(field)
+  {
+    if(
+      JSON.stringify(legacyTrend[field])
+      !==
+      JSON.stringify(aggregateTrend[field])
+    )
+    {
+      throw new Error(
+        "Revenue trend migration mismatch for " +
+        field +
+        ": legacy=" +
+        JSON.stringify(legacyTrend[field]) +
+        ", aggregate=" +
+        JSON.stringify(aggregateTrend[field])
+      );
+    }
+  });
+
+  return {
+    passed:true,
+    legacy:legacyTrend,
+    aggregate:aggregateTrend
+  };
+}
+
+function testRevenueTrendMigration()
+{
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  return validateRevenueTrendMigration(processed);
+}
+
+function buildTrendEngine(data, revenueTrend)
 {
   return {
 
     revenue:
-      buildRevenueTrend(data),
+      revenueTrend,
 
     profit:
       buildProfitTrend(data),
@@ -813,10 +901,10 @@ function buildTrendEngine(data)
   };
 }
 
-function buildForecast(data)
+function buildForecast(cache)
 {
   var trend =
-    buildRevenueTrend(data);
+    cache.revenueTrend;
 
   var values =
     trend.values;
@@ -1976,7 +2064,7 @@ function buildDiagnosis(data, cache) {
   var diagnosis = [];
 
   var revenueTrend =
-    detectRevenueTrend(data);
+    detectRevenueTrend(cache);
 
   var categoryTrend =
   detectCategoryDominance(data);
@@ -2167,10 +2255,10 @@ function buildDiagnosis(data, cache) {
 
 }
 
-function detectRevenueTrend(data) {
+function detectRevenueTrend(cache) {
 
   var trend =
-    buildRevenueTrend(data);
+    cache.revenueTrend;
 
   var values =
     trend.values;
@@ -2313,17 +2401,22 @@ function buildAnalyticsCache(data) {
       cache.summary
     );
 
-  cache.trend =
-    buildTrendEngine(data);
-
   cache.revenueTrend =
-    buildRevenueTrend(data);
+    buildRevenueTrendFromAggregate(
+      cache.aggregate
+    );
+
+  cache.trend =
+    buildTrendEngine(
+      data,
+      cache.revenueTrend
+    );
 
   cache.expenseBreakdown =
     buildExpenseBreakdown(data);
 
   cache.forecast =
-    buildForecast(data);
+    buildForecast(cache);
 
   cache.hotColdSplit = 
     buildHotColdSplit(data);
