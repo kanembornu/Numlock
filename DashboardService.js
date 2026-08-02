@@ -303,25 +303,23 @@ function buildAggregate(data)
         (aggregate.expenseCategory[expenseKey] || 0)
         + expense;
     }
+
+    var profitMonthKey =
+      Utilities.formatDate(
+        new Date(row.date),
+        Session.getScriptTimeZone(),
+        "yyyy-MM"
+      );
+
+    aggregate.monthlyProfit[profitMonthKey] =
+      (aggregate.monthlyProfit[profitMonthKey] || 0)
+      + revenue
+      - expense;
   
   aggregate.activeDaysCount =
   Object.keys(
     aggregate.activeDays
   ).length;
-
-  Object.keys(
-    aggregate.monthlyRevenue
-  ).forEach(function(month)
-  {
-    aggregate.monthlyProfit[month] =
-
-      (aggregate.monthlyRevenue[month] || 0)
-
-      -
-
-      (aggregate.monthlyExpense[month] || 0);
-
-  });
 
   });
 
@@ -888,7 +886,7 @@ function buildTrendEngine(data, cache)
       cache.revenueTrend,
 
     profit:
-      buildProfitTrend(data),
+      cache.profitTrend,
 
     hotCold:
       buildHotColdSplit(data),
@@ -1265,6 +1263,88 @@ function buildProfitTrend(data) {
     labels: labels,
     values: values
   };
+}
+
+function buildProfitTrendFromAggregate(aggregate) {
+
+  var labels =
+    Object.keys(
+      aggregate.monthlyProfit
+    )
+    .sort();
+
+  var values =
+    labels.map(function(label) {
+
+      return aggregate.monthlyProfit[label];
+
+    });
+
+  return {
+    labels: labels,
+    values: values
+  };
+
+}
+
+function validateProfitTrendMigration(data) {
+
+  var legacyTrend =
+    buildProfitTrend(data);
+
+  var aggregateTrend =
+    buildProfitTrendFromAggregate(
+      buildAggregate(data)
+    );
+
+  ["labels", "values"]
+  .forEach(function(field) {
+
+    if (
+      JSON.stringify(legacyTrend[field]) !==
+      JSON.stringify(aggregateTrend[field])
+    ) {
+      throw new Error(
+        "Profit trend migration mismatch for " +
+        field +
+        ": legacy=" +
+        JSON.stringify(legacyTrend[field]) +
+        ", aggregate=" +
+        JSON.stringify(aggregateTrend[field])
+      );
+    }
+
+  });
+
+  return {
+    passed: true,
+    legacy: legacyTrend,
+    aggregate: aggregateTrend
+  };
+
+}
+
+function testProfitTrendMigration() {
+
+  var ss =
+    SpreadsheetApp.getActiveSpreadsheet();
+
+  var transactions =
+    getTransactionData(ss);
+
+  var priceMap =
+    getPriceMap(ss);
+
+  var processed =
+    processTransactions(
+      transactions,
+      priceMap
+    );
+
+  return validateProfitTrendMigration(
+    processed
+  );
+
 }
 
 function buildExecutiveSummary(cache)
@@ -2592,6 +2672,11 @@ function buildAnalyticsCache(data) {
       cache.aggregate
     );
 
+  cache.profitTrend =
+    buildProfitTrendFromAggregate(
+      cache.aggregate
+    );
+
   cache.trend =
     buildTrendEngine(
       data,
@@ -2612,9 +2697,6 @@ function buildAnalyticsCache(data) {
 
   cache.paretoAnalysis =
     buildParetoAnalysis(cache);
-
-  cache.profitTrend =
-    buildProfitTrend(data);
 
   cache.revenueIntelligence =
     buildRevenueIntelligence(cache);
