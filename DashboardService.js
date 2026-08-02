@@ -890,7 +890,7 @@ function testRevenueTrendMigration()
   return validateRevenueTrendMigration(processed);
 }
 
-function buildTrendEngine(data, cache)
+function buildTrendEngine(cache)
 {
   return {
 
@@ -2764,10 +2764,7 @@ function buildAnalyticsCache(data) {
     );
 
   cache.trend =
-    buildTrendEngine(
-      data,
-      cache
-    );
+    buildTrendEngine(cache);
 
   cache.forecast =
     buildForecast(cache);
