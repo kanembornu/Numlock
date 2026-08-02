@@ -20,13 +20,15 @@ The numbered architecture is frozen as the verified production structure. It has
 
 ## Developer onboarding
 
-Prerequisites are Git, VS Code, Node.js for local syntax checks, the Google `clasp` CLI, and access to the NUMLOCK Apps Script project and backing spreadsheet.
+Prerequisites are Git, VS Code, Node.js for local syntax checks and the Tailwind build, the Google `clasp` CLI, and access to the NUMLOCK Apps Script project and backing spreadsheet.
 
 1. Clone the repository and open `Numlock.code-workspace`.
 2. Read `AGENTS.md`, [Project Context](.ai/PROJECT_CONTEXT.md), and [Development Workflow](docs/DEVELOPMENT-WORKFLOW.md).
 3. Confirm `git status --short` and preserve unrelated changes.
 4. Confirm the active clasp account and run `clasp status` before any upload.
 5. Use the testing and deployment gates below; never expose `.clasp.json` or credential files.
+
+Install the pinned development tooling with `npm ci`. Run `npm run build:tailwind` after frontend class changes and before `clasp status`. The command generates `189.View.Tailwind.html`, a minified CSS-only, Git-tracked production partial included by `190.View.Index.html`; do not edit the generated file directly.
 
 ## Development workflow
 
@@ -36,7 +38,7 @@ Prerequisites are Git, VS Code, Node.js for local syntax checks, the Google `cla
 4. Run syntax, migration, diff, and status validation appropriate to the change.
 5. Review the exact diff and stage every approved path explicitly; never use `git add .`.
 6. Commit locally and push to GitHub only when explicitly requested.
-7. Use `clasp status` to verify the upload inventory before any Apps Script upload.
+7. Run `npm ci` and `npm run build:tailwind`, then use `clasp status` to verify the upload inventory before any Apps Script upload.
 
 ## Validation and deployment flow
 

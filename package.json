@@ -1,0 +1,10 @@
+{
+  "name": "numlock",
+  "private": true,
+  "scripts": {
+    "build:tailwind": "tailwindcss -c tailwind.config.js -i assets/tailwind.input.css -o 189.View.Tailwind.html --minify"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}

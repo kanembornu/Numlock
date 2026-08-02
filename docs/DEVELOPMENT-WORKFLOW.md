@@ -10,6 +10,12 @@
 
 Credential files, OAuth tokens, script IDs, and spreadsheet exports containing business data must not be committed or printed.
 
+Install the pinned local build tooling with `npm ci`. Tailwind is a development-only dependency; Apps Script never executes Node.js packages.
+
+## Frontend styling build
+
+Run `npm run build:tailwind` after any class change in `190.View.Index.html` and before `clasp status`. The command generates the minified, CSS-only `189.View.Tailwind.html` partial. This generated partial is a reviewed, Git-tracked production artifact and must not be edited by hand. `190.View.Index.html` includes it through Apps Script HTML Service templating.
+
 ## Safe loop
 
 1. Read `AGENTS.md` and `.ai/PROJECT_CONTEXT.md`.
@@ -19,8 +25,8 @@ Credential files, OAuth tokens, script IDs, and spreadsheet exports containing b
 5. Make the smallest complete change and preserve Apps Script V8/global-function contracts.
 6. Run focused syntax, mock, source-contract, link, and diff validation.
 7. Review `git diff` and `git diff --check`.
-8. If upload is explicitly authorized, confirm the active clasp account and run `clasp status` before pushing.
-9. Run live functions in the Apps Script editor, then deploy and browser-test only when separately authorized.
+8. Run `npm ci` and `npm run build:tailwind`, review the generated partial, then confirm the active clasp account and run `clasp status` before any authorized upload.
+9. Run `runAllBackendTests()` as the primary live backend validation in the Apps Script editor. Use individual tests for targeted debugging, then deploy and browser-test only when separately authorized.
 10. Report each evidence level separately and stop when scope is complete.
 
 ## Current source transition

@@ -22,6 +22,7 @@ Mocks validate JavaScript execution and deterministic contracts; they do not pro
 
 These functions are read-only with respect to spreadsheet data and are safe to run deliberately in the Apps Script editor:
 
+- `runAllBackendTests()` — primary live backend validation entry point; runs the complete suite once in the documented order and stops on the first failure.
 - `getDashboardData()`
 - `testAggregate()`
 - `testSummaryMigration()`
@@ -33,6 +34,8 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `doGet()` (web output construction only; normally validate through the web app)
 
 Migration tests must throw on mismatches. A returned `passed: true` or successful completion is runtime evidence only when it comes from the intended NUMLOCK Apps Script project.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `8/8` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -67,7 +70,7 @@ After every function move:
 1. Confirm the active clasp account and configured NUMLOCK project without exposing the script ID.
 2. From the VS Code terminal, run `clasp status` and verify only approved production files are tracked.
 3. Run `clasp push` only when explicitly requested. Use `clasp push --force` only when a normal push cannot synchronize the complete reviewed source and force upload is explicitly required.
-4. Run `getDashboardData()` and all six migration tests in Apps Script.
+4. Run `runAllBackendTests()` in Apps Script as the primary backend validation. Use an individual test only for targeted debugging.
 5. Stop on the first mismatch or runtime error; do not apply speculative fixes.
 6. List the existing Apps Script deployments, create an immutable version, and update the intended deployment only when explicitly requested after backend tests pass.
 7. Hard-refresh the deployed dashboard, verify visible cards/charts/transactions, and inspect the browser console.

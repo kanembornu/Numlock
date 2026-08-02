@@ -18,9 +18,9 @@ These are independent actions. Upload success is not runtime, deployment, or bro
 4. Run `clasp status`; it must show `appsscript.json` and only the approved numbered `.js` and `.html` production files.
 5. Stop if the account or inventory is wrong.
 
-### Sprint 5.7 styling build gate (after implementation)
+### Sprint 5.7 styling build gate
 
-The production-safe styling migration is not implemented in Package 001. When separately authorized, use this exact artifact plan:
+The production-safe styling migration uses this artifact plan:
 
 - add `package.json`, `package-lock.json`, `tailwind.config.js`, `assets/tailwind.input.css`, and generated `189.View.Tailwind.html`;
 - modify `190.View.Index.html` to replace only `https://cdn.tailwindcss.com` with a `<style>` block that force-includes `189.View.Tailwind.html`; preserve the existing authored `<style>` block;
@@ -34,7 +34,7 @@ Pin `tailwindcss` exactly to `3.4.17` in `devDependencies` and define this packa
 "build:tailwind": "tailwindcss -c tailwind.config.js -i assets/tailwind.input.css -o 189.View.Tailwind.html --minify"
 ```
 
-`assets/tailwind.input.css` contains the three Tailwind directives. `tailwind.config.js` scans `./190.View.Index.html` and contains the explicit runtime-class safelist recorded in `DECISIONS.md`. Run `npm ci`, then `npm run build:tailwind`, run the build a second time and confirm no diff, and confirm the partial contains CSS only. Node.js is build-time tooling and is never uploaded or executed in Apps Script.
+`assets/tailwind.input.css` contains the three Tailwind directives. `tailwind.config.js` scans `./190.View.Index.html` and contains the explicit runtime-class safelist recorded in `DECISIONS.md`. Run `npm ci`, then `npm run build:tailwind` before `clasp status`; confirm the partial contains minified CSS only and review its diff. Node.js is build-time tooling and is never uploaded or executed in Apps Script.
 
 Before upload, verify that the only removed external reference is the Tailwind CDN script; Chart.js and Font Awesome remain unchanged. Confirm all arbitrary utilities compile: `rounded-[24px]`, `rounded-[28px]`, `rounded-[32px]`, `text-[11px]`, `text-[15px]`, `text-[18px]`, `text-[24px]`, `text-[2rem]`, `tracking-[0.22em]`, `tracking-[0.25em]`, and `left-[14px]`. Confirm responsive `lg:` and `xl:` utilities and every safelisted state class exist in the generated artifact.
 

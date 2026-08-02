@@ -2,6 +2,15 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "NUMLOCK: Build Tailwind",
+      "type": "shell",
+      "command": "npm run build:tailwind",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "clasp status",
       "type": "shell",
       "command": "clasp status",
