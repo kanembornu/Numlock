@@ -124,6 +124,19 @@ function buildParetoAnalysis(cache) {
 
       });
 
+  if (!products.length) {
+
+    return {
+
+      totalProducts: 0,
+      criticalProducts: 0,
+      ratio: 0,
+      concentration: "Low"
+
+    };
+
+  }
+
   var totalRevenue =
     cache.summary.revenue;
 

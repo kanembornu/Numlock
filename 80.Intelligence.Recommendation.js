@@ -15,7 +15,29 @@ function buildRecommendationEngine(cache)
   var forecast =
     cache.forecast;
 
+  var bestSeller =
+    summary.bestSeller || "-";
+
   var recommendations = [];
+
+  var hasBusinessData =
+    Number(summary.revenue || 0) !== 0 ||
+    Number(summary.expense || 0) !== 0 ||
+    Number(summary.unitsSold || 0) !== 0;
+
+  if (!hasBusinessData)
+  {
+    return [{
+
+      priority:"Low",
+
+      score:0,
+
+      message:
+        "Belum ada data bisnis yang cukup untuk menghasilkan rekomendasi."
+
+    }];
+  }
 
   // Profit Margin
 
@@ -97,7 +119,7 @@ function buildRecommendationEngine(cache)
       score:40,
 
       message:
-        summary.bestSeller +
+        bestSeller +
         " merupakan produk terlaris. Pertimbangkan bundling atau upselling."
 
     });
@@ -255,6 +277,9 @@ function buildOpportunityEngine(cache) {
   var forecast =
     cache.forecast;
 
+  var bestSeller =
+    summary.bestSeller || "-";
+
   var opportunities = [];
 
   // Best Seller
@@ -266,7 +291,7 @@ function buildOpportunityEngine(cache) {
       title: "Best Seller Opportunity",
 
       message:
-        summary.bestSeller +
+        bestSeller +
         " memiliki volume penjualan tertinggi. Pertimbangkan bundling atau promo khusus."
 
     });
@@ -339,6 +364,9 @@ function buildActionRoadmap(cache) {
   var forecast =
     cache.forecast;
 
+  var bestSeller =
+    summary.bestSeller || "-";
+
   // Week 1
 
   if (
@@ -403,7 +431,7 @@ function buildActionRoadmap(cache) {
         "Scale Best Seller",
 
       action:
-        summary.bestSeller +
+        bestSeller +
         " layak dijadikan fokus upselling."
 
     });

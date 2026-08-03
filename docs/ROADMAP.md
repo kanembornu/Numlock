@@ -63,7 +63,7 @@ Sprint 5.8 Package 001 completed a repository-evidence audit without changing pr
 
 The next three bounded, independently releasable packages are:
 
-1. **Package 002 — Empty-data resilience:** make valid empty and sparse datasets return and render explicit usable states.
+1. **Package 002 — Empty-data resilience: complete locally; upload and live validation pending.** Empty, sales-only, purchase-only, one-row, sparse mixed, and populated fixtures traverse the full dashboard response pipeline without non-finite values. Populated output and the public response shape are preserved.
 2. **Package 003 — Truthful transaction scope:** implement one approved end-to-end filter contract, or remove the unsupported control until the contract exists. Purchase-only semantics require product approval before work starts.
 3. **Package 004 — Recoverable dashboard states:** replace indefinite loading with visible, accessible success, empty, failure, and retry states.
 

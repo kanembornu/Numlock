@@ -17,6 +17,8 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P0-1 — Make empty and sparse datasets safe end to end
 
+**Status: Completed locally in Sprint 5.8 Package 002; upload and live Apps Script validation are pending.**
+
 - **Problem:** `buildInsights()` returns `topExpense: null` when there are no expenses, but `buildDiagnosis()` unconditionally reads `insights.topExpense.category` and `.amount`. Several frontend regions also render empty arrays as blank space rather than an explained state.
 - **User impact:** a new, cleared, or sales-only sheet can fail the dashboard request or leave charts, recommendations, and transactions unexplained.
 - **Proposed solution:** define compatibility-safe empty outputs for diagnosis and every visible collection; guard missing top expense/product values; render explicit no-data states without changing populated-data shapes.
@@ -190,9 +192,11 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### Sprint 5.8 Package 002 — Empty-data resilience
 
+**Status: Completed locally; upload and live validation are pending.**
+
 - **Objective:** make every valid empty or sparse dataset return and render a usable, explicit state.
 - **Independent release:** yes; it preserves populated-data response fields and requires no filter/date contract.
-- **Expected tests:** deterministic empty/sales-only/purchase-only/sparse backend fixtures, local 8/8 gate, extracted frontend syntax, mocked empty/error rendering, desktop and narrow browser acceptance.
+- **Expected tests:** seven deterministic empty/sales-only/purchase-only/one-row/sparse/populated backend fixtures, local 9/9 gate, extracted frontend syntax, mocked sparse rendering, and live Apps Script validation. Empty-state redesign and browser acceptance remain Package 004 scope.
 - **Scope:** P0-1 only.
 
 ### Sprint 5.8 Package 003 — Truthful transaction scope

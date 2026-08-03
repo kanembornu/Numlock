@@ -15,6 +15,13 @@ function getDashboardData() {
       transactions,
       priceMap);
 
+  return buildDashboardResponse(
+    processedData
+  );
+}
+
+function buildDashboardResponse(processedData) {
+
   var cache =
   buildAnalyticsCache(
     processedData

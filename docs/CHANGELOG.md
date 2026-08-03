@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Made the complete dashboard response and intelligence pipeline resilient to empty, sales-only, purchase-only, one-row, sparse mixed, and populated datasets while preserving the populated response snapshot and public response fields.
+- Added `testSparseDatasetResilience()` with seven deterministic fixtures, finite-number and required-property checks, decision-output validation, and full populated-output equivalence; the unified backend gate is now 9/9.
+- Added minimal frontend collection guards for charts, diagnosis, recommendations, roadmap, products, expenses, and recent transactions without redesigning empty states or changing Tailwind classes.
 - Completed Sprint 5.8 Package 001 as a documentation-only product, UX, capability, consistency, and frontend-performance audit.
 - Added the evidence-based P0/P1/P2/P3 product backlog and selected only the next three independently releasable packages: empty-data resilience, truthful transaction scope, and recoverable dashboard states.
 - Classified GitHub Pages `index.html` as a separate redirect/launcher rather than a duplicate dashboard or documentation page.

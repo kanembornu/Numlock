@@ -19,10 +19,16 @@ function buildExecutiveSummary(cache)
       "Revenue menunjukkan tren positif."
     );
   }
-  else
+  else if(revenue.direction === "Down")
   {
     summary.push(
       "Revenue mengalami penurunan dan memerlukan perhatian."
+    );
+  }
+  else
+  {
+    summary.push(
+      "Belum cukup data untuk menilai tren revenue."
     );
   }
 
@@ -34,10 +40,16 @@ function buildExecutiveSummary(cache)
       "Profit berada dalam kondisi yang sehat."
     );
   }
-  else
+  else if(profit.direction === "Down")
   {
     summary.push(
       "Profit memerlukan perhatian karena margin masih rendah."
+    );
+  }
+  else
+  {
+    summary.push(
+      "Belum cukup data untuk menilai tren profit."
     );
   }
 

@@ -15,6 +15,17 @@ function buildProfitIntelligence(cache)
   var margin =
     Number(financial.profitMargin || 0);
 
+  if (
+    Number(financial.revenue || 0) === 0
+  )
+  {
+    return{
+      direction:"Stable",
+      changeRate:0,
+      status:"Neutral"
+    };
+  }
+
   return{
 
     direction:

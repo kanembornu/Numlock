@@ -53,6 +53,12 @@ function buildDiagnosis(data, cache) {
   var insights =
     cache.insights;
 
+  var bestSeller =
+    summary.bestSeller || "-";
+
+  var topRevenueProduct =
+    summary.topRevenueProduct || "-";
+
   var diagnosis = [];
 
   var revenueTrend =
@@ -115,11 +121,11 @@ function buildDiagnosis(data, cache) {
     title: "Produk Terlaris",
 
     description:
-      summary.bestSeller +
+      bestSeller +
       " merupakan produk terlaris. Pertimbangkan promo bundle atau upselling.",
 
     message:
-      summary.bestSeller +
+      bestSeller +
       " merupakan produk terlaris. Pertimbangkan promo bundle atau upselling."
 
   });
@@ -137,40 +143,65 @@ function buildDiagnosis(data, cache) {
     title: "Revenue Tertinggi",
 
     description:
-      summary.topRevenueProduct +
+      topRevenueProduct +
       " menghasilkan revenue terbesar. Pastikan stok dan kualitas tetap terjaga.",
 
     message:
-      summary.topRevenueProduct +
+      topRevenueProduct +
       " menghasilkan revenue terbesar. Pastikan stok dan kualitas tetap terjaga."
 
   });
 
   // Top Expense
 
-  diagnosis.push({
+  if (insights.topExpense) {
 
-    level: "warning",
+    diagnosis.push({
 
-    category: "expense",
+      level: "warning",
 
-    priority: "critical",
+      category: "expense",
 
-    title: "Biaya Terbesar",
+      priority: "critical",
 
-    description:
-      insights.topExpense.category +
-      " menyumbang biaya terbesar sebesar Rp " +
-      insights.topExpense.amount.toLocaleString("id-ID") +
-      ". Pertimbangkan evaluasi efisiensi.",
+      title: "Biaya Terbesar",
 
-    message:
-      insights.topExpense.category +
-      " adalah komponen biaya terbesar (Rp " +
-      insights.topExpense.amount.toLocaleString("id-ID") +
-      "). Pertimbangkan evaluasi efisiensi biaya."
+      description:
+        insights.topExpense.category +
+        " menyumbang biaya terbesar sebesar Rp " +
+        insights.topExpense.amount.toLocaleString("id-ID") +
+        ". Pertimbangkan evaluasi efisiensi.",
 
-  });
+      message:
+        insights.topExpense.category +
+        " adalah komponen biaya terbesar (Rp " +
+        insights.topExpense.amount.toLocaleString("id-ID") +
+        "). Pertimbangkan evaluasi efisiensi biaya."
+
+    });
+
+  }
+  else {
+
+    diagnosis.push({
+
+      level: "good",
+
+      category: "expense",
+
+      priority: "good",
+
+      title: "Biaya Terbesar",
+
+      description:
+        "Belum ada data biaya yang dapat dianalisis.",
+
+      message:
+        "Belum ada data biaya yang dapat dianalisis."
+
+    });
+
+  }
 
   // Revenue per Cup
 

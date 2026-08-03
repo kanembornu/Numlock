@@ -454,12 +454,12 @@
             <div class="mt-6 space-y-4">
                 <div class="flex justify-between">
                   <span>Best Seller</span>
-                  <strong> ${res.summary.bestSeller} </strong>
+                  <strong> ${res.summary.bestSeller || "-"} </strong>
                 </div>
 
                 <div class="flex justify-between">
                   <span> Top Revenue </span>
-                  <strong> ${res.summary.topRevenueProduct} </strong>
+                  <strong> ${res.summary.topRevenueProduct || "-"} </strong>
                 </div>
             </div>
           </div>
@@ -863,6 +863,22 @@
 
     function renderCharts(res)
     {
+      var revenueTrend =
+        res.revenueTrend || { labels: [], values: [] };
+
+      var hotColdSplit =
+        res.hotColdSplit || { hot: 0, cold: 0 };
+
+      var expenseBreakdown =
+        Array.isArray(res.expenseBreakdown)
+          ? res.expenseBreakdown
+          : [];
+
+      var topProducts =
+        Array.isArray(res.topProducts)
+          ? res.topProducts
+          : [];
+
       const revenueCtx = document.getElementById("mainChart").getContext("2d");
       if (revenueChart)
       {
@@ -873,7 +889,7 @@
           type: "line",
           data:
           {
-            labels: res.revenueTrend.labels.map(label => {
+            labels: revenueTrend.labels.map(label => {
               const month = label.split("-")[1];
 
               return [
@@ -895,7 +911,7 @@
             datasets:
             [{
               label: "Revenue",
-              data: res.revenueTrend.values,
+              data: revenueTrend.values,
               borderColor: "#6366f1",
               backgroundColor: "rgba(99,102,241,0.1)",
               borderWidth: 3,
@@ -984,7 +1000,7 @@
             labels: [ "Hot","Cold" ],
             datasets:
             [{
-              data: [ res.hotColdSplit.hot, res.hotColdSplit.cold ],
+              data: [ hotColdSplit.hot, hotColdSplit.cold ],
               backgroundColor: [ "#f97316", "#06b6d4" ]
             }]
           },
@@ -1004,7 +1020,7 @@
       expenseChart.destroy();
     }
       const expenseData =
-        res.expenseBreakdown
+        expenseBreakdown
           .sort((a,b) => b.amount - a.amount)
           .slice(0,7);
 
@@ -1085,7 +1101,7 @@
         }
       });
 
-    document.getElementById( "topProductsContainer" ).innerHTML = res.topProducts .slice(0,5) .map(function(p,index)
+    document.getElementById( "topProductsContainer" ).innerHTML = topProducts .slice(0,5) .map(function(p,index)
     {
       return `
         <div class="flex justify-between items-center py-4 border-b border-slate-100">
@@ -1110,10 +1126,15 @@
     //--------------------------------------------------
     function renderBusinessIntelligence(res)
     {
-      if (res.diagnosis && res.diagnosis.length)
+      var diagnosis =
+        Array.isArray(res.diagnosis)
+          ? res.diagnosis
+          : [];
+
+      if (diagnosis.length)
       {
         document.getElementById("diagnosisContainer").innerHTML =
-        res.diagnosis
+        diagnosis
         .map(renderDiagnosisCard)
         .join("");
 
@@ -1355,10 +1376,15 @@
         `;
       }
 
-      if (res.recommendations && res.recommendations.length)
+      var recommendations =
+        Array.isArray(res.recommendations)
+          ? res.recommendations
+          : [];
+
+      if (recommendations.length)
       {
           document.getElementById("recommendationContainer").innerHTML =
-          res.recommendations
+          recommendations
           .slice(0,6)
           .map(renderTimelineItem)
           .join("");
@@ -1370,7 +1396,12 @@
     //--------------------------------------------------
     function renderTransactions(res)
     {
-      document.getElementById("tableBody").innerHTML = res.recentTransactions.map(function(r)
+      var recentTransactions =
+        Array.isArray(res.recentTransactions)
+          ? res.recentTransactions
+          : [];
+
+      document.getElementById("tableBody").innerHTML = recentTransactions.map(function(r)
       {
         var amount = r.revenue || r.expense || 0;
         return `
@@ -1548,7 +1579,10 @@
       //--------------------------------------------------
       // Action Roadmap
       //--------------------------------------------------
-      if (res.actionRoadmap)
+      if (
+        Array.isArray(res.actionRoadmap) &&
+        res.actionRoadmap.length
+      )
       {
         document.getElementById( "actionRoadmapCard" ).innerHTML = `
 
