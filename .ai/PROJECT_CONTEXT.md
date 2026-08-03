@@ -16,7 +16,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
 - Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
 - Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
-- `runAllBackendTests()` is the unified local/live backend gate and requires 13/13 PASS, including sparse-dataset resilience, date filtering, dashboard-state metadata, the responsive-shell source contract, and reporting metadata.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 14/14 PASS, including sparse-dataset resilience, date filtering, dashboard-state metadata, the responsive-shell source contract, reporting metadata, and scoped data-quality diagnostics.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 - Sprint 5.8 Package 001 product audit is complete. `docs/PRODUCT-BACKLOG.md` is the prioritized evidence inventory; `docs/ROADMAP.md` schedules only Packages 002–004.
 - Sprint 5.8 Package 002 empty/sparse-data resilience and Package 003 date filtering are deployed. Populated response output remains snapshot-protected.
@@ -25,6 +25,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Sprint 5.8 Package 004 adds an authoritative loading/success/empty/error/retry frontend state contract. Additive `dateFilter.rowCount` metadata defines empty as zero scoped transaction rows; retry preserves the exact last request, and stale callbacks are ignored.
 - Sprint 5.9 Package 001 preserves the fixed desktop sidebar at `lg` and above while using an accessible overlay drawer, full-width content, stacked dense regions, responsive chart sizing, and an explicitly horizontally scrollable transactions table below `lg`.
 - Sprint 5.9 Package 002 adds scoped reporting counts, earliest/latest dates, partial-period semantics, generated/latest timestamps, project-timezone freshness status, and a compact frontend reporting summary without changing analytics outputs.
+- Sprint 5.9 Package 003 adds observational `dataQuality` diagnostics over the active filtered rows. It reports six fixed issue types with Good/Attention/Critical status and a compact accessible disclosure; it never changes, removes, repairs, or writes transaction data.
 
 ## Architecture and invariants
 
@@ -42,7 +43,7 @@ Safe live entry points and known failure modes are documented in `docs/TESTING.m
 
 - All six legacy migration oracle chains are retired. The unified backend suite uses deterministic fixtures only, source migration is complete, and Sprint 5.7 Package 005 is complete.
 - The former nonfunctional transaction-type control has been replaced by the authoritative dashboard date filter; transaction-type filtering is intentionally not implemented.
-- High-value requirement-gated work includes reporting periods/comparisons, data freshness and quality, unified actionable recommendations, and configurable KPI targets.
+- High-value requirement-gated work includes reporting-period comparisons, unified actionable recommendations, and configurable KPI targets.
 - Root `index.html` is a separate GitHub Pages redirect/launcher to the Apps Script UI, not a duplicate dashboard.
 - Future releases must update `10.Config.js` and `docs/CHANGELOG.md` together.
 - The Apps Script iframe emits its platform sandbox warning.

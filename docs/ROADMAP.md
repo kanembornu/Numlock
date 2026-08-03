@@ -79,6 +79,10 @@ Completed locally. The desktop shell remains fixed and unchanged at `lg` and abo
 
 Completed locally. Additive `reportingScope` and `dataFreshness` metadata is derived from the already scoped rows using one captured request time and the Apps Script project timezone. The frontend shows only the active month range, scoped transaction count, latest transaction date, and Current/Stale/No Data status. Analytics formulas, date-filter semantics, dashboard states, and populated output remain unchanged. `testReportingMetadata()` raises the unified requirement to 13/13; upload and live/browser acceptance remain separate evidence.
 
+### Package 003 — scoped data-quality diagnostics
+
+Completed locally. Additive `dataQuality` metadata observes the active filtered rows for invalid dates, unknown transaction types, missing Sales products, missing Purchase categories, invalid Sales quantities, and invalid Purchase amounts. It changes no source row, filtering rule, or analytics formula. The responsive frontend shows status and issue count with a real-button label/count disclosure; internal codes remain hidden. `testDataQualityDiagnostics()` raises the unified requirement to 14/14; upload and live/browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

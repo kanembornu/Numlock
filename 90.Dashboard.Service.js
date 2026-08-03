@@ -438,6 +438,165 @@ function buildReportingMetadata(scopedData, dateRange, referenceDate) {
   };
 }
 
+function buildDataQualityDiagnostics(scopedData) {
+
+  var definitions = [
+    {
+      code: "INVALID_DATE",
+      label: "Invalid transaction date",
+      severity: "High"
+    },
+    {
+      code: "UNKNOWN_TRANSACTION_TYPE",
+      label: "Unknown transaction type",
+      severity: "High"
+    },
+    {
+      code: "MISSING_SALES_PRODUCT",
+      label: "Missing Sales product",
+      severity: "Medium"
+    },
+    {
+      code: "MISSING_PURCHASE_CATEGORY",
+      label: "Missing Purchase category",
+      severity: "Medium"
+    },
+    {
+      code: "INVALID_QUANTITY",
+      label: "Invalid Sales quantity",
+      severity: "Medium"
+    },
+    {
+      code: "INVALID_PURCHASE_AMOUNT",
+      label: "Invalid Purchase amount",
+      severity: "Medium"
+    }
+  ];
+
+  var rows =
+    scopedData || [];
+
+  var counts = {};
+  var issueRows = 0;
+  var issueCount = 0;
+  var hasHighSeverityIssue = false;
+
+  definitions.forEach(function(definition)
+  {
+    counts[definition.code] = 0;
+  });
+
+  rows.forEach(function(row)
+  {
+    var rowIssues = [];
+    var value = row || {};
+    var transactionDate =
+      new Date(value.date);
+
+    if (
+      value.date == null ||
+      value.date === "" ||
+      isNaN(transactionDate.getTime())
+    )
+    {
+      rowIssues.push("INVALID_DATE");
+    }
+
+    if (
+      value.transactionType !== "Sales" &&
+      value.transactionType !== "Purchase"
+    )
+    {
+      rowIssues.push("UNKNOWN_TRANSACTION_TYPE");
+    }
+
+    if (value.transactionType === "Sales")
+    {
+      if (String(value.product || "").trim() === "")
+      {
+        rowIssues.push("MISSING_SALES_PRODUCT");
+      }
+
+      var quantitySource =
+        value.dataQualitySource
+          ? value.dataQualitySource.quantity
+          : value.qty;
+
+      var quantity =
+        Number(quantitySource);
+
+      if (!isFinite(quantity) || quantity < 0)
+      {
+        rowIssues.push("INVALID_QUANTITY");
+      }
+    }
+
+    if (value.transactionType === "Purchase")
+    {
+      if (String(value.purchaseCategory || "").trim() === "")
+      {
+        rowIssues.push("MISSING_PURCHASE_CATEGORY");
+      }
+
+      var purchaseAmountSource =
+        value.dataQualitySource
+          ? value.dataQualitySource.purchaseAmount
+          : value.expense;
+
+      if (!isFinite(Number(purchaseAmountSource)))
+      {
+        rowIssues.push("INVALID_PURCHASE_AMOUNT");
+      }
+    }
+
+    if (rowIssues.length)
+    {
+      issueRows++;
+    }
+
+    rowIssues.forEach(function(code)
+    {
+      counts[code]++;
+      issueCount++;
+    });
+  });
+
+  var issues =
+    definitions
+      .filter(function(definition)
+      {
+        return counts[definition.code] > 0;
+      })
+      .map(function(definition)
+      {
+        if (definition.severity === "High")
+        {
+          hasHighSeverityIssue = true;
+        }
+
+        return {
+          code: definition.code,
+          label: definition.label,
+          count: counts[definition.code],
+          severity: definition.severity
+        };
+      });
+
+  return {
+    totalRows: rows.length,
+    validRows: rows.length - issueRows,
+    issueRows: issueRows,
+    issueCount: issueCount,
+    status:
+      issueCount === 0
+        ? "Good"
+        : hasHighSeverityIssue
+          ? "Critical"
+          : "Attention",
+    issues: issues
+  };
+}
+
 function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate) {
 
   var generatedDate =
@@ -467,6 +626,11 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       filteredData,
       dateRange,
       generatedDate
+    );
+
+  var dataQuality =
+    buildDataQualityDiagnostics(
+      filteredData
     );
 
   var cache =
@@ -573,6 +737,9 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       dataFreshness:
         reportingMetadata.dataFreshness,
+
+      dataQuality:
+        dataQuality,
 
     };
 }

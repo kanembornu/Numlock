@@ -28,6 +28,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testDashboardStateContract()` — five deterministic contract scenarios covering the state vocabulary plus empty, purchase-only, sales-only, and populated scoped-row semantics.
 - `testResponsiveShellContract()` — 12 source-contract scenarios covering the `lg` desktop boundary, drawer controls and accessibility, close paths, scroll lock, focus restoration, active navigation, table containment, and single controller initialization.
 - `testReportingMetadata()` — deterministic scoped-row counts, earliest/latest dates, invalid-date handling, Current/Stale/No Data freshness, partial/complete period boundaries, project timezone, response presence, finite values, and frontend disclosure checks.
+- `testDataQualityDiagnostics()` — 15 deterministic scenarios covering all six issues, Good/Attention/Critical status, multiple issues per row, mixed validity, scoped response output, source immutability, raw numeric provenance, and the accessible frontend disclosure contract.
 - `getDashboardData()`
 - `testSummaryFixtures()` — deterministic Summary regression fixtures with literal expected outputs.
 - `testRevenueTrendFixtures()` — deterministic Revenue Trend fixtures with literal completed-month labels and values.
@@ -61,10 +62,10 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all twelve directly runnable `test*` functions.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 13-test suite.
+- `96.Tests.Cases.js` contains all thirteen directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 14-test suite.
 
-Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=30 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
+Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=33 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
 
 `testDashboardDateFilter()` uses fixed reference dates and project-timezone date keys. It covers missing/null/unknown normalization to `currentYear`; `today`; inclusive `last7days` within one month and across two months; month/year presets; custom single/multi-month and cross-year boundaries; invalid custom input; immutable filtering; ignored invalid row dates; parameterless equivalence; current partial-month Revenue Trend inclusion; ascending trend labels; finite values; and renderable empty or zero-revenue results. Its success log reports scenarios, Current Year rows, custom rows, and the resolved timezone.
 
@@ -74,7 +75,9 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testReportingMetadata()` validates empty, sales-only, purchase-only, mixed, and invalid-date inputs; counts; earliest/latest dates and timestamp; all freshness statuses; today, rolling, month, year, previous-month, and custom completion rules; project timezone; additive response presence; finite numbers; and the compact responsive frontend contract. It logs `PASS: testReportingMetadata | scenarios=15 | freshness=Current,Stale,No Data`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `13/13` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+`testDataQualityDiagnostics()` validates empty and fully valid data; each fixed issue independently; negative and non-finite numeric inputs; multiple issues on one row; mixed valid/invalid rows; all status rules; scoped date-filter output; source-array immutability; preservation of raw numeric provenance through processing; additive response presence; and frontend accessibility/code-hiding tokens. It logs `PASS: testDataQualityDiagnostics | scenarios=15 | statuses=Good,Attention,Critical`.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `14/14` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -91,7 +94,20 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `13/13`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, the responsive-shell source contract, and reporting metadata. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `14/14`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, the responsive-shell source contract, reporting metadata, and scoped data-quality diagnostics. The unified suite remains ordered and fail-fast.
+
+## Data-quality diagnostics contract
+
+`dataQuality` is additive and observational. It evaluates only the rows already admitted by the active date filter, performs no additional spreadsheet read, and never mutates, repairs, writes, or automatically excludes a row. Invalid dates are unit-tested by the pure builder; production date filtering does not reintroduce unscopable invalid-date rows.
+
+- `INVALID_DATE` (High): date cannot be interpreted as valid.
+- `UNKNOWN_TRANSACTION_TYPE` (High): type is neither exactly `Sales` nor `Purchase`.
+- `MISSING_SALES_PRODUCT` (Medium): Sales row has no product.
+- `MISSING_PURCHASE_CATEGORY` (Medium): Purchase row has no purchase category.
+- `INVALID_QUANTITY` (Medium): Sales quantity is non-finite or negative.
+- `INVALID_PURCHASE_AMOUNT` (Medium): Purchase expense is non-finite.
+
+`totalRows` is the scoped row count; `issueRows` counts unique affected rows; `validRows` is their difference; and `issueCount` counts all detected issues. Status is Good at zero issues, Attention when issues are exclusively Medium severity, and Critical when any High-severity issue exists. The frontend renders only status, issue-count text, user-facing labels, and counts; its real disclosure button exposes `aria-expanded` and `aria-controls`, and internal codes must not appear in HTML.
 
 ## Reporting metadata contract
 

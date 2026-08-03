@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Keep data-quality diagnostics scoped and observational
+
+The final response adds `dataQuality` from the same already filtered processed-row array used by the dashboard. The builder is pure: it performs no spreadsheet read or write, does not mutate or repair rows, does not exclude additional rows, and does not affect analytics formulas. Raw source quantity and purchase-amount values are retained only as additive internal provenance on newly created processed-row objects so non-finite inputs remain observable after existing numeric normalization.
+
+The six fixed issues are: `INVALID_DATE` when a row date cannot be interpreted as valid; `UNKNOWN_TRANSACTION_TYPE` unless type is exactly `Sales` or `Purchase`; `MISSING_SALES_PRODUCT` for Sales without product; `MISSING_PURCHASE_CATEGORY` for Purchase without purchase category; `INVALID_QUANTITY` for non-finite or negative Sales quantity; and `INVALID_PURCHASE_AMOUNT` for non-finite Purchase expense. Invalid dates that cannot enter a selected date range remain excluded by the existing date-filter contract and are not reintroduced solely for diagnostics.
+
+`totalRows` counts scoped evaluated rows, `issueRows` counts unique affected rows, `validRows` is total minus affected rows, and `issueCount` counts all issues across rows. Status is Good for zero issues, Attention for only Medium-severity issues, and Critical when any High-severity issue exists. The frontend displays status text, issue-count text, and user-facing labels/counts only; internal codes remain backend metadata.
+
 ### Derive reporting transparency from the scoped rows
 
 The final response adds `reportingScope` and `dataFreshness` without changing `dateFilter` or any analytics output. One service-layer builder receives the already filtered processed rows, the resolved range, and the request's captured execution time; it performs no spreadsheet read and does not mutate rows. Counts include the scoped rows, while invalid dates are ignored for earliest/latest timestamp calculation.

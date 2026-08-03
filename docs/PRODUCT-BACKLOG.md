@@ -71,9 +71,11 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P1-3 — Add data-quality diagnostics
 
+**Status: Completed locally in Sprint 5.9 Package 003; upload and live/browser validation are pending.**
+
 - **Problem:** users receive business conclusions without visible counts for ignored, incomplete, unpriced, invalid-date, or unknown-category rows. Existing deterministic tests validate analytics outputs but not an operator-facing quality summary.
 - **User impact:** apparently precise scores and recommendations can conceal incomplete inputs.
-- **Proposed solution:** collect non-sensitive quality counters during normalization/aggregation, return a backward-compatible quality object, and show a warning only when action is required.
+- **Proposed solution:** implemented additive observational diagnostics over active scoped rows with six fixed issue definitions, deterministic severity/status, and a compact accessible disclosure. No rows are modified or automatically excluded.
 - **Files likely affected:** `25.Data.Processor.js`, `30.Analytics.Aggregate.js`, `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`.
 - **Implementation complexity:** M
 - **Regression risk:** Medium

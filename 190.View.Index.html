@@ -156,6 +156,28 @@
           <span
             id="freshnessStatusBadge"
             class="hidden rounded-full px-3 py-1 font-semibold"></span>
+          <div
+            id="dataQualityInformation"
+            class="w-full min-w-0">
+            <div class="flex flex-wrap items-center gap-2">
+              <span
+                id="dataQualityStatusBadge"
+                class="hidden rounded-full px-3 py-1 font-semibold"></span>
+              <span id="dataQualityIssueCount"></span>
+              <button
+                id="dataQualityDetailsButton"
+                type="button"
+                class="hidden rounded-xl border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700"
+                aria-expanded="false"
+                aria-controls="dataQualityDetails"
+                onclick="toggleDataQualityDetails()">
+                Details
+              </button>
+            </div>
+            <ul
+              id="dataQualityDetails"
+              class="hidden mt-2 space-y-1 pl-5 text-slate-700"></ul>
+          </div>
         </div>
       </div>
     </div>
@@ -796,6 +818,98 @@
         "rounded-full px-3 py-1 font-semibold " +
         statusClasses[freshness.status];
       badge.innerText = freshness.status;
+    }
+
+    function toggleDataQualityDetails()
+    {
+      var button =
+        document.getElementById("dataQualityDetailsButton");
+
+      var details =
+        document.getElementById("dataQualityDetails");
+
+      var isExpanded =
+        button.getAttribute("aria-expanded") === "true";
+
+      button.setAttribute(
+        "aria-expanded",
+        String(!isExpanded)
+      );
+
+      details.classList.toggle(
+        "hidden",
+        isExpanded
+      );
+    }
+
+    function renderDataQuality(res)
+    {
+      var quality =
+        res && res.dataQuality;
+
+      if (
+        !quality ||
+        !Array.isArray(quality.issues)
+      )
+      {
+        throw new Error(
+          "Dashboard data-quality metadata is missing"
+        );
+      }
+
+      var badge =
+        document.getElementById("dataQualityStatusBadge");
+
+      var issueCount =
+        document.getElementById("dataQualityIssueCount");
+
+      var button =
+        document.getElementById("dataQualityDetailsButton");
+
+      var details =
+        document.getElementById("dataQualityDetails");
+
+      var statusClasses = {
+        "Good": "bg-emerald-100 text-emerald-700",
+        "Attention": "bg-amber-100 text-amber-700",
+        "Critical": "bg-red-100 text-red-700"
+      };
+
+      if (!statusClasses[quality.status])
+      {
+        throw new Error(
+          "Dashboard data-quality status is invalid"
+        );
+      }
+
+      badge.className =
+        "rounded-full px-3 py-1 font-semibold " +
+        statusClasses[quality.status];
+      badge.innerText = quality.status;
+
+      issueCount.innerText =
+        quality.issueCount === 0
+          ? "No data issues"
+          : quality.issueCount + " data issues";
+
+      button.classList.toggle(
+        "hidden",
+        quality.issueCount === 0
+      );
+      button.setAttribute("aria-expanded", "false");
+
+      details.classList.add("hidden");
+      details.innerHTML =
+        quality.issues
+          .map(function(issue)
+          {
+            return "<li>" +
+              issue.label +
+              ": " +
+              issue.count +
+              "</li>";
+          })
+          .join("");
     }
 
     function loadData()
@@ -1976,6 +2090,7 @@
 
       renderBusinessOverview(res);
       renderReportingMetadata(res);
+      renderDataQuality(res);
       renderCharts(res);
       renderBusinessIntelligence(res);
       renderExecutiveCenter(res);

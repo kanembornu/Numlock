@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.9 Package 003 additive scoped `dataQuality` diagnostics with total/valid/issue row counts, issue totals, six fixed issue definitions, and Good/Attention/Critical status without changing filtering or analytics.
+- Added a compact responsive Data Quality badge, issue-count text, and accessible label-only details disclosure that never renders internal issue codes.
+- Added `testDataQualityDiagnostics()` with 15 deterministic scenarios and raised the ordered fail-fast unified backend gate to 14/14 while preserving populated analytics output.
 - Implemented Sprint 5.9 Package 002 additive `reportingScope` and `dataFreshness` response metadata from the already scoped transaction rows, including deterministic project-timezone freshness and partial-period semantics.
 - Added a compact responsive reporting summary for active month range, transaction count, latest data date, and text-labeled Current/Stale/No Data status without exposing raw timestamps or internal metadata.
 - Added `testReportingMetadata()` and raised the ordered fail-fast unified backend gate to 13/13 while retaining the populated analytics snapshot.

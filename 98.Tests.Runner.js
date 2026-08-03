@@ -13,7 +13,8 @@ function runAllBackendTests()
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
-    { name: "testReportingMetadata", run: testReportingMetadata }
+    { name: "testReportingMetadata", run: testReportingMetadata },
+    { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics }
   ];
   var passedTests = [];
 

@@ -619,3 +619,147 @@ function createReportingMetadataFixtures()
     ]
   };
 }
+
+function createDataQualityDiagnosticsFixtures()
+{
+  var validSales = {
+    date: new Date(2026, 5, 10, 9, 0, 0),
+    transactionType: "Sales",
+    product: "Latte",
+    purchaseCategory: "",
+    qty: 1,
+    revenue: 30000,
+    expense: 0
+  };
+
+  var validPurchase = {
+    date: new Date(2026, 5, 11, 9, 0, 0),
+    transactionType: "Purchase",
+    product: "",
+    purchaseCategory: "Supplies",
+    qty: 0,
+    revenue: 0,
+    expense: 5000
+  };
+
+  return {
+    cases: [
+      {
+        name: "empty data",
+        rows: [],
+        expected: {
+          totalRows: 0,
+          validRows: 0,
+          issueRows: 0,
+          issueCount: 0,
+          status: "Good",
+          issues: []
+        }
+      },
+      {
+        name: "fully valid mixed rows",
+        rows: [validSales, validPurchase],
+        expected: {
+          totalRows: 2,
+          validRows: 2,
+          issueRows: 0,
+          issueCount: 0,
+          status: "Good",
+          issues: []
+        }
+      },
+      {
+        name: "invalid date",
+        rows: [{ date: "not-a-date", transactionType: "Sales", product: "Latte", qty: 1, expense: 0 }],
+        expectedIssue: ["INVALID_DATE", "Critical"]
+      },
+      {
+        name: "unknown transaction type",
+        rows: [{ date: new Date(2026, 5, 10), transactionType: "Refund", product: "Latte", qty: 1, expense: 0 }],
+        expectedIssue: ["UNKNOWN_TRANSACTION_TYPE", "Critical"]
+      },
+      {
+        name: "missing Sales product",
+        rows: [{ date: new Date(2026, 5, 10), transactionType: "Sales", product: "", qty: 1, expense: 0 }],
+        expectedIssue: ["MISSING_SALES_PRODUCT", "Attention"]
+      },
+      {
+        name: "missing Purchase category",
+        rows: [{ date: new Date(2026, 5, 10), transactionType: "Purchase", purchaseCategory: "", qty: 0, expense: 5000 }],
+        expectedIssue: ["MISSING_PURCHASE_CATEGORY", "Attention"]
+      },
+      {
+        name: "negative Sales quantity",
+        rows: [{ date: new Date(2026, 5, 10), transactionType: "Sales", product: "Latte", qty: -1, expense: 0 }],
+        expectedIssue: ["INVALID_QUANTITY", "Attention"]
+      },
+      {
+        name: "non-finite Sales quantity",
+        rows: [{ date: new Date(2026, 5, 10), transactionType: "Sales", product: "Latte", qty: "not-a-number", expense: 0 }],
+        expectedIssue: ["INVALID_QUANTITY", "Attention"]
+      },
+      {
+        name: "non-finite Purchase amount",
+        rows: [{ date: new Date(2026, 5, 10), transactionType: "Purchase", purchaseCategory: "Supplies", qty: 0, expense: "not-a-number" }],
+        expectedIssue: ["INVALID_PURCHASE_AMOUNT", "Attention"]
+      },
+      {
+        name: "one row with multiple issues",
+        rows: [{ date: "not-a-date", transactionType: "Sales", product: "", qty: -1, expense: 0 }],
+        expectedCodes: ["INVALID_DATE", "MISSING_SALES_PRODUCT", "INVALID_QUANTITY"],
+        expectedStatus: "Critical"
+      },
+      {
+        name: "mixed valid and invalid rows",
+        rows: [
+          validSales,
+          { date: new Date(2026, 5, 12), transactionType: "Purchase", purchaseCategory: "", qty: 0, expense: 5000 }
+        ],
+        expectedIssue: ["MISSING_PURCHASE_CATEGORY", "Attention"],
+        expectedValidRows: 1
+      }
+    ],
+    scoped: {
+      referenceDate: new Date(2026, 5, 15, 12, 0, 0),
+      rows: [
+        validSales,
+        { date: new Date(2026, 5, 12), transactionType: "Sales", product: "", purchaseCategory: "", qty: 1, revenue: 0, expense: 0 },
+        { date: new Date(2026, 4, 31), transactionType: "Refund", product: "", purchaseCategory: "", qty: 0, revenue: 0, expense: 0 },
+        { date: "not-a-date", transactionType: "Sales", product: "", purchaseCategory: "", qty: -1, revenue: 0, expense: 0 }
+      ]
+    },
+    processor: {
+      transactions: [
+        ["Date", "Category", "Type", "Product", "Purchase Category", "Qty", "Amount"],
+        [new Date(2026, 5, 10), "Hot", "Sales", "Latte", "", "not-a-number", 0],
+        [new Date(2026, 5, 11), "", "Purchase", "", "Supplies", 0, "not-a-number"]
+      ],
+      priceMap: {
+        Latte: { P26Hot: 30000 }
+      }
+    },
+    frontendTokens: [
+      'id="dataQualityInformation"',
+      'id="dataQualityStatusBadge"',
+      'id="dataQualityIssueCount"',
+      'id="dataQualityDetailsButton"',
+      'type="button"',
+      'aria-expanded="false"',
+      'aria-controls="dataQualityDetails"',
+      'id="dataQualityDetails"',
+      '"No data issues"',
+      '"Good": "bg-emerald-100 text-emerald-700"',
+      '"Attention": "bg-amber-100 text-amber-700"',
+      '"Critical": "bg-red-100 text-red-700"',
+      'flex flex-wrap items-center'
+    ],
+    internalCodes: [
+      "INVALID_DATE",
+      "UNKNOWN_TRANSACTION_TYPE",
+      "MISSING_SALES_PRODUCT",
+      "MISSING_PURCHASE_CATEGORY",
+      "INVALID_QUANTITY",
+      "INVALID_PURCHASE_AMOUNT"
+    ]
+  };
+}

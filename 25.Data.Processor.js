@@ -45,7 +45,11 @@ function processTransactions(transactions, priceMap) {
       purchaseCategory: purchaseCategory,
       qty: qty,
       revenue: revenue,
-      expense: expense
+      expense: expense,
+      dataQualitySource: {
+        quantity: row[5],
+        purchaseAmount: row[6]
+      }
     });
   }
   return result;

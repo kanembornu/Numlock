@@ -345,7 +345,8 @@ function testSparseDatasetResilience()
     "businessMaturity",
     "kpiAchievement",
     "reportingScope",
-    "dataFreshness"
+    "dataFreshness",
+    "dataQuality"
   ];
 
   var expectedNormalJson =
@@ -406,7 +407,8 @@ function testSparseDatasetResilience()
       {
         if (
           property !== "reportingScope" &&
-          property !== "dataFreshness"
+          property !== "dataFreshness" &&
+          property !== "dataQuality"
         )
         {
           comparableResponse[property] = response[property];
@@ -1183,6 +1185,262 @@ function testReportingMetadata()
     summary.scenarios +
     " | freshness=" +
     summary.freshness.join(",")
+  );
+
+  return summary;
+}
+
+function testDataQualityDiagnostics()
+{
+  var fixture =
+    createDataQualityDiagnosticsFixtures();
+
+  var scenariosPassed = 0;
+  var statuses = {};
+  var severityByCode = {
+    INVALID_DATE: "High",
+    UNKNOWN_TRANSACTION_TYPE: "High",
+    MISSING_SALES_PRODUCT: "Medium",
+    MISSING_PURCHASE_CATEGORY: "Medium",
+    INVALID_QUANTITY: "Medium",
+    INVALID_PURCHASE_AMOUNT: "Medium"
+  };
+
+  fixture.cases.forEach(function(testCase)
+  {
+    var actual =
+      buildDataQualityDiagnostics(
+        testCase.rows
+      );
+
+    if (
+      testCase.expected &&
+      JSON.stringify(actual) !==
+        JSON.stringify(testCase.expected)
+    )
+    {
+      throw new Error(
+        "Data-quality output mismatch for " +
+        testCase.name
+      );
+    }
+
+    if (testCase.expectedIssue)
+    {
+      if (
+        actual.issueRows !== 1 ||
+        actual.issueCount !== 1 ||
+        actual.issues.length !== 1 ||
+        actual.issues[0].code !==
+          testCase.expectedIssue[0] ||
+        actual.status !==
+          testCase.expectedIssue[1]
+      )
+      {
+        throw new Error(
+          "Data-quality issue mismatch for " +
+          testCase.name
+        );
+      }
+
+      if (
+        testCase.expectedValidRows == null &&
+        (
+          actual.totalRows !== 1 ||
+          actual.validRows !== 0
+        )
+      )
+      {
+        throw new Error(
+          "Data-quality single-row mismatch for " +
+          testCase.name
+        );
+      }
+    }
+
+    if (testCase.expectedCodes)
+    {
+      var actualCodes =
+        actual.issues.map(function(issue)
+        {
+          return issue.code;
+        });
+
+      if (
+        JSON.stringify(actualCodes) !==
+          JSON.stringify(testCase.expectedCodes) ||
+        actual.issueRows !== 1 ||
+        actual.issueCount !==
+          testCase.expectedCodes.length ||
+        actual.status !== testCase.expectedStatus
+      )
+      {
+        throw new Error(
+          "Data-quality multi-issue mismatch for " +
+          testCase.name
+        );
+      }
+    }
+
+    if (
+      testCase.expectedValidRows != null &&
+      actual.validRows !== testCase.expectedValidRows
+    )
+    {
+      throw new Error(
+        "Data-quality valid-row mismatch for " +
+        testCase.name
+      );
+    }
+
+    actual.issues.forEach(function(issue)
+    {
+      if (
+        issue.severity !==
+          severityByCode[issue.code] ||
+        !issue.label ||
+        issue.count < 1
+      )
+      {
+        throw new Error(
+          "Data-quality issue contract mismatch for " +
+          testCase.name
+        );
+      }
+    });
+
+    statuses[actual.status] = true;
+    scenariosPassed++;
+  });
+
+  var scopedRowsJson =
+    JSON.stringify(fixture.scoped.rows);
+
+  var scopedResponse =
+    buildDashboardResponse(
+      fixture.scoped.rows,
+      "custom",
+      "2026-06-01",
+      "2026-06-30",
+      fixture.scoped.referenceDate
+    );
+
+  if (
+    scopedResponse.dataQuality.totalRows !== 2 ||
+    scopedResponse.dataQuality.validRows !== 1 ||
+    scopedResponse.dataQuality.issueRows !== 1 ||
+    scopedResponse.dataQuality.issueCount !== 1 ||
+    scopedResponse.dataQuality.status !== "Attention" ||
+    scopedResponse.dataQuality.issues[0].code !==
+      "MISSING_SALES_PRODUCT" ||
+    scopedResponse.reportingScope.rowCount !== 2 ||
+    scopedResponse.dateFilter.rowCount !== 2
+  )
+  {
+    throw new Error(
+      "Data-quality diagnostics are not scoped"
+    );
+  }
+  scenariosPassed++;
+
+  buildDataQualityDiagnostics(
+    fixture.scoped.rows
+  );
+
+  if (
+    JSON.stringify(fixture.scoped.rows) !==
+      scopedRowsJson
+  )
+  {
+    throw new Error(
+      "Data-quality diagnostics mutated source rows"
+    );
+  }
+  scenariosPassed++;
+
+  var sourceTransactionsJson =
+    JSON.stringify(fixture.processor.transactions);
+
+  var processedRows =
+    processTransactions(
+      fixture.processor.transactions,
+      fixture.processor.priceMap
+    );
+
+  var processedQuality =
+    buildDataQualityDiagnostics(
+      processedRows
+    );
+
+  var processedCodes =
+    processedQuality.issues.map(function(issue)
+    {
+      return issue.code;
+    });
+
+  if (
+    JSON.stringify(processedCodes) !==
+      JSON.stringify([
+        "INVALID_QUANTITY",
+        "INVALID_PURCHASE_AMOUNT"
+      ]) ||
+    JSON.stringify(fixture.processor.transactions) !==
+      sourceTransactionsJson
+  )
+  {
+    throw new Error(
+      "Processed-row data-quality provenance mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  fixture.frontendTokens.forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "data-quality frontend"
+    );
+  });
+
+  fixture.internalCodes.forEach(function(code)
+  {
+    assertSourceExcludes(
+      source,
+      code,
+      "internal data-quality code"
+    );
+  });
+
+  scenariosPassed++;
+
+  if (
+    !statuses.Good ||
+    !statuses.Attention ||
+    !statuses.Critical
+  )
+  {
+    throw new Error(
+      "Data-quality status coverage incomplete"
+    );
+  }
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    statuses: ["Good", "Attention", "Critical"]
+  };
+
+  Logger.log(
+    "PASS: testDataQualityDiagnostics | scenarios=" +
+    summary.scenarios +
+    " | statuses=" +
+    summary.statuses.join(",")
   );
 
   return summary;
