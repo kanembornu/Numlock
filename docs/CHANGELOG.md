@@ -5,7 +5,7 @@ This document records verified engineering milestones. Semantic versioning begin
 ## Unreleased
 
 - Added deterministic Expense Breakdown fixtures covering category order, repeated purchases, zero and negative amounts, ignored rows, top expense, and empty data.
-- Replaced the unified suite's Expense Breakdown oracle comparison while retaining the legacy chain pending live validation.
+- Retired the legacy Expense Breakdown oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Added deterministic Revenue Trend fixtures covering completed-month aggregation, cross-year ordering, current-month exclusion, zero-revenue inputs, and empty data.
 - Retired the legacy Revenue Trend oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Retired the legacy Summary oracle, validator, and migration test after deterministic Summary fixtures and the unified suite passed live.
@@ -45,5 +45,5 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Known technical debt
 
-- Four legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
+- Three legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
 - The Apps Script runtime emits an iframe sandbox warning.

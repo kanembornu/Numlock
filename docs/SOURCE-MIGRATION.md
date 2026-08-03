@@ -41,8 +41,8 @@ Each former-monolith top-level function appears exactly once below.
 | `50.Analytics.Product.js` | `buildRevenueConcentration(cache)` | Cached concentration calculation. |
 | `50.Analytics.Product.js` | `buildParetoAnalysis(cache)` | Cached Pareto calculation. |
 | `55.Analytics.Expense.js` | `buildExpenseIntelligence(cache)` | Cached expense intelligence. |
-| `55.Analytics.Expense.js` | `buildExpenseBreakdown(data)` | Legacy expense-breakdown oracle. |
-| `55.Analytics.Expense.js` | `validateExpenseBreakdownMigration(data)` | Expense equivalence validator. |
+| `55.Analytics.Expense.js` | `buildExpenseBreakdown(data)` | Historical owner; retired after deterministic Expense Breakdown fixture validation. |
+| `55.Analytics.Expense.js` | `validateExpenseBreakdownMigration(data)` | Historical owner; retired with the Expense Breakdown oracle. |
 | `60.Intelligence.Revenue.js` | `buildRevenueIntelligence(cache)` | Revenue direction and momentum. |
 | `60.Intelligence.Revenue.js` | `detectRevenueTrend(cache)` | Diagnosis-facing revenue detection. |
 | `65.Intelligence.Profit.js` | `buildProfitIntelligence(cache)` | Profit-margin interpretation. |
@@ -72,7 +72,7 @@ Each former-monolith top-level function appears exactly once below.
 | `95.Tests.js` | `testProfitTrendMigration()` | Manual profit-trend migration test. |
 | `95.Tests.js` | `testHotColdMigration()` | Manual Hot/Cold migration test. |
 | `95.Tests.js` | `testProductMigration()` | Manual product migration test. |
-| `95.Tests.js` | `testExpenseBreakdownMigration()` | Manual expense migration test. |
+| `95.Tests.js` | `testExpenseBreakdownMigration()` | Historical owner; retired after `testExpenseBreakdownFixtures()` passed live. |
 
 `100.Code.js#doGet()` and `190.View.Index.html` are outside the 59-function former-monolith count.
 

@@ -28,7 +28,6 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testRevenueTrendFixtures()` — deterministic Revenue Trend fixtures with literal completed-month labels and values.
 - `testExpenseBreakdownFixtures()` — deterministic ordered Expense Breakdown fixtures with literal amounts and top expense.
 - `testAggregate()`
-- `testExpenseBreakdownMigration()`
 - `testProductMigration()`
 - `testProfitTrendMigration()`
 - `testHotColdMigration()`
@@ -42,7 +41,7 @@ Migration tests must throw on mismatches. A returned `passed: true` or successfu
 
 `testRevenueTrendFixtures()` is the authoritative Revenue Trend regression test. It covers unsorted and repeated rows across completed months, purchase-only and zero-revenue rows, cross-year sorting, an empty dataset, and a current-month sentinel that must be excluded. Expected labels and values are literal and independent. The former Revenue Trend oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
-`testExpenseBreakdownFixtures()` replaces `testExpenseBreakdownMigration()` in the unified `8/8` suite. It asserts exact category insertion order, repeated-category totals, zero and negative amounts, ignored missing-category and sales rows, top expense, and empty output. Expected arrays and top-expense values are literal and independent of the legacy Expense Breakdown implementation. The legacy chain remains independently runnable until the deterministic fixture and unified suite pass live in Apps Script.
+`testExpenseBreakdownFixtures()` is the authoritative Expense Breakdown regression test. It asserts exact category insertion order, repeated-category totals, zero and negative amounts, ignored missing-category and sales rows, top expense, and empty output. Expected arrays and top-expense values are literal and independent. The former Expense Breakdown oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
 Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `8/8` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 

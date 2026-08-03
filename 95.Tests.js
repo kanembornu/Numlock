@@ -649,29 +649,6 @@ function testExpenseBreakdownFixtures()
   };
 }
 
-function testExpenseBreakdownMigration() {
-
-  var ss =
-    SpreadsheetApp.getActiveSpreadsheet();
-
-  var transactions =
-    getTransactionData(ss);
-
-  var priceMap =
-    getPriceMap(ss);
-
-  var processed =
-    processTransactions(
-      transactions,
-      priceMap
-    );
-
-  return validateExpenseBreakdownMigration(
-    processed
-  );
-
-}
-
 function runAllBackendTests()
 {
   var tests = [
