@@ -31,7 +31,7 @@ Google Sheets
 - profit trend; and
 - Hot/Cold split.
 
-`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`. Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend use deterministic fixture regression coverage; only the Hot/Cold Split legacy builder remains as a validation oracle. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows. Profit Intelligence remains based on the cached Financial Engine result rather than Profit Trend output.
+`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`, making Aggregate Engine the sole production analytics source. All six migrated domains use deterministic fixture regression coverage; no legacy migration builder remains. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows. Profit Intelligence remains based on the cached Financial Engine result rather than Profit Trend output.
 
 ## Numbered architecture
 
@@ -44,7 +44,7 @@ Google Sheets
 | `30.Analytics.Aggregate.js` | Aggregate construction and aggregate adapters. |
 | `35.Analytics.Financial.js` | Financial calculations. |
 | `40.Analytics.Summary.js` | Retired Summary migration slot; comments only, with no executable globals. |
-| `45.Analytics.Trend.js` | Trend cache facade, forecast, and legacy Hot/Cold migration validation; production Revenue Trend and Profit Trend are owned by aggregate adapters in `30.Analytics.Aggregate.js`. |
+| `45.Analytics.Trend.js` | Trend cache facade and forecast; production Revenue Trend, Profit Trend, and Hot/Cold Split are owned by aggregate adapters in `30.Analytics.Aggregate.js`. |
 | `50.Analytics.Product.js` | Product contribution, concentration, and Pareto over cached aggregate data; production Top Products is owned by the aggregate adapter in `30.Analytics.Aggregate.js`. |
 | `55.Analytics.Expense.js` | Expense intelligence over cached aggregate data; production Expense Breakdown is owned by the aggregate adapter in `30.Analytics.Aggregate.js`. |
 | `60.Intelligence.Revenue.js` | Revenue intelligence and revenue-direction detection. |
@@ -54,7 +54,7 @@ Google Sheets
 | `80.Intelligence.Recommendation.js` | Recommendations, opportunities, priorities, and action roadmap. |
 | `85.Intelligence.Decision.js` | Risk, business focus, executive alert, and executive summary. |
 | `90.Dashboard.Service.js` | Aggregate-cache orchestration and public dashboard response composition. |
-| `95.Tests.js` | Manual migration/backend test entry points and their test-only diagnostics. |
+| `95.Tests.js` | Deterministic backend test entry points and their test-only diagnostics. |
 | `100.Code.js` | Web entry points such as `doGet()`. |
 | `190.View.Index.html` | Dashboard HTML and browser runtime. |
 | `appsscript.json` | Apps Script manifest. |
@@ -90,15 +90,15 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `testExpenseBreakdownFixtures()`
 - `testTopProductsFixtures()`
 - `testProfitTrendFixtures()`
-- `testHotColdMigration()`
+- `testHotColdFixtures()`
 
-The migration test functions are editor-run validation entry points, not UI endpoints. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.
+The test functions are editor-run validation entry points, not UI endpoints. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.
 
 ## Architecture constraints
 
 - Preserve the public `getDashboardData()` response shape.
 - Build Aggregate Engine once per dashboard request.
-- Production code must not call legacy migration oracles.
+- No legacy migration oracle may be reintroduced into production or regression paths.
 - Spreadsheet reads belong in `20.Data.Source.js`; normalized-row construction belongs in `25.Data.Processor.js`.
 - Analytics functions must not render HTML or mutate spreadsheet data.
 - Intelligence layers read cached analytics and do not rescan raw transactions unless their documented domain has not yet migrated.

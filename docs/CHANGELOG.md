@@ -6,6 +6,7 @@ This document records verified engineering milestones. Semantic versioning begin
 
 - Added deterministic Hot/Cold Split fixtures covering repeated sales, quantity totals, zero quantities, non-Sales rows, unknown categories, exact case-sensitive matching, and empty data.
 - Replaced the unified suite's final legacy migration comparison with deterministic Hot/Cold Split fixtures while retaining the legacy chain pending live validation.
+- Retired the legacy Hot/Cold Split oracle, validator, and migration test after deterministic fixtures and the unified suite passed live, completing Sprint 5.7 Package 005 and the migration away from all legacy comparison builders.
 - Added deterministic Profit Trend fixtures covering unsorted cross-year months, repeated rows, sales revenue, purchase expense, purchase-only and revenue-only months, zero values, negative-expense refunds, and empty data.
 - Replaced the unified suite's Profit Trend migration comparison with deterministic fixtures while retaining the legacy chain pending live validation.
 - Retired the legacy Profit Trend oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
@@ -52,5 +53,5 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Known technical debt
 
-- The Hot/Cold Split legacy chain remains pending retirement after live fixture validation; no unified-suite test depends on a legacy migration oracle.
+- All legacy migration oracle chains are retired; the unified backend suite uses deterministic fixtures only.
 - The Apps Script runtime emits an iframe sandbox warning.

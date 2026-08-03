@@ -33,8 +33,8 @@ Each former-monolith top-level function appears exactly once below.
 | `45.Analytics.Trend.js` | `buildForecast(cache)` | Forecast from cached revenue trend. |
 | `45.Analytics.Trend.js` | `buildProfitTrend(data)` | Historical owner; retired after deterministic Profit Trend fixture validation. |
 | `45.Analytics.Trend.js` | `validateProfitTrendMigration(data)` | Historical owner; retired with the Profit Trend oracle. |
-| `45.Analytics.Trend.js` | `buildHotColdSplit(data)` | Legacy Hot/Cold oracle. |
-| `45.Analytics.Trend.js` | `validateHotColdMigration(data)` | Hot/Cold equivalence validator. |
+| `45.Analytics.Trend.js` | `buildHotColdSplit(data)` | Historical owner; retired after deterministic Hot/Cold Split fixture validation. |
+| `45.Analytics.Trend.js` | `validateHotColdMigration(data)` | Historical owner; retired with the Hot/Cold Split oracle. |
 | `50.Analytics.Product.js` | `buildTopProducts(data)` | Historical owner; retired after deterministic Top Products fixture validation. |
 | `50.Analytics.Product.js` | `validateProductMigration(data)` | Historical owner; retired with the Top Products oracle. |
 | `50.Analytics.Product.js` | `buildProductContribution(cache)` | Cached product contribution. |
@@ -70,7 +70,7 @@ Each former-monolith top-level function appears exactly once below.
 | `95.Tests.js` | `testSummaryMigration()` | Historical owner; retired after `testSummaryFixtures()` passed live. |
 | `95.Tests.js` | `testRevenueTrendMigration()` | Historical owner; retired after `testRevenueTrendFixtures()` passed live. |
 | `95.Tests.js` | `testProfitTrendMigration()` | Historical owner; retired after `testProfitTrendFixtures()` passed live. |
-| `95.Tests.js` | `testHotColdMigration()` | Manual Hot/Cold migration test. |
+| `95.Tests.js` | `testHotColdMigration()` | Historical owner; retired after `testHotColdFixtures()` passed live. |
 | `95.Tests.js` | `testProductMigration()` | Historical owner; retired after `testTopProductsFixtures()` passed live. |
 | `95.Tests.js` | `testExpenseBreakdownMigration()` | Historical owner; retired after `testExpenseBreakdownFixtures()` passed live. |
 
@@ -103,7 +103,7 @@ At every step, update `.claspignore` in the same commit to allow the newly activ
 - Compare the moved function’s name, parameter list, and normalized body with its pre-move source.
 - Confirm every top-level global exists exactly once across clasp-tracked `.js` files.
 - Run `node --check` on every changed JavaScript file.
-- Run all six dedicated migration tests with local deterministic mocks.
+- Run all six deterministic fixture tests with local Apps Script-compatible mocks.
 - Run `getDashboardData()` with a local Apps Script-compatible mock.
 - Run `git diff --check` and inspect `git status --short`.
 - Before upload, verify `clasp status` contains exactly the intended transitional file set.
@@ -136,6 +136,8 @@ Rollback must use the scoped task diff or an explicit inverse move. Do not use d
 7. **Entry point and view rename:** atomically moved `Code.js` to `100.Code.js`, moved `Index.html` to `190.View.Index.html`, updated the `HtmlService` filename literal, removed the comment-only monolith, and finalized `.claspignore`.
 
 Each decomposition commit was independently validated locally. Final acceptance subsequently confirmed a successful clasp upload, `getDashboardData()`, `testAggregate()`, all six migration tests in Apps Script, a new deployment version, and successful dashboard rendering. No application runtime errors were found. Git actions and future external writes remain separately authorized operations.
+
+All legacy comparison builders, validators, and migration test entry points were subsequently replaced by deterministic fixtures and retired after live validation. Aggregate Engine is now the sole production analytics source; source migration and Sprint 5.7 Package 005 are complete.
 
 ## Needs classification
 

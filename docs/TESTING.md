@@ -31,10 +31,9 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testProfitTrendFixtures()` — deterministic Profit Trend fixtures with literal sorted month labels and monthly profit values.
 - `testHotColdFixtures()` — deterministic Hot/Cold Split fixtures with literal case-sensitive Sales totals.
 - `testAggregate()`
-- `testHotColdMigration()`
 - `doGet()` (web output construction only; normally validate through the web app)
 
-Migration tests must throw on mismatches. A returned `passed: true` or successful completion is runtime evidence only when it comes from the intended NUMLOCK Apps Script project.
+Deterministic tests must throw on mismatches. A returned `passed: true` or successful completion is runtime evidence only when it comes from the intended NUMLOCK Apps Script project.
 
 `testSummaryFixtures()` is the authoritative Summary regression test. It covers mixed sales, purchases, multiple active days, repeated products, distinct quantity and revenue leaders, zero values, and an empty dataset. Its expected Summary fields are hardcoded independently. The former Summary oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
@@ -48,7 +47,7 @@ Migration tests must throw on mismatches. A returned `passed: true` or successfu
 
 `testProfitTrendFixtures()` is the authoritative Profit Trend regression test. It asserts unsorted cross-year month ordering, repeated-row aggregation, revenue-minus-expense values, purchase-only and revenue-only months, zero-value months, negative-expense refund behavior, and empty output. Expected labels and values are literal and independent. The former Profit Trend oracle, validator, and migration entry point were retired after this test, the independent legacy comparison, and the unified suite passed live in Apps Script.
 
-`testHotColdFixtures()` is the authoritative Hot/Cold Split regression test. It asserts repeated Hot and Cold Sales quantity totals, zero quantities, ignored non-Sales rows, ignored unknown categories, exact case-sensitive matching that excludes differently cased values, and empty output. Expected `hot` and `cold` totals are literal and independent. The legacy Hot/Cold Split oracle, validator, and migration entry point remain temporarily for independent live validation before retirement.
+`testHotColdFixtures()` is the authoritative Hot/Cold Split regression test. It asserts repeated Hot and Cold Sales quantity totals, zero quantities, ignored non-Sales rows, ignored unknown categories, exact case-sensitive matching that excludes differently cased values, and empty output. Expected `hot` and `cold` totals are literal and independent. The former Hot/Cold Split oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
 Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `8/8` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
@@ -57,9 +56,8 @@ Use the individual functions for targeted debugging after `runAllBackendTests()`
 Do not select parameterized helpers in the Apps Script editor. They require constructed arguments and are exercised through the safe entry points or bounded local harnesses:
 
 - data helpers taking `ss`, `transactions`, or `priceMap`;
-- `buildAggregate(data)` and every legacy `build*(data)` analytics oracle;
+- `buildAggregate(data)`;
 - every `build*FromAggregate(aggregate)` adapter;
-- every `validate*Migration(data)` validator;
 - cache consumers taking `cache`;
 - `buildDiagnosis(data, cache)`; and
 - all other builders requiring `data`, `summary`, or another argument.
@@ -68,7 +66,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It remains `8/8`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split. No unified-suite test depends on a legacy migration oracle. Targeted legacy functions are for failure diagnosis and explicitly documented retirement validation only.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It remains `8/8`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split. The unified suite uses deterministic fixtures only, and no legacy migration oracle or validator remains.
 
 ### During decomposition
 
@@ -78,7 +76,7 @@ After every function move:
 2. Confirm its name, parameters, and body are unchanged except for approved header comments.
 3. Run JavaScript syntax checks on every changed `.js` file.
 4. Run source-contract scans for duplicate or missing globals.
-5. Run all six deterministic fixture regressions locally; run the legacy Hot/Cold Split migration test independently while its retirement is pending.
+5. Run all six deterministic fixture regressions locally.
 6. Run `getDashboardData()` locally with an Apps Script-compatible mock.
 7. Run `git diff --check` and `git status --short`.
 
