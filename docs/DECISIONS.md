@@ -2,9 +2,19 @@
 
 ## Active decisions
 
+### Sprint 5.8 uses a product-evidence backlog
+
+Sprint 5.8 Package 001 shifts planned work from internal restructuring to product correctness, decision value, UX, accessibility, and measured frontend performance. [The product backlog](PRODUCT-BACKLOG.md) is the single prioritized inventory. Its P0/P1/P2/P3 ordering is evidence-based, and only the next three packages are scheduled in `ROADMAP.md`.
+
+Backlog entries that need business semantics, configuration ownership, export policy, or drill-down authorization remain explicitly requirement-gated. An audit recommendation does not authorize implementation or a public-contract change.
+
+### Preserve GitHub Pages as a separate launcher
+
+Root `index.html` is a GitHub Pages redirect/launcher to the Apps Script web app. It is not a second dashboard and not a documentation page. Keeping it separate preserves a lightweight stable entry point without duplicating Apps Script UI ownership.
+
 ### Aggregate Engine is the analytics source of truth
 
-`buildAnalyticsCache(data)` constructs one aggregate per dashboard request. Summary, revenue trend, expense breakdown, top products, profit trend, and Hot/Cold split derive from it. Legacy builders remain only as migration oracles until a separately approved cleanup.
+`buildAnalyticsCache(data)` constructs one aggregate per dashboard request. Summary, revenue trend, expense breakdown, top products, profit trend, and Hot/Cold split derive from it. Deterministic fixtures cover all six domains and no legacy migration oracle remains.
 
 ### Preserve the public dashboard contract
 
@@ -14,9 +24,9 @@ The frontend continues to call `getDashboardData()` and receive the existing pro
 
 The completed structure is defined in `ARCHITECTURE.md` and recorded function-by-function in `SOURCE-MIGRATION.md`. It is frozen as the live-validated production architecture. Numeric names communicate ownership and load order. Duplicate globals remain forbidden; architecture changes require an explicitly approved task and synchronized documentation.
 
-### Accept current browser warnings as non-blocking debt
+### Accept the current Apps Script browser warning as non-blocking debt
 
-The Tailwind CDN production warning and Apps Script iframe sandbox warning were present during successful deployed-dashboard verification. They are recorded technical debt, not application runtime failures, and do not authorize an incidental frontend change.
+The Apps Script iframe sandbox warning was present during successful deployed-dashboard verification. It is recorded technical debt, not an application runtime failure, and does not authorize an incidental frontend change. The Tailwind CDN warning was eliminated by the compiled-CSS package.
 
 ### Keep production Console output actionable
 
@@ -57,4 +67,8 @@ Static checks, local mocks, clasp upload, live Apps Script execution, deployment
 
 ## Deferred decisions
 
-- Legacy migration oracles remain until independent deterministic regression fixtures replace their current equivalence coverage. The Package 004 audit found no safe deletion candidate.
+- Purchase-only dashboard semantics and whether filtering applies to one view or every intelligence output.
+- Reporting-period presets and exact previous-period comparison rules.
+- KPI target values, storage location, and who may edit them.
+- Export format, included fields, and access policy.
+- Drill-down detail fields and authorization boundary.

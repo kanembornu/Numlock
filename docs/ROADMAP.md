@@ -57,8 +57,19 @@ Tailwind `3.4.17` is pinned locally and compiles the utilities used by `190.View
 
 The generated artifact, explicit dynamic-class safelist, clasp inventory, live backend checks, and deployed-browser parity were validated. The Apps Script iframe sandbox warning remains accepted non-blocking platform output.
 
-## Later work
+## Sprint 5.8 — product value, UX, and performance
 
-- Remove legacy migration builders only in a separately approved cleanup after live equivalence remains proven in the decomposed layout.
+Sprint 5.8 Package 001 completed a repository-evidence audit without changing production source, frontend behavior, GitHub Pages, or release metadata. The prioritized implementation backlog is maintained in [Product Backlog](PRODUCT-BACKLOG.md).
+
+The next three bounded, independently releasable packages are:
+
+1. **Package 002 — Empty-data resilience:** make valid empty and sparse datasets return and render explicit usable states.
+2. **Package 003 — Truthful transaction scope:** implement one approved end-to-end filter contract, or remove the unsupported control until the contract exists. Purchase-only semantics require product approval before work starts.
+3. **Package 004 — Recoverable dashboard states:** replace indefinite loading with visible, accessible success, empty, failure, and retry states.
+
+No later backlog item is scheduled by this roadmap. Date periods, targets, export, and drill-down remain requirement-gated.
+
+## Ongoing release obligations
+
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.
-- Select product or UI enhancements from verified business needs; this roadmap promises no unapproved feature work.
+- Preserve the frozen numbered ownership model and Aggregate Engine production contract unless a separately approved change updates the governing documentation.
