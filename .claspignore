@@ -17,7 +17,11 @@
 !80.Intelligence.Recommendation.js
 !85.Intelligence.Decision.js
 !90.Dashboard.Service.js
-!95.Tests.js
+!92.Tests.Fixtures.js
+!94.Tests.Assertions.js
+!95.Tests.Validators.js
+!96.Tests.Cases.js
+!98.Tests.Runner.js
 !100.Code.js
 !189.View.Tailwind.html
 !190.View.Index.html

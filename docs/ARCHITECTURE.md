@@ -18,7 +18,7 @@ Google Sheets
   -> 190.View.Index.html
 ```
 
-`100.Code.js#doGet()` evaluates `190.View.Index.html`. The browser calls the public server function `getDashboardData()` in `90.Dashboard.Service.js`, which returns a serializable dashboard response. Migration test entry points live in `95.Tests.js` and remain global because Apps Script editor execution requires global functions; they are not browser APIs.
+`100.Code.js#doGet()` evaluates `190.View.Index.html`. The browser calls the public server function `getDashboardData()` in `90.Dashboard.Service.js`, which returns a serializable dashboard response. Directly runnable test entry points live in `96.Tests.Cases.js`, and the unified runner lives in `98.Tests.Runner.js`. They remain global because Apps Script editor execution requires global functions; they are not browser APIs.
 
 ## Aggregate Engine
 
@@ -54,7 +54,11 @@ Google Sheets
 | `80.Intelligence.Recommendation.js` | Recommendations, opportunities, priorities, and action roadmap. |
 | `85.Intelligence.Decision.js` | Risk, business focus, executive alert, and executive summary. |
 | `90.Dashboard.Service.js` | Aggregate-cache orchestration and public dashboard response composition. |
-| `95.Tests.js` | Deterministic backend test entry points and their test-only diagnostics. |
+| `92.Tests.Fixtures.js` | Deterministic dataset construction for backend tests. |
+| `94.Tests.Assertions.js` | Reusable test-only assertions, including recursive finite-number validation. |
+| `95.Tests.Validators.js` | Pure analytics invariant validators and diagnostics; no runnable test entry points. |
+| `96.Tests.Cases.js` | Directly runnable Apps Script backend tests. |
+| `98.Tests.Runner.js` | Ordered, fail-fast unified 9-test backend suite. |
 | `100.Code.js` | Web entry points such as `doGet()`. |
 | `190.View.Index.html` | Dashboard HTML and browser runtime. |
 | `appsscript.json` | Apps Script manifest. |
@@ -74,7 +78,7 @@ Numeric filenames communicate ownership and give a dependency-safe Apps Script l
         -> 20.Data.Source
         -> Google Sheets / Apps Script services
 
-95.Tests -> the layer under test
+98.Tests.Runner -> 96.Tests.Cases -> 92/94/95 test support -> the layer under test
 00.Project.Spec and 10.Config -> may be read downward; never depend on higher layers
 ```
 
@@ -91,8 +95,10 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `testTopProductsFixtures()`
 - `testProfitTrendFixtures()`
 - `testHotColdFixtures()`
+- `testSparseDatasetResilience()`
+- `runAllBackendTests()`
 
-The test functions are editor-run validation entry points, not UI endpoints. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.
+The test functions are editor-run validation entry points, not UI endpoints. Apps Script does not automatically display returned objects, so `testSparseDatasetResilience()` explicitly logs its successful seven-fixture, 30-property, populated-equivalence summary. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.
 
 ## Architecture constraints
 

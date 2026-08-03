@@ -18,7 +18,7 @@ Every release updates `10.Config.js` and `docs/CHANGELOG.md` together. Update RE
 2. Run `npm ci`.
 3. Run `npm run build:tailwind` when frontend classes or styling changed, and review the generated `189.View.Tailwind.html` diff.
 4. Parse every numbered production JavaScript file and run applicable static checks.
-5. Run `runAllBackendTests()` locally with the documented Apps Script-compatible mocks; require `8/8` PASS.
+5. Run `runAllBackendTests()` locally with the documented Apps Script-compatible mocks; require `9/9` PASS.
 6. Review the complete diff and confirm release metadata and changelog agree.
 
 ### 2. Apps Script upload
@@ -30,7 +30,7 @@ Every release updates `10.Config.js` and `docs/CHANGELOG.md` together. Update RE
 ### 3. Live validation
 
 1. In the Apps Script editor, run `runAllBackendTests()` against the intended NUMLOCK project.
-2. Require the final `8/8` PASS marker.
+2. Require the final `9/9` PASS marker.
 3. If it fails, use the named targeted test function only to diagnose that failure. Stop on mismatches; do not deploy speculative fixes.
 
 ### 4. Deployment
@@ -72,10 +72,10 @@ Production rollback means editing the existing production deployment to point ba
 - [ ] `npm ci` passed.
 - [ ] Tailwind was rebuilt and reviewed when frontend classes or styling changed.
 - [ ] Production JavaScript syntax/static checks passed.
-- [ ] Local `runAllBackendTests()` passed `8/8`.
+- [ ] Local `runAllBackendTests()` passed `9/9`.
 - [ ] `clasp status` showed the exact reviewed production inventory.
 - [ ] Authorized `clasp push --force` completed.
-- [ ] Apps Script `runAllBackendTests()` passed `8/8`.
+- [ ] Apps Script `runAllBackendTests()` passed `9/9`.
 - [ ] The existing production deployment was updated to a new immutable version.
 - [ ] The stable web-app URL was retained.
 - [ ] Desktop and narrow-width browser acceptance passed.
@@ -90,7 +90,7 @@ Production rollback means editing the existing production deployment to point ba
 ### Reachability result
 
 - Production path: `getDashboardData()` calls `buildAnalyticsCache()`, which calls `buildAggregate()` once and derives summary, revenue trend, expense breakdown, top products, profit trend, and Hot/Cold split through aggregate adapters. It does not call a legacy builder, migration validator, or test entry point.
-- Test path: `runAllBackendTests()` reaches seven test entries: `testAggregate()` and deterministic Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split fixtures, plus the production `getDashboardData()` check. The unified suite uses deterministic fixtures only and no legacy migration oracle remains.
+- Test path: `runAllBackendTests()` reaches eight test entries: `testAggregate()`, deterministic Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split fixtures, and `testSparseDatasetResilience()`, plus the production `getDashboardData()` check. The unified suite contains exactly nine ordered checks, uses deterministic fixtures only, and no legacy migration oracle remains.
 - Unreachable functions: none.
 - Retired functions: all six legacy oracle chains were removed after their deterministic replacements passed live.
 - Replacement coverage status: complete. Aggregate Engine is the sole production analytics source, source migration is complete, and Sprint 5.7 Package 005 is complete.
@@ -101,14 +101,16 @@ Each declared production-source function appears exactly once below.
 
 | Classification | Functions |
 | --- | --- |
-| Active production function | `getTransactionData`, `getPriceMap`, `processTransactions`, `buildAggregate`, `buildSummaryFromAggregate`, `buildRevenueTrendFromAggregate`, `buildProfitTrendFromAggregate`, `buildHotColdSplitFromAggregate`, `buildTopProductsFromAggregate`, `buildExpenseBreakdownFromAggregate`, `buildFinancial`, `buildTrendEngine`, `buildForecast`, `buildProductContribution`, `buildRevenueConcentration`, `buildParetoAnalysis`, `buildExpenseIntelligence`, `buildRevenueIntelligence`, `detectRevenueTrend`, `buildProfitIntelligence`, `buildBusinessScore`, `buildGrowthScore`, `buildKpiAchievement`, `buildBusinessMaturity`, `buildKPIStatus`, `buildInsights`, `buildDiagnosis`, `detectCategoryDominance`, `buildRecommendationEngine`, `buildPriorityAction`, `buildOpportunityEngine`, `buildActionRoadmap`, `buildExecutiveSummary`, `buildRiskEngine`, `buildBusinessFocus`, `buildExecutiveAlert`, `getDashboardData`, `buildRecentTransactions`, `buildAnalyticsCache`, `doGet` |
-| Active regression test | `validateAggregate`, `createSummaryFixtures`, `createRevenueTrendFixtures`, `createExpenseBreakdownFixtures`, `createTopProductsFixtures`, `createProfitTrendFixtures`, `createHotColdFixtures` |
+| Active production function | `getTransactionData`, `getPriceMap`, `processTransactions`, `buildAggregate`, `buildSummaryFromAggregate`, `buildRevenueTrendFromAggregate`, `buildProfitTrendFromAggregate`, `buildHotColdSplitFromAggregate`, `buildTopProductsFromAggregate`, `buildExpenseBreakdownFromAggregate`, `buildFinancial`, `buildTrendEngine`, `buildForecast`, `buildProductContribution`, `buildRevenueConcentration`, `buildParetoAnalysis`, `buildExpenseIntelligence`, `buildRevenueIntelligence`, `detectRevenueTrend`, `buildProfitIntelligence`, `buildBusinessScore`, `buildGrowthScore`, `buildKpiAchievement`, `buildBusinessMaturity`, `buildKPIStatus`, `buildInsights`, `buildDiagnosis`, `detectCategoryDominance`, `buildRecommendationEngine`, `buildPriorityAction`, `buildOpportunityEngine`, `buildActionRoadmap`, `buildExecutiveSummary`, `buildRiskEngine`, `buildBusinessFocus`, `buildExecutiveAlert`, `getDashboardData`, `buildDashboardResponse`, `buildRecentTransactions`, `buildAnalyticsCache`, `doGet` |
+| Active regression support | `createSummaryFixtures`, `createRevenueTrendFixtures`, `createExpenseBreakdownFixtures`, `createTopProductsFixtures`, `createProfitTrendFixtures`, `createHotColdFixtures`, `createSparseDatasetFixtures`, `assertFiniteNumbers`, `validateAggregate` |
 | Legacy migration oracle | None |
 | Migration validator | None |
-| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendFixtures`, `testExpenseBreakdownFixtures`, `testTopProductsFixtures`, `testProfitTrendFixtures`, `testHotColdFixtures`, `runAllBackendTests` |
+| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendFixtures`, `testExpenseBreakdownFixtures`, `testTopProductsFixtures`, `testProfitTrendFixtures`, `testHotColdFixtures`, `testSparseDatasetResilience`, `runAllBackendTests` |
 | Dead/unreferenced function | None |
 
 `validateAggregate` is classified as an active regression diagnostic rather than a migration validator because it logs comparisons but does not assert or throw on mismatches.
+
+Test support is responsibility-split: deterministic data in `92.Tests.Fixtures.js`, reusable assertions in `94.Tests.Assertions.js`, analytics invariants in `95.Tests.Validators.js`, directly runnable cases in `96.Tests.Cases.js`, and the unified runner in `98.Tests.Runner.js`. Apps Script does not automatically display returned objects, so the sparse test logs its successful returned summary explicitly.
 
 ### Summary retirement status
 

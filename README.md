@@ -11,7 +11,7 @@ The application uses the completed numbered, flat Apps Script layout:
 - `30`–`55`: aggregate, financial, summary, trend, product, and expense analytics.
 - `60`–`85`: revenue, profit, score, diagnosis, recommendation, and decision intelligence.
 - `90.Dashboard.Service.js`: cache orchestration and dashboard response composition.
-- `95.Tests.js`: migration and backend test entry points.
+- `92`–`98`: deterministic test fixtures, reusable assertions, analytics validators, directly runnable test cases, and the unified backend runner.
 - `100.Code.js`: the `doGet()` web entry point.
 - `190.View.Index.html`: dashboard UI and browser runtime.
 

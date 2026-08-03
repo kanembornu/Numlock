@@ -8,6 +8,8 @@ The map is frozen as the historical decomposition record. It records the verifie
 
 The transitional `Code.js`, `DashboardService.js`, and `Index.html` files have been replaced by `100.Code.js`, the numbered backend files, and `190.View.Index.html`.
 
+The historical table below retains the original `95.Tests.js` ownership recorded at decomposition time. Current tests are split by responsibility: `92.Tests.Fixtures.js` creates deterministic datasets, `94.Tests.Assertions.js` owns reusable assertions, `95.Tests.Validators.js` checks analytics invariants, `96.Tests.Cases.js` owns directly runnable Apps Script tests, and `98.Tests.Runner.js` owns the ordered unified 9-test suite. Every function from the former test monolith has exactly one current owner.
+
 ## Exact function map
 
 Each former-monolith top-level function appears exactly once below.
@@ -92,7 +94,7 @@ No top-level shared constants exist in the current source. Category names, sheet
 6. Move product and expense functions to `50.Analytics.Product.js` and `55.Analytics.Expense.js`.
 7. Move revenue, profit, scoring, diagnosis, recommendation, and decision functions in numeric order through `85.Intelligence.Decision.js`.
 8. Move cache orchestration and response composition to `90.Dashboard.Service.js`.
-9. Move manual test entry points to `95.Tests.js`.
+9. Move manual test entry points to the historical `95.Tests.js`; they were later separated into the current `92`–`98` test ownership files without changing coverage.
 10. Atomically renamed `Code.js` to `100.Code.js` and `Index.html` to `190.View.Index.html`, updating `doGet()` from `"Index"` to `"190.View.Index"` in the same change.
 11. Removed the comment-only `DashboardService.js` after every global existed exactly once in numbered files.
 

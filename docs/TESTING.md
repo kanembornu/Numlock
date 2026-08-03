@@ -23,6 +23,7 @@ Mocks validate JavaScript execution and deterministic contracts; they do not pro
 These functions are read-only with respect to spreadsheet data and are safe to run deliberately in the Apps Script editor:
 
 - `runAllBackendTests()` — primary live backend validation entry point; runs the complete suite once in the documented order and stops on the first failure.
+- `testSparseDatasetResilience()` — seven deterministic end-to-end dashboard-response fixtures covering empty, sales-only, purchase-only, one-row, sparse mixed, and populated data.
 - `getDashboardData()`
 - `testSummaryFixtures()` — deterministic Summary regression fixtures with literal expected outputs.
 - `testRevenueTrendFixtures()` — deterministic Revenue Trend fixtures with literal completed-month labels and values.
@@ -49,7 +50,19 @@ Deterministic tests must throw on mismatches. A returned `passed: true` or succe
 
 `testHotColdFixtures()` is the authoritative Hot/Cold Split regression test. It asserts repeated Hot and Cold Sales quantity totals, zero quantities, ignored non-Sales rows, ignored unknown categories, exact case-sensitive matching that excludes differently cased values, and empty output. Expected `hot` and `cold` totals are literal and independent. The former Hot/Cold Split oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `8/8` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+`testSparseDatasetResilience()` calls the same `buildDashboardResponse()` composition path used by `getDashboardData()`. It requires all 30 public response properties, recursively rejects `NaN` and infinite numbers, validates diagnosis/recommendation/risk/alert/roadmap structures, and compares the complete populated fixture response with a literal pre-change snapshot.
+
+Backend test ownership is separated by responsibility:
+
+- `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
+- `94.Tests.Assertions.js` contains reusable test assertions.
+- `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
+- `96.Tests.Cases.js` contains all eight directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 9-test suite.
+
+Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=30 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `9/9` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -66,7 +79,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It remains `8/8`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split. The unified suite uses deterministic fixtures only, and no legacy migration oracle or validator remains.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `9/9`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, and full sparse-dataset dashboard resilience. The unified suite uses deterministic fixtures only, and no legacy migration oracle or validator remains.
 
 ### During decomposition
 
