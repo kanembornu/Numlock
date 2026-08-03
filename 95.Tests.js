@@ -73,6 +73,139 @@ function validateAggregate(data)
   Logger.log("==========================================");
 }
 
+function createSummaryFixtures()
+{
+  return [
+    {
+      name: "mixed sales purchases repeated products and zero values",
+      data: [
+        {
+          date: new Date(2026, 0, 10, 9, 0, 0),
+          category: "Hot",
+          transactionType: "Sales",
+          product: "Latte",
+          purchaseCategory: "",
+          qty: 2,
+          revenue: 60000,
+          expense: 0
+        },
+        {
+          date: new Date(2026, 0, 10, 10, 0, 0),
+          category: "Hot",
+          transactionType: "Sales",
+          product: "Espresso",
+          purchaseCategory: "",
+          qty: 4,
+          revenue: 200000,
+          expense: 0
+        },
+        {
+          date: new Date(2026, 0, 11, 9, 0, 0),
+          category: "Cold",
+          transactionType: "Sales",
+          product: "Latte",
+          purchaseCategory: "",
+          qty: 3,
+          revenue: 90000,
+          expense: 0
+        },
+        {
+          date: new Date(2026, 0, 12, 9, 0, 0),
+          category: "",
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Supplies",
+          qty: 0,
+          revenue: 0,
+          expense: 50000
+        },
+        {
+          date: new Date(2026, 0, 12, 10, 0, 0),
+          category: "Cold",
+          transactionType: "Sales",
+          product: "Water",
+          purchaseCategory: "",
+          qty: 0,
+          revenue: 0,
+          expense: 0
+        }
+      ],
+      expected: {
+        revenue: 350000,
+        expense: 50000,
+        profit: 300000,
+        unitsSold: 9,
+        bestSeller: "Latte",
+        topRevenueProduct: "Espresso",
+        avgDailyRevenue: 175000,
+        activeDays: 2
+      }
+    },
+    {
+      name: "empty dataset",
+      data: [],
+      expected: {
+        revenue: 0,
+        expense: 0,
+        profit: 0,
+        unitsSold: 0,
+        bestSeller: "",
+        topRevenueProduct: "",
+        avgDailyRevenue: 0,
+        activeDays: 1
+      }
+    }
+  ];
+}
+
+function testSummaryFixtures()
+{
+  var fields = [
+    "revenue",
+    "expense",
+    "profit",
+    "unitsSold",
+    "bestSeller",
+    "topRevenueProduct",
+    "avgDailyRevenue",
+    "activeDays"
+  ];
+
+  var fixtures =
+    createSummaryFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    var actual =
+      buildSummaryFromAggregate(
+        buildAggregate(fixture.data)
+      );
+
+    fields.forEach(function(field)
+    {
+      if(actual[field] !== fixture.expected[field])
+      {
+        throw new Error(
+          "Summary fixture mismatch for " +
+          fixture.name +
+          " / " +
+          field +
+          ": expected=" +
+          fixture.expected[field] +
+          ", actual=" +
+          actual[field]
+        );
+      }
+    });
+  });
+
+  return {
+    passed: true,
+    fixtures: fixtures.length,
+    fields: fields
+  };
+}
+
 function testSummaryMigration() {
   var ss =
     SpreadsheetApp.getActiveSpreadsheet();
@@ -209,7 +342,7 @@ function runAllBackendTests()
   var tests = [
     { name: "getDashboardData", run: getDashboardData },
     { name: "testAggregate", run: testAggregate },
-    { name: "testSummaryMigration", run: testSummaryMigration },
+    { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendMigration", run: testRevenueTrendMigration },
     { name: "testExpenseBreakdownMigration", run: testExpenseBreakdownMigration },
     { name: "testProductMigration", run: testProductMigration },
