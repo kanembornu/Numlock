@@ -484,6 +484,171 @@ function testProductMigration() {
 
 }
 
+function createExpenseBreakdownFixtures()
+{
+  return [
+    {
+      name: "ordered categories with repeated zero negative and ignored rows",
+      data: [
+        {
+          date: new Date(2025, 0, 1, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Supplies",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: 100
+        },
+        {
+          date: new Date(2025, 0, 2, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Rent",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: 500
+        },
+        {
+          date: new Date(2025, 0, 3, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Supplies",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: 50
+        },
+        {
+          date: new Date(2025, 0, 4, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Utilities",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: 0
+        },
+        {
+          date: new Date(2025, 0, 5, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Refunds",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: -25
+        },
+        {
+          date: new Date(2025, 0, 6, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: 999
+        },
+        {
+          date: new Date(2025, 0, 7, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Latte",
+          purchaseCategory: "",
+          category: "Hot",
+          qty: 1,
+          revenue: 300,
+          expense: 250
+        }
+      ],
+      expected: {
+        breakdown: [
+          { category: "Supplies", amount: 150 },
+          { category: "Rent", amount: 500 },
+          { category: "Utilities", amount: 0 },
+          { category: "Refunds", amount: -25 }
+        ],
+        topExpense: {
+          category: "Rent",
+          amount: 500
+        }
+      }
+    },
+    {
+      name: "empty dataset",
+      data: [],
+      expected: {
+        breakdown: [],
+        topExpense: null
+      }
+    }
+  ];
+}
+
+function testExpenseBreakdownFixtures()
+{
+  var fixtures =
+    createExpenseBreakdownFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    var aggregate =
+      buildAggregate(fixture.data);
+
+    var actualBreakdown =
+      buildExpenseBreakdownFromAggregate(
+        aggregate
+      );
+
+    if(
+      actualBreakdown.length !==
+      fixture.expected.breakdown.length
+    )
+    {
+      throw new Error(
+        "Expense Breakdown fixture length mismatch for " +
+        fixture.name
+      );
+    }
+
+    if(
+      JSON.stringify(actualBreakdown) !==
+      JSON.stringify(fixture.expected.breakdown)
+    )
+    {
+      throw new Error(
+        "Expense Breakdown fixture mismatch for " +
+        fixture.name +
+        ": expected=" +
+        JSON.stringify(fixture.expected.breakdown) +
+        ", actual=" +
+        JSON.stringify(actualBreakdown)
+      );
+    }
+
+    if(
+      JSON.stringify(aggregate.topExpense) !==
+      JSON.stringify(fixture.expected.topExpense)
+    )
+    {
+      throw new Error(
+        "Expense Breakdown top expense mismatch for " +
+        fixture.name +
+        ": expected=" +
+        JSON.stringify(fixture.expected.topExpense) +
+        ", actual=" +
+        JSON.stringify(aggregate.topExpense)
+      );
+    }
+  });
+
+  return {
+    passed: true,
+    fixtures: fixtures.length,
+    fields: ["breakdown", "topExpense"]
+  };
+}
+
 function testExpenseBreakdownMigration() {
 
   var ss =
@@ -514,7 +679,7 @@ function runAllBackendTests()
     { name: "testAggregate", run: testAggregate },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
-    { name: "testExpenseBreakdownMigration", run: testExpenseBreakdownMigration },
+    { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },
     { name: "testProductMigration", run: testProductMigration },
     { name: "testProfitTrendMigration", run: testProfitTrendMigration },
     { name: "testHotColdMigration", run: testHotColdMigration }
