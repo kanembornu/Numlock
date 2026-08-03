@@ -21,7 +21,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## Architecture and invariants
 
-`buildAnalyticsCache()` builds Aggregate Engine once. Migrated production builders consume cached aggregate outputs. Deterministic fixtures are authoritative for Summary and now cover Revenue Trend pending live validation; the five remaining legacy builders are validation-only. Preserve the `getDashboardData()` response, Apps Script globals, formulas, spreadsheet reads, case-sensitive categories, date behavior, and frontend contract.
+`buildAnalyticsCache()` builds Aggregate Engine once. Migrated production builders consume cached aggregate outputs. Deterministic fixtures are authoritative for Summary and Revenue Trend; the four remaining legacy builders are validation-only. Preserve the `getDashboardData()` response, Apps Script globals, formulas, spreadsheet reads, case-sensitive categories, date behavior, and frontend contract.
 
 All source uses the numbered ownership layout documented in `docs/ARCHITECTURE.md`; all 59 former-monolith function assignments are recorded in `docs/SOURCE-MIGRATION.md`.
 
@@ -33,8 +33,7 @@ Safe live entry points and known failure modes are documented in `docs/TESTING.m
 
 ## Technical debt
 
-- The legacy Summary oracle is retired; five migration oracles remain until independent fixture coverage replaces them.
-- The unified suite no longer depends on the Revenue Trend oracle; its legacy chain remains pending retirement after live fixture validation.
+- The legacy Summary and Revenue Trend oracles are retired; four migration oracles remain until independent fixture coverage replaces them.
 - Future releases must update `10.Config.js` and `docs/CHANGELOG.md` together.
 - The Apps Script iframe emits its platform sandbox warning.
 

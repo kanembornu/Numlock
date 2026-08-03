@@ -27,8 +27,8 @@ Each former-monolith top-level function appears exactly once below.
 | `35.Analytics.Financial.js` | `buildFinancial(data)` | Financial Engine calculations. |
 | `40.Analytics.Summary.js` | `buildSummary(data)` | Historical owner; retired after deterministic Summary fixture validation. |
 | `40.Analytics.Summary.js` | `validateSummaryMigration(data)` | Historical owner; retired with the Summary oracle. |
-| `45.Analytics.Trend.js` | `buildRevenueTrend(data)` | Legacy revenue-trend oracle. |
-| `45.Analytics.Trend.js` | `validateRevenueTrendMigration(data)` | Revenue-trend equivalence validator. |
+| `45.Analytics.Trend.js` | `buildRevenueTrend(data)` | Historical owner; retired after deterministic Revenue Trend fixture validation. |
+| `45.Analytics.Trend.js` | `validateRevenueTrendMigration(data)` | Historical owner; retired with the Revenue Trend oracle. |
 | `45.Analytics.Trend.js` | `buildTrendEngine(cache)` | Cached trend response facade. |
 | `45.Analytics.Trend.js` | `buildForecast(cache)` | Forecast from cached revenue trend. |
 | `45.Analytics.Trend.js` | `buildProfitTrend(data)` | Legacy profit-trend oracle. |
@@ -68,7 +68,7 @@ Each former-monolith top-level function appears exactly once below.
 | `95.Tests.js` | `testAggregate()` | Manual aggregate test entry point. |
 | `95.Tests.js` | `validateAggregate(data)` | Test-only aggregate invariant diagnostic helper. |
 | `95.Tests.js` | `testSummaryMigration()` | Historical owner; retired after `testSummaryFixtures()` passed live. |
-| `95.Tests.js` | `testRevenueTrendMigration()` | Manual revenue-trend migration test. |
+| `95.Tests.js` | `testRevenueTrendMigration()` | Historical owner; retired after `testRevenueTrendFixtures()` passed live. |
 | `95.Tests.js` | `testProfitTrendMigration()` | Manual profit-trend migration test. |
 | `95.Tests.js` | `testHotColdMigration()` | Manual Hot/Cold migration test. |
 | `95.Tests.js` | `testProductMigration()` | Manual product migration test. |

@@ -31,7 +31,7 @@ Google Sheets
 - profit trend; and
 - Hot/Cold split.
 
-`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`. Summary uses deterministic fixture regression coverage; five legacy builders remain only as validation oracles for the other migrated domains. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows.
+`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`. Summary and Revenue Trend use deterministic fixture regression coverage; four legacy builders remain only as validation oracles for the other migrated domains. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows.
 
 ## Numbered architecture
 
@@ -44,7 +44,7 @@ Google Sheets
 | `30.Analytics.Aggregate.js` | Aggregate construction and aggregate adapters. |
 | `35.Analytics.Financial.js` | Financial calculations. |
 | `40.Analytics.Summary.js` | Retired Summary migration slot; comments only, with no executable globals. |
-| `45.Analytics.Trend.js` | Revenue/profit trends, forecast, Hot/Cold split, trend cache facade, and migration validation. |
+| `45.Analytics.Trend.js` | Trend cache facade, forecast, and legacy profit/Hot-Cold migration validation; production Revenue Trend is owned by the aggregate adapter in `30.Analytics.Aggregate.js`. |
 | `50.Analytics.Product.js` | Product ranking, contribution, concentration, Pareto, and product migration validation. |
 | `55.Analytics.Expense.js` | Expense breakdown, expense intelligence, and migration validation. |
 | `60.Intelligence.Revenue.js` | Revenue intelligence and revenue-direction detection. |
@@ -86,7 +86,7 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `getDashboardData()` — browser-callable, read-only dashboard-data API.
 - `testAggregate()` — manual aggregate diagnostic.
 - `testSummaryFixtures()`
-- `testRevenueTrendMigration()`
+- `testRevenueTrendFixtures()`
 - `testExpenseBreakdownMigration()`
 - `testProductMigration()`
 - `testProfitTrendMigration()`

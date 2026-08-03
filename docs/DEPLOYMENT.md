@@ -46,7 +46,7 @@ Run `clasp push` only with explicit approval. The authoritative release workflow
 
 1. `getDashboardData()`
 2. `testSummaryFixtures()`
-3. `testRevenueTrendMigration()`
+3. `testRevenueTrendFixtures()`
 4. `testExpenseBreakdownMigration()`
 5. `testProductMigration()`
 6. `testProfitTrendMigration()`

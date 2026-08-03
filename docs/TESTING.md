@@ -27,7 +27,6 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testSummaryFixtures()` — deterministic Summary regression fixtures with literal expected outputs.
 - `testRevenueTrendFixtures()` — deterministic Revenue Trend fixtures with literal completed-month labels and values.
 - `testAggregate()`
-- `testRevenueTrendMigration()`
 - `testExpenseBreakdownMigration()`
 - `testProductMigration()`
 - `testProfitTrendMigration()`
@@ -40,7 +39,7 @@ Migration tests must throw on mismatches. A returned `passed: true` or successfu
 
 `testAggregate()` remains a live-data diagnostic. Its validator checks Aggregate Engine internal invariants for active-day count, total profit, best seller, and top-revenue product without depending on legacy Summary logic.
 
-`testRevenueTrendFixtures()` replaces `testRevenueTrendMigration()` in the unified `8/8` suite. It covers unsorted and repeated rows across completed months, purchase-only and zero-revenue rows, cross-year sorting, an empty dataset, and a current-month sentinel that must be excluded. Expected labels and values are literal and independent of the legacy Revenue Trend implementation. The legacy Revenue Trend chain remains independently runnable until the deterministic fixture and unified suite pass live in Apps Script.
+`testRevenueTrendFixtures()` is the authoritative Revenue Trend regression test. It covers unsorted and repeated rows across completed months, purchase-only and zero-revenue rows, cross-year sorting, an empty dataset, and a current-month sentinel that must be excluded. Expected labels and values are literal and independent. The former Revenue Trend oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
 Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `8/8` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 

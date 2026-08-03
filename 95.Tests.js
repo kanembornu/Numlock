@@ -415,26 +415,6 @@ function testRevenueTrendFixtures()
   };
 }
 
-function testRevenueTrendMigration()
-{
-  var ss =
-    SpreadsheetApp.getActiveSpreadsheet();
-
-  var transactions =
-    getTransactionData(ss);
-
-  var priceMap =
-    getPriceMap(ss);
-
-  var processed =
-    processTransactions(
-      transactions,
-      priceMap
-    );
-
-  return validateRevenueTrendMigration(processed);
-}
-
 function testProfitTrendMigration() {
 
   var ss =
