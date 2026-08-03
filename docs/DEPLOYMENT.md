@@ -45,7 +45,7 @@ Before upload after relevant frontend changes, verify the Tailwind CDN reference
 Run `clasp push` only with explicit approval. The authoritative release workflow uses `clasp push --force` only after exact inventory review and upload authorization. After upload, run `runAllBackendTests()` in the Apps Script editor and require `8/8`; use these targeted functions only to diagnose failures:
 
 1. `getDashboardData()`
-2. `testSummaryMigration()`
+2. `testSummaryFixtures()`
 3. `testRevenueTrendMigration()`
 4. `testExpenseBreakdownMigration()`
 5. `testProductMigration()`

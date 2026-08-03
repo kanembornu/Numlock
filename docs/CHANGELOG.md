@@ -4,7 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
-- Audited every production-source function and retained all active migration-oracle coverage; no function was safe to remove.
+- Retired the legacy Summary oracle, validator, and migration test after deterministic Summary fixtures and the unified suite passed live.
+- Replaced the aggregate diagnostic's legacy Summary comparison with direct Aggregate Engine invariant checks.
+- Completed the initial production-source audit, which retained migration oracles until deterministic replacement coverage was proven.
 - Established `docs/RELEASE.md` as the authoritative release workflow, semantic-versioning policy, and release-checklist owner.
 - Added consistent VS Code tasks for Tailwind build, clasp inventory, clasp push, and local preflight.
 
@@ -39,5 +41,5 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Known technical debt
 
-- Legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
+- Five legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
 - The Apps Script runtime emits an iframe sandbox warning.

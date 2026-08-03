@@ -4,7 +4,7 @@
 
 This record maps the 59 top-level functions formerly in `DashboardService.js` into the completed numbered flat-file architecture. The migration preserved function names, parameters, bodies, global visibility, formulas, response shapes, spreadsheet access, and Apps Script V8 compatibility.
 
-The map is frozen as the verified production ownership contract. The 59 mapped globals plus `100.Code.js#doGet()` each have exactly one production owner.
+The map is frozen as the historical decomposition record. It records the verified owners immediately after migration; later explicitly approved retirements are marked below and the current executable inventory is maintained in `RELEASE.md`.
 
 The transitional `Code.js`, `DashboardService.js`, and `Index.html` files have been replaced by `100.Code.js`, the numbered backend files, and `190.View.Index.html`.
 
@@ -25,8 +25,8 @@ Each former-monolith top-level function appears exactly once below.
 | `30.Analytics.Aggregate.js` | `buildTopProductsFromAggregate(aggregate)` | Aggregate adapter. |
 | `30.Analytics.Aggregate.js` | `buildExpenseBreakdownFromAggregate(aggregate)` | Aggregate adapter. |
 | `35.Analytics.Financial.js` | `buildFinancial(data)` | Financial Engine calculations. |
-| `40.Analytics.Summary.js` | `buildSummary(data)` | Legacy summary validation oracle. |
-| `40.Analytics.Summary.js` | `validateSummaryMigration(data)` | Summary equivalence validator. |
+| `40.Analytics.Summary.js` | `buildSummary(data)` | Historical owner; retired after deterministic Summary fixture validation. |
+| `40.Analytics.Summary.js` | `validateSummaryMigration(data)` | Historical owner; retired with the Summary oracle. |
 | `45.Analytics.Trend.js` | `buildRevenueTrend(data)` | Legacy revenue-trend oracle. |
 | `45.Analytics.Trend.js` | `validateRevenueTrendMigration(data)` | Revenue-trend equivalence validator. |
 | `45.Analytics.Trend.js` | `buildTrendEngine(cache)` | Cached trend response facade. |
@@ -66,8 +66,8 @@ Each former-monolith top-level function appears exactly once below.
 | `90.Dashboard.Service.js` | `buildRecentTransactions(data)` | Dashboard response projection. |
 | `90.Dashboard.Service.js` | `buildAnalyticsCache(data)` | Single aggregate/cache orchestration. |
 | `95.Tests.js` | `testAggregate()` | Manual aggregate test entry point. |
-| `95.Tests.js` | `validateAggregate(data)` | Test-only aggregate/legacy diagnostic helper. |
-| `95.Tests.js` | `testSummaryMigration()` | Manual summary migration test. |
+| `95.Tests.js` | `validateAggregate(data)` | Test-only aggregate invariant diagnostic helper. |
+| `95.Tests.js` | `testSummaryMigration()` | Historical owner; retired after `testSummaryFixtures()` passed live. |
 | `95.Tests.js` | `testRevenueTrendMigration()` | Manual revenue-trend migration test. |
 | `95.Tests.js` | `testProfitTrendMigration()` | Manual profit-trend migration test. |
 | `95.Tests.js` | `testHotColdMigration()` | Manual Hot/Cold migration test. |

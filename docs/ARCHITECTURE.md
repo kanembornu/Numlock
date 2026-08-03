@@ -31,7 +31,7 @@ Google Sheets
 - profit trend; and
 - Hot/Cold split.
 
-`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`; legacy builders remain only as validation oracles. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows.
+`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`. Summary uses deterministic fixture regression coverage; five legacy builders remain only as validation oracles for the other migrated domains. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows.
 
 ## Numbered architecture
 
@@ -43,7 +43,7 @@ Google Sheets
 | `25.Data.Processor.js` | Transaction normalization. |
 | `30.Analytics.Aggregate.js` | Aggregate construction and aggregate adapters. |
 | `35.Analytics.Financial.js` | Financial calculations. |
-| `40.Analytics.Summary.js` | Legacy summary oracle and summary migration validation. |
+| `40.Analytics.Summary.js` | Retired Summary migration slot; comments only, with no executable globals. |
 | `45.Analytics.Trend.js` | Revenue/profit trends, forecast, Hot/Cold split, trend cache facade, and migration validation. |
 | `50.Analytics.Product.js` | Product ranking, contribution, concentration, Pareto, and product migration validation. |
 | `55.Analytics.Expense.js` | Expense breakdown, expense intelligence, and migration validation. |
@@ -85,7 +85,7 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `doGet()` — web-app HTTP entry point.
 - `getDashboardData()` — browser-callable, read-only dashboard-data API.
 - `testAggregate()` — manual aggregate diagnostic.
-- `testSummaryMigration()`
+- `testSummaryFixtures()`
 - `testRevenueTrendMigration()`
 - `testExpenseBreakdownMigration()`
 - `testProductMigration()`
