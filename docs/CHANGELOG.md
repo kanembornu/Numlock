@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.9 Package 002 additive `reportingScope` and `dataFreshness` response metadata from the already scoped transaction rows, including deterministic project-timezone freshness and partial-period semantics.
+- Added a compact responsive reporting summary for active month range, transaction count, latest data date, and text-labeled Current/Stale/No Data status without exposing raw timestamps or internal metadata.
+- Added `testReportingMetadata()` and raised the ordered fail-fast unified backend gate to 13/13 while retaining the populated analytics snapshot.
 - Implemented Sprint 5.9 Package 001 responsive dashboard shell: preserved the fixed desktop sidebar at `lg`, added a narrow-screen overlay drawer with backdrop/Escape/navigation close behavior, body scroll locking, focus restoration, and active-page semantics.
 - Added narrow-screen stacking, wrapping, `min-w-0` overflow guards, responsive chart heights, and an explicit horizontal-scroll container for the recent-transactions table.
 - Added `testResponsiveShellContract()` and raised the ordered fail-fast unified backend gate to 12/12.

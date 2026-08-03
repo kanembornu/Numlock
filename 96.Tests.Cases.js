@@ -343,7 +343,9 @@ function testSparseDatasetResilience()
     "executiveAlert",
     "actionRoadmap",
     "businessMaturity",
-    "kpiAchievement"
+    "kpiAchievement",
+    "reportingScope",
+    "dataFreshness"
   ];
 
   var expectedNormalJson =
@@ -395,13 +397,28 @@ function testSparseDatasetResilience()
     }
 
     if (
-      fixture.normal &&
-      JSON.stringify(response) !== expectedNormalJson
+      fixture.normal
     )
     {
-      throw new Error(
-        "Normal populated dashboard output changed"
-      );
+      var comparableResponse = {};
+
+      Object.keys(response).forEach(function(property)
+      {
+        if (
+          property !== "reportingScope" &&
+          property !== "dataFreshness"
+        )
+        {
+          comparableResponse[property] = response[property];
+        }
+      });
+
+      if (JSON.stringify(comparableResponse) !== expectedNormalJson)
+      {
+        throw new Error(
+          "Normal populated dashboard output changed"
+        );
+      }
     }
   });
 
@@ -998,6 +1015,174 @@ function testResponsiveShellContract()
     summary.breakpoint +
     " | drawer=" +
     summary.drawer
+  );
+
+  return summary;
+}
+
+function testReportingMetadata()
+{
+  var fixture =
+    createReportingMetadataFixtures();
+
+  var scenariosPassed = 0;
+
+  fixture.cases.forEach(function(testCase)
+  {
+    var metadata =
+      buildReportingMetadata(
+        testCase.rows,
+        { filter: "custom" },
+        fixture.referenceDate
+      );
+
+    var scope =
+      metadata.reportingScope;
+
+    var actual =
+      scope.transactionCount + "|" +
+      scope.salesCount + "|" +
+      scope.purchaseCount + "|" +
+      scope.firstTransactionDate + "|" +
+      scope.lastTransactionDate + "|" +
+      metadata.dataFreshness.status;
+
+    if (actual !== testCase.expected)
+    {
+      throw new Error(
+        "Reporting metadata mismatch for " +
+        testCase.name +
+        ": expected=" +
+        testCase.expected +
+        ", actual=" +
+        actual
+      );
+    }
+
+    if (
+      scope.rowCount !== scope.transactionCount ||
+      metadata.dataFreshness.timezone !==
+        Session.getScriptTimeZone()
+    )
+    {
+      throw new Error(
+        "Reporting count or timezone mismatch for " +
+        testCase.name
+      );
+    }
+
+    assertFiniteNumbers(
+      metadata,
+      "reporting metadata / " + testCase.name
+    );
+
+    scenariosPassed++;
+  });
+
+  fixture.periods.forEach(function(period)
+  {
+    var periodReferenceDate =
+      period.referenceDate ||
+      fixture.referenceDate;
+
+    var range =
+      resolveDashboardDateRange(
+        period.filter,
+        period.filter === "custom" ? "2026-06-01" : null,
+        period.filter === "custom" ? "2026-06-30" : null,
+        periodReferenceDate
+      );
+
+    var metadata =
+      buildReportingMetadata(
+        [],
+        range,
+        periodReferenceDate
+      );
+
+    if (
+      metadata.reportingScope.isPartialPeriod !==
+      period.expected
+    )
+    {
+      throw new Error(
+        "Reporting partial-period mismatch for " +
+        period.filter
+      );
+    }
+
+    scenariosPassed++;
+  });
+
+  var response =
+    buildDashboardResponse(
+      fixture.cases[3].rows,
+      "custom",
+      "2026-06-01",
+      "2026-06-30",
+      fixture.referenceDate
+    );
+
+  if (!response.reportingScope || !response.dataFreshness)
+  {
+    throw new Error(
+      "Dashboard response missing reporting metadata"
+    );
+  }
+
+  if (
+    response.dataFreshness.generatedAt !==
+      fixture.referenceDate.toISOString() ||
+    response.dataFreshness.lastTransactionAt !==
+      fixture.cases[3].rows[2].date.toISOString()
+  )
+  {
+    throw new Error(
+      "Reporting timestamps are not deterministic"
+    );
+  }
+
+  scenariosPassed++;
+
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  fixture.frontendTokens.forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "reporting frontend"
+    );
+  });
+
+  assertSourceExcludes(
+    source,
+    "freshness.lastTransactionAt",
+    "raw freshness timestamp"
+  );
+
+  assertSourceExcludes(
+    source,
+    "freshness.generatedAt",
+    "generated timestamp"
+  );
+
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    freshness: ["Current", "Stale", "No Data"]
+  };
+
+  Logger.log(
+    "PASS: testReportingMetadata | scenarios=" +
+    summary.scenarios +
+    " | freshness=" +
+    summary.freshness.join(",")
   );
 
   return summary;

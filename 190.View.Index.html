@@ -146,7 +146,16 @@
             class="min-w-0 w-full bg-white border border-slate-200 rounded-xl px-4 py-3 sm:w-auto">
         </div>
 
-        <div id="dateFilterLabel" class="w-full text-xs text-slate-500 mt-2">
+        <div
+          id="reportingInformation"
+          class="w-full mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-600"
+          aria-label="Reporting information">
+          <span id="dateFilterLabel"></span>
+          <span id="transactionCountLabel"></span>
+          <span id="latestDataLabel"></span>
+          <span
+            id="freshnessStatusBadge"
+            class="hidden rounded-full px-3 py-1 font-semibold"></span>
         </div>
       </div>
     </div>
@@ -730,6 +739,65 @@
         : startMonth + " – " + endMonth;
     }
 
+    function formatDashboardDay(dateKey)
+    {
+      var parts = String(dateKey || "").split("-");
+
+      if (
+        parts.length !== 3 ||
+        !/^\d{4}$/.test(parts[0]) ||
+        !/^\d{2}$/.test(parts[1]) ||
+        !/^\d{2}$/.test(parts[2])
+      )
+      {
+        return "";
+      }
+
+      return parts[2] + "/" + parts[1] + "/" + parts[0];
+    }
+
+    function renderReportingMetadata(res)
+    {
+      var scope = res && res.reportingScope;
+      var freshness = res && res.dataFreshness;
+
+      if (!res || !res.dateFilter || !scope || !freshness)
+      {
+        throw new Error("Dashboard reporting metadata is missing");
+      }
+
+      document.getElementById("dateFilterLabel").innerText =
+        formatDashboardMonthRange(
+          res.dateFilter.startDate,
+          res.dateFilter.endDate
+        );
+
+      document.getElementById("transactionCountLabel").innerText =
+        scope.transactionCount + " transactions";
+
+      var latestDate =
+        formatDashboardDay(scope.lastTransactionDate);
+
+      document.getElementById("latestDataLabel").innerText =
+        latestDate
+          ? "Updated " + latestDate
+          : "No transaction data";
+
+      var badge =
+        document.getElementById("freshnessStatusBadge");
+
+      var statusClasses = {
+        "Current": "bg-emerald-100 text-emerald-700",
+        "Stale": "bg-amber-100 text-amber-700",
+        "No Data": "bg-slate-100 text-slate-600"
+      };
+
+      badge.className =
+        "rounded-full px-3 py-1 font-semibold " +
+        statusClasses[freshness.status];
+      badge.innerText = freshness.status;
+    }
+
     function loadData()
     {
       if (dashboardRequestInFlight)
@@ -796,15 +864,6 @@
           try
           {
             render(res);
-
-            if (res && res.dateFilter)
-            {
-              document.getElementById("dateFilterLabel").innerText =
-                formatDashboardMonthRange(
-                  res.dateFilter.startDate,
-                  res.dateFilter.endDate
-                );
-            }
 
             var isEmpty =
               res &&
@@ -1916,6 +1975,7 @@
       }
 
       renderBusinessOverview(res);
+      renderReportingMetadata(res);
       renderCharts(res);
       renderBusinessIntelligence(res);
       renderExecutiveCenter(res);

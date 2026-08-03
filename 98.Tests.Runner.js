@@ -12,7 +12,8 @@ function runAllBackendTests()
     { name: "testSparseDatasetResilience", run: testSparseDatasetResilience },
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
     { name: "testDashboardStateContract", run: testDashboardStateContract },
-    { name: "testResponsiveShellContract", run: testResponsiveShellContract }
+    { name: "testResponsiveShellContract", run: testResponsiveShellContract },
+    { name: "testReportingMetadata", run: testReportingMetadata }
   ];
   var passedTests = [];
 

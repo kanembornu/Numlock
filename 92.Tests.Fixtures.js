@@ -551,3 +551,71 @@ function createResponsiveShellContractFixtures()
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
   ];
 }
+
+function createReportingMetadataFixtures()
+{
+  var referenceDate =
+    new Date(2026, 5, 15, 12, 0, 0);
+
+  return {
+    referenceDate: referenceDate,
+    cases: [
+      {
+        name: "empty scoped data",
+        rows: [],
+        expected: "0|0|0|null|null|No Data"
+      },
+      {
+        name: "sales only current data",
+        rows: [
+          { date: new Date(2026, 5, 15, 9, 0, 0), transactionType: "Sales" }
+        ],
+        expected: "1|1|0|2026-06-15|2026-06-15|Current"
+      },
+      {
+        name: "purchase only stale data",
+        rows: [
+          { date: new Date(2026, 5, 12, 9, 0, 0), transactionType: "Purchase" }
+        ],
+        expected: "1|0|1|2026-06-12|2026-06-12|Stale"
+      },
+      {
+        name: "mixed earliest latest and counts",
+        rows: [
+          { date: new Date(2026, 5, 14, 8, 0, 0), transactionType: "Sales" },
+          { date: new Date(2026, 5, 10, 8, 0, 0), transactionType: "Purchase" },
+          { date: new Date(2026, 5, 15, 10, 0, 0), transactionType: "Sales" }
+        ],
+        expected: "3|2|1|2026-06-10|2026-06-15|Current"
+      },
+      {
+        name: "invalid date ignored safely",
+        rows: [
+          { date: "not-a-date", transactionType: "Sales" },
+          { date: new Date(2026, 5, 11, 10, 0, 0), transactionType: "Purchase" }
+        ],
+        expected: "2|1|1|2026-06-11|2026-06-11|Stale"
+      }
+    ],
+    periods: [
+      { filter: "today", expected: false },
+      { filter: "last7days", expected: false },
+      { filter: "currentMonth", expected: true },
+      { filter: "currentMonth", referenceDate: new Date(2026, 5, 30, 12, 0, 0), expected: false },
+      { filter: "previousMonth", expected: false },
+      { filter: "currentYear", expected: true },
+      { filter: "currentYear", referenceDate: new Date(2026, 11, 31, 12, 0, 0), expected: false },
+      { filter: "custom", expected: false }
+    ],
+    frontendTokens: [
+      'id="reportingInformation"',
+      'scope.transactionCount + " transactions"',
+      '"Updated " + latestDate',
+      '"No transaction data"',
+      '"Current": "bg-emerald-100 text-emerald-700"',
+      '"Stale": "bg-amber-100 text-amber-700"',
+      '"No Data": "bg-slate-100 text-slate-600"',
+      'flex flex-wrap items-center'
+    ]
+  };
+}

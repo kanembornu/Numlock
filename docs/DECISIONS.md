@@ -2,6 +2,12 @@
 
 ## Active decisions
 
+### Derive reporting transparency from the scoped rows
+
+The final response adds `reportingScope` and `dataFreshness` without changing `dateFilter` or any analytics output. One service-layer builder receives the already filtered processed rows, the resolved range, and the request's captured execution time; it performs no spreadsheet read and does not mutate rows. Counts include the scoped rows, while invalid dates are ignored for earliest/latest timestamp calculation.
+
+The Apps Script project timezone determines calendar dates, Current/Stale/No Data status, and current-month/current-year partial-period boundaries. The frontend displays only the month range, transaction count, latest date, and text-labeled freshness status; ISO timestamps, generation time, timezone, and internal filter keys remain undisclosed.
+
 ### Preserve desktop while using one responsive drawer below lg
 
 At `lg` and above, the dashboard retains its fixed `w-72` sidebar, permanent `lg:ml-72` content offset, spacing, and visual hierarchy. Below `lg`, main content uses the full viewport and navigation is a hidden-by-default overlay drawer controlled by real menu and close buttons. Backdrop click, Escape, and navigation selection close it; closing unlocks body scrolling and restores focus to the menu control. The controller initializes once and remains separate from dashboard data rendering.

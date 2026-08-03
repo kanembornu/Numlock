@@ -58,6 +58,8 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P1-2 — Display data freshness and reporting scope
 
+**Status: Completed locally in Sprint 5.9 Package 002; upload and live/browser validation are pending.**
+
 - **Problem:** the response has no generated-at timestamp, latest source transaction date, row count, or visible reporting scope, although the header claims a real-time overview.
 - **User impact:** users cannot distinguish current data from a stale or incomplete sheet and may act on an old snapshot.
 - **Proposed solution:** add backward-compatible metadata containing generation time, source maximum date, included-row count, and active scope; display a concise “updated/data through” indicator.

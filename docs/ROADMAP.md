@@ -75,6 +75,10 @@ No later backlog item is scheduled by this roadmap. Date periods, targets, expor
 
 Completed locally. The desktop shell remains fixed and unchanged at `lg` and above. Below `lg`, navigation uses an accessible overlay drawer with deterministic close, body-lock, and focus-restoration behavior; content uses full width, dense grids and filters wrap or stack, charts retain responsive height, and the transactions table scrolls within its own container. `testResponsiveShellContract()` raises the unified requirement to 12/12. Upload and live/browser acceptance remain separate evidence.
 
+### Package 002 — data freshness and reporting scope
+
+Completed locally. Additive `reportingScope` and `dataFreshness` metadata is derived from the already scoped rows using one captured request time and the Apps Script project timezone. The frontend shows only the active month range, scoped transaction count, latest transaction date, and Current/Stale/No Data status. Analytics formulas, date-filter semantics, dashboard states, and populated output remain unchanged. `testReportingMetadata()` raises the unified requirement to 13/13; upload and live/browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

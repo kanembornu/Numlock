@@ -277,14 +277,180 @@ function filterTransactionsByDateRange(data, range) {
   });
 }
 
+function buildReportingMetadata(scopedData, dateRange, referenceDate) {
+
+  var timezone =
+    Session.getScriptTimeZone();
+
+  if (!timezone)
+  {
+    throw new Error(
+      "Reporting metadata requires a project timezone"
+    );
+  }
+
+  var generatedDate =
+    new Date(referenceDate || new Date());
+
+  var today =
+    Utilities.formatDate(
+      generatedDate,
+      timezone,
+      "yyyy-MM-dd"
+    );
+
+  var rows =
+    scopedData || [];
+
+  var salesCount = 0;
+  var purchaseCount = 0;
+  var firstTransactionDate = null;
+  var lastTransactionDate = null;
+  var latestTimestamp = null;
+
+  rows.forEach(function(row)
+  {
+    if (row && row.transactionType === "Sales")
+    {
+      salesCount++;
+    }
+
+    if (row && row.transactionType === "Purchase")
+    {
+      purchaseCount++;
+    }
+
+    var transactionDate =
+      new Date(row && row.date);
+
+    if (isNaN(transactionDate.getTime()))
+    {
+      return;
+    }
+
+    var dateKey;
+
+    try
+    {
+      dateKey =
+        Utilities.formatDate(
+          transactionDate,
+          timezone,
+          "yyyy-MM-dd"
+        );
+    }
+    catch (error)
+    {
+      return;
+    }
+
+    if (
+      firstTransactionDate === null ||
+      dateKey < firstTransactionDate
+    )
+    {
+      firstTransactionDate = dateKey;
+    }
+
+    if (
+      lastTransactionDate === null ||
+      dateKey > lastTransactionDate
+    )
+    {
+      lastTransactionDate = dateKey;
+    }
+
+    if (
+      latestTimestamp === null ||
+      transactionDate.getTime() > latestTimestamp.getTime()
+    )
+    {
+      latestTimestamp = transactionDate;
+    }
+  });
+
+  var filter =
+    dateRange.filter;
+
+  var todayParts =
+    today.split("-");
+
+  var year =
+    Number(todayParts[0]);
+
+  var month =
+    Number(todayParts[1]);
+
+  var monthEnd =
+    shiftDashboardDateKey(
+      createDashboardDateKey(
+        year,
+        month + 1,
+        1
+      ),
+      -1
+    );
+
+  var isPartialPeriod = false;
+
+  if (filter === "currentMonth")
+  {
+    isPartialPeriod =
+      today !== monthEnd;
+  }
+  else if (filter === "currentYear")
+  {
+    isPartialPeriod =
+      today !== createDashboardDateKey(year, 12, 31);
+  }
+
+  var status = "Stale";
+
+  if (rows.length === 0)
+  {
+    status = "No Data";
+  }
+  else if (lastTransactionDate === today)
+  {
+    status = "Current";
+  }
+
+  return {
+    reportingScope: {
+      rowCount: rows.length,
+      transactionCount: rows.length,
+      salesCount: salesCount,
+      purchaseCount: purchaseCount,
+      firstTransactionDate: firstTransactionDate,
+      lastTransactionDate: lastTransactionDate,
+      isPartialPeriod: isPartialPeriod
+    },
+    dataFreshness: {
+      lastTransactionAt:
+        latestTimestamp
+          ? latestTimestamp.toISOString()
+          : null,
+      generatedAt:
+        generatedDate.toISOString(),
+      timezone: timezone,
+      status: status
+    }
+  };
+}
+
 function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate) {
+
+  var generatedDate =
+    referenceDate
+      ? new Date(referenceDate)
+      : new Date();
 
   var dateRange =
     resolveDashboardDateRange(
       filter,
       customStart,
       customEnd,
-      referenceDate
+      generatedDate
     );
 
   var filteredData =
@@ -295,6 +461,13 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
   dateRange.rowCount =
     filteredData.length;
+
+  var reportingMetadata =
+    buildReportingMetadata(
+      filteredData,
+      dateRange,
+      generatedDate
+    );
 
   var cache =
   buildAnalyticsCache(
@@ -394,6 +567,12 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       dateFilter:
         dateRange,
+
+      reportingScope:
+        reportingMetadata.reportingScope,
+
+      dataFreshness:
+        reportingMetadata.dataFreshness,
 
     };
 }

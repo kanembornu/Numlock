@@ -105,3 +105,16 @@ function assertSourceContainsOnce(source, token, scenarioName)
     );
   }
 }
+
+function assertSourceExcludes(source, token, scenarioName)
+{
+  if (source.indexOf(token) !== -1)
+  {
+    throw new Error(
+      "Source contract unexpectedly exposes " +
+      scenarioName +
+      ": " +
+      token
+    );
+  }
+}
