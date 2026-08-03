@@ -241,6 +241,180 @@ function testSummaryFixtures()
   };
 }
 
+function createRevenueTrendFixtures()
+{
+  var today = new Date();
+  var currentMonthDate =
+    new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      15,
+      12,
+      0,
+      0
+    );
+
+  var currentMonthLabel =
+    currentMonthDate.getFullYear() +
+    "-" +
+    ("0" + (currentMonthDate.getMonth() + 1)).slice(-2);
+
+  return [
+    {
+      name: "unsorted completed months with current-month exclusion",
+      data: [
+        {
+          date: new Date(2025, 2, 20, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Latte",
+          purchaseCategory: "",
+          category: "Hot",
+          qty: 1,
+          revenue: 30000,
+          expense: 0
+        },
+        {
+          date: new Date(2024, 11, 5, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Espresso",
+          purchaseCategory: "",
+          category: "Hot",
+          qty: 1,
+          revenue: 10000,
+          expense: 0
+        },
+        {
+          date: currentMonthDate,
+          transactionType: "Sales",
+          product: "Current Month Sentinel",
+          purchaseCategory: "",
+          category: "Cold",
+          qty: 1,
+          revenue: 999999,
+          expense: 0
+        },
+        {
+          date: new Date(2025, 0, 10, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Americano",
+          purchaseCategory: "",
+          category: "Cold",
+          qty: 1,
+          revenue: 20000,
+          expense: 0
+        },
+        {
+          date: new Date(2024, 11, 25, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Espresso",
+          purchaseCategory: "",
+          category: "Hot",
+          qty: 1,
+          revenue: 5000,
+          expense: 0
+        },
+        {
+          date: new Date(2025, 1, 12, 12, 0, 0),
+          transactionType: "Purchase",
+          product: "",
+          purchaseCategory: "Supplies",
+          category: "",
+          qty: 0,
+          revenue: 0,
+          expense: 7000
+        },
+        {
+          date: new Date(2025, 3, 8, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Water",
+          purchaseCategory: "",
+          category: "Cold",
+          qty: 0,
+          revenue: 0,
+          expense: 0
+        },
+        {
+          date: new Date(2025, 2, 2, 12, 0, 0),
+          transactionType: "Sales",
+          product: "Latte",
+          purchaseCategory: "",
+          category: "Hot",
+          qty: 1,
+          revenue: 2500,
+          expense: 0
+        }
+      ],
+      expected: {
+        labels: ["2024-12", "2025-01", "2025-03"],
+        values: [15000, 20000, 32500]
+      },
+      excludedCurrentMonthLabel: currentMonthLabel
+    },
+    {
+      name: "empty dataset",
+      data: [],
+      expected: {
+        labels: [],
+        values: []
+      },
+      excludedCurrentMonthLabel: currentMonthLabel
+    }
+  ];
+}
+
+function testRevenueTrendFixtures()
+{
+  var fixtures =
+    createRevenueTrendFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    var actual =
+      buildRevenueTrendFromAggregate(
+        buildAggregate(fixture.data)
+      );
+
+    ["labels", "values"]
+      .forEach(function(field)
+      {
+        if(
+          JSON.stringify(actual[field]) !==
+          JSON.stringify(fixture.expected[field])
+        )
+        {
+          throw new Error(
+            "Revenue Trend fixture mismatch for " +
+            fixture.name +
+            " / " +
+            field +
+            ": expected=" +
+            JSON.stringify(fixture.expected[field]) +
+            ", actual=" +
+            JSON.stringify(actual[field])
+          );
+        }
+      });
+
+    if(
+      actual.labels.indexOf(
+        fixture.excludedCurrentMonthLabel
+      ) !== -1
+    )
+    {
+      throw new Error(
+        "Revenue Trend fixture included current month: " +
+        fixture.excludedCurrentMonthLabel
+      );
+    }
+  });
+
+  return {
+    passed: true,
+    fixtures: fixtures.length,
+    fields: ["labels", "values"]
+  };
+}
+
 function testRevenueTrendMigration()
 {
   var ss =
@@ -359,7 +533,7 @@ function runAllBackendTests()
     { name: "getDashboardData", run: getDashboardData },
     { name: "testAggregate", run: testAggregate },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
-    { name: "testRevenueTrendMigration", run: testRevenueTrendMigration },
+    { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownMigration", run: testExpenseBreakdownMigration },
     { name: "testProductMigration", run: testProductMigration },
     { name: "testProfitTrendMigration", run: testProfitTrendMigration },

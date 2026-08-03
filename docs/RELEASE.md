@@ -90,7 +90,7 @@ Production rollback means editing the existing production deployment to point ba
 ### Reachability result
 
 - Production path: `getDashboardData()` calls `buildAnalyticsCache()`, which calls `buildAggregate()` once and derives summary, revenue trend, expense breakdown, top products, profit trend, and Hot/Cold split through aggregate adapters. It does not call a legacy builder, migration validator, or test entry point.
-- Test path: `runAllBackendTests()` reaches seven test entries: `testAggregate()`, deterministic `testSummaryFixtures()`, and the five remaining migration tests, plus the production `getDashboardData()` check. `testAggregate()` calls an invariant-based `validateAggregate()` diagnostic with no legacy Summary dependency.
+- Test path: `runAllBackendTests()` reaches seven test entries: `testAggregate()`, deterministic Summary and Revenue Trend fixtures, and the four remaining migration tests, plus the production `getDashboardData()` check. `testRevenueTrendMigration()` remains independently runnable but is no longer in the unified suite.
 - Unreachable functions: none.
 - Retired functions: the Summary oracle, migration validator, and migration entry point were removed after their deterministic replacement passed live.
 - Replacement coverage required before further retirement: replace each of the five remaining legacy-oracle comparisons with independent, deterministic expected-output fixtures before removing its legacy builder, validator, and dedicated migration entry point. Keep the unified runner at equivalent or stronger coverage.
@@ -102,10 +102,10 @@ Each declared production-source function appears exactly once below.
 | Classification | Functions |
 | --- | --- |
 | Active production function | `getTransactionData`, `getPriceMap`, `processTransactions`, `buildAggregate`, `buildSummaryFromAggregate`, `buildRevenueTrendFromAggregate`, `buildProfitTrendFromAggregate`, `buildHotColdSplitFromAggregate`, `buildTopProductsFromAggregate`, `buildExpenseBreakdownFromAggregate`, `buildFinancial`, `buildTrendEngine`, `buildForecast`, `buildProductContribution`, `buildRevenueConcentration`, `buildParetoAnalysis`, `buildExpenseIntelligence`, `buildRevenueIntelligence`, `detectRevenueTrend`, `buildProfitIntelligence`, `buildBusinessScore`, `buildGrowthScore`, `buildKpiAchievement`, `buildBusinessMaturity`, `buildKPIStatus`, `buildInsights`, `buildDiagnosis`, `detectCategoryDominance`, `buildRecommendationEngine`, `buildPriorityAction`, `buildOpportunityEngine`, `buildActionRoadmap`, `buildExecutiveSummary`, `buildRiskEngine`, `buildBusinessFocus`, `buildExecutiveAlert`, `getDashboardData`, `buildRecentTransactions`, `buildAnalyticsCache`, `doGet` |
-| Active regression test | `validateAggregate`, `createSummaryFixtures` |
+| Active regression test | `validateAggregate`, `createSummaryFixtures`, `createRevenueTrendFixtures` |
 | Legacy migration oracle | `buildRevenueTrend`, `buildExpenseBreakdown`, `buildTopProducts`, `buildProfitTrend`, `buildHotColdSplit` |
 | Migration validator | `validateRevenueTrendMigration`, `validateExpenseBreakdownMigration`, `validateProductMigration`, `validateProfitTrendMigration`, `validateHotColdMigration` |
-| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendMigration`, `testExpenseBreakdownMigration`, `testProductMigration`, `testProfitTrendMigration`, `testHotColdMigration`, `runAllBackendTests` |
+| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendFixtures`, `testRevenueTrendMigration`, `testExpenseBreakdownMigration`, `testProductMigration`, `testProfitTrendMigration`, `testHotColdMigration`, `runAllBackendTests` |
 | Dead/unreferenced function | None |
 
 `validateAggregate` is classified as an active regression diagnostic rather than a migration validator because it logs comparisons but does not assert or throw on mismatches.
@@ -113,3 +113,7 @@ Each declared production-source function appears exactly once below.
 ### Summary retirement status
 
 Summary regression coverage uses deterministic processed-transaction fixtures with literal expected outputs. After `testSummaryFixtures()` and the unified `8/8` suite passed live in Apps Script, the legacy Summary oracle, validator, and test entry point were retired. `validateAggregate()` now checks Aggregate Engine invariants directly and does not depend on legacy Summary logic. `buildSummaryFromAggregate()` is the only production Summary builder.
+
+### Revenue Trend retirement status
+
+Revenue Trend regression coverage now uses deterministic processed-transaction fixtures with literal completed-month labels and values. The unified suite no longer depends on `testRevenueTrendMigration()`. The legacy Revenue Trend oracle, validator, and test entry point remain pending retirement until `testRevenueTrendFixtures()` and the unified `8/8` suite pass live in Apps Script.
