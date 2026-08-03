@@ -566,29 +566,6 @@ function testTopProductsFixtures()
   };
 }
 
-function testProductMigration() {
-
-  var ss =
-    SpreadsheetApp.getActiveSpreadsheet();
-
-  var transactions =
-    getTransactionData(ss);
-
-  var priceMap =
-    getPriceMap(ss);
-
-  var processed =
-    processTransactions(
-      transactions,
-      priceMap
-    );
-
-  return validateProductMigration(
-    processed
-  );
-
-}
-
 function createExpenseBreakdownFixtures()
 {
   return [

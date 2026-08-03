@@ -5,7 +5,7 @@ This document records verified engineering milestones. Semantic versioning begin
 ## Unreleased
 
 - Added deterministic Top Products fixtures covering aggregation, ranking, stable ties, top-ten truncation, zero values, purchase-only rows, and empty data.
-- Replaced the unified suite's Top Products oracle comparison while retaining the legacy chain pending live validation.
+- Retired the legacy Top Products oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Added deterministic Expense Breakdown fixtures covering category order, repeated purchases, zero and negative amounts, ignored rows, top expense, and empty data.
 - Retired the legacy Expense Breakdown oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Added deterministic Revenue Trend fixtures covering completed-month aggregation, cross-year ordering, current-month exclusion, zero-revenue inputs, and empty data.
@@ -47,5 +47,5 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Known technical debt
 
-- Three legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
+- Two legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
 - The Apps Script runtime emits an iframe sandbox warning.

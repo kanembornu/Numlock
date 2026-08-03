@@ -48,7 +48,7 @@ Run `clasp push` only with explicit approval. The authoritative release workflow
 2. `testSummaryFixtures()`
 3. `testRevenueTrendFixtures()`
 4. `testExpenseBreakdownFixtures()`
-5. `testProductMigration()`
+5. `testTopProductsFixtures()`
 6. `testProfitTrendMigration()`
 7. `testHotColdMigration()`
 

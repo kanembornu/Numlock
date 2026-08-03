@@ -35,8 +35,8 @@ Each former-monolith top-level function appears exactly once below.
 | `45.Analytics.Trend.js` | `validateProfitTrendMigration(data)` | Profit-trend equivalence validator. |
 | `45.Analytics.Trend.js` | `buildHotColdSplit(data)` | Legacy Hot/Cold oracle. |
 | `45.Analytics.Trend.js` | `validateHotColdMigration(data)` | Hot/Cold equivalence validator. |
-| `50.Analytics.Product.js` | `buildTopProducts(data)` | Legacy product-ranking oracle. |
-| `50.Analytics.Product.js` | `validateProductMigration(data)` | Product equivalence validator. |
+| `50.Analytics.Product.js` | `buildTopProducts(data)` | Historical owner; retired after deterministic Top Products fixture validation. |
+| `50.Analytics.Product.js` | `validateProductMigration(data)` | Historical owner; retired with the Top Products oracle. |
 | `50.Analytics.Product.js` | `buildProductContribution(cache)` | Cached product contribution. |
 | `50.Analytics.Product.js` | `buildRevenueConcentration(cache)` | Cached concentration calculation. |
 | `50.Analytics.Product.js` | `buildParetoAnalysis(cache)` | Cached Pareto calculation. |
@@ -71,7 +71,7 @@ Each former-monolith top-level function appears exactly once below.
 | `95.Tests.js` | `testRevenueTrendMigration()` | Historical owner; retired after `testRevenueTrendFixtures()` passed live. |
 | `95.Tests.js` | `testProfitTrendMigration()` | Manual profit-trend migration test. |
 | `95.Tests.js` | `testHotColdMigration()` | Manual Hot/Cold migration test. |
-| `95.Tests.js` | `testProductMigration()` | Manual product migration test. |
+| `95.Tests.js` | `testProductMigration()` | Historical owner; retired after `testTopProductsFixtures()` passed live. |
 | `95.Tests.js` | `testExpenseBreakdownMigration()` | Historical owner; retired after `testExpenseBreakdownFixtures()` passed live. |
 
 `100.Code.js#doGet()` and `190.View.Index.html` are outside the 59-function former-monolith count.
