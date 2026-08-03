@@ -461,6 +461,111 @@ function testHotColdMigration() {
 
 }
 
+function createTopProductsFixtures()
+{
+  return [
+    {
+      name: "aggregated products with stable ties and top-ten truncation",
+      data: [
+        { date: new Date(2025, 0, 1), transactionType: "Sales", product: "Alpha", purchaseCategory: "", category: "Hot", qty: 3, revenue: 300, expense: 0 },
+        { date: new Date(2025, 0, 2), transactionType: "Sales", product: "Bravo", purchaseCategory: "", category: "Hot", qty: 10, revenue: 1000, expense: 0 },
+        { date: new Date(2025, 0, 3), transactionType: "Sales", product: "Charlie", purchaseCategory: "", category: "Cold", qty: 8, revenue: 800, expense: 0 },
+        { date: new Date(2025, 0, 4), transactionType: "Sales", product: "Delta", purchaseCategory: "", category: "Cold", qty: 8, revenue: 0, expense: 0 },
+        { date: new Date(2025, 0, 5), transactionType: "Sales", product: "Echo", purchaseCategory: "", category: "Hot", qty: 7, revenue: 700, expense: 0 },
+        { date: new Date(2025, 0, 6), transactionType: "Sales", product: "Foxtrot", purchaseCategory: "", category: "Hot", qty: 6, revenue: 600, expense: 0 },
+        { date: new Date(2025, 0, 7), transactionType: "Sales", product: "Golf", purchaseCategory: "", category: "Cold", qty: 5, revenue: 500, expense: 0 },
+        { date: new Date(2025, 0, 8), transactionType: "Sales", product: "Hotel", purchaseCategory: "", category: "Cold", qty: 4, revenue: 400, expense: 0 },
+        { date: new Date(2025, 0, 9), transactionType: "Sales", product: "India", purchaseCategory: "", category: "Hot", qty: 3, revenue: 300, expense: 0 },
+        { date: new Date(2025, 0, 10), transactionType: "Sales", product: "Juliet", purchaseCategory: "", category: "Hot", qty: 2, revenue: 200, expense: 0 },
+        { date: new Date(2025, 0, 11), transactionType: "Sales", product: "Kilo", purchaseCategory: "", category: "Cold", qty: 1, revenue: 100, expense: 0 },
+        { date: new Date(2025, 0, 12), transactionType: "Sales", product: "Lima", purchaseCategory: "", category: "Cold", qty: 1, revenue: 90, expense: 0 },
+        { date: new Date(2025, 0, 13), transactionType: "Sales", product: "ZeroQty", purchaseCategory: "", category: "Hot", qty: 0, revenue: 50, expense: 0 },
+        { date: new Date(2025, 0, 14), transactionType: "Sales", product: "Alpha", purchaseCategory: "", category: "Hot", qty: 2, revenue: 250, expense: 0 },
+        { date: new Date(2025, 0, 15), transactionType: "Purchase", product: "", purchaseCategory: "Supplies", category: "", qty: 0, revenue: 0, expense: 500 }
+      ],
+      expected: [
+        { name: "Bravo", qty: 10, revenue: 1000 },
+        { name: "Charlie", qty: 8, revenue: 800 },
+        { name: "Delta", qty: 8, revenue: 0 },
+        { name: "Echo", qty: 7, revenue: 700 },
+        { name: "Foxtrot", qty: 6, revenue: 600 },
+        { name: "Alpha", qty: 5, revenue: 550 },
+        { name: "Golf", qty: 5, revenue: 500 },
+        { name: "Hotel", qty: 4, revenue: 400 },
+        { name: "India", qty: 3, revenue: 300 },
+        { name: "Juliet", qty: 2, revenue: 200 }
+      ],
+      excludedNames: ["Kilo", "Lima", "ZeroQty"]
+    },
+    {
+      name: "empty dataset",
+      data: [],
+      expected: [],
+      excludedNames: []
+    }
+  ];
+}
+
+function testTopProductsFixtures()
+{
+  var fixtures =
+    createTopProductsFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    var actual =
+      buildTopProductsFromAggregate(
+        buildAggregate(fixture.data)
+      );
+
+    if(actual.length !== fixture.expected.length)
+    {
+      throw new Error(
+        "Top Products fixture length mismatch for " +
+        fixture.name
+      );
+    }
+
+    if(
+      JSON.stringify(actual) !==
+      JSON.stringify(fixture.expected)
+    )
+    {
+      throw new Error(
+        "Top Products fixture mismatch for " +
+        fixture.name +
+        ": expected=" +
+        JSON.stringify(fixture.expected) +
+        ", actual=" +
+        JSON.stringify(actual)
+      );
+    }
+
+    fixture.excludedNames.forEach(function(name)
+    {
+      var included =
+        actual.some(function(product)
+        {
+          return product.name === name;
+        });
+
+      if(included)
+      {
+        throw new Error(
+          "Top Products fixture failed truncation for " +
+          name
+        );
+      }
+    });
+  });
+
+  return {
+    passed: true,
+    fixtures: fixtures.length,
+    fields: ["name", "qty", "revenue"]
+  };
+}
+
 function testProductMigration() {
 
   var ss =
@@ -657,7 +762,7 @@ function runAllBackendTests()
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },
-    { name: "testProductMigration", run: testProductMigration },
+    { name: "testTopProductsFixtures", run: testTopProductsFixtures },
     { name: "testProfitTrendMigration", run: testProfitTrendMigration },
     { name: "testHotColdMigration", run: testHotColdMigration }
   ];
