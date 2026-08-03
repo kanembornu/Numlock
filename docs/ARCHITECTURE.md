@@ -31,7 +31,7 @@ Google Sheets
 - profit trend; and
 - Hot/Cold split.
 
-`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`. Summary, Revenue Trend, Expense Breakdown, and Top Products use deterministic fixture regression coverage; two legacy builders remain only as validation oracles for the other migrated domains. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows.
+`buildAnalyticsCache(data)` constructs the aggregate exactly once. Production adapters derive those six outputs from `cache.aggregate`. Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend use deterministic fixture regression coverage; only the Hot/Cold Split legacy builder remains as a validation oracle. Higher intelligence layers consume cached outputs and must not rebuild migrated analytics from raw rows. Profit Intelligence remains based on the cached Financial Engine result rather than Profit Trend output.
 
 ## Numbered architecture
 
@@ -44,7 +44,7 @@ Google Sheets
 | `30.Analytics.Aggregate.js` | Aggregate construction and aggregate adapters. |
 | `35.Analytics.Financial.js` | Financial calculations. |
 | `40.Analytics.Summary.js` | Retired Summary migration slot; comments only, with no executable globals. |
-| `45.Analytics.Trend.js` | Trend cache facade, forecast, and legacy profit/Hot-Cold migration validation; production Revenue Trend is owned by the aggregate adapter in `30.Analytics.Aggregate.js`. |
+| `45.Analytics.Trend.js` | Trend cache facade, forecast, and legacy Hot/Cold migration validation; production Revenue Trend and Profit Trend are owned by aggregate adapters in `30.Analytics.Aggregate.js`. |
 | `50.Analytics.Product.js` | Product contribution, concentration, and Pareto over cached aggregate data; production Top Products is owned by the aggregate adapter in `30.Analytics.Aggregate.js`. |
 | `55.Analytics.Expense.js` | Expense intelligence over cached aggregate data; production Expense Breakdown is owned by the aggregate adapter in `30.Analytics.Aggregate.js`. |
 | `60.Intelligence.Revenue.js` | Revenue intelligence and revenue-direction detection. |
@@ -89,7 +89,7 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `testRevenueTrendFixtures()`
 - `testExpenseBreakdownFixtures()`
 - `testTopProductsFixtures()`
-- `testProfitTrendMigration()`
+- `testProfitTrendFixtures()`
 - `testHotColdMigration()`
 
 The migration test functions are editor-run validation entry points, not UI endpoints. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.

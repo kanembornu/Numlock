@@ -90,10 +90,10 @@ Production rollback means editing the existing production deployment to point ba
 ### Reachability result
 
 - Production path: `getDashboardData()` calls `buildAnalyticsCache()`, which calls `buildAggregate()` once and derives summary, revenue trend, expense breakdown, top products, profit trend, and Hot/Cold split through aggregate adapters. It does not call a legacy builder, migration validator, or test entry point.
-- Test path: `runAllBackendTests()` reaches seven test entries: `testAggregate()`, deterministic Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend fixtures, and the remaining Hot/Cold Split migration test, plus the production `getDashboardData()` check. `testProfitTrendMigration()` remains independently runnable pending live fixture validation.
+- Test path: `runAllBackendTests()` reaches seven test entries: `testAggregate()`, deterministic Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend fixtures, and the remaining Hot/Cold Split migration test, plus the production `getDashboardData()` check.
 - Unreachable functions: none.
-- Retired functions: the Summary, Revenue Trend, Expense Breakdown, and Top Products oracle chains were removed after their deterministic replacements passed live.
-- Replacement coverage required before further retirement: live-validate the independent Profit Trend fixtures before removing that legacy builder, validator, and dedicated migration entry point; Hot/Cold Split still requires independent deterministic replacement coverage. Keep the unified runner at equivalent or stronger coverage.
+- Retired functions: the Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend oracle chains were removed after their deterministic replacements passed live.
+- Replacement coverage required before further retirement: Hot/Cold Split still requires independent deterministic replacement coverage before its legacy builder, validator, and dedicated migration entry point are removed. Keep the unified runner at equivalent or stronger coverage.
 
 ### Complete production-source function classification
 
@@ -103,9 +103,9 @@ Each declared production-source function appears exactly once below.
 | --- | --- |
 | Active production function | `getTransactionData`, `getPriceMap`, `processTransactions`, `buildAggregate`, `buildSummaryFromAggregate`, `buildRevenueTrendFromAggregate`, `buildProfitTrendFromAggregate`, `buildHotColdSplitFromAggregate`, `buildTopProductsFromAggregate`, `buildExpenseBreakdownFromAggregate`, `buildFinancial`, `buildTrendEngine`, `buildForecast`, `buildProductContribution`, `buildRevenueConcentration`, `buildParetoAnalysis`, `buildExpenseIntelligence`, `buildRevenueIntelligence`, `detectRevenueTrend`, `buildProfitIntelligence`, `buildBusinessScore`, `buildGrowthScore`, `buildKpiAchievement`, `buildBusinessMaturity`, `buildKPIStatus`, `buildInsights`, `buildDiagnosis`, `detectCategoryDominance`, `buildRecommendationEngine`, `buildPriorityAction`, `buildOpportunityEngine`, `buildActionRoadmap`, `buildExecutiveSummary`, `buildRiskEngine`, `buildBusinessFocus`, `buildExecutiveAlert`, `getDashboardData`, `buildRecentTransactions`, `buildAnalyticsCache`, `doGet` |
 | Active regression test | `validateAggregate`, `createSummaryFixtures`, `createRevenueTrendFixtures`, `createExpenseBreakdownFixtures`, `createTopProductsFixtures`, `createProfitTrendFixtures` |
-| Legacy migration oracle | `buildProfitTrend`, `buildHotColdSplit` |
-| Migration validator | `validateProfitTrendMigration`, `validateHotColdMigration` |
-| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendFixtures`, `testExpenseBreakdownFixtures`, `testTopProductsFixtures`, `testProfitTrendFixtures`, `testProfitTrendMigration`, `testHotColdMigration`, `runAllBackendTests` |
+| Legacy migration oracle | `buildHotColdSplit` |
+| Migration validator | `validateHotColdMigration` |
+| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendFixtures`, `testExpenseBreakdownFixtures`, `testTopProductsFixtures`, `testProfitTrendFixtures`, `testHotColdMigration`, `runAllBackendTests` |
 | Dead/unreferenced function | None |
 
 `validateAggregate` is classified as an active regression diagnostic rather than a migration validator because it logs comparisons but does not assert or throw on mismatches.
@@ -128,4 +128,4 @@ Top Products regression coverage uses deterministic processed-transaction fixtur
 
 ### Profit Trend retirement status
 
-Profit Trend regression coverage now uses deterministic processed-transaction fixtures with literal cross-year labels and monthly profit values. The unified suite no longer depends on the legacy Profit Trend oracle. `buildProfitTrend()`, `validateProfitTrendMigration()`, and `testProfitTrendMigration()` remain temporarily for independent live validation and must be retired only after `testProfitTrendFixtures()` and the unified `8/8` suite pass live in Apps Script.
+Profit Trend regression coverage uses deterministic processed-transaction fixtures with literal cross-year labels and monthly profit values. After `testProfitTrendFixtures()`, the independent legacy comparison, and the unified `8/8` suite passed live in Apps Script, the legacy Profit Trend oracle, validator, and test entry point were retired. `buildProfitTrendFromAggregate()` is the sole production Profit Trend builder; `buildAnalyticsCache()` derives `cache.profitTrend` from `cache.aggregate`, and `buildTrendEngine()` consumes that cached result. Profit Intelligence remains based on `cache.financial`.

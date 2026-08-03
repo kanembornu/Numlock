@@ -31,8 +31,8 @@ Each former-monolith top-level function appears exactly once below.
 | `45.Analytics.Trend.js` | `validateRevenueTrendMigration(data)` | Historical owner; retired with the Revenue Trend oracle. |
 | `45.Analytics.Trend.js` | `buildTrendEngine(cache)` | Cached trend response facade. |
 | `45.Analytics.Trend.js` | `buildForecast(cache)` | Forecast from cached revenue trend. |
-| `45.Analytics.Trend.js` | `buildProfitTrend(data)` | Legacy profit-trend oracle. |
-| `45.Analytics.Trend.js` | `validateProfitTrendMigration(data)` | Profit-trend equivalence validator. |
+| `45.Analytics.Trend.js` | `buildProfitTrend(data)` | Historical owner; retired after deterministic Profit Trend fixture validation. |
+| `45.Analytics.Trend.js` | `validateProfitTrendMigration(data)` | Historical owner; retired with the Profit Trend oracle. |
 | `45.Analytics.Trend.js` | `buildHotColdSplit(data)` | Legacy Hot/Cold oracle. |
 | `45.Analytics.Trend.js` | `validateHotColdMigration(data)` | Hot/Cold equivalence validator. |
 | `50.Analytics.Product.js` | `buildTopProducts(data)` | Historical owner; retired after deterministic Top Products fixture validation. |
@@ -69,7 +69,7 @@ Each former-monolith top-level function appears exactly once below.
 | `95.Tests.js` | `validateAggregate(data)` | Test-only aggregate invariant diagnostic helper. |
 | `95.Tests.js` | `testSummaryMigration()` | Historical owner; retired after `testSummaryFixtures()` passed live. |
 | `95.Tests.js` | `testRevenueTrendMigration()` | Historical owner; retired after `testRevenueTrendFixtures()` passed live. |
-| `95.Tests.js` | `testProfitTrendMigration()` | Manual profit-trend migration test. |
+| `95.Tests.js` | `testProfitTrendMigration()` | Historical owner; retired after `testProfitTrendFixtures()` passed live. |
 | `95.Tests.js` | `testHotColdMigration()` | Manual Hot/Cold migration test. |
 | `95.Tests.js` | `testProductMigration()` | Historical owner; retired after `testTopProductsFixtures()` passed live. |
 | `95.Tests.js` | `testExpenseBreakdownMigration()` | Historical owner; retired after `testExpenseBreakdownFixtures()` passed live. |
