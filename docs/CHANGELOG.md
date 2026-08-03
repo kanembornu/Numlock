@@ -1,8 +1,16 @@
 # NUMLOCK Changelog
 
-This document records verified engineering milestones. NUMLOCK does not yet maintain formal semantic-version release metadata.
+This document records verified engineering milestones. Semantic versioning begins at `1.0.0`; future releases must update this changelog and `10.Config.js` together.
 
 ## Unreleased
+
+- No unreleased changes recorded.
+
+## 1.0.0 — Production — 2026-08-03
+
+- Established `10.Config.js` as the authoritative release and version metadata source.
+- Completed and froze the verified production source structure.
+- Completed production hardening while preserving dashboard behavior and data contracts.
 
 ### Documentation and workflow foundation
 

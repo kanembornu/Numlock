@@ -2,6 +2,10 @@
 
 ## Completed
 
+### Sprint 5.7 Package 003 — release and version metadata
+
+Semantic versioning begins at `1.0.0`. `10.Config.js` is the authoritative release metadata source, and future releases must update it together with `docs/CHANGELOG.md`. The verified source structure and production hardening are complete.
+
 ### Sprint 5.5 — Dashboard Intelligence
 
 Dashboard Intelligence is complete. The dashboard response includes financial, trend, product, expense, scoring, diagnosis, recommendation, risk, and executive decision outputs consumed by the current frontend.
@@ -52,5 +56,5 @@ Implementation acceptance requires deterministic build output, an explicit dynam
 ## Later work
 
 - Remove legacy migration builders only in a separately approved cleanup after live equivalence remains proven in the decomposed layout.
-- Evolve release/version metadata only through a separately approved task.
+- Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.
 - Select product or UI enhancements from verified business needs; this roadmap promises no unapproved feature work.

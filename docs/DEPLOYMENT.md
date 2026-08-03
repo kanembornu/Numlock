@@ -13,10 +13,11 @@ These are independent actions. Upload success is not runtime, deployment, or bro
 ## Pre-upload gate
 
 1. Confirm the reviewed diff and `git status --short`.
-2. Confirm the authorized clasp account can access the configured NUMLOCK project without printing the script ID.
-3. Run syntax and migration validation.
-4. Run `clasp status`; it must show `appsscript.json` and only the approved numbered `.js` and `.html` production files.
-5. Stop if the account or inventory is wrong.
+2. For a release, update `10.Config.js` and `docs/CHANGELOG.md` together. Semantic versioning begins at `1.0.0`.
+3. Confirm the authorized clasp account can access the configured NUMLOCK project without printing the script ID.
+4. Run syntax and migration validation.
+5. Run `clasp status`; it must show `appsscript.json` and only the approved numbered `.js` and `.html` production files, including `10.Config.js`.
+6. Stop if the account or inventory is wrong.
 
 ### Sprint 5.7 styling build gate
 
@@ -61,7 +62,7 @@ After live tests pass and deployment is explicitly authorized:
 3. Update the intended deployment to that version; do not create a second production deployment accidentally.
 4. Verify manifest execute-as and access settings remain intentional.
 
-This repository contains no deployment automation; these remain explicit operator actions.
+Source structure and production hardening are complete. This repository contains no deployment or automated release scripts; release and deployment steps remain explicit operator actions.
 
 ## Browser verification
 

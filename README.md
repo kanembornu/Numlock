@@ -6,6 +6,7 @@ NUMLOCK is a coffee-shop business-intelligence dashboard built with Google Apps 
 
 The application uses the completed numbered, flat Apps Script layout:
 
+- `10.Config.js`: authoritative release and version metadata.
 - `20`–`25`: spreadsheet reads and transaction processing.
 - `30`–`55`: aggregate, financial, summary, trend, product, and expense analytics.
 - `60`–`85`: revenue, profit, score, diagnosis, recommendation, and decision intelligence.
@@ -17,6 +18,8 @@ The application uses the completed numbered, flat Apps Script layout:
 The ownership model and completed function migration map are documented in [Architecture](docs/ARCHITECTURE.md) and [Source Migration](docs/SOURCE-MIGRATION.md).
 
 The numbered architecture is frozen as the verified production structure. It has passed local source checks, Apps Script backend validation, deployment, and browser rendering verification. Future changes must preserve file ownership and public behavior unless a separately approved architecture change updates the governing documents.
+
+Semantic versioning begins at `1.0.0`. Source structure and production hardening are complete. Future releases must update `10.Config.js` and [the changelog](docs/CHANGELOG.md) together.
 
 ## Developer onboarding
 

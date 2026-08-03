@@ -13,6 +13,7 @@
  * - Web entry points and view
  *
  * Runtime owners:
+ * - 10.Config.js: authoritative release and version metadata
  * - 100.Code.js: web entry point
  * - 190.View.Index.html: dashboard view
  *
@@ -21,4 +22,6 @@
  * -> Aggregate / Financial -> Data Processor -> Data Source -> Google Sheets.
  *
  * This file contains specification comments only and declares no executable globals.
+ * Semantic versioning begins at 1.0.0. Future releases must update
+ * 10.Config.js and docs/CHANGELOG.md together.
  */
