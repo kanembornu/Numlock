@@ -76,3 +76,32 @@ function assertThrowsMessage(callback, expectedMessage)
 
   return thrown;
 }
+
+function assertSourceContains(source, token, scenarioName)
+{
+  if (source.indexOf(token) === -1)
+  {
+    throw new Error(
+      "Responsive shell contract missing " +
+      scenarioName +
+      ": " +
+      token
+    );
+  }
+}
+
+function assertSourceContainsOnce(source, token, scenarioName)
+{
+  var firstIndex = source.indexOf(token);
+  var lastIndex = source.lastIndexOf(token);
+
+  if (firstIndex === -1 || firstIndex !== lastIndex)
+  {
+    throw new Error(
+      "Responsive shell contract expected one " +
+      scenarioName +
+      ": " +
+      token
+    );
+  }
+}

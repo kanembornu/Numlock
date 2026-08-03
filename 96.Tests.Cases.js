@@ -952,3 +952,53 @@ function testDashboardStateContract()
 
   return summary;
 }
+
+function testResponsiveShellContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  var fixtures =
+    createResponsiveShellContractFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    fixture.tokens.forEach(function(token)
+    {
+      assertSourceContains(
+        source,
+        token,
+        fixture.name
+      );
+    });
+
+    if (fixture.uniqueToken)
+    {
+      assertSourceContainsOnce(
+        source,
+        fixture.uniqueToken,
+        fixture.name
+      );
+    }
+  });
+
+  var summary = {
+    passed: true,
+    scenarios: fixtures.length,
+    breakpoint: "lg",
+    drawer: true
+  };
+
+  Logger.log(
+    "PASS: testResponsiveShellContract | scenarios=" +
+    summary.scenarios +
+    " | breakpoint=" +
+    summary.breakpoint +
+    " | drawer=" +
+    summary.drawer
+  );
+
+  return summary;
+}

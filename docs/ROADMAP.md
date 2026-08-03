@@ -69,6 +69,12 @@ The next three bounded, independently releasable packages are:
 
 No later backlog item is scheduled by this roadmap. Date periods, targets, export, and drill-down remain requirement-gated.
 
+## Sprint 5.9 — responsive dashboard shell
+
+### Package 001 — responsive dashboard shell
+
+Completed locally. The desktop shell remains fixed and unchanged at `lg` and above. Below `lg`, navigation uses an accessible overlay drawer with deterministic close, body-lock, and focus-restoration behavior; content uses full width, dense grids and filters wrap or stack, charts retain responsive height, and the transactions table scrolls within its own container. `testResponsiveShellContract()` raises the unified requirement to 12/12. Upload and live/browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

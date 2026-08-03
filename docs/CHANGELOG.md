@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.9 Package 001 responsive dashboard shell: preserved the fixed desktop sidebar at `lg`, added a narrow-screen overlay drawer with backdrop/Escape/navigation close behavior, body scroll locking, focus restoration, and active-page semantics.
+- Added narrow-screen stacking, wrapping, `min-w-0` overflow guards, responsive chart heights, and an explicit horizontal-scroll container for the recent-transactions table.
+- Added `testResponsiveShellContract()` and raised the ordered fail-fast unified backend gate to 12/12.
 - Implemented Sprint 5.8 Package 004 recoverable dashboard states with an accessible live status region, explicit loading/empty/error messages, keyboard-operable Retry, duplicate-request locking, exact request reuse, render-error recovery, and stale-callback suppression.
 - Added backward-compatible `dateFilter.rowCount` metadata so empty means zero scoped transaction rows; purchase-only and sales-only periods remain successful populated states.
 - Added `testDashboardStateContract()` and deterministic frontend lifecycle mocks; the unified backend gate now requires 11/11.

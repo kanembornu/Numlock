@@ -104,6 +104,8 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P2-1 — Establish a responsive narrow-width shell and table
 
+**Status: Completed locally in Sprint 5.9 Package 001; upload and live/browser validation are pending.**
+
 - **Problem:** the sidebar is fixed at `w-72`, main content always uses `ml-72 p-10`, the intelligence subgrid remains two columns, and the transactions table has no horizontal overflow wrapper. Responsive rules primarily start at large/extra-large widths.
 - **User impact:** narrow screens lose substantial viewport width and may clip dense cards or transaction columns.
 - **Proposed solution:** add a keyboard-operable compact navigation pattern, responsive main spacing/typography, single-column intelligence cards, and a deliberate mobile table treatment.
@@ -114,6 +116,8 @@ The current dashboard already has a clear two-destination navigation model, a br
 - **Dependency on other items:** None.
 
 ### P2-2 — Add accessible semantics and keyboard state
+
+**Status: Mobile drawer controls, accessible labeling, Escape handling, focus restoration, and active navigation semantics completed locally in Sprint 5.9 Package 001. Remaining document/chart/live-region accessibility work stays in backlog.**
 
 - **Problem:** the document has no language/title metadata, the filter has no label, navigation state is communicated only by initial styling, inline SVGs lack accessibility treatment, chart canvases have no text alternative, and loading/error changes are not announced.
 - **User impact:** screen-reader and keyboard users receive incomplete state and chart information; focus/active navigation is unclear.

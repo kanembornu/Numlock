@@ -16,13 +16,14 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
 - Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
 - Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
-- `runAllBackendTests()` is the unified local/live backend gate and requires 11/11 PASS, including sparse-dataset resilience, date filtering, and dashboard-state metadata.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 12/12 PASS, including sparse-dataset resilience, date filtering, dashboard-state metadata, and the responsive-shell source contract.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 - Sprint 5.8 Package 001 product audit is complete. `docs/PRODUCT-BACKLOG.md` is the prioritized evidence inventory; `docs/ROADMAP.md` schedules only Packages 002–004.
 - Sprint 5.8 Package 002 empty/sparse-data resilience and Package 003 date filtering are deployed. Populated response output remains snapshot-protected.
 - Backend tests are responsibility-split across `92.Tests.Fixtures.js`, `94.Tests.Assertions.js`, `95.Tests.Validators.js`, `96.Tests.Cases.js`, and `98.Tests.Runner.js`; the sparse test explicitly logs its returned success summary for Apps Script execution visibility.
 - Sprint 5.8 Package 003 implements one project-timezone date filter for every row-derived dashboard output. The parameterless default is `currentYear`; custom ranges require valid inclusive `YYYY-MM-DD` boundaries in start-to-end order. Revenue Trend includes every represented month in the filtered rows, including current partial-month revenue, while its visible scope uses month-only `MM/YYYY` formatting.
 - Sprint 5.8 Package 004 adds an authoritative loading/success/empty/error/retry frontend state contract. Additive `dateFilter.rowCount` metadata defines empty as zero scoped transaction rows; retry preserves the exact last request, and stale callbacks are ignored.
+- Sprint 5.9 Package 001 preserves the fixed desktop sidebar at `lg` and above while using an accessible overlay drawer, full-width content, stacked dense regions, responsive chart sizing, and an explicitly horizontally scrollable transactions table below `lg`.
 
 ## Architecture and invariants
 

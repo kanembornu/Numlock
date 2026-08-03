@@ -2,6 +2,12 @@
 
 ## Active decisions
 
+### Preserve desktop while using one responsive drawer below lg
+
+At `lg` and above, the dashboard retains its fixed `w-72` sidebar, permanent `lg:ml-72` content offset, spacing, and visual hierarchy. Below `lg`, main content uses the full viewport and navigation is a hidden-by-default overlay drawer controlled by real menu and close buttons. Backdrop click, Escape, and navigation selection close it; closing unlocks body scrolling and restores focus to the menu control. The controller initializes once and remains separate from dashboard data rendering.
+
+Dense grids stack where necessary, filter controls wrap, flex/grid children use bounded widths, chart containers retain usable responsive height, and the recent-transactions table scrolls inside its own horizontal container rather than widening the page. Active navigation exposes `aria-current="page"`.
+
 ### Use one recoverable dashboard state contract
 
 The frontend has five explicit lifecycle states: `loading`, `success`, `empty`, `error`, and `retry`. Loading disables filter controls, prevents duplicate requests, visibly de-emphasizes stale content, and exposes busy status. Success restores the populated dashboard and active month-range label. Empty is defined only by additive `dateFilter.rowCount === 0`; zero revenue or zero expense alone never makes a period empty.

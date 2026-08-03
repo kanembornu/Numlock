@@ -26,6 +26,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testSparseDatasetResilience()` — seven deterministic end-to-end dashboard-response fixtures covering empty, sales-only, purchase-only, one-row, sparse mixed, and populated data.
 - `testDashboardDateFilter()` — 58 deterministic assertions covering normalization, preset/custom ranges, inclusivity, invalid inputs/dates, immutability, response equivalence, Revenue Trend scope/order, finite values, and empty results.
 - `testDashboardStateContract()` — five deterministic contract scenarios covering the state vocabulary plus empty, purchase-only, sales-only, and populated scoped-row semantics.
+- `testResponsiveShellContract()` — 12 source-contract scenarios covering the `lg` desktop boundary, drawer controls and accessibility, close paths, scroll lock, focus restoration, active navigation, table containment, and single controller initialization.
 - `getDashboardData()`
 - `testSummaryFixtures()` — deterministic Summary regression fixtures with literal expected outputs.
 - `testRevenueTrendFixtures()` — deterministic Revenue Trend fixtures with literal completed-month labels and values.
@@ -59,8 +60,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all ten directly runnable `test*` functions.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 11-test suite.
+- `96.Tests.Cases.js` contains all eleven directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 12-test suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=30 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -68,7 +69,9 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testDashboardStateContract()` validates the exact loading/success/empty/error/retry vocabulary and additive `dateFilter.rowCount` for empty, purchase-only, sales-only, and populated responses. It logs `PASS: testDashboardStateContract | scenarios=5 | states=loading,success,empty,error,retry`. Frontend lifecycle mocks separately validate request failure, render exceptions, retry request identity, duplicate blocking, stale-handler suppression, control recovery, filter retention, live-region semantics, and the no-raw-payload Console policy.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `11/11` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+`testResponsiveShellContract()` reads the production HTML partial and validates the menu, labeled drawer, backdrop, ARIA controls, Escape/navigation close paths, body scroll lock, focus restoration, active-page semantics, table scroll wrapper, narrow full-width main content, retained desktop sidebar classes, and the single initialization guard. It logs `PASS: testResponsiveShellContract | scenarios=12 | breakpoint=lg | drawer=true`.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `12/12` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -85,7 +88,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `11/11`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, and scoped-row state metadata. The unified suite uses deterministic fixtures only, and no legacy migration oracle or validator remains.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `12/12`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, and the responsive-shell source contract. The unified suite remains ordered and fail-fast.
 
 ## Dashboard state contract
 
