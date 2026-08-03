@@ -9,7 +9,8 @@ function runAllBackendTests()
     { name: "testTopProductsFixtures", run: testTopProductsFixtures },
     { name: "testProfitTrendFixtures", run: testProfitTrendFixtures },
     { name: "testHotColdFixtures", run: testHotColdFixtures },
-    { name: "testSparseDatasetResilience", run: testSparseDatasetResilience }
+    { name: "testSparseDatasetResilience", run: testSparseDatasetResilience },
+    { name: "testDashboardDateFilter", run: testDashboardDateFilter }
   ];
   var passedTests = [];
 

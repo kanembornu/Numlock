@@ -40,7 +40,7 @@ Future reports must continue to distinguish live runtime evidence from local moc
 
 ## Completed and frozen source-file decomposition
 
-Sprint 5.6 source decomposition is complete and frozen as the verified production structure. All backend functions now live in their approved numbered owners, tests live in `95.Tests.js`, `doGet()` lives in `100.Code.js`, and the frontend lives in `190.View.Index.html`. The transitional monolith and legacy filenames have been removed.
+Sprint 5.6 source decomposition is complete and frozen as the verified production structure. All backend functions now live in their approved numbered owners, tests use the responsibility-split `92`–`98` files, `doGet()` lives in `100.Code.js`, and the frontend lives in `190.View.Index.html`. The transitional monolith and legacy filenames have been removed.
 
 Final acceptance completed successfully:
 
@@ -64,7 +64,7 @@ Sprint 5.8 Package 001 completed a repository-evidence audit without changing pr
 The next three bounded, independently releasable packages are:
 
 1. **Package 002 — Empty-data resilience: complete locally; upload and live validation pending.** Empty, sales-only, purchase-only, one-row, sparse mixed, and populated fixtures traverse the full dashboard response pipeline without non-finite values. Populated output and the public response shape are preserved.
-2. **Package 003 — Truthful transaction scope:** implement one approved end-to-end filter contract, or remove the unsupported control until the contract exists. Purchase-only semantics require product approval before work starts.
+2. **Package 003 — Dashboard date filter: complete locally; upload and live validation pending.** Every row-derived dashboard output uses the same project-timezone date range, parameterless calls default to Current Year, custom ranges are validated and inclusive, Revenue Trend includes current-period data, and the visible scope is month-only text.
 3. **Package 004 — Recoverable dashboard states:** replace indefinite loading with visible, accessible success, empty, failure, and retry states.
 
 No later backlog item is scheduled by this roadmap. Date periods, targets, export, and drill-down remain requirement-gated.

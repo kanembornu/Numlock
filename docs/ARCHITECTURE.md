@@ -58,7 +58,7 @@ Google Sheets
 | `94.Tests.Assertions.js` | Reusable test-only assertions, including recursive finite-number validation. |
 | `95.Tests.Validators.js` | Pure analytics invariant validators and diagnostics; no runnable test entry points. |
 | `96.Tests.Cases.js` | Directly runnable Apps Script backend tests. |
-| `98.Tests.Runner.js` | Ordered, fail-fast unified 9-test backend suite. |
+| `98.Tests.Runner.js` | Ordered, fail-fast unified 10-test backend suite. |
 | `100.Code.js` | Web entry points such as `doGet()`. |
 | `190.View.Index.html` | Dashboard HTML and browser runtime. |
 | `appsscript.json` | Apps Script manifest. |

@@ -85,25 +85,9 @@ function createSummaryFixtures()
 
 function createRevenueTrendFixtures()
 {
-  var today = new Date();
-  var currentMonthDate =
-    new Date(
-      today.getFullYear(),
-      today.getMonth(),
-      15,
-      12,
-      0,
-      0
-    );
-
-  var currentMonthLabel =
-    currentMonthDate.getFullYear() +
-    "-" +
-    ("0" + (currentMonthDate.getMonth() + 1)).slice(-2);
-
   return [
     {
-      name: "unsorted completed months with current-month exclusion",
+      name: "unsorted months including current-period data",
       data: [
         {
           date: new Date(2025, 2, 20, 12, 0, 0),
@@ -126,7 +110,7 @@ function createRevenueTrendFixtures()
           expense: 0
         },
         {
-          date: currentMonthDate,
+          date: new Date(2026, 5, 15, 12, 0, 0),
           transactionType: "Sales",
           product: "Current Month Sentinel",
           purchaseCategory: "",
@@ -187,10 +171,9 @@ function createRevenueTrendFixtures()
         }
       ],
       expected: {
-        labels: ["2024-12", "2025-01", "2025-03"],
-        values: [15000, 20000, 32500]
-      },
-      excludedCurrentMonthLabel: currentMonthLabel
+        labels: ["2024-12", "2025-01", "2025-03", "2026-06"],
+        values: [15000, 20000, 32500, 999999]
+      }
     },
     {
       name: "empty dataset",
@@ -198,8 +181,7 @@ function createRevenueTrendFixtures()
       expected: {
         labels: [],
         values: []
-      },
-      excludedCurrentMonthLabel: currentMonthLabel
+      }
     }
   ];
 }
@@ -469,4 +451,37 @@ function createSparseDatasetFixtures()
       normal: true
     }
   ];
+}
+
+function createDashboardDateFilterFixtures()
+{
+  return {
+    referenceDate:
+      new Date(2026, 5, 15, 12, 0, 0),
+
+    rows: [
+      { date: new Date(2026, 5, 15, 23, 59, 59), transactionType: "Sales", product: "Today", purchaseCategory: "", category: "Hot", qty: 1, revenue: 150, expense: 0 },
+      { date: new Date(2026, 5, 14, 12, 0, 0), transactionType: "Sales", product: "Yesterday", purchaseCategory: "", category: "Cold", qty: 1, revenue: 140, expense: 0 },
+      { date: new Date(2026, 5, 9, 0, 0, 0), transactionType: "Sales", product: "Last 7 Start", purchaseCategory: "", category: "Hot", qty: 1, revenue: 90, expense: 0 },
+      { date: new Date(2026, 5, 8, 23, 59, 59), transactionType: "Sales", product: "Before Last 7", purchaseCategory: "", category: "Cold", qty: 1, revenue: 80, expense: 0 },
+      { date: new Date(2026, 5, 1, 0, 0, 0), transactionType: "Sales", product: "Month Start", purchaseCategory: "", category: "Hot", qty: 1, revenue: 10, expense: 0 },
+      { date: new Date(2026, 4, 31, 23, 59, 59), transactionType: "Purchase", product: "", purchaseCategory: "Previous End", category: "", qty: 0, revenue: 0, expense: 31 },
+      { date: new Date(2026, 4, 1, 0, 0, 0), transactionType: "Purchase", product: "", purchaseCategory: "Previous Start", category: "", qty: 0, revenue: 0, expense: 1 },
+      { date: new Date(2026, 3, 30, 23, 59, 59), transactionType: "Purchase", product: "", purchaseCategory: "Before Previous", category: "", qty: 0, revenue: 0, expense: 30 },
+      { date: new Date(2026, 0, 1, 0, 0, 0), transactionType: "Sales", product: "Year Start", purchaseCategory: "", category: "Hot", qty: 1, revenue: 1, expense: 0 },
+      { date: new Date(2025, 11, 31, 23, 59, 59), transactionType: "Sales", product: "Prior Year", purchaseCategory: "", category: "Cold", qty: 1, revenue: 999, expense: 0 },
+      { date: "not-a-date", transactionType: "Sales", product: "Invalid Date", purchaseCategory: "", category: "Hot", qty: 1, revenue: 9999, expense: 0 }
+    ],
+
+    trendRows: [
+      { date: new Date(2025, 11, 31, 12, 0, 0), transactionType: "Sales", product: "December", purchaseCategory: "", category: "Hot", qty: 1, revenue: 120, expense: 0 },
+      { date: new Date(2026, 0, 1, 12, 0, 0), transactionType: "Sales", product: "January", purchaseCategory: "", category: "Cold", qty: 1, revenue: 10, expense: 0 },
+      { date: new Date(2026, 4, 20, 12, 0, 0), transactionType: "Sales", product: "May", purchaseCategory: "", category: "Hot", qty: 1, revenue: 50, expense: 0 },
+      { date: new Date(2026, 5, 1, 12, 0, 0), transactionType: "Sales", product: "June Start", purchaseCategory: "", category: "Hot", qty: 1, revenue: 60, expense: 0 },
+      { date: new Date(2026, 5, 15, 12, 0, 0), transactionType: "Sales", product: "June Current", purchaseCategory: "", category: "Cold", qty: 1, revenue: 150, expense: 0 },
+      { date: new Date(2026, 6, 31, 12, 0, 0), transactionType: "Sales", product: "July", purchaseCategory: "", category: "Hot", qty: 1, revenue: 70, expense: 0 },
+      { date: new Date(2026, 7, 1, 12, 0, 0), transactionType: "Sales", product: "August Start", purchaseCategory: "", category: "Cold", qty: 1, revenue: 80, expense: 0 },
+      { date: new Date(2026, 7, 3, 12, 0, 0), transactionType: "Purchase", product: "", purchaseCategory: "Supplies", category: "", qty: 0, revenue: 0, expense: 5 }
+    ]
+  };
 }

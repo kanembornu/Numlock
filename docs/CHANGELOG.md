@@ -4,6 +4,10 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented the Sprint 5.8 Package 003 date filter across every dashboard output with `today`, inclusive `last7days`, `currentMonth`, full `previousMonth`, default `currentYear`, and validated inclusive `custom` ranges in the Apps Script project timezone.
+- Added backward-compatible `getDashboardData(filter, customStart, customEnd)` handling and additive `dateFilter` response metadata; invalid row dates are ignored and source arrays are not mutated.
+- Corrected Revenue Trend to retain every represented month in the already filtered transaction set, including current partial-month revenue, and simplified the visible range to month-only `MM/YYYY` or `MM/YYYY – MM/YYYY` text.
+- Expanded `testDashboardDateFilter()` with deterministic preset, cross-month, cross-year, current-period, zero-revenue, ordering, and finite-value assertions while preserving the unified backend gate at 10/10.
 - Made the complete dashboard response and intelligence pipeline resilient to empty, sales-only, purchase-only, one-row, sparse mixed, and populated datasets while preserving the populated response snapshot and public response fields.
 - Added `testSparseDatasetResilience()` with seven deterministic fixtures, finite-number and required-property checks, decision-output validation, and full populated-output equivalence; the unified backend gate is now 9/9.
 - Added minimal frontend collection guards for charts, diagnosis, recommendations, roadmap, products, expenses, and recent transactions without redesigning empty states or changing Tailwind classes.
@@ -20,7 +24,7 @@ This document records verified engineering milestones. Semantic versioning begin
 - Retired the legacy Top Products oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Added deterministic Expense Breakdown fixtures covering category order, repeated purchases, zero and negative amounts, ignored rows, top expense, and empty data.
 - Retired the legacy Expense Breakdown oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
-- Added deterministic Revenue Trend fixtures covering completed-month aggregation, cross-year ordering, current-month exclusion, zero-revenue inputs, and empty data.
+- Added deterministic Revenue Trend fixtures covering complete filtered-period aggregation, cross-year ordering, current-period inclusion, zero-revenue inputs, and empty data.
 - Retired the legacy Revenue Trend oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Retired the legacy Summary oracle, validator, and migration test after deterministic Summary fixtures and the unified suite passed live.
 - Replaced the aggregate diagnostic's legacy Summary comparison with direct Aggregate Engine invariant checks.

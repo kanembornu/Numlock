@@ -42,3 +42,37 @@ function assertRequiredProperties(value, requiredProperties, fixtureName)
     }
   });
 }
+
+function assertThrowsMessage(callback, expectedMessage)
+{
+  var thrown = null;
+
+  try
+  {
+    callback();
+  }
+  catch (error)
+  {
+    thrown = error;
+  }
+
+  if (!thrown)
+  {
+    throw new Error(
+      "Expected error was not thrown: " +
+      expectedMessage
+    );
+  }
+
+  if (thrown.message !== expectedMessage)
+  {
+    throw new Error(
+      "Unexpected error message: expected=" +
+      expectedMessage +
+      ", actual=" +
+      thrown.message
+    );
+  }
+
+  return thrown;
+}

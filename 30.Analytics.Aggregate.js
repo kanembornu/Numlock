@@ -208,21 +208,10 @@ function buildSummaryFromAggregate(aggregate) {
 
 function buildRevenueTrendFromAggregate(aggregate)
 {
-  var today = new Date();
-
-  var currentMonth =
-    today.getFullYear() +
-    "-" +
-    ("0"+(today.getMonth()+1)).slice(-2);
-
   var labels =
     Object.keys(
       aggregate.monthlyRevenue
     )
-    .filter(function(label)
-    {
-      return label != currentMonth;
-    })
     .sort();
 
   var values =

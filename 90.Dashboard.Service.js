@@ -1,4 +1,4 @@
-function getDashboardData() {
+function getDashboardData(filter, customStart, customEnd) {
 
   var ss =
     SpreadsheetApp
@@ -16,15 +16,286 @@ function getDashboardData() {
       priceMap);
 
   return buildDashboardResponse(
-    processedData
+    processedData,
+    filter,
+    customStart,
+    customEnd
   );
 }
 
-function buildDashboardResponse(processedData) {
+function normalizeDashboardDateFilter(filter) {
+
+  var normalized =
+    filter == null
+      ? ""
+      : String(filter).trim();
+
+  var allowed = {
+    today: true,
+    last7days: true,
+    currentMonth: true,
+    previousMonth: true,
+    currentYear: true,
+    custom: true
+  };
+
+  return allowed[normalized]
+    ? normalized
+    : "currentYear";
+}
+
+function createDashboardDateKey(year, month, day) {
+
+  var date =
+    new Date(
+      Date.UTC(
+        year,
+        month - 1,
+        day
+      )
+    );
+
+  return date.getUTCFullYear() +
+    "-" +
+    ("0" + (date.getUTCMonth() + 1)).slice(-2) +
+    "-" +
+    ("0" + date.getUTCDate()).slice(-2);
+}
+
+function shiftDashboardDateKey(dateKey, days) {
+
+  var parts =
+    dateKey.split("-");
+
+  return createDashboardDateKey(
+    Number(parts[0]),
+    Number(parts[1]),
+    Number(parts[2]) + days
+  );
+}
+
+function validateDashboardDateKey(value, fieldName) {
+
+  var text =
+    value == null
+      ? ""
+      : String(value).trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text))
+  {
+    throw new Error(
+      fieldName +
+      " must be a valid YYYY-MM-DD date"
+    );
+  }
+
+  var parts =
+    text.split("-");
+
+  if (
+    createDashboardDateKey(
+      Number(parts[0]),
+      Number(parts[1]),
+      Number(parts[2])
+    ) !== text
+  )
+  {
+    throw new Error(
+      fieldName +
+      " must be a valid YYYY-MM-DD date"
+    );
+  }
+
+  return text;
+}
+
+function resolveDashboardDateRange(filter, customStart, customEnd, referenceDate) {
+
+  var normalizedFilter =
+    normalizeDashboardDateFilter(filter);
+
+  var timezone =
+    Session.getScriptTimeZone();
+
+  if (!timezone)
+  {
+    throw new Error(
+      "Dashboard date filter requires a project timezone"
+    );
+  }
+
+  var today =
+    Utilities.formatDate(
+      referenceDate || new Date(),
+      timezone,
+      "yyyy-MM-dd"
+    );
+
+  var todayParts =
+    today.split("-");
+
+  var year =
+    Number(todayParts[0]);
+
+  var month =
+    Number(todayParts[1]);
+
+  var startDate;
+  var endDate;
+  var label;
+
+  if (normalizedFilter === "today")
+  {
+    startDate = today;
+    endDate = today;
+    label = "Today";
+  }
+  else if (normalizedFilter === "last7days")
+  {
+    startDate =
+      shiftDashboardDateKey(
+        today,
+        -6
+      );
+    endDate = today;
+    label = "Last 7 Days";
+  }
+  else if (normalizedFilter === "currentMonth")
+  {
+    startDate =
+      createDashboardDateKey(
+        year,
+        month,
+        1
+      );
+    endDate = today;
+    label = "Current Month";
+  }
+  else if (normalizedFilter === "previousMonth")
+  {
+    endDate =
+      shiftDashboardDateKey(
+        createDashboardDateKey(
+          year,
+          month,
+          1
+        ),
+        -1
+      );
+
+    var previousParts =
+      endDate.split("-");
+
+    startDate =
+      createDashboardDateKey(
+        Number(previousParts[0]),
+        Number(previousParts[1]),
+        1
+      );
+    label = "Previous Month";
+  }
+  else if (normalizedFilter === "custom")
+  {
+    startDate =
+      validateDashboardDateKey(
+        customStart,
+        "customStart"
+      );
+
+    endDate =
+      validateDashboardDateKey(
+        customEnd,
+        "customEnd"
+      );
+
+    if (startDate > endDate)
+    {
+      throw new Error(
+        "customStart must not be after customEnd"
+      );
+    }
+
+    label =
+      "Custom: " +
+      startDate +
+      " to " +
+      endDate;
+  }
+  else
+  {
+    startDate =
+      createDashboardDateKey(
+        year,
+        1,
+        1
+      );
+    endDate = today;
+    label = "Current Year";
+  }
+
+  return {
+    filter: normalizedFilter,
+    startDate: startDate,
+    endDate: endDate,
+    label: label
+  };
+}
+
+function filterTransactionsByDateRange(data, range) {
+
+  var timezone =
+    Session.getScriptTimeZone();
+
+  return (data || []).filter(function(row)
+  {
+    var date =
+      new Date(row && row.date);
+
+    if (isNaN(date.getTime()))
+    {
+      return false;
+    }
+
+    var dateKey;
+
+    try
+    {
+      dateKey =
+        Utilities.formatDate(
+          date,
+          timezone,
+          "yyyy-MM-dd"
+        );
+    }
+    catch (error)
+    {
+      return false;
+    }
+
+    return dateKey >= range.startDate &&
+      dateKey <= range.endDate;
+  });
+}
+
+function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate) {
+
+  var dateRange =
+    resolveDashboardDateRange(
+      filter,
+      customStart,
+      customEnd,
+      referenceDate
+    );
+
+  var filteredData =
+    filterTransactionsByDateRange(
+      processedData,
+      dateRange
+    );
 
   var cache =
   buildAnalyticsCache(
-    processedData
+    filteredData
   );
 
     return {
@@ -50,10 +321,10 @@ function buildDashboardResponse(processedData) {
         cache.expenseBreakdown,
 
       recentTransactions:
-        buildRecentTransactions(processedData),
+        buildRecentTransactions(filteredData),
 
       diagnosis:
-        buildDiagnosis(processedData, cache),
+        buildDiagnosis(filteredData, cache),
 
       forecast:
         cache.forecast,
@@ -117,6 +388,9 @@ function buildDashboardResponse(processedData) {
 
       kpiAchievement:
         cache.kpiAchievement,
+
+      dateFilter:
+        dateRange,
 
     };
 }

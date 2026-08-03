@@ -2,7 +2,7 @@
 
 ## Scope and evidence
 
-This backlog is the documentation outcome of Sprint 5.8 Package 001. It is grounded in the production contracts in `10.Config.js`, `70.Intelligence.Score.js`, `75.Intelligence.Diagnosis.js`, `80.Intelligence.Recommendation.js`, `85.Intelligence.Decision.js`, `90.Dashboard.Service.js`, `95.Tests.js`, and `190.View.Index.html`, plus the governing repository documentation. It proposes product work only; no production source, frontend, deployment, or release metadata changed during the audit.
+This backlog is the documentation outcome of Sprint 5.8 Package 001. It is grounded in the production contracts in `10.Config.js`, `70.Intelligence.Score.js`, `75.Intelligence.Diagnosis.js`, `80.Intelligence.Recommendation.js`, `85.Intelligence.Decision.js`, `90.Dashboard.Service.js`, the responsibility-split `92`–`98` test files, and `190.View.Index.html`, plus the governing repository documentation. It proposes product work only; no production source, frontend, deployment, or release metadata changed during the audit.
 
 The current dashboard already has a clear two-destination navigation model, a broad executive-to-operational information hierarchy, KPI cards, three Chart.js visualizations, skeletons for initial KPIs/charts, recent transactions, deterministic backend coverage, and explicit Chart destruction before recreation. Generated Tailwind CSS is approximately 18 KB and is not presently a size concern. No duplicated event-listener registration was found.
 
@@ -25,27 +25,31 @@ The current dashboard already has a clear two-destination navigation model, a br
 - **Files likely affected:** `75.Intelligence.Diagnosis.js`, `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`, `docs/TESTING.md`.
 - **Implementation complexity:** M
 - **Regression risk:** Medium
-- **Validation required:** deterministic no-row, sales-only, purchase-only, and sparse-data fixtures; local `runAllBackendTests()` 8/8; extracted frontend script syntax; browser acceptance for empty and populated data at desktop and narrow widths.
+- **Validation required:** deterministic no-row, sales-only, purchase-only, and sparse-data fixtures; local `runAllBackendTests()` 10/10; extracted frontend script syntax; browser acceptance for empty and populated data at desktop and narrow widths.
 - **Dependency on other items:** None.
 
 ### P0-2 — Make the transaction filter truthful
 
+**Status: Completed locally in Sprint 5.8 Package 003 by replacing the unsupported transaction-type control with the approved authoritative date filter. Upload and live validation are pending.**
+
 - **Problem:** the UI offers All, Sales Only, and Purchase Only, but `onchange="loadData()"` calls parameterless `getDashboardData()` and never reads or applies `#filter`.
 - **User impact:** users believe the dashboard has changed scope when every KPI, chart, intelligence output, and transaction remains unfiltered.
-- **Proposed solution:** choose and document one compatible filter contract, apply it consistently to the entire response, show the active scope, and remove the control until that contract is ready if partial filtering would misrepresent intelligence. Product confirmation is required on whether purchases-only should suppress sales KPIs or present a purpose-built expense view.
+- **Proposed solution:** implemented one date-range contract across the entire response and removed the unsupported transaction-type choices. Transaction-type filtering remains out of scope.
 - **Files likely affected:** `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`, `docs/ARCHITECTURE.md`, `docs/TESTING.md`.
 - **Implementation complexity:** M
 - **Regression risk:** High
 - **Validation required:** deterministic All/Sales/Purchase contracts; backward-compatible parameterless call; filter transition and stale-response browser tests; confirmation that every displayed metric uses the same scope.
-- **Dependency on other items:** None; purchase-only semantics must be approved before implementation.
+- **Dependency on other items:** None.
 
 ## P1 — high-value product improvements
 
 ### P1-1 — Add a date range and explicit period comparison contract
 
-- **Problem:** all spreadsheet history is processed, while labels say “real-time,” “this month,” and “compared with the previous period” without a visible selected period. Forecast and trend builders infer periods internally.
+**Status: Date-range selection and visible month scope are completed locally in Sprint 5.8 Package 003; explicit previous-period comparison semantics remain requirement-gated.**
+
+- **Problem:** the dashboard now has an authoritative visible date range, but labels that imply comparison still lack an explicit previous-period contract and forecast interpretation remains implicit.
 - **User impact:** executives cannot tell which dates a KPI covers or confidently interpret growth comparisons.
-- **Proposed solution:** add a shared reporting-period object, presets plus an explicit range, a documented previous-period rule, and a visible scope label used by all analytics and intelligence outputs.
+- **Proposed solution:** retain the implemented shared date-range metadata and add only the approved previous-period rule plus explicit comparison metadata used consistently by analytics and intelligence outputs.
 - **Files likely affected:** `20.Data.Source.js` or `25.Data.Processor.js`, analytics/intelligence consumers, `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`, architecture/testing documentation.
 - **Implementation complexity:** L
 - **Regression risk:** High
@@ -196,15 +200,17 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 - **Objective:** make every valid empty or sparse dataset return and render a usable, explicit state.
 - **Independent release:** yes; it preserves populated-data response fields and requires no filter/date contract.
-- **Expected tests:** seven deterministic empty/sales-only/purchase-only/one-row/sparse/populated backend fixtures, local 9/9 gate, extracted frontend syntax, mocked sparse rendering, and live Apps Script validation. Empty-state redesign and browser acceptance remain Package 004 scope.
+- **Expected tests:** seven deterministic empty/sales-only/purchase-only/one-row/sparse/populated backend fixtures, local 10/10 gate, extracted frontend syntax, mocked sparse rendering, and live Apps Script validation. Empty-state redesign and browser acceptance remain Package 004 scope.
 - **Scope:** P0-1 only.
 
 ### Sprint 5.8 Package 003 — Truthful transaction scope
 
-- **Objective:** remove the misleading filter behavior by implementing one approved end-to-end scope contract or temporarily removing the unsupported control.
-- **Independent release:** yes; retain parameterless `getDashboardData()` as the All-data compatibility path.
-- **Expected tests:** All/Sales/Purchase fixtures, response compatibility, rapid-change/stale-response behavior, every-visible-output scope audit, desktop and narrow browser acceptance.
-- **Scope:** P0-2 only. Start only after purchase-only semantics are approved.
+**Status: Completed locally; upload and live Apps Script validation are pending.**
+
+- **Objective:** replace the misleading transaction-type control with the approved end-to-end date filter.
+- **Independent release:** yes; parameterless `getDashboardData()` remains compatible and defaults to Current Year.
+- **Expected tests:** deterministic date-range and Revenue Trend assertions, response compatibility, inclusive boundaries, custom validation, finite/empty outputs, frontend request locking, and every-visible-output scope checks.
+- **Scope:** P0-2 only; transaction-type filtering was not implemented.
 
 ### Sprint 5.8 Package 004 — Recoverable dashboard states
 

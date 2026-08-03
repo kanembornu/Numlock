@@ -85,15 +85,36 @@
         <p class="text-slate-500 mt-3"> Real-time performance overview of your business </p>
       </div>
 
-      <div class="mt-4 lg:mt-0">
+      <div
+        id="dateFilterControls"
+        onchange="handleDateFilterChange()"
+        class="mt-4 lg:mt-0">
         <select
           id="filter"
-          onchange="loadData()"
           class="bg-white border border-slate-200 rounded-xl px-4 py-3">
-          <option value="All">All Transactions</option>
-          <option value="Sales">Sales Only</option>
-          <option value="Purchase">Purchase Only</option>
+          <option value="today">Today</option>
+          <option value="last7days">Last 7 Days</option>
+          <option value="currentMonth">Current Month</option>
+          <option value="previousMonth">Previous Month</option>
+          <option value="currentYear" selected>Current Year</option>
+          <option value="custom">Custom</option>
         </select>
+
+        <div id="customDateRange" class="hidden mt-2 space-y-2">
+          <input
+            id="customStart"
+            type="date"
+            disabled
+            class="bg-white border border-slate-200 rounded-xl px-4 py-3">
+          <input
+            id="customEnd"
+            type="date"
+            disabled
+            class="bg-white border border-slate-200 rounded-xl px-4 py-3">
+        </div>
+
+        <div id="dateFilterLabel" class="text-xs text-slate-500 mt-2">
+        </div>
       </div>
     </div>
 
@@ -315,6 +336,7 @@
   let revenueChart;
   let hotColdChart;
   let expenseChart;
+  let dashboardRequestInFlight = false;
 
     function showPage(pageId)
     {
@@ -365,22 +387,162 @@
       document.getElementById("topProductSkeleton").classList.add("hidden");
     }
 
+    function setDashboardFilterLoading(loading)
+    {
+      dashboardRequestInFlight = loading;
+
+      document.getElementById("filter").disabled = loading;
+
+      var isCustom =
+        document.getElementById("filter").value === "custom";
+
+      document.getElementById("customStart").disabled =
+        loading || !isCustom;
+
+      document.getElementById("customEnd").disabled =
+        loading || !isCustom;
+    }
+
+    function updateCustomDateVisibility()
+    {
+      var isCustom =
+        document.getElementById("filter").value === "custom";
+
+      document.getElementById("customDateRange").classList.toggle(
+        "hidden",
+        !isCustom
+      );
+
+      if (!dashboardRequestInFlight)
+      {
+        document.getElementById("customStart").disabled = !isCustom;
+        document.getElementById("customEnd").disabled = !isCustom;
+      }
+    }
+
+    function getDashboardFilterRequest()
+    {
+      var filter =
+        document.getElementById("filter").value;
+
+      var customStart =
+        document.getElementById("customStart").value;
+
+      var customEnd =
+        document.getElementById("customEnd").value;
+
+      if (filter === "custom")
+      {
+        if (!customStart || !customEnd)
+        {
+          document.getElementById("dateFilterLabel").innerText =
+            "Select both custom dates";
+          return null;
+        }
+
+        if (customStart > customEnd)
+        {
+          document.getElementById("dateFilterLabel").innerText =
+            "Start date must not be after end date";
+          return null;
+        }
+      }
+
+      return {
+        filter: filter,
+        customStart: filter === "custom" ? customStart : null,
+        customEnd: filter === "custom" ? customEnd : null
+      };
+    }
+
+    function handleDateFilterChange()
+    {
+      updateCustomDateVisibility();
+      loadData();
+    }
+
+    function formatDashboardMonthRange(startDate, endDate)
+    {
+      function formatMonth(dateKey)
+      {
+        var parts = String(dateKey || "").split("-");
+
+        if (
+          parts.length !== 3 ||
+          !/^\d{4}$/.test(parts[0]) ||
+          !/^\d{2}$/.test(parts[1])
+        )
+        {
+          return "";
+        }
+
+        return parts[1] + "/" + parts[0];
+      }
+
+      var startMonth = formatMonth(startDate);
+      var endMonth = formatMonth(endDate);
+
+      if (!startMonth || !endMonth)
+      {
+        return "";
+      }
+
+      return startMonth === endMonth
+        ? startMonth
+        : startMonth + " – " + endMonth;
+    }
+
     function loadData()
     {
+      if (dashboardRequestInFlight)
+      {
+        return;
+      }
+
+      var request =
+        getDashboardFilterRequest();
+
+      if (!request)
+      {
+        return;
+      }
+
+      setDashboardFilterLoading(true);
       showBusinessOverviewSkeleton();
       showChartSkeleton();
 
       google.script.run
         .withSuccessHandler(function(res)
         {
-          render(res);
+          try
+          {
+            render(res);
+
+            if (res && res.dateFilter)
+            {
+              document.getElementById("dateFilterLabel").innerText =
+                formatDashboardMonthRange(
+                  res.dateFilter.startDate,
+                  res.dateFilter.endDate
+                );
+            }
+          }
+          finally
+          {
+            setDashboardFilterLoading(false);
+          }
         })
         .withFailureHandler(function(err)
         {
+          setDashboardFilterLoading(false);
           console.error("SERVER ERROR");
           console.error(err);
         })
-        .getDashboardData();
+        .getDashboardData(
+          request.filter,
+          request.customStart,
+          request.customEnd
+        );
     }
 
     //--------------------------------------------------
@@ -1624,7 +1786,11 @@
     hideChartSkeleton();
     }
 
-window.onload = loadData;
+window.onload = function()
+{
+  updateCustomDateVisibility();
+  loadData();
+};
 
 </script>
 

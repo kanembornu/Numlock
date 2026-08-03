@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Use one project-timezone dashboard date filter
+
+Every transaction-derived dashboard section uses one processed-row subset resolved before analytics cache construction. The exact filters are `today`, inclusive `last7days`, `currentMonth`, full `previousMonth`, default `currentYear`, and inclusive `custom`. Missing, null, empty, or unknown input normalizes to `currentYear` for backward compatibility.
+
+The Apps Script project timezone is authoritative. Custom boundaries must be exact, valid `YYYY-MM-DD` values and start must not be after end; invalid input throws a descriptive error and is never silently swapped. The response adds `dateFilter` metadata without removing or renaming existing fields. Transaction-type filtering is not part of this decision.
+
+Revenue Trend is built only by `buildRevenueTrendFromAggregate()` from that already filtered row set. It retains all represented revenue months, including a partial current month, in ascending `YYYY-MM` order. The frontend derives month-only visible scope text directly from the backend ISO boundaries without browser-local `Date` parsing; the ISO metadata remains unchanged for internal use.
+
 ### Sprint 5.8 uses a product-evidence backlog
 
 Sprint 5.8 Package 001 shifts planned work from internal restructuring to product correctness, decision value, UX, accessibility, and measured frontend performance. [The product backlog](PRODUCT-BACKLOG.md) is the single prioritized inventory. Its P0/P1/P2/P3 ordering is evidence-based, and only the next three packages are scheduled in `ROADMAP.md`.
@@ -67,8 +75,7 @@ Static checks, local mocks, clasp upload, live Apps Script execution, deployment
 
 ## Deferred decisions
 
-- Purchase-only dashboard semantics and whether filtering applies to one view or every intelligence output.
-- Reporting-period presets and exact previous-period comparison rules.
+- Exact previous-period comparison rules beyond the implemented date scope.
 - KPI target values, storage location, and who may edit them.
 - Export format, included fields, and access policy.
 - Drill-down detail fields and authorization boundary.
