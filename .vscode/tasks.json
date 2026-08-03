@@ -11,13 +11,13 @@
       "problemMatcher": []
     },
     {
-      "label": "clasp status",
+      "label": "NUMLOCK: Clasp Status",
       "type": "shell",
       "command": "clasp status",
       "problemMatcher": []
     },
     {
-      "label": "clasp push",
+      "label": "NUMLOCK: Clasp Push",
       "type": "shell",
       "command": "clasp push",
       "problemMatcher": []
@@ -26,6 +26,19 @@
       "label": "clasp pull",
       "type": "shell",
       "command": "clasp pull",
+      "problemMatcher": []
+    },
+    {
+      "label": "NUMLOCK: Preflight",
+      "type": "shell",
+      "command": "/bin/zsh",
+      "args": [
+        "-lc",
+        "npm ci && npm run build:tailwind && for file in [0-9]*.js; do node --check \"$file\" || exit 1; done && clasp status"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
       "problemMatcher": []
     }
   ]

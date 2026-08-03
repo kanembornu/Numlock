@@ -4,7 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
-- No unreleased changes recorded.
+- Audited every production-source function and retained all active migration-oracle coverage; no function was safe to remove.
+- Established `docs/RELEASE.md` as the authoritative release workflow, semantic-versioning policy, and release-checklist owner.
+- Added consistent VS Code tasks for Tailwind build, clasp inventory, clasp push, and local preflight.
 
 ## 1.0.0 — Production — 2026-08-03
 
@@ -37,5 +39,5 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Known technical debt
 
-- Tailwind is currently loaded from its CDN and emits a production-use warning.
+- Legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
 - The Apps Script runtime emits an iframe sandbox warning.

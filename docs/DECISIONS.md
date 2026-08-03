@@ -24,7 +24,7 @@ Normal successful dashboard loading and rendering must not write application mes
 
 ### Precompile Tailwind into a clasp-tracked HTML partial
 
-For Sprint 5.7 Package 001, the recommended implementation direction is to pin Tailwind 3.4.17 as a local development dependency and compile only the utilities used by `190.View.Index.html` into a generated, minified HTML partial. The partial is a checked-in deployment artifact; Apps Script runs no Node.js tooling. A later, separately approved implementation must include that partial from the existing template, add it to the `.claspignore` allowlist, and remove the Tailwind Play CDN script only after source, upload, live, and browser parity gates pass.
+Sprint 5.7 Package 001 pins Tailwind 3.4.17 as a local development dependency and compiles only the utilities used by `190.View.Index.html` into generated, minified `189.View.Tailwind.html`. The checked-in partial is included by the existing template and tracked by clasp; Apps Script runs no Node.js tooling. The Tailwind Play CDN script was removed after source, upload, live, and browser parity gates passed.
 
 This is safer than placing generated CSS inside the hand-maintained view because generated and authored code remain separate, and safer than a handcrafted rewrite because it preserves Tailwind's current utility semantics and responsive variants. A standalone `.css` asset is not selected because HTML Service does not provide a conventional static-asset route and the current web entry point serves one evaluated HTML template.
 
@@ -47,12 +47,14 @@ Migration test entry points remain global for manual Apps Script editor executio
 
 Static checks, local mocks, clasp upload, live Apps Script execution, deployment, and browser verification are reported separately. Git and Apps Script writes require explicit approval.
 
+### Use one authoritative release workflow
+
+`docs/RELEASE.md` owns release sequencing, semantic versioning, operator checks, deployment, browser acceptance, Git completion, and rollback. `10.Config.js` owns executable release metadata and `docs/CHANGELOG.md` owns release history. Version `1.0.0` is the current production release.
+
 ### Keep operating rules and context separate
 
 `AGENTS.md` is the canonical operating contract. `.ai/` provides concise project context, templates, decisions, and routing without overriding or reproducing that contract.
 
 ## Deferred decisions
 
-- `10.Config.js` remains unpopulated until a real immutable configuration contract is approved; inline behavioral literals are not extracted during pure moves.
-- Legacy migration oracles remain until a separately approved cleanup proves they are no longer required for regression coverage.
-- No release/version metadata system is invented until the repository adopts one explicitly.
+- Legacy migration oracles remain until independent deterministic regression fixtures replace their current equivalence coverage. The Package 004 audit found no safe deletion candidate.

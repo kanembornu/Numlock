@@ -19,7 +19,7 @@ The ownership model and completed function migration map are documented in [Arch
 
 The numbered architecture is frozen as the verified production structure. It has passed local source checks, Apps Script backend validation, deployment, and browser rendering verification. Future changes must preserve file ownership and public behavior unless a separately approved architecture change updates the governing documents.
 
-Semantic versioning begins at `1.0.0`. Source structure and production hardening are complete. Future releases must update `10.Config.js` and [the changelog](docs/CHANGELOG.md) together.
+Version `1.0.0` is in production. Source structure and Sprint 5.7 production hardening are complete. Future releases must update `10.Config.js` and [the changelog](docs/CHANGELOG.md) together and follow the authoritative [Release Workflow](docs/RELEASE.md).
 
 ## Developer onboarding
 
@@ -41,7 +41,7 @@ Install the pinned development tooling with `npm ci`. Run `npm run build:tailwin
 4. Run syntax, migration, diff, and status validation appropriate to the change.
 5. Review the exact diff and stage every approved path explicitly; never use `git add .`.
 6. Commit locally and push to GitHub only when explicitly requested.
-7. Run `npm ci` and `npm run build:tailwind`, then use `clasp status` to verify the upload inventory before any Apps Script upload.
+7. Follow the [Release Workflow](docs/RELEASE.md): use the unified `runAllBackendTests()` runner, compile Tailwind when relevant, and verify the clasp inventory before any authorized upload.
 
 ## Validation and deployment flow
 
@@ -65,4 +65,5 @@ Keep evidence levels separate:
 - [Decisions](docs/DECISIONS.md)
 - [Troubleshooting](docs/TROUBLESHOOTING.md)
 - [Changelog](docs/CHANGELOG.md)
+- [Release Workflow](docs/RELEASE.md)
 - [Reference Parity Inventory](docs/PARITY-INVENTORY.md)

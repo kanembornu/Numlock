@@ -14,6 +14,9 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Numbered source decomposition: complete and frozen as the verified production structure.
 - Production hardening: complete.
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
+- Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
+- Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 8/8 PASS.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 
 ## Architecture and invariants
@@ -30,9 +33,8 @@ Safe live entry points and known failure modes are documented in `docs/TESTING.m
 
 ## Technical debt
 
-- Legacy migration oracles remain intentionally.
+- Legacy migration oracles remain intentionally; the Package 004 audit found none safe to remove before independent fixture coverage replaces them.
 - Future releases must update `10.Config.js` and `docs/CHANGELOG.md` together.
-- The deployed frontend emits the Tailwind CDN production warning.
 - The Apps Script iframe emits its platform sandbox warning.
 
-The two browser warnings are known and non-blocking. They do not authorize frontend changes.
+The iframe sandbox warning is known and non-blocking. It does not authorize frontend changes.

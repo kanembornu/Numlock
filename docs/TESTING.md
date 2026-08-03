@@ -53,6 +53,8 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It must remain `8/8` while legacy migration-oracle coverage exists; targeted functions are for failure diagnosis only.
+
 ### During decomposition
 
 After every function move:
@@ -74,6 +76,8 @@ After every function move:
 5. Stop on the first mismatch or runtime error; do not apply speculative fixes.
 6. List the existing Apps Script deployments, create an immutable version, and update the intended deployment only when explicitly requested after backend tests pass.
 7. Hard-refresh the deployed dashboard, verify visible cards/charts/transactions, and inspect the browser console.
+
+Follow `RELEASE.md` for the complete authoritative release sequence and checklist.
 
 ## Safety
 

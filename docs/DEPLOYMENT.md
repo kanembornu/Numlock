@@ -1,5 +1,7 @@
 # Deployment
 
+`RELEASE.md` owns the complete release sequence. This document provides deployment-specific controls and must remain consistent with it.
+
 ## Artifact boundaries
 
 - A Git commit records repository history.
@@ -21,13 +23,12 @@ These are independent actions. Upload success is not runtime, deployment, or bro
 
 ### Sprint 5.7 styling build gate
 
-The production-safe styling migration uses this artifact plan:
+The completed production-safe styling migration uses these artifacts:
 
-- add `package.json`, `package-lock.json`, `tailwind.config.js`, `assets/tailwind.input.css`, and generated `189.View.Tailwind.html`;
-- modify `190.View.Index.html` to replace only `https://cdn.tailwindcss.com` with a `<style>` block that force-includes `189.View.Tailwind.html`; preserve the existing authored `<style>` block;
-- add `node_modules/` to `.gitignore`; keep the generated `189.View.Tailwind.html` tracked;
-- add `!189.View.Tailwind.html` to the `.claspignore` allowlist; package/build files remain excluded by the existing deny-all rule;
-- add a VS Code task named `build:tailwind` that invokes `npm run build:tailwind` and make styling validation run that task before `clasp status`.
+- `package.json`, `package-lock.json`, `tailwind.config.js`, and `assets/tailwind.input.css` own the local build;
+- generated `189.View.Tailwind.html` is a reviewed, Git- and clasp-tracked production artifact;
+- `190.View.Index.html` includes the generated partial while preserving its authored CSS; and
+- `node_modules/` and build-only files remain excluded from clasp.
 
 Pin `tailwindcss` exactly to `3.4.17` in `devDependencies` and define this package script:
 
@@ -37,11 +38,11 @@ Pin `tailwindcss` exactly to `3.4.17` in `devDependencies` and define this packa
 
 `assets/tailwind.input.css` contains the three Tailwind directives. `tailwind.config.js` scans `./190.View.Index.html` and contains the explicit runtime-class safelist recorded in `DECISIONS.md`. Run `npm ci`, then `npm run build:tailwind` before `clasp status`; confirm the partial contains minified CSS only and review its diff. Node.js is build-time tooling and is never uploaded or executed in Apps Script.
 
-Before upload, verify that the only removed external reference is the Tailwind CDN script; Chart.js and Font Awesome remain unchanged. Confirm all arbitrary utilities compile: `rounded-[24px]`, `rounded-[28px]`, `rounded-[32px]`, `text-[11px]`, `text-[15px]`, `text-[18px]`, `text-[24px]`, `text-[2rem]`, `tracking-[0.22em]`, `tracking-[0.25em]`, and `left-[14px]`. Confirm responsive `lg:` and `xl:` utilities and every safelisted state class exist in the generated artifact.
+Before upload after relevant frontend changes, verify the Tailwind CDN reference remains absent while Chart.js and Font Awesome remain unchanged. Confirm all arbitrary utilities compile: `rounded-[24px]`, `rounded-[28px]`, `rounded-[32px]`, `text-[11px]`, `text-[15px]`, `text-[18px]`, `text-[24px]`, `text-[2rem]`, `tracking-[0.22em]`, `tracking-[0.25em]`, and `left-[14px]`. Confirm responsive `lg:` and `xl:` utilities and every safelisted state class exist in the generated artifact.
 
 ## Upload and live validation
 
-Run `clasp push` only with explicit approval. Use `clasp push --force` only when explicitly required to upload the complete reviewed source. After upload, execute in the Apps Script editor:
+Run `clasp push` only with explicit approval. The authoritative release workflow uses `clasp push --force` only after exact inventory review and upload authorization. After upload, run `runAllBackendTests()` in the Apps Script editor and require `8/8`; use these targeted functions only to diagnose failures:
 
 1. `getDashboardData()`
 2. `testSummaryMigration()`

@@ -6,6 +6,10 @@
 
 Semantic versioning begins at `1.0.0`. `10.Config.js` is the authoritative release metadata source, and future releases must update it together with `docs/CHANGELOG.md`. The verified source structure and production hardening are complete.
 
+### Sprint 5.7 Package 004 — release workflow and migration-oracle audit
+
+The authoritative release workflow is documented in `docs/RELEASE.md`. Version `1.0.0` is in production, the unified backend runner requires `8/8`, and Tailwind is compiled locally into the clasp-tracked partial. The audit found no dead functions and no safe migration-oracle deletion: all six legacy builders still provide active equivalence coverage and require independent fixture-based regression replacements before retirement.
+
 ### Sprint 5.5 — Dashboard Intelligence
 
 Dashboard Intelligence is complete. The dashboard response includes financial, trend, product, expense, scoring, diagnosis, recommendation, risk, and executive decision outputs consumed by the current frontend.
@@ -45,13 +49,13 @@ Final acceptance completed successfully:
 - creation and activation of a new deployment version; and
 - deployed-dashboard rendering and application runtime verification.
 
-No application runtime errors were found. The Tailwind CDN production warning and Apps Script iframe sandbox warning remain known, non-blocking frontend technical debt.
+No application runtime errors were found. At that acceptance point, the Tailwind CDN warning and Apps Script iframe sandbox warning were known and non-blocking; Package 001 subsequently removed the Tailwind CDN dependency, while the platform iframe warning remains accepted.
 
-## Planned — Sprint 5.7 Package 001 production-safe styling
+## Completed — Sprint 5.7 Package 001 production-safe styling
 
-The audit is complete; implementation is intentionally deferred. Replace the Tailwind Play CDN with a pinned local Tailwind CLI build whose minified output is checked in as an Apps Script HTML partial. Preserve `190.View.Index.html` behavior, its inline custom CSS, all responsive and arbitrary-value utilities, and all JavaScript-selected state classes. Keep Chart.js and Font Awesome CDN usage unchanged; they are separate dependencies and outside this package.
+Tailwind `3.4.17` is pinned locally and compiles the utilities used by `190.View.Index.html` into the checked-in `189.View.Tailwind.html` Apps Script partial. The Tailwind CDN reference has been removed while Chart.js and Font Awesome remain separate CDN dependencies.
 
-Implementation acceptance requires deterministic build output, an explicit dynamic-class safelist, a clean clasp inventory containing the generated partial, source-level confirmation that the Tailwind CDN reference is gone, successful live backend checks, and deployed-browser visual and console verification. The Apps Script iframe sandbox warning remains out of scope.
+The generated artifact, explicit dynamic-class safelist, clasp inventory, live backend checks, and deployed-browser parity were validated. The Apps Script iframe sandbox warning remains accepted non-blocking platform output.
 
 ## Later work
 
