@@ -2,6 +2,12 @@
 
 ## Active decisions
 
+### Use one recoverable dashboard state contract
+
+The frontend has five explicit lifecycle states: `loading`, `success`, `empty`, `error`, and `retry`. Loading disables filter controls, prevents duplicate requests, visibly de-emphasizes stale content, and exposes busy status. Success restores the populated dashboard and active month-range label. Empty is defined only by additive `dateFilter.rowCount === 0`; zero revenue or zero expense alone never makes a period empty.
+
+Error handling shows `Unable to load dashboard data.`, restores controls, retains the selected filter and custom dates, and exposes a real Retry button. Retry reuses the exact last request without reloading the page. Sequence tokens prevent stale success or failure callbacks from replacing a newer state. Request and render failures retain concise `console.error` context but never log raw dashboard payloads.
+
 ### Use one project-timezone dashboard date filter
 
 Every transaction-derived dashboard section uses one processed-row subset resolved before analytics cache construction. The exact filters are `today`, inclusive `last7days`, `currentMonth`, full `previousMonth`, default `currentYear`, and inclusive `custom`. Missing, null, empty, or unknown input normalizes to `currentYear` for backward compatibility.

@@ -485,3 +485,51 @@ function createDashboardDateFilterFixtures()
     ]
   };
 }
+
+function createDashboardStateContractFixtures()
+{
+  return {
+    states: [
+      "loading",
+      "success",
+      "empty",
+      "error",
+      "retry"
+    ],
+    referenceDate:
+      new Date(2026, 5, 15, 12, 0, 0),
+    cases: [
+      {
+        name: "valid empty response",
+        data: [],
+        expectedRowCount: 0,
+        expectedState: "empty"
+      },
+      {
+        name: "purchase-only response",
+        data: [
+          { date: new Date(2026, 5, 10, 12, 0, 0), transactionType: "Purchase", product: "", purchaseCategory: "Supplies", category: "", qty: 0, revenue: 0, expense: 5000 }
+        ],
+        expectedRowCount: 1,
+        expectedState: "success"
+      },
+      {
+        name: "sales-only response",
+        data: [
+          { date: new Date(2026, 5, 11, 12, 0, 0), transactionType: "Sales", product: "Latte", purchaseCategory: "", category: "Hot", qty: 1, revenue: 30000, expense: 0 }
+        ],
+        expectedRowCount: 1,
+        expectedState: "success"
+      },
+      {
+        name: "populated response",
+        data: [
+          { date: new Date(2026, 5, 11, 12, 0, 0), transactionType: "Sales", product: "Latte", purchaseCategory: "", category: "Hot", qty: 1, revenue: 30000, expense: 0 },
+          { date: new Date(2026, 5, 12, 12, 0, 0), transactionType: "Purchase", product: "", purchaseCategory: "Supplies", category: "", qty: 0, revenue: 0, expense: 5000 }
+        ],
+        expectedRowCount: 2,
+        expectedState: "success"
+      }
+    ]
+  };
+}

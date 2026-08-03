@@ -16,12 +16,13 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
 - Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
 - Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
-- `runAllBackendTests()` is the unified local/live backend gate and requires 10/10 PASS, including sparse-dataset resilience and the dashboard date-filter contract.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 11/11 PASS, including sparse-dataset resilience, date filtering, and dashboard-state metadata.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 - Sprint 5.8 Package 001 product audit is complete. `docs/PRODUCT-BACKLOG.md` is the prioritized evidence inventory; `docs/ROADMAP.md` schedules only Packages 002–004.
-- Sprint 5.8 Package 002 empty/sparse-data resilience is implemented and locally validated; populated response output is snapshot-protected and the public response shape is unchanged. Upload and live Apps Script validation remain pending.
+- Sprint 5.8 Package 002 empty/sparse-data resilience and Package 003 date filtering are deployed. Populated response output remains snapshot-protected.
 - Backend tests are responsibility-split across `92.Tests.Fixtures.js`, `94.Tests.Assertions.js`, `95.Tests.Validators.js`, `96.Tests.Cases.js`, and `98.Tests.Runner.js`; the sparse test explicitly logs its returned success summary for Apps Script execution visibility.
 - Sprint 5.8 Package 003 implements one project-timezone date filter for every row-derived dashboard output. The parameterless default is `currentYear`; custom ranges require valid inclusive `YYYY-MM-DD` boundaries in start-to-end order. Revenue Trend includes every represented month in the filtered rows, including current partial-month revenue, while its visible scope uses month-only `MM/YYYY` formatting.
+- Sprint 5.8 Package 004 adds an authoritative loading/success/empty/error/retry frontend state contract. Additive `dateFilter.rowCount` metadata defines empty as zero scoped transaction rows; retry preserves the exact last request, and stale callbacks are ignored.
 
 ## Architecture and invariants
 

@@ -118,6 +118,25 @@
       </div>
     </div>
 
+    <div
+      id="dashboardStatus"
+      class="hidden mb-6 rounded-2xl border border-slate-200 bg-white p-6"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true">
+      <div class="flex items-center justify-between gap-4">
+        <p id="dashboardStatusText" class="font-semibold text-slate-700"></p>
+        <button
+          id="dashboardRetryButton"
+          type="button"
+          onclick="retryDashboardData()"
+          class="hidden rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white">
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <div id="dashboardContent" aria-busy="false">
     <!-- BUSINESS OVERVIEW -->
     <div id="businessOverview" class="grid grid-cols-1 xl:grid-cols-4 gap-6 mb-8"></div>
 
@@ -329,6 +348,7 @@
         </table>
       </div>
     </div>
+    </div>
   </main>
 </div>
 
@@ -337,6 +357,9 @@
   let hotColdChart;
   let expenseChart;
   let dashboardRequestInFlight = false;
+  let dashboardRequestSequence = 0;
+  let activeDashboardRequestToken = 0;
+  let lastDashboardRequest = null;
 
     function showPage(pageId)
     {
@@ -387,20 +410,99 @@
       document.getElementById("topProductSkeleton").classList.add("hidden");
     }
 
-    function setDashboardFilterLoading(loading)
+    function setDashboardControlsDisabled(disabled)
     {
-      dashboardRequestInFlight = loading;
-
-      document.getElementById("filter").disabled = loading;
+      document.getElementById("filter").disabled = disabled;
 
       var isCustom =
         document.getElementById("filter").value === "custom";
 
       document.getElementById("customStart").disabled =
-        loading || !isCustom;
+        disabled || !isCustom;
 
       document.getElementById("customEnd").disabled =
-        loading || !isCustom;
+        disabled || !isCustom;
+    }
+
+    function setDashboardState(state, message)
+    {
+      var status =
+        document.getElementById("dashboardStatus");
+
+      var statusText =
+        document.getElementById("dashboardStatusText");
+
+      var retryButton =
+        document.getElementById("dashboardRetryButton");
+
+      var content =
+        document.getElementById("dashboardContent");
+
+      dashboardRequestInFlight =
+        state === "loading";
+
+      setDashboardControlsDisabled(
+        dashboardRequestInFlight
+      );
+
+      status.classList.toggle(
+        "hidden",
+        state === "success"
+      );
+
+      retryButton.classList.toggle(
+        "hidden",
+        state !== "error"
+      );
+
+      content.classList.toggle(
+        "hidden",
+        state === "empty" || state === "error"
+      );
+
+      content.style.opacity =
+        state === "loading"
+          ? "0.45"
+          : "";
+
+      content.style.pointerEvents =
+        state === "loading"
+          ? "none"
+          : "";
+
+      content.setAttribute(
+        "aria-busy",
+        state === "loading" ? "true" : "false"
+      );
+
+      status.setAttribute(
+        "role",
+        state === "error" ? "alert" : "status"
+      );
+
+      if (state === "loading")
+      {
+        statusText.innerText = "Loading dashboard data.";
+        showBusinessOverviewSkeleton();
+        showChartSkeleton();
+      }
+      else if (state === "empty")
+      {
+        statusText.innerText =
+          "No data available for the selected period.";
+        hideChartSkeleton();
+      }
+      else if (state === "error")
+      {
+        statusText.innerText =
+          message || "Unable to load dashboard data.";
+        hideChartSkeleton();
+      }
+      else
+      {
+        statusText.innerText = "";
+        hideChartSkeleton();
+      }
     }
 
     function updateCustomDateVisibility()
@@ -507,13 +609,54 @@
         return;
       }
 
-      setDashboardFilterLoading(true);
-      showBusinessOverviewSkeleton();
-      showChartSkeleton();
+      requestDashboardData(request);
+    }
+
+    function retryDashboardData()
+    {
+      if (
+        dashboardRequestInFlight ||
+        !lastDashboardRequest
+      )
+      {
+        return;
+      }
+
+      requestDashboardData(lastDashboardRequest);
+    }
+
+    function requestDashboardData(request)
+    {
+      if (dashboardRequestInFlight)
+      {
+        return;
+      }
+
+      lastDashboardRequest = {
+        filter: request.filter,
+        customStart: request.customStart,
+        customEnd: request.customEnd
+      };
+
+      var requestToken =
+        ++dashboardRequestSequence;
+
+      activeDashboardRequestToken =
+        requestToken;
+
+      setDashboardState("loading");
 
       google.script.run
         .withSuccessHandler(function(res)
         {
+          if (
+            requestToken !== activeDashboardRequestToken ||
+            !dashboardRequestInFlight
+          )
+          {
+            return;
+          }
+
           try
           {
             render(res);
@@ -526,22 +669,53 @@
                   res.dateFilter.endDate
                 );
             }
+
+            var isEmpty =
+              res &&
+              res.dateFilter &&
+              res.dateFilter.rowCount === 0;
+
+            setDashboardState(
+              isEmpty ? "empty" : "success"
+            );
           }
-          finally
+          catch (error)
           {
-            setDashboardFilterLoading(false);
+            console.error(
+              "Dashboard render failed",
+              error
+            );
+
+            setDashboardState(
+              "error",
+              "Unable to load dashboard data."
+            );
           }
         })
         .withFailureHandler(function(err)
         {
-          setDashboardFilterLoading(false);
-          console.error("SERVER ERROR");
-          console.error(err);
+          if (
+            requestToken !== activeDashboardRequestToken ||
+            !dashboardRequestInFlight
+          )
+          {
+            return;
+          }
+
+          console.error(
+            "Dashboard request failed",
+            err
+          );
+
+          setDashboardState(
+            "error",
+            "Unable to load dashboard data."
+          );
         })
         .getDashboardData(
-          request.filter,
-          request.customStart,
-          request.customEnd
+          lastDashboardRequest.filter,
+          lastDashboardRequest.customStart,
+          lastDashboardRequest.customEnd
         );
     }
 
@@ -1594,13 +1768,15 @@
     {
       if (!res)
       {
-        console.error("Render cancelled");
-        return;
+        throw new Error(
+          "Dashboard response is missing"
+        );
       }
       if (!res.summary)
       {
-        console.error("Summary not found");
-        return;
+        throw new Error(
+          "Dashboard summary is missing"
+        );
       }
 
       renderBusinessOverview(res);

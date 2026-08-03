@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.8 Package 004 recoverable dashboard states with an accessible live status region, explicit loading/empty/error messages, keyboard-operable Retry, duplicate-request locking, exact request reuse, render-error recovery, and stale-callback suppression.
+- Added backward-compatible `dateFilter.rowCount` metadata so empty means zero scoped transaction rows; purchase-only and sales-only periods remain successful populated states.
+- Added `testDashboardStateContract()` and deterministic frontend lifecycle mocks; the unified backend gate now requires 11/11.
 - Implemented the Sprint 5.8 Package 003 date filter across every dashboard output with `today`, inclusive `last7days`, `currentMonth`, full `previousMonth`, default `currentYear`, and validated inclusive `custom` ranges in the Apps Script project timezone.
 - Added backward-compatible `getDashboardData(filter, customStart, customEnd)` handling and additive `dateFilter` response metadata; invalid row dates are ignored and source arrays are not mutated.
 - Corrected Revenue Trend to retain every represented month in the already filtered transaction set, including current partial-month revenue, and simplified the visible range to month-only `MM/YYYY` or `MM/YYYY – MM/YYYY` text.

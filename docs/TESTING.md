@@ -25,6 +25,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `runAllBackendTests()` — primary live backend validation entry point; runs the complete suite once in the documented order and stops on the first failure.
 - `testSparseDatasetResilience()` — seven deterministic end-to-end dashboard-response fixtures covering empty, sales-only, purchase-only, one-row, sparse mixed, and populated data.
 - `testDashboardDateFilter()` — 58 deterministic assertions covering normalization, preset/custom ranges, inclusivity, invalid inputs/dates, immutability, response equivalence, Revenue Trend scope/order, finite values, and empty results.
+- `testDashboardStateContract()` — five deterministic contract scenarios covering the state vocabulary plus empty, purchase-only, sales-only, and populated scoped-row semantics.
 - `getDashboardData()`
 - `testSummaryFixtures()` — deterministic Summary regression fixtures with literal expected outputs.
 - `testRevenueTrendFixtures()` — deterministic Revenue Trend fixtures with literal completed-month labels and values.
@@ -58,14 +59,16 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all eight directly runnable `test*` functions.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 10-test suite.
+- `96.Tests.Cases.js` contains all ten directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 11-test suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=30 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
 
 `testDashboardDateFilter()` uses fixed reference dates and project-timezone date keys. It covers missing/null/unknown normalization to `currentYear`; `today`; inclusive `last7days` within one month and across two months; month/year presets; custom single/multi-month and cross-year boundaries; invalid custom input; immutable filtering; ignored invalid row dates; parameterless equivalence; current partial-month Revenue Trend inclusion; ascending trend labels; finite values; and renderable empty or zero-revenue results. Its success log reports scenarios, Current Year rows, custom rows, and the resolved timezone.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `10/10` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+`testDashboardStateContract()` validates the exact loading/success/empty/error/retry vocabulary and additive `dateFilter.rowCount` for empty, purchase-only, sales-only, and populated responses. It logs `PASS: testDashboardStateContract | scenarios=5 | states=loading,success,empty,error,retry`. Frontend lifecycle mocks separately validate request failure, render exceptions, retry request identity, duplicate blocking, stale-handler suppression, control recovery, filter retention, live-region semantics, and the no-raw-payload Console policy.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `11/11` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -82,7 +85,13 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `10/10`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, and the dashboard date filter. The unified suite uses deterministic fixtures only, and no legacy migration oracle or validator remains.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `11/11`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, and scoped-row state metadata. The unified suite uses deterministic fixtures only, and no legacy migration oracle or validator remains.
+
+## Dashboard state contract
+
+`dateFilter.rowCount` is the authoritative count of valid transaction rows inside the active inclusive date range. Only zero rows is empty; purchase-only and sales-only responses are successful even when one financial measure is zero.
+
+The browser transitions through centralized loading, success, empty, and error presentation. Loading disables controls, blocks duplicate requests, announces progress, and de-emphasizes stale content. Empty preserves the active range and immediately restores filter controls. Request or render failure restores controls, retains the selected values, shows a sanitized error plus Retry, clears skeletons, and writes concise diagnostic context to `console.error` without logging business payloads. Retry submits the exact saved filter/start/end tuple, and request sequence tokens ignore stale callbacks.
 
 ## Dashboard date-filter contract
 

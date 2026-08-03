@@ -63,9 +63,9 @@ Sprint 5.8 Package 001 completed a repository-evidence audit without changing pr
 
 The next three bounded, independently releasable packages are:
 
-1. **Package 002 — Empty-data resilience: complete locally; upload and live validation pending.** Empty, sales-only, purchase-only, one-row, sparse mixed, and populated fixtures traverse the full dashboard response pipeline without non-finite values. Populated output and the public response shape are preserved.
-2. **Package 003 — Dashboard date filter: complete locally; upload and live validation pending.** Every row-derived dashboard output uses the same project-timezone date range, parameterless calls default to Current Year, custom ranges are validated and inclusive, Revenue Trend includes current-period data, and the visible scope is month-only text.
-3. **Package 004 — Recoverable dashboard states:** replace indefinite loading with visible, accessible success, empty, failure, and retry states.
+1. **Package 002 — Empty-data resilience: complete and deployed.** Empty, sales-only, purchase-only, one-row, sparse mixed, and populated fixtures traverse the full dashboard response pipeline without non-finite values. Populated output and the public response shape are preserved.
+2. **Package 003 — Dashboard date filter: complete and deployed.** Every row-derived dashboard output uses the same project-timezone date range, parameterless calls default to Current Year, custom ranges are validated and inclusive, Revenue Trend includes current-period data, and the visible scope is month-only text.
+3. **Package 004 — Recoverable dashboard states: complete locally; upload and live/browser validation pending.** Loading, success, empty, error, and retry use one accessible state controller; empty uses scoped row count, retry preserves the exact request, and stale callbacks are ignored.
 
 No later backlog item is scheduled by this roadmap. Date periods, targets, export, and drill-down remain requirement-gated.
 

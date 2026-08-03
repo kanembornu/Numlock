@@ -25,7 +25,7 @@ The current dashboard already has a clear two-destination navigation model, a br
 - **Files likely affected:** `75.Intelligence.Diagnosis.js`, `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`, `docs/TESTING.md`.
 - **Implementation complexity:** M
 - **Regression risk:** Medium
-- **Validation required:** deterministic no-row, sales-only, purchase-only, and sparse-data fixtures; local `runAllBackendTests()` 10/10; extracted frontend script syntax; browser acceptance for empty and populated data at desktop and narrow widths.
+- **Validation required:** deterministic no-row, sales-only, purchase-only, and sparse-data fixtures; local `runAllBackendTests()` 11/11; extracted frontend script syntax; browser acceptance for empty and populated data at desktop and narrow widths.
 - **Dependency on other items:** None.
 
 ### P0-2 — Make the transaction filter truthful
@@ -126,6 +126,8 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P2-3 — Replace indefinite loading with recoverable error states
 
+**Status: Completed locally in Sprint 5.8 Package 004; upload and live/browser validation are pending.**
+
 - **Problem:** the failure handler writes only two console errors; skeletons and “Loading…” content remain, with no visible explanation or retry. Invalid responses similarly stop after console output.
 - **User impact:** server/network/contract failures look like endless loading and provide no recovery path.
 - **Proposed solution:** use one visible status region with loading, success, empty, and sanitized failure states; always clear skeletons; add retry and retain concise developer diagnostics.
@@ -196,16 +198,16 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### Sprint 5.8 Package 002 — Empty-data resilience
 
-**Status: Completed locally; upload and live validation are pending.**
+**Status: Completed and deployed.**
 
 - **Objective:** make every valid empty or sparse dataset return and render a usable, explicit state.
 - **Independent release:** yes; it preserves populated-data response fields and requires no filter/date contract.
-- **Expected tests:** seven deterministic empty/sales-only/purchase-only/one-row/sparse/populated backend fixtures, local 10/10 gate, extracted frontend syntax, mocked sparse rendering, and live Apps Script validation. Empty-state redesign and browser acceptance remain Package 004 scope.
+- **Expected tests:** seven deterministic empty/sales-only/purchase-only/one-row/sparse/populated backend fixtures, local 11/11 gate, extracted frontend syntax, mocked sparse rendering, and live Apps Script validation. Empty-state redesign and browser acceptance remain Package 004 scope.
 - **Scope:** P0-1 only.
 
 ### Sprint 5.8 Package 003 — Truthful transaction scope
 
-**Status: Completed locally; upload and live Apps Script validation are pending.**
+**Status: Completed and deployed.**
 
 - **Objective:** replace the misleading transaction-type control with the approved end-to-end date filter.
 - **Independent release:** yes; parameterless `getDashboardData()` remains compatible and defaults to Current Year.
@@ -214,9 +216,11 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### Sprint 5.8 Package 004 — Recoverable dashboard states
 
+**Status: Completed locally; upload and live/browser validation are pending.**
+
 - **Objective:** replace indefinite loading with visible, accessible success/empty/error/retry states.
 - **Independent release:** yes; it can consume existing response/error behavior and does not change analytics formulas.
-- **Expected tests:** mocked success/failure/null/invalid response and retry, skeleton cleanup, keyboard/live-region checks, Console policy verification, desktop and narrow browser acceptance.
+- **Expected tests:** deterministic row-count semantics plus mocked success/failure/render exception/retry/stale response, skeleton cleanup, keyboard/live-region checks, Console policy verification, desktop and narrow browser acceptance.
 - **Scope:** P2-3 only, reusing the empty-state vocabulary established by Package 002.
 
 ## Explicitly not prioritized as defects

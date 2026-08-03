@@ -293,6 +293,9 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       dateRange
     );
 
+  dateRange.rowCount =
+    filteredData.length;
+
   var cache =
   buildAnalyticsCache(
     filteredData
