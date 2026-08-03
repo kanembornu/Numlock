@@ -4,6 +4,8 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Added deterministic Profit Trend fixtures covering unsorted cross-year months, repeated rows, sales revenue, purchase expense, purchase-only and revenue-only months, zero values, negative-expense refunds, and empty data.
+- Replaced the unified suite's Profit Trend migration comparison with deterministic fixtures while retaining the legacy chain pending live validation.
 - Added deterministic Top Products fixtures covering aggregation, ranking, stable ties, top-ten truncation, zero values, purchase-only rows, and empty data.
 - Retired the legacy Top Products oracle, validator, and migration test after deterministic fixtures and the unified suite passed live.
 - Added deterministic Expense Breakdown fixtures covering category order, repeated purchases, zero and negative amounts, ignored rows, top expense, and empty data.
@@ -47,5 +49,5 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Known technical debt
 
-- Two legacy migration oracles remain until independent deterministic regression fixtures replace their equivalence coverage.
+- The Profit Trend legacy chain remains pending retirement after live fixture validation; Hot/Cold Split remains the other legacy migration oracle.
 - The Apps Script runtime emits an iframe sandbox warning.

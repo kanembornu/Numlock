@@ -438,6 +438,77 @@ function testProfitTrendMigration() {
 
 }
 
+function createProfitTrendFixtures()
+{
+  return [
+    {
+      name: "unsorted cross-year months with revenue expense and refunds",
+      data: [
+        { date: new Date(2025, 1, 20), transactionType: "Sales", product: "Latte", purchaseCategory: "", category: "Hot", qty: 1, revenue: 500, expense: 0 },
+        { date: new Date(2024, 11, 5), transactionType: "Purchase", product: "", purchaseCategory: "Supplies", category: "", qty: 0, revenue: 0, expense: 300 },
+        { date: new Date(2025, 0, 10), transactionType: "Sales", product: "Espresso", purchaseCategory: "", category: "Hot", qty: 2, revenue: 1000, expense: 0 },
+        { date: new Date(2025, 2, 8), transactionType: "Sales", product: "Water", purchaseCategory: "", category: "Cold", qty: 0, revenue: 0, expense: 0 },
+        { date: new Date(2024, 10, 15), transactionType: "Sales", product: "Tea", purchaseCategory: "", category: "Hot", qty: 1, revenue: 200, expense: 0 },
+        { date: new Date(2025, 0, 25), transactionType: "Purchase", product: "", purchaseCategory: "Ingredients", category: "", qty: 0, revenue: 0, expense: 400 },
+        { date: new Date(2025, 1, 2), transactionType: "Purchase", product: "", purchaseCategory: "Refund", category: "", qty: 0, revenue: 0, expense: -50 }
+      ],
+      expected: {
+        labels: ["2024-11", "2024-12", "2025-01", "2025-02", "2025-03"],
+        values: [200, -300, 600, 550, 0]
+      }
+    },
+    {
+      name: "empty dataset",
+      data: [],
+      expected: {
+        labels: [],
+        values: []
+      }
+    }
+  ];
+}
+
+function testProfitTrendFixtures()
+{
+  var fixtures =
+    createProfitTrendFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    var actual =
+      buildProfitTrendFromAggregate(
+        buildAggregate(fixture.data)
+      );
+
+    ["labels", "values"]
+      .forEach(function(field)
+      {
+        if(
+          JSON.stringify(actual[field]) !==
+          JSON.stringify(fixture.expected[field])
+        )
+        {
+          throw new Error(
+            "Profit Trend fixture mismatch for " +
+            fixture.name +
+            " / " +
+            field +
+            ": expected=" +
+            JSON.stringify(fixture.expected[field]) +
+            ", actual=" +
+            JSON.stringify(actual[field])
+          );
+        }
+      });
+  });
+
+  return {
+    passed: true,
+    fixtures: fixtures.length,
+    fields: ["labels", "values"]
+  };
+}
+
 function testHotColdMigration() {
 
   var ss =
@@ -740,7 +811,7 @@ function runAllBackendTests()
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },
     { name: "testTopProductsFixtures", run: testTopProductsFixtures },
-    { name: "testProfitTrendMigration", run: testProfitTrendMigration },
+    { name: "testProfitTrendFixtures", run: testProfitTrendFixtures },
     { name: "testHotColdMigration", run: testHotColdMigration }
   ];
   var passedTests = [];
