@@ -21,7 +21,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## Architecture and invariants
 
-`buildAnalyticsCache()` builds Aggregate Engine once. Migrated production builders consume cached aggregate outputs. Deterministic fixtures are authoritative for Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend; only the Hot/Cold Split legacy builder remains as a validation oracle. Preserve the `getDashboardData()` response, Apps Script globals, formulas, spreadsheet reads, case-sensitive categories, date behavior, and frontend contract.
+`buildAnalyticsCache()` builds Aggregate Engine once. Migrated production builders consume cached aggregate outputs. Deterministic fixtures are authoritative for Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split. No unified-suite test depends on a legacy migration oracle; the Hot/Cold Split legacy chain remains temporarily for independent live validation. Preserve the `getDashboardData()` response, Apps Script globals, formulas, spreadsheet reads, case-sensitive categories, date behavior, and frontend contract.
 
 All source uses the numbered ownership layout documented in `docs/ARCHITECTURE.md`; all 59 former-monolith function assignments are recorded in `docs/SOURCE-MIGRATION.md`.
 
@@ -33,7 +33,7 @@ Safe live entry points and known failure modes are documented in `docs/TESTING.m
 
 ## Technical debt
 
-- The legacy Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend oracles are retired. Hot/Cold Split is the one remaining legacy oracle chain and migration comparison in the unified suite.
+- The legacy Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend oracles are retired. Hot/Cold Split deterministic fixtures are active, with its legacy chain pending retirement after live validation; no legacy comparison remains in the unified suite.
 - Future releases must update `10.Config.js` and `docs/CHANGELOG.md` together.
 - The Apps Script iframe emits its platform sandbox warning.
 

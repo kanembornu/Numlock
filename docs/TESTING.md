@@ -29,6 +29,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testExpenseBreakdownFixtures()` — deterministic ordered Expense Breakdown fixtures with literal amounts and top expense.
 - `testTopProductsFixtures()` — deterministic Top Products fixtures with literal ranking, stable ties, and top-ten truncation.
 - `testProfitTrendFixtures()` — deterministic Profit Trend fixtures with literal sorted month labels and monthly profit values.
+- `testHotColdFixtures()` — deterministic Hot/Cold Split fixtures with literal case-sensitive Sales totals.
 - `testAggregate()`
 - `testHotColdMigration()`
 - `doGet()` (web output construction only; normally validate through the web app)
@@ -46,6 +47,8 @@ Migration tests must throw on mismatches. A returned `passed: true` or successfu
 `testTopProductsFixtures()` is the authoritative Top Products regression test. It asserts repeated-product quantity and revenue totals, descending quantity ranking, stable tie order, the ten-product limit, zero values, ignored purchase-only rows, and empty output. Expected product arrays are literal and independent. The former Top Products oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
 `testProfitTrendFixtures()` is the authoritative Profit Trend regression test. It asserts unsorted cross-year month ordering, repeated-row aggregation, revenue-minus-expense values, purchase-only and revenue-only months, zero-value months, negative-expense refund behavior, and empty output. Expected labels and values are literal and independent. The former Profit Trend oracle, validator, and migration entry point were retired after this test, the independent legacy comparison, and the unified suite passed live in Apps Script.
+
+`testHotColdFixtures()` is the authoritative Hot/Cold Split regression test. It asserts repeated Hot and Cold Sales quantity totals, zero quantities, ignored non-Sales rows, ignored unknown categories, exact case-sensitive matching that excludes differently cased values, and empty output. Expected `hot` and `cold` totals are literal and independent. The legacy Hot/Cold Split oracle, validator, and migration entry point remain temporarily for independent live validation before retirement.
 
 Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `8/8` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
@@ -65,7 +68,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It remains `8/8`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, and Profit Trend. Targeted legacy functions are for failure diagnosis and explicitly documented retirement validation only; Hot/Cold Split is the one remaining migration comparison in the unified suite.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It remains `8/8`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split. No unified-suite test depends on a legacy migration oracle. Targeted legacy functions are for failure diagnosis and explicitly documented retirement validation only.
 
 ### During decomposition
 
@@ -75,7 +78,7 @@ After every function move:
 2. Confirm its name, parameters, and body are unchanged except for approved header comments.
 3. Run JavaScript syntax checks on every changed `.js` file.
 4. Run source-contract scans for duplicate or missing globals.
-5. Run the five deterministic fixture regressions and the remaining Hot/Cold Split migration comparison locally.
+5. Run all six deterministic fixture regressions locally; run the legacy Hot/Cold Split migration test independently while its retirement is pending.
 6. Run `getDashboardData()` locally with an Apps Script-compatible mock.
 7. Run `git diff --check` and `git status --short`.
 

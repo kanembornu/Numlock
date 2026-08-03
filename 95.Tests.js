@@ -509,6 +509,78 @@ function testHotColdMigration() {
 
 }
 
+function createHotColdFixtures()
+{
+  return [
+    {
+      name: "case-sensitive sales-only quantity aggregation",
+      data: [
+        { date: new Date(2025, 0, 1), transactionType: "Sales", product: "Espresso", purchaseCategory: "", category: "Hot", qty: 3, revenue: 300, expense: 0 },
+        { date: new Date(2025, 0, 2), transactionType: "Sales", product: "Iced Tea", purchaseCategory: "", category: "Cold", qty: 2, revenue: 200, expense: 0 },
+        { date: new Date(2025, 0, 3), transactionType: "Sales", product: "Latte", purchaseCategory: "", category: "Hot", qty: 4, revenue: 400, expense: 0 },
+        { date: new Date(2025, 0, 4), transactionType: "Sales", product: "Cold Brew", purchaseCategory: "", category: "Cold", qty: 5, revenue: 500, expense: 0 },
+        { date: new Date(2025, 0, 5), transactionType: "Sales", product: "Zero", purchaseCategory: "", category: "Hot", qty: 0, revenue: 0, expense: 0 },
+        { date: new Date(2025, 0, 6), transactionType: "Purchase", product: "", purchaseCategory: "Hot supplies", category: "Hot", qty: 100, revenue: 0, expense: 1000 },
+        { date: new Date(2025, 0, 7), transactionType: "Return", product: "Returned drink", purchaseCategory: "", category: "Cold", qty: 50, revenue: 0, expense: 0 },
+        { date: new Date(2025, 0, 8), transactionType: "Sales", product: "Unknown", purchaseCategory: "", category: "Warm", qty: 20, revenue: 2000, expense: 0 },
+        { date: new Date(2025, 0, 9), transactionType: "Sales", product: "Lower Hot", purchaseCategory: "", category: "hot", qty: 30, revenue: 3000, expense: 0 },
+        { date: new Date(2025, 0, 10), transactionType: "Sales", product: "Upper Cold", purchaseCategory: "", category: "COLD", qty: 40, revenue: 4000, expense: 0 },
+        { date: new Date(2025, 0, 11), transactionType: "Sales", product: "Mixed Cold", purchaseCategory: "", category: "CoLd", qty: 60, revenue: 6000, expense: 0 }
+      ],
+      expected: {
+        hot: 7,
+        cold: 7
+      }
+    },
+    {
+      name: "empty dataset",
+      data: [],
+      expected: {
+        hot: 0,
+        cold: 0
+      }
+    }
+  ];
+}
+
+function testHotColdFixtures()
+{
+  var fixtures =
+    createHotColdFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    var actual =
+      buildHotColdSplitFromAggregate(
+        buildAggregate(fixture.data)
+      );
+
+    ["hot", "cold"]
+      .forEach(function(field)
+      {
+        if(actual[field] !== fixture.expected[field])
+        {
+          throw new Error(
+            "Hot/Cold fixture mismatch for " +
+            fixture.name +
+            " / " +
+            field +
+            ": expected=" +
+            fixture.expected[field] +
+            ", actual=" +
+            actual[field]
+          );
+        }
+      });
+  });
+
+  return {
+    passed: true,
+    fixtures: fixtures.length,
+    fields: ["hot", "cold"]
+  };
+}
+
 function createTopProductsFixtures()
 {
   return [
@@ -789,7 +861,7 @@ function runAllBackendTests()
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },
     { name: "testTopProductsFixtures", run: testTopProductsFixtures },
     { name: "testProfitTrendFixtures", run: testProfitTrendFixtures },
-    { name: "testHotColdMigration", run: testHotColdMigration }
+    { name: "testHotColdFixtures", run: testHotColdFixtures }
   ];
   var passedTests = [];
 
