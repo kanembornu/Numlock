@@ -4,6 +4,7 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Closed Sprint 5.11 after confirming Package 001 stable DOM-reference caching, bounded deferred rendering, stale deferred-work cancellation, and frontend mutation safety in commit `46e42b1`. The latest verified gate remains local 23/23 plus the successful 26-file clasp upload; Apps Script runtime, deployment, and browser acceptance remain unverified.
 - Completed Sprint 5.11 Package 001 bounded client-render performance without changing analytics, response contracts, visible output, filter/retry behavior, accessibility, responsive behavior, or chart lifecycle.
 - Cached only stable shell, control, skeleton, and dashboard-state DOM references; retained dynamic generated children as uncached render output; and kept response collections immutable by copying or using non-mutating iteration.
 - Added one request-token-guarded `requestAnimationFrame` phase for detailed intelligence, recommendations, decision support, product detail, roadmap, and recent transactions while keeping first-visible dashboard state, Executive Summary, KPIs, reporting metadata, comparison, targets, data quality, and charts immediate. Added `testClientRenderPerformanceContract()` and raised the ordered fail-fast unified gate to 23/23.

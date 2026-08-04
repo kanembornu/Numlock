@@ -6,7 +6,9 @@ This backlog is the documentation outcome of Sprint 5.8 Package 001. It is groun
 
 The current dashboard already has a clear two-destination navigation model, a broad executive-to-operational information hierarchy, KPI cards, three Chart.js visualizations, skeletons for initial KPIs/charts, recent transactions, deterministic backend coverage, and explicit Chart destruction before recreation. Generated Tailwind CSS is approximately 18 KB and is not presently a size concern. No duplicated event-listener registration was found.
 
-Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1 and P2 are covered by the ordered 22-test unified gate. Upload, Apps Script runtime, deployment, and browser acceptance were not rerun during the closure audit and remain separate unverified evidence. P1-5 target editing remains requirement-gated; P2-5 is the only open implementation-ready P0/P1/P2 item.
+Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1 and P2 are covered by the ordered 22-test gate established at that closure. Upload, Apps Script runtime, deployment, and browser acceptance were not rerun during that audit and remain separate evidence. P1-5 target editing remains requirement-gated; the bounded P2-5 frontend scope was subsequently completed in Sprint 5.11.
+
+Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b1`, covered by the ordered local 23/23 gate, and uploaded in the reviewed 26-file clasp inventory. Live Apps Script, deployment, and browser evidence remain unverified. Remaining gated work includes editable KPI targets, API projection, CSV export, and drill-down; each requires additional product, consumer, permission, or privacy decisions.
 
 ## Priority rules
 
@@ -211,6 +213,8 @@ Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1
 
 ### P3-1 — Add print/export views
 
+**Status: The print-only current-filter executive report is recommended as Sprint 5.12 Package 001. CSV remains deferred pending field, permission, and privacy requirements.**
+
 - **Problem:** there is no print stylesheet or export action for executive reporting.
 - **User impact:** users must copy or screenshot dashboard content for meetings and archives.
 - **Proposed solution:** after confirming audience and format, provide a print-optimized executive summary and optionally CSV export for visible transactions; do not export hidden spreadsheet data.
@@ -231,7 +235,7 @@ Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1
 - **Validation required:** scope/authorization tests, aggregation-to-detail reconciliation, large-result pagination, keyboard/modal behavior, privacy review.
 - **Dependency on other items:** P1-1, P1-3, and P1-4; detail fields and authorization are unavailable requirements.
 
-## Recommended next implementation package
+## Completed implementation package
 
 ### Sprint 5.11 Package 001 — Bounded client-render performance
 
@@ -243,6 +247,17 @@ Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1
 - **Dependency readiness:** Ready for frontend-only work. API payload projection is explicitly excluded until external consumers are inventoried.
 - **Expected validation:** render-order and stale-response tests, response immutability, Chart instance counts, representative performance trace, ordered unified 23/23 gate, and desktop/narrow browser acceptance.
 - **Scope:** P2-5 only.
+
+## Recommended next implementation package
+
+### Sprint 5.12 Package 001 — Print-ready filtered executive report
+
+- **Objective:** provide one accessible Print action and a print/PDF layout for the current filtered Executive Summary, visible supporting KPIs, reporting scope, freshness, and period comparison.
+- **User value:** enables meeting handouts and archival reporting without screenshots or manual copying.
+- **Dependency readiness:** Ready; authoritative date scope, reporting metadata, period comparison, and executive hierarchy are complete.
+- **Implementation risk:** Medium and frontend-bounded; preserve on-screen behavior and print only data already visible for the active filter.
+- **Expected validation:** current/custom filter consistency, print/PDF visual acceptance, keyboard-accessible action, no hidden-data disclosure, unchanged screen styles, and the full unified gate.
+- **Scope:** bounded print portion of P3-1 only; exclude CSV, backend payload changes, hidden spreadsheet fields, drill-down, and persistence.
 
 ## Explicitly not prioritized as defects
 

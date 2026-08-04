@@ -119,11 +119,19 @@ Completed locally. Additive `businessPriority` deterministically ranks existing 
 
 Completed locally. Existing KPI and business-status thresholds now have one immutable configuration owner, while calculation mechanics remain with their domains. Additive `kpiTargets` explains the four existing KPI Achievement targets with explicit system provenance and no editing claim; a compact accessible disclosure appears in Business Performance outside the first viewport. `testKpiTargetContract()` raises the ordered fail-fast unified requirement to 22/22. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
 
-## Sprint 5.11 — bounded client-render performance
+## Sprint 5.11 — complete
+
+Sprint 5.11 is complete. Package 001 is committed at `46e42b1` and confirms stable DOM-reference caching, one bounded deferred phase, cancellation plus request-token stale protection, and frontend response-mutation safety. The latest verified gate is local 23/23 followed by a successful 26-file clasp upload; Apps Script runtime, deployment, and browser acceptance remain unverified.
 
 ### Sprint 5.11 Package 001 — bounded client-render performance
 
 Completed and uploaded. Stable shell, control, skeleton, and state nodes are cached once while generated children remain uncached. The immediate render retains dashboard state, Executive Summary, KPI cards, reporting metadata, comparison, KPI-target context, Data Quality, and charts. One cancellable, request-token-guarded animation-frame phase renders detailed intelligence, recommendations, decision support, product detail, roadmap, and recent transactions exactly once. Response arrays are never sorted or mutated in place, public payloads and visible output remain unchanged, and `testClientRenderPerformanceContract()` raises the ordered fail-fast unified requirement to 23/23. API projection remains excluded pending an external-consumer inventory; Apps Script runtime and browser acceptance remain separate unverified evidence.
+
+## Recommended next package
+
+### Sprint 5.12 Package 001 — print-ready filtered executive report
+
+Add an independently releasable print view for the current filtered Executive Summary and its supporting visible metrics, scope, freshness, and comparison context. User value is immediate meeting and archive usability without screenshots. Dependencies are ready because authoritative date scope, reporting metadata, comparison, and executive hierarchy are complete. Risk is medium and bounded to print CSS, one accessible Print action, current visible data, and print/PDF acceptance. Exclude CSV, hidden spreadsheet data, backend payload changes, drill-down, and persistence.
 
 ## Ongoing release obligations
 
