@@ -16,7 +16,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
 - Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
 - Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
-- `runAllBackendTests()` is the unified local/live backend gate and requires 17/17 PASS, including sparse-dataset resilience, date filtering, dashboard-state metadata, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 18/18 PASS, including sparse-dataset resilience, date filtering, dashboard-state metadata, accessibility, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 - Sprint 5.8 Package 001 product audit is complete. `docs/PRODUCT-BACKLOG.md` is the prioritized evidence inventory; `docs/ROADMAP.md` schedules only Packages 002–004.
 - Sprint 5.8 Package 002 empty/sparse-data resilience and Package 003 date filtering are deployed. Populated response output remains snapshot-protected.
@@ -29,6 +29,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Sprint 5.9 Package 004 inspects invalid dates once from the raw transaction read before processing and date scoping, then combines those source-only findings with the existing scoped diagnostics. Analytics still receive only valid scoped rows; no raw value or source-row identity is returned to the browser.
 - Sprint 5.9 Package 005 gives Revenue, Hot/Cold, and Expense charts explicit per-chart empty states, accessible text summaries, unit-aware tooltips, `MM/YYYY` revenue labels, and safe instance destruction without changing analytics formulas, source values, response fields, or dashboard-level state semantics.
 - Sprint 5.9 Package 006 retains locally compiled Tailwind 3.4.17, pins Chart.js to 4.5.1 and Font Awesome to 6.0.0, and makes Chart.js failure non-blocking: chart summaries remain, each chart says `Chart unavailable.`, one payload-free diagnostic is logged, and non-chart rendering continues.
+- Sprint 5.10 Package 001 completes dashboard accessibility ownership: document/landmark and table semantics, labeled and validated date controls, keyboard-visible focus, hidden-content focus exclusion, bounded live announcements, and CSS/Chart.js reduced-motion behavior.
 
 ## Architecture and invariants
 

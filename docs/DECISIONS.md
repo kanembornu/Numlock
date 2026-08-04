@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Own dashboard accessibility in the frontend contract
+
+`190.View.Index.html` owns document language/title/viewport metadata, one primary main landmark, labeled primary navigation, logical page headings, form and table semantics, visible keyboard focus, and focus exclusion for the closed mobile drawer and inactive page. Native buttons and controls retain browser Enter/Space behavior; Escape closes the drawer and restores the menu-button focus; Retry and Data Quality remain native buttons.
+
+Date validation is separate from reporting metadata. Both custom date controls reference one polite atomic validation region and expose `aria-invalid`; valid requests clear that state. Dashboard lifecycle, reporting freshness, and Data Quality use bounded text-only live regions, never raw payloads or internal metadata, and each region has one owner to prevent duplicate announcements.
+
+Normal motion is preserved by default. Under `prefers-reduced-motion: reduce`, skeleton shimmer, drawer movement, roadmap transitions, and Chart.js animation are disabled while state changes and rendered content remain intact.
+
 ### Pin and own every runtime frontend dependency
 
 Tailwind CSS remains locally compiled from exactly pinned `tailwindcss` 3.4.17 and is included through the clasp-tracked `189.View.Tailwind.html`; it has no runtime network dependency. Chart.js is required for the three dashboard charts and is retained at the exact verified version 4.5.1 from the single HTTPS jsDelivr UMD URL. Font Awesome remains required because eight active `fas` icons still render navigation, controls, and overview-card imagery; its single HTTPS cdnjs stylesheet remains pinned at 6.0.0. No floating, duplicate, dynamically injected, or replacement-library URL is allowed.

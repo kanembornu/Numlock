@@ -95,6 +95,12 @@ Completed locally. Revenue Trend, Hot/Cold Split, and Expense Breakdown retain t
 
 Completed locally. Tailwind remains locally compiled at 3.4.17, Chart.js is pinned to the verified 4.5.1 UMD artifact, and the eight actively used Font Awesome icons retain the exact 6.0.0 stylesheet. If Chart.js is unavailable, existing instances are destroyed, accessible summaries remain, each chart reports `Chart unavailable.`, one payload-free diagnostic is logged, and non-chart rendering continues. `testFrontendDependencyContract()` raises the unified requirement to 17/17; upload and live/browser acceptance remain separate evidence.
 
+## Sprint 5.10 — complete dashboard accessibility
+
+### Package 001 — document, keyboard, announcement, and reduced-motion contract
+
+Completed locally. The dashboard now owns document and landmark semantics, labeled date controls with associated live validation, semantic navigation/page visibility, named and scoped transaction-table markup, visible keyboard focus, bounded status announcements, and reduced-motion behavior for authored CSS and Chart.js. `testAccessibilityContract()` raises the ordered fail-fast unified requirement to 18/18. Upload, Apps Script runtime, and browser/assistive-technology acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

@@ -1022,6 +1022,72 @@ function testResponsiveShellContract()
   return summary;
 }
 
+function testAccessibilityContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  var fixtures =
+    createAccessibilityContractFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    fixture.tokens.forEach(function(token)
+    {
+      assertSourceContains(
+        source,
+        token,
+        fixture.name
+      );
+    });
+
+    if (fixture.uniqueToken)
+    {
+      assertSourceContainsOnce(
+        source,
+        fixture.uniqueToken,
+        fixture.name
+      );
+    }
+  });
+
+  assertSourceContainsOnce(
+    source,
+    'id="dashboardStatus"',
+    "dashboard live region"
+  );
+  assertSourceContainsOnce(
+    source,
+    'id="dateFilterValidation"',
+    "date validation live region"
+  );
+  assertSourceContainsOnce(
+    source,
+    'id="reportingInformation"',
+    "reporting live region"
+  );
+
+  var summary = {
+    passed: true,
+    scenarios: fixtures.length,
+    keyboard: true,
+    reducedMotion: true
+  };
+
+  Logger.log(
+    "PASS: testAccessibilityContract | scenarios=" +
+    summary.scenarios +
+    " | keyboard=" +
+    summary.keyboard +
+    " | reducedMotion=" +
+    summary.reducedMotion
+  );
+
+  return summary;
+}
+
 function testChartPresentationContract()
 {
   var source =

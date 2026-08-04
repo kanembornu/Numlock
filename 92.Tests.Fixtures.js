@@ -546,9 +546,37 @@ function createResponsiveShellContractFixtures()
     { name: "focus restoration", tokens: ['menuButton.focus();'] },
     { name: "active navigation", tokens: ['button.setAttribute("aria-current", "page");'] },
     { name: "table scroll wrapper", tokens: ['id="transactionsTableScroll"', 'overflow-x-auto'] },
-    { name: "narrow content width", tokens: ['<main class="ml-0 min-w-0 w-full flex-1'] },
+    { name: "narrow content width", tokens: ['<main id="mainContent" class="ml-0 min-w-0 w-full flex-1'] },
     { name: "desktop sidebar", tokens: ['w-72 -translate-x-full', 'lg:translate-x-0', 'lg:ml-72'] },
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
+  ];
+}
+
+function createAccessibilityContractFixtures()
+{
+  return [
+    { name: "document language", tokens: ['<html lang="en">'] },
+    { name: "viewport metadata", tokens: ['<meta name="viewport" content="width=device-width, initial-scale=1.0">'] },
+    { name: "document title", tokens: ['<title>NUMLOCK Coffee Shop Analytics</title>'] },
+    { name: "primary main landmark", tokens: ['<main id="mainContent"'], uniqueToken: '<main id="mainContent"' },
+    { name: "labelled navigation", tokens: ['<nav class="flex-1 p-4 space-y-2" aria-label="Primary">'] },
+    { name: "logical chart headings", tokens: ['<h2 id="revenueChartTitle"', '<h2 id="hotColdChartTitle"', '<h2 id="expenseChartTitle"'] },
+    { name: "filter selector label", tokens: ['<label for="filter" class="sr-only">Reporting period</label>'] },
+    { name: "custom date labels", tokens: ['<label for="customStart" class="sr-only">Custom start date</label>', '<label for="customEnd" class="sr-only">Custom end date</label>'] },
+    { name: "invalid control state", tokens: ['function setDateFilterValidation(message)', '"aria-invalid",', 'String(hasError)'] },
+    { name: "accessible validation message", tokens: ['id="dateFilterValidation"', 'aria-describedby="dateFilterValidation"', 'setDateFilterValidation("Select both custom dates");'] },
+    { name: "active navigation semantics", tokens: ['aria-current="page"', 'button.setAttribute("aria-current", "page");', 'button.removeAttribute("aria-current");'] },
+    { name: "table accessible name and empty state", tokens: ['<caption class="sr-only">Recent business transactions</caption>', 'colspan="5" class="p-6 text-center text-slate-500">No recent transactions for the selected period.</td>'] },
+    { name: "scoped table headers", tokens: ['<th scope="col" class="p-4 text-left"> Date </th>', '<th scope="col" class="p-4 text-left"> Amount </th>'] },
+    { name: "dynamic status regions", tokens: ['id="dashboardStatus"', 'id="reportingInformation"', 'role="status"', 'aria-live="polite"'] },
+    { name: "visible keyboard focus", tokens: ['button:focus-visible,', 'select:focus-visible,', 'input:focus-visible,', 'outline: 3px solid #6366f1;'] },
+    { name: "hidden drawer focus exclusion", tokens: ['sidebar.inert = !isOpen && !isDesktop;', 'sidebar.setAttribute(', '"aria-hidden",'] },
+    { name: "Escape drawer close", tokens: ['event.key === "Escape"', 'setSidebarOpen(false, true);'] },
+    { name: "Retry keyboard operation", tokens: ['id="dashboardRetryButton"', 'type="button"', 'onclick="retryDashboardData()"'] },
+    { name: "Data Quality keyboard operation", tokens: ['id="dataQualityDetailsButton"', 'type="button"', 'onclick="toggleDataQualityDetails()"'] },
+    { name: "reduced motion CSS", tokens: ['@media (prefers-reduced-motion: reduce)', '.skeleton { animation: none; }', '#dashboardSidebar { transition: none; }', '#actionRoadmapCard .text-xl { transition: none; }'] },
+    { name: "Chart animation reduction", tokens: ['function shouldReduceMotion()', 'animation: shouldReduceMotion() ? false : undefined,'] },
+    { name: "hidden page focus exclusion", tokens: ['id="transactions" class="page" hidden', 'page.hidden = !isActivePage;'] }
   ];
 }
 

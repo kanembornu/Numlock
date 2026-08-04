@@ -121,11 +121,11 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P2-2 — Add accessible semantics and keyboard state
 
-**Status: Mobile drawer controls, accessible labeling, Escape handling, focus restoration, and active navigation semantics completed locally in Sprint 5.9 Package 001. Remaining document/chart/live-region accessibility work stays in backlog.**
+**Status: Completed locally in Sprint 5.10 Package 001; upload and live/browser validation are pending.**
 
 - **Problem:** the document has no language/title metadata, the filter has no label, navigation state is communicated only by initial styling, inline SVGs lack accessibility treatment, chart canvases have no text alternative, and loading/error changes are not announced.
 - **User impact:** screen-reader and keyboard users receive incomplete state and chart information; focus/active navigation is unclear.
-- **Proposed solution:** add document metadata, semantic/ARIA labels, active-state and focus management, live regions, reduced-motion handling, accessible chart summaries, and table caption/header scope.
+- **Proposed solution:** implemented document/landmark semantics, labeled and validated date controls, active-state and focus management, bounded live regions, hidden-content focus exclusion, reduced-motion handling, accessible chart summaries, and table caption/header scope.
 - **Files likely affected:** `190.View.Index.html`, `tailwind.config.js`, generated `189.View.Tailwind.html`.
 - **Implementation complexity:** M
 - **Regression risk:** Low

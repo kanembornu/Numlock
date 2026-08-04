@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.10 Package 001 dashboard accessibility without changing analytics, layout hierarchy, visual design, or response contracts.
+- Added document and landmark metadata, date-control labels and associated live validation, focus-visible styling, hidden-page focus exclusion, table naming/header scope, and reduced-motion handling for skeleton, drawer, roadmap, and Chart.js animation.
+- Added `testAccessibilityContract()` with 22 deterministic/static scenarios and raised the ordered fail-fast unified backend gate to 18/18.
 - Implemented Sprint 5.9 Package 006 deterministic frontend dependency ownership: retained local Tailwind 3.4.17, pinned Chart.js to 4.5.1, and retained the actively used Font Awesome 6.0.0 stylesheet.
 - Added a non-blocking Chart.js failure path that safely destroys existing instances, preserves accessible summaries and non-chart rendering, displays `Chart unavailable.`, and logs one actionable diagnostic without business payloads.
 - Added `testFrontendDependencyContract()` with 14 deterministic/static scenarios and raised the ordered fail-fast unified backend gate to 17/17 while preserving chart presentation and responsive contracts.
