@@ -284,6 +284,362 @@ function filterTransactionsByDateRange(data, range) {
   });
 }
 
+function getDashboardMonthEndDateKey(year, month) {
+
+  return shiftDashboardDateKey(
+    createDashboardDateKey(
+      year,
+      month + 1,
+      1
+    ),
+    -1
+  );
+}
+
+function createCappedDashboardDateKey(year, month, day) {
+
+  var monthEnd =
+    getDashboardMonthEndDateKey(
+      year,
+      month
+    );
+
+  var maximumDay =
+    Number(
+      monthEnd.split("-")[2]
+    );
+
+  return createDashboardDateKey(
+    year,
+    month,
+    Math.min(day, maximumDay)
+  );
+}
+
+function getDashboardDateRangeDuration(range) {
+
+  var startParts =
+    range.startDate.split("-");
+
+  var endParts =
+    range.endDate.split("-");
+
+  var startTime =
+    Date.UTC(
+      Number(startParts[0]),
+      Number(startParts[1]) - 1,
+      Number(startParts[2])
+    );
+
+  var endTime =
+    Date.UTC(
+      Number(endParts[0]),
+      Number(endParts[1]) - 1,
+      Number(endParts[2])
+    );
+
+  return Math.floor(
+    (endTime - startTime) /
+    86400000
+  ) + 1;
+}
+
+function resolvePreviousComparisonDateRange(currentRange) {
+
+  var filter =
+    currentRange.filter;
+
+  var startParts =
+    currentRange.startDate.split("-");
+
+  var endParts =
+    currentRange.endDate.split("-");
+
+  var startYear =
+    Number(startParts[0]);
+
+  var startMonth =
+    Number(startParts[1]);
+
+  var endYear =
+    Number(endParts[0]);
+
+  var endMonth =
+    Number(endParts[1]);
+
+  var endDay =
+    Number(endParts[2]);
+
+  var previousStart;
+  var previousEnd;
+
+  if (filter === "currentMonth")
+  {
+    previousStart =
+      createDashboardDateKey(
+        startYear,
+        startMonth - 1,
+        1
+      );
+
+    previousEnd =
+      createCappedDashboardDateKey(
+        startYear,
+        startMonth - 1,
+        endDay
+      );
+  }
+  else if (filter === "previousMonth")
+  {
+    previousEnd =
+      shiftDashboardDateKey(
+        currentRange.startDate,
+        -1
+      );
+
+    var priorMonthParts =
+      previousEnd.split("-");
+
+    previousStart =
+      createDashboardDateKey(
+        Number(priorMonthParts[0]),
+        Number(priorMonthParts[1]),
+        1
+      );
+  }
+  else if (filter === "currentYear")
+  {
+    previousStart =
+      createDashboardDateKey(
+        startYear - 1,
+        1,
+        1
+      );
+
+    previousEnd =
+      createCappedDashboardDateKey(
+        endYear - 1,
+        endMonth,
+        endDay
+      );
+  }
+  else
+  {
+    var duration =
+      getDashboardDateRangeDuration(
+        currentRange
+      );
+
+    previousEnd =
+      shiftDashboardDateKey(
+        currentRange.startDate,
+        -1
+      );
+
+    previousStart =
+      shiftDashboardDateKey(
+        previousEnd,
+        -(duration - 1)
+      );
+  }
+
+  return {
+    startDate: previousStart,
+    endDate: previousEnd,
+    label:
+      "Compared with " +
+      previousStart +
+      " to " +
+      previousEnd
+  };
+}
+
+function filterTransactionsByComparisonRange(data, range) {
+
+  return filterTransactionsByDateRange(
+    data,
+    range
+  );
+}
+
+function buildPeriodComparisonMetrics(data, range) {
+
+  var metrics = {
+    startDate: range.startDate,
+    endDate: range.endDate,
+    rowCount: 0,
+    revenue: 0,
+    expense: 0,
+    profit: 0,
+    unitsSold: 0
+  };
+
+  (data || []).forEach(function(row)
+  {
+    var revenue =
+      Number(row && row.revenue || 0);
+
+    var expense =
+      Number(row && row.expense || 0);
+
+    var quantity =
+      Number(row && row.qty || 0);
+
+    metrics.rowCount++;
+    metrics.revenue +=
+      isFinite(revenue)
+        ? revenue
+        : 0;
+    metrics.expense +=
+      isFinite(expense)
+        ? expense
+        : 0;
+
+    if (row && row.transactionType === "Sales")
+    {
+      metrics.unitsSold +=
+        isFinite(quantity)
+          ? quantity
+          : 0;
+    }
+  });
+
+  metrics.profit =
+    metrics.revenue -
+    metrics.expense;
+
+  return metrics;
+}
+
+function calculateFiniteComparison(currentValue, previousValue, isProfit) {
+
+  var current =
+    Number(currentValue);
+
+  var previous =
+    Number(previousValue);
+
+  if (!isFinite(current) || !isFinite(previous))
+  {
+    return {
+      percentage: null,
+      status: "No Comparison"
+    };
+  }
+
+  if (previous === 0)
+  {
+    return current === 0
+      ? {
+          percentage: 0,
+          status: "Stable"
+        }
+      : {
+          percentage: null,
+          status: "No Comparison"
+        };
+  }
+
+  if (!isProfit && previous < 0)
+  {
+    return {
+      percentage: null,
+      status: "No Comparison"
+    };
+  }
+
+  var denominator =
+    isProfit
+      ? Math.abs(previous)
+      : previous;
+
+  var percentage =
+    ((current - previous) /
+      denominator) * 100;
+
+  if (!isFinite(percentage))
+  {
+    return {
+      percentage: null,
+      status: "No Comparison"
+    };
+  }
+
+  return {
+    percentage:
+      Number(
+        percentage.toFixed(1)
+      ),
+    status:
+      current > previous
+        ? "Up"
+        : current < previous
+          ? "Down"
+          : "Stable"
+  };
+}
+
+function buildPeriodComparison(currentRows, previousRows, currentRange, previousRange) {
+
+  var current =
+    buildPeriodComparisonMetrics(
+      currentRows,
+      currentRange
+    );
+
+  var previous =
+    buildPeriodComparisonMetrics(
+      previousRows,
+      previousRange
+    );
+
+  var revenue =
+    calculateFiniteComparison(
+      current.revenue,
+      previous.revenue,
+      false
+    );
+
+  var expense =
+    calculateFiniteComparison(
+      current.expense,
+      previous.expense,
+      false
+    );
+
+  var profit =
+    calculateFiniteComparison(
+      current.profit,
+      previous.profit,
+      true
+    );
+
+  var unitsSold =
+    calculateFiniteComparison(
+      current.unitsSold,
+      previous.unitsSold,
+      false
+    );
+
+  return {
+    current: current,
+    previous: previous,
+    changes: {
+      revenuePercent: revenue.percentage,
+      expensePercent: expense.percentage,
+      profitPercent: profit.percentage,
+      unitsSoldPercent: unitsSold.percentage
+    },
+    status: {
+      revenue: revenue.status,
+      expense: expense.status,
+      profit: profit.status,
+      unitsSold: unitsSold.status
+    },
+    label: previousRange.label
+  };
+}
+
 function buildReportingMetadata(scopedData, dateRange, referenceDate) {
 
   var timezone =
@@ -666,6 +1022,25 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       dateRange
     );
 
+  var previousRange =
+    resolvePreviousComparisonDateRange(
+      dateRange
+    );
+
+  var previousData =
+    filterTransactionsByComparisonRange(
+      processedData,
+      previousRange
+    );
+
+  var periodComparison =
+    buildPeriodComparison(
+      filteredData,
+      previousData,
+      dateRange,
+      previousRange
+    );
+
   dateRange.rowCount =
     filteredData.length;
 
@@ -789,6 +1164,9 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       dataQuality:
         dataQuality,
+
+      periodComparison:
+        periodComparison,
 
     };
 }

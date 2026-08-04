@@ -11,6 +11,7 @@ function runAllBackendTests()
     { name: "testHotColdFixtures", run: testHotColdFixtures },
     { name: "testSparseDatasetResilience", run: testSparseDatasetResilience },
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
+    { name: "testPeriodComparison", run: testPeriodComparison },
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testAccessibilityContract", run: testAccessibilityContract },
     { name: "testExecutivePresentationContract", run: testExecutivePresentationContract },

@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Compare active periods with one truthful prior-period contract
+
+The dashboard response adds `periodComparison` without changing any existing KPI, formula, filter boundary, forecast, intelligence output, or response property. Today compares with the previous calendar day; Last 7 Days with the preceding seven days; Current Month with the same elapsed day count in the previous month capped at that month end; Previous Month with the full month before it; Current Year with equivalent prior-year-to-date capped safely across leap years; and Custom with the immediately preceding equal inclusive duration. All boundaries use the Apps Script project timezone.
+
+`getDashboardData()` reads raw transactions once and processes them once. `buildDashboardResponse()` filters that same processed array into current and previous subsets, builds the normal analytics cache only for the current subset, and computes only row count, revenue, expense, signed profit, and units sold for the prior subset. It never recursively calls `getDashboardData()` or builds a second dashboard response.
+
+When the previous value is positive, percentage change is `(current - previous) / previous * 100`. Two zero values produce `0.0 / Stable`; a zero prior baseline with a nonzero current value produces `null / No Comparison`. Profit keeps signed current and previous values; for a nonzero loss baseline, the percentage denominator uses its magnitude so profit-to-loss, loss-to-profit, and deeper-loss direction remains truthful. All finite percentages round to one decimal. The frontend presents this contract once in the Executive Summary with text and arrow direction, treats expense movement factually, and never relies on color alone.
+
 ### Own dashboard accessibility in the frontend contract
 
 `190.View.Index.html` owns document language/title/viewport metadata, one primary main landmark, labeled primary navigation, logical page headings, form and table semantics, visible keyboard focus, and focus exclusion for the closed mobile drawer and inactive page. Native buttons and controls retain browser Enter/Space behavior; Escape closes the drawer and restores the menu-button focus; Retry and Data Quality remain native buttons.
@@ -131,7 +139,6 @@ Static checks, local mocks, clasp upload, live Apps Script execution, deployment
 
 ## Deferred decisions
 
-- Exact previous-period comparison rules beyond the implemented date scope.
 - KPI target values, storage location, and who may edit them.
 - Export format, included fields, and access policy.
 - Drill-down detail fields and authorization boundary.

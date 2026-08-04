@@ -534,6 +534,70 @@ function createDashboardStateContractFixtures()
   };
 }
 
+function createPeriodComparisonFixtures()
+{
+  var referenceDate =
+    new Date(2026, 7, 12, 12, 0, 0);
+
+  return {
+    referenceDate: referenceDate,
+    ranges: [
+      {
+        filter: "today",
+        expected: "2026-08-11|2026-08-11"
+      },
+      {
+        filter: "last7days",
+        expected: "2026-07-30|2026-08-05"
+      },
+      {
+        filter: "currentMonth",
+        expected: "2026-07-01|2026-07-12"
+      },
+      {
+        filter: "previousMonth",
+        expected: "2026-06-01|2026-06-30"
+      },
+      {
+        filter: "currentYear",
+        expected: "2025-01-01|2025-08-12"
+      },
+      {
+        filter: "custom",
+        startDate: "2026-08-10",
+        endDate: "2026-08-15",
+        expected: "2026-08-04|2026-08-09"
+      }
+    ],
+    cappedMonth: {
+      referenceDate: new Date(2026, 2, 31, 12, 0, 0),
+      expected: "2026-02-01|2026-02-28"
+    },
+    leapYear: {
+      referenceDate: new Date(2024, 1, 29, 12, 0, 0),
+      expected: "2023-01-01|2023-02-28"
+    },
+    rows: [
+      { date: new Date(2026, 7, 4, 12, 0, 0), transactionType: "Sales", qty: 2, revenue: 100, expense: 0 },
+      { date: new Date(2026, 7, 9, 12, 0, 0), transactionType: "Purchase", qty: 0, revenue: 0, expense: 40 },
+      { date: new Date(2026, 7, 10, 12, 0, 0), transactionType: "Sales", qty: 3, revenue: 150, expense: 0 },
+      { date: new Date(2026, 7, 15, 12, 0, 0), transactionType: "Purchase", qty: 0, revenue: 0, expense: 60 },
+      { date: new Date(2026, 7, 16, 12, 0, 0), transactionType: "Sales", qty: 99, revenue: 9999, expense: 0 }
+    ],
+    frontendTokens: [
+      'id="periodComparisonSection"',
+      'id="periodComparisonLabel"',
+      'id="periodComparisonMetrics"',
+      "function renderPeriodComparison(periodComparison)",
+      'status === "No Comparison"',
+      'status === "Stable"',
+      'status === "Up" ? "▲ " : "▼ "',
+      'metricName + " " + status + " " + display + " " + comparison.label',
+      'renderPeriodComparison(res.periodComparison);'
+    ]
+  };
+}
+
 function createResponsiveShellContractFixtures()
 {
   return [

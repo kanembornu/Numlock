@@ -346,7 +346,8 @@ function testSparseDatasetResilience()
     "kpiAchievement",
     "reportingScope",
     "dataFreshness",
-    "dataQuality"
+    "dataQuality",
+    "periodComparison"
   ];
 
   var expectedNormalJson =
@@ -408,7 +409,8 @@ function testSparseDatasetResilience()
         if (
           property !== "reportingScope" &&
           property !== "dataFreshness" &&
-          property !== "dataQuality"
+          property !== "dataQuality" &&
+          property !== "periodComparison"
         )
         {
           comparableResponse[property] = response[property];
@@ -889,6 +891,303 @@ function testDashboardDateFilter()
     summary.customRows +
     " | timezone=" +
     summary.timezone
+  );
+
+  return summary;
+}
+
+function testPeriodComparison()
+{
+  var fixture =
+    createPeriodComparisonFixtures();
+
+  var scenariosPassed = 0;
+
+  fixture.ranges.forEach(function(testCase)
+  {
+    var currentRange =
+      resolveDashboardDateRange(
+        testCase.filter,
+        testCase.startDate,
+        testCase.endDate,
+        fixture.referenceDate
+      );
+
+    var previousRange =
+      resolvePreviousComparisonDateRange(
+        currentRange
+      );
+
+    if (
+      previousRange.startDate + "|" +
+      previousRange.endDate !==
+      testCase.expected
+    )
+    {
+      throw new Error(
+        "Period comparison range mismatch for " +
+        testCase.filter
+      );
+    }
+
+    scenariosPassed++;
+  });
+
+  var cappedCurrentMonth =
+    resolveDashboardDateRange(
+      "currentMonth",
+      null,
+      null,
+      fixture.cappedMonth.referenceDate
+    );
+
+  var cappedPreviousMonth =
+    resolvePreviousComparisonDateRange(
+      cappedCurrentMonth
+    );
+
+  if (
+    cappedPreviousMonth.startDate + "|" +
+    cappedPreviousMonth.endDate !==
+    fixture.cappedMonth.expected
+  )
+  {
+    throw new Error(
+      "Period comparison did not cap the shorter previous month"
+    );
+  }
+  scenariosPassed++;
+
+  var leapCurrentYear =
+    resolveDashboardDateRange(
+      "currentYear",
+      null,
+      null,
+      fixture.leapYear.referenceDate
+    );
+
+  var leapPreviousYear =
+    resolvePreviousComparisonDateRange(
+      leapCurrentYear
+    );
+
+  if (
+    leapPreviousYear.startDate + "|" +
+    leapPreviousYear.endDate !==
+    fixture.leapYear.expected
+  )
+  {
+    throw new Error(
+      "Period comparison leap-year boundary mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var originalRows =
+    JSON.stringify(fixture.rows);
+
+  var currentRange =
+    resolveDashboardDateRange(
+      "custom",
+      "2026-08-10",
+      "2026-08-15",
+      fixture.referenceDate
+    );
+
+  var previousRange =
+    resolvePreviousComparisonDateRange(
+      currentRange
+    );
+
+  var currentRows =
+    filterTransactionsByDateRange(
+      fixture.rows,
+      currentRange
+    );
+
+  var previousRows =
+    filterTransactionsByComparisonRange(
+      fixture.rows,
+      previousRange
+    );
+
+  var comparison =
+    buildPeriodComparison(
+      currentRows,
+      previousRows,
+      currentRange,
+      previousRange
+    );
+
+  if (
+    comparison.current.rowCount !== 2 ||
+    comparison.previous.rowCount !== 2 ||
+    comparison.current.revenue !== 150 ||
+    comparison.previous.revenue !== 100 ||
+    comparison.current.expense !== 60 ||
+    comparison.previous.expense !== 40 ||
+    comparison.current.profit !== 90 ||
+    comparison.previous.profit !== 60 ||
+    comparison.current.unitsSold !== 3 ||
+    comparison.previous.unitsSold !== 2
+  )
+  {
+    throw new Error(
+      "Period comparison inclusive metric boundaries mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  if (JSON.stringify(fixture.rows) !== originalRows)
+  {
+    throw new Error(
+      "Period comparison mutated the processed transaction array"
+    );
+  }
+  scenariosPassed++;
+
+  var calculationCases = [
+    { name: "up", current: 125, previous: 100, profit: false, percentage: 25, status: "Up" },
+    { name: "down", current: 75, previous: 100, profit: false, percentage: -25, status: "Down" },
+    { name: "both zero", current: 0, previous: 0, profit: false, percentage: 0, status: "Stable" },
+    { name: "zero baseline", current: 100, previous: 0, profit: false, percentage: null, status: "No Comparison" },
+    { name: "profit to loss", current: -50, previous: 100, profit: true, percentage: -150, status: "Down" },
+    { name: "loss to profit", current: 50, previous: -100, profit: true, percentage: 150, status: "Up" },
+    { name: "deeper loss", current: -150, previous: -100, profit: true, percentage: -50, status: "Down" },
+    { name: "finite rounding", current: 4, previous: 3, profit: false, percentage: 33.3, status: "Up" }
+  ];
+
+  calculationCases.forEach(function(testCase)
+  {
+    var actual =
+      calculateFiniteComparison(
+        testCase.current,
+        testCase.previous,
+        testCase.profit
+      );
+
+    if (
+      actual.percentage !== testCase.percentage ||
+      actual.status !== testCase.status
+    )
+    {
+      throw new Error(
+        "Period comparison calculation mismatch for " +
+        testCase.name
+      );
+    }
+
+    scenariosPassed++;
+  });
+
+  var emptyComparison =
+    buildPeriodComparison(
+      [],
+      [],
+      currentRange,
+      previousRange
+    );
+
+  assertFiniteNumbers(
+    emptyComparison,
+    "period comparison empty periods"
+  );
+
+  if (
+    emptyComparison.status.revenue !== "Stable" ||
+    emptyComparison.changes.revenuePercent !== 0
+  )
+  {
+    throw new Error(
+      "Period comparison empty-period semantics mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var response =
+    buildDashboardResponse(
+      fixture.rows,
+      "custom",
+      "2026-08-10",
+      "2026-08-15",
+      fixture.referenceDate
+    );
+
+  if (
+    !response.periodComparison ||
+    response.periodComparison.current.startDate !== "2026-08-10" ||
+    response.periodComparison.previous.startDate !== "2026-08-04"
+  )
+  {
+    throw new Error(
+      "Dashboard response periodComparison contract mismatch"
+    );
+  }
+
+  assertFiniteNumbers(
+    response,
+    "period comparison response"
+  );
+  scenariosPassed++;
+
+  var dashboardSource =
+    getDashboardData.toString();
+
+  if (
+    dashboardSource.split("getTransactionData(").length - 1 !== 1 ||
+    dashboardSource.split("processTransactions(").length - 1 !== 1 ||
+    dashboardSource.indexOf("getDashboardData(", 20) !== -1
+  )
+  {
+    throw new Error(
+      "Period comparison must retain one raw read and one processing pass"
+    );
+  }
+  scenariosPassed++;
+
+  var responseSource =
+    buildDashboardResponse.toString();
+
+  if (
+    responseSource.split("buildAnalyticsCache(").length - 1 !== 1 ||
+    responseSource.indexOf("buildDashboardResponse(", 30) !== -1
+  )
+  {
+    throw new Error(
+      "Period comparison must not build a second dashboard response"
+    );
+  }
+  scenariosPassed++;
+
+  var frontendSource =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  fixture.frontendTokens.forEach(function(token)
+  {
+    assertSourceContains(
+      frontendSource,
+      token,
+      "period comparison frontend"
+    );
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    presets: 6,
+    finite: true
+  };
+
+  Logger.log(
+    "PASS: testPeriodComparison | scenarios=" +
+    summary.scenarios +
+    " | presets=" +
+    summary.presets +
+    " | finite=" +
+    summary.finite
   );
 
   return summary;

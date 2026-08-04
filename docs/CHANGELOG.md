@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.10 Package 003 additive period-over-period comparison for Today, Last 7 Days, Current Month, Previous Month, Current Year, and Custom ranges in the Apps Script project timezone.
+- Added finite one-decimal percentage and Up/Down/Stable/No Comparison semantics, including zero baselines, signed profit/loss transitions, shorter-month caps, leap-year safety, one raw read, and one processing pass without changing existing analytics or KPI values.
+- Added one compact accessible Executive Summary comparison, `testPeriodComparison()` with 23 deterministic scenarios, and raised the ordered fail-fast unified gate to 20/20.
 - Completed Sprint 5.10 Package 002 executive dashboard polish without changing analytics, backend responses, accessibility behavior, responsive behavior, the color palette, or animation.
 - Moved the Executive Summary ahead of KPIs so performance, attention status, and the next action are visible first; standardized section terminology, card spacing, badge capitalization, and recommendation priority labels while reducing repeated executive cards and excess whitespace.
 - Added `testExecutivePresentationContract()` and raised the ordered fail-fast unified backend gate to 19/19.

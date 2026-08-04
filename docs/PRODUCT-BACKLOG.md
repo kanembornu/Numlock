@@ -45,16 +45,16 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P1-1 — Add a date range and explicit period comparison contract
 
-**Status: Date-range selection and visible month scope are completed locally in Sprint 5.8 Package 003; explicit previous-period comparison semantics remain requirement-gated.**
+**Status: Completed locally in Sprint 5.10 Package 003; upload and live/browser validation pending.**
 
 - **Problem:** the dashboard now has an authoritative visible date range, but labels that imply comparison still lack an explicit previous-period contract and forecast interpretation remains implicit.
 - **User impact:** executives cannot tell which dates a KPI covers or confidently interpret growth comparisons.
-- **Proposed solution:** retain the implemented shared date-range metadata and add only the approved previous-period rule plus explicit comparison metadata used consistently by analytics and intelligence outputs.
-- **Files likely affected:** `20.Data.Source.js` or `25.Data.Processor.js`, analytics/intelligence consumers, `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`, architecture/testing documentation.
+- **Implemented solution:** retained the shared active range and added `periodComparison` for the immediately equivalent prior period. Both subsets reuse the once-processed rows; the prior period computes only required metrics, and one compact accessible comparison appears in the Executive Summary.
+- **Files affected:** `90.Dashboard.Service.js`, `92.Tests.Fixtures.js`, `96.Tests.Cases.js`, `98.Tests.Runner.js`, `190.View.Index.html`, generated Tailwind CSS, and architecture/testing documentation.
 - **Implementation complexity:** L
 - **Regression risk:** High
-- **Validation required:** boundary/time-zone fixtures, current-month and cross-year comparisons, empty-period behavior, response compatibility, browser filter and chart acceptance.
-- **Dependency on other items:** P0-2; exact period presets and comparison semantics require product approval.
+- **Validation required:** 23 deterministic scenarios covering every preset, timezone-safe boundaries, shorter months, leap years, empty/zero periods, signed profit transitions, finite values, one-read/one-process architecture, and frontend status rendering; unified 20/20 plus browser filter acceptance.
+- **Dependency on other items:** P0-2 complete; the exact comparison semantics are now approved and implemented.
 
 ### P1-2 — Display data freshness and reporting scope
 
