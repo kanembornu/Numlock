@@ -1088,6 +1088,176 @@ function testAccessibilityContract()
   return summary;
 }
 
+function testExecutivePresentationContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  var orderedTokens = [
+    'id="executiveSummarySection"',
+    'id="businessOverview"',
+    'id="revenueChartTitle"',
+    'id="diagnosisContainer"',
+    'id="recommendationContainer"',
+    'id="executiveCenter"'
+  ];
+  var previousIndex = -1;
+
+  orderedTokens.forEach(function(token)
+  {
+    var tokenIndex = source.indexOf(token);
+
+    if (tokenIndex === -1 || tokenIndex <= previousIndex)
+    {
+      throw new Error(
+        "Executive presentation section order mismatch: " +
+        token
+      );
+    }
+
+    previousIndex = tokenIndex;
+  });
+
+  [
+    'id="executiveSummaryTitle"',
+    "Executive Summary</h2>",
+    "Key Metrics</h2>",
+    "Business Signals",
+    "Business Performance",
+    "Recommended Actions",
+    "Decision Support",
+    'id="revenueDependencyContainer"',
+    "Revenue Dependency",
+    'id="paretoContainer"',
+    "Pareto Analysis"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "executive heading consistency"
+    );
+  });
+
+  [
+    "Executive Insights",
+    "Executive Analysis",
+    "Executive Decision Center",
+    "Business Command Center",
+    "<!-- PRODUCT INTELLIGENCE -->"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      source,
+      token,
+      "mixed dashboard terminology"
+    );
+  });
+
+  [
+    'label:"Critical"',
+    'label:"Attention"',
+    'label:"Opportunity"',
+    'label:"High Priority"',
+    'label:"Medium Priority"',
+    'label:"Low Priority"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "badge wording consistency"
+    );
+  });
+
+  assertSourceContains(
+    source,
+    ".slice(0,6)\n          .map(renderTimelineItem)",
+    "recommendation priority ordering"
+  );
+  assertSourceContains(
+    source,
+    "index < items.length - 1",
+    "recommendation timeline ending"
+  );
+
+  [
+    'id="executiveSummary"',
+    'id="executiveAlertCard"',
+    'id="priorityTitle"',
+    'id="priorityMessage"'
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(
+      source,
+      token,
+      "non-duplicated executive message"
+    );
+  });
+
+  [
+    "grid grid-cols-1 xl:grid-cols-3 gap-5",
+    "grid grid-cols-1 xl:grid-cols-4 gap-5",
+    "grid grid-cols-1 xl:grid-cols-2 gap-5"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "responsive executive hierarchy"
+    );
+  });
+
+  createAccessibilityContractFixtures()
+    .forEach(function(fixture)
+    {
+      fixture.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "preserved accessibility / " + fixture.name
+        );
+      });
+    });
+
+  createResponsiveShellContractFixtures()
+    .forEach(function(fixture)
+    {
+      fixture.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "preserved responsive shell / " + fixture.name
+        );
+      });
+    });
+
+  var summary = {
+    passed: true,
+    scenarios: 7,
+    executiveSummaryFirst: true,
+    accessibilityPreserved: true,
+    responsiveHierarchy: true
+  };
+
+  Logger.log(
+    "PASS: testExecutivePresentationContract | scenarios=" +
+    summary.scenarios +
+    " | executiveSummaryFirst=" +
+    summary.executiveSummaryFirst +
+    " | accessibilityPreserved=" +
+    summary.accessibilityPreserved +
+    " | responsiveHierarchy=" +
+    summary.responsiveHierarchy
+  );
+
+  return summary;
+}
+
 function testChartPresentationContract()
 {
   var source =

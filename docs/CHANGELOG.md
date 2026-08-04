@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.10 Package 002 executive dashboard polish without changing analytics, backend responses, accessibility behavior, responsive behavior, the color palette, or animation.
+- Moved the Executive Summary ahead of KPIs so performance, attention status, and the next action are visible first; standardized section terminology, card spacing, badge capitalization, and recommendation priority labels while reducing repeated executive cards and excess whitespace.
+- Added `testExecutivePresentationContract()` and raised the ordered fail-fast unified backend gate to 19/19.
 - Completed Sprint 5.10 Package 001 dashboard accessibility without changing analytics, layout hierarchy, visual design, or response contracts.
 - Added document and landmark metadata, date-control labels and associated live validation, focus-visible styling, hidden-page focus exclusion, table naming/header scope, and reduced-motion handling for skeleton, drawer, roadmap, and Chart.js animation.
 - Added `testAccessibilityContract()` with 22 deterministic/static scenarios and raised the ordered fail-fast unified backend gate to 18/18.

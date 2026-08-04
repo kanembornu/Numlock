@@ -101,6 +101,10 @@ Completed locally. Tailwind remains locally compiled at 3.4.17, Chart.js is pinn
 
 Completed locally. The dashboard now owns document and landmark semantics, labeled date controls with associated live validation, semantic navigation/page visibility, named and scoped transaction-table markup, visible keyboard focus, bounded status announcements, and reduced-motion behavior for authored CSS and Chart.js. `testAccessibilityContract()` raises the ordered fail-fast unified requirement to 18/18. Upload, Apps Script runtime, and browser/assistive-technology acceptance remain separate evidence.
 
+### Package 002 — executive dashboard polish
+
+Completed locally. The dashboard now begins with one concise Executive Summary that answers performance, attention status, and next action before consistently spaced KPI cards. Visible terminology, heading hierarchy, badge capitalization, recommendation priority labels, card rhythm, and section gaps are standardized; repeated executive summary/priority/alert cards were consolidated without changing analytics, backend responses, accessibility, responsive behavior, colors, or animation. `testExecutivePresentationContract()` raises the ordered fail-fast unified requirement to 19/19. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

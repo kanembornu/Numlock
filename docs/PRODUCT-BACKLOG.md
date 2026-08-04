@@ -106,6 +106,18 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ## P2 — UX and performance improvements
 
+### P2-0 — Improve executive presentation hierarchy
+
+**Status: Completed locally in Sprint 5.10 Package 002; upload and live Apps Script validation pending.**
+
+- **Problem:** executive conclusions, attention signals, priorities, KPIs, and decision-support cards were separated across a long page with inconsistent terminology, spacing, and badge capitalization.
+- **User impact:** a business owner had to scan multiple repeated executive regions before understanding performance, urgency, and the next action.
+- **Implemented solution:** placed a three-part Executive Summary first, followed by consistently spaced KPIs; retained factual performance detail, distinct business signals, prioritized recommendations, decision support, risk/growth, and product performance while removing duplicate executive cards and tightening vertical rhythm.
+- **Files affected:** `190.View.Index.html`, `96.Tests.Cases.js`, `98.Tests.Runner.js`, and governing documentation.
+- **Regression risk:** Low; presentation-only markup, copy, spacing, and ordered static contract changes.
+- **Validation required:** `testExecutivePresentationContract()`, accessibility, frontend-dependency, chart-presentation, unified 19/19 suite, generated Tailwind build, clasp inventory/upload, and live Apps Script execution.
+- **Dependency on other items:** P2-1 and P2-2 responsive/accessibility contracts are preserved and rechecked.
+
 ### P2-1 — Establish a responsive narrow-width shell and table
 
 **Status: Completed locally in Sprint 5.9 Package 001; upload and live/browser validation are pending.**

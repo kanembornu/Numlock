@@ -82,7 +82,7 @@ function assertSourceContains(source, token, scenarioName)
   if (source.indexOf(token) === -1)
   {
     throw new Error(
-      "Responsive shell contract missing " +
+      "Source contract missing " +
       scenarioName +
       ": " +
       token
@@ -98,7 +98,7 @@ function assertSourceContainsOnce(source, token, scenarioName)
   if (firstIndex === -1 || firstIndex !== lastIndex)
   {
     throw new Error(
-      "Responsive shell contract expected one " +
+      "Source contract expected one " +
       scenarioName +
       ": " +
       token

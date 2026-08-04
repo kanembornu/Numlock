@@ -13,6 +13,7 @@ function runAllBackendTests()
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testAccessibilityContract", run: testAccessibilityContract },
+    { name: "testExecutivePresentationContract", run: testExecutivePresentationContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
