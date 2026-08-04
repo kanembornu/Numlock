@@ -347,7 +347,8 @@ function testSparseDatasetResilience()
     "reportingScope",
     "dataFreshness",
     "dataQuality",
-    "periodComparison"
+    "periodComparison",
+    "businessPriority"
   ];
 
   var expectedNormalJson =
@@ -410,7 +411,8 @@ function testSparseDatasetResilience()
           property !== "reportingScope" &&
           property !== "dataFreshness" &&
           property !== "dataQuality" &&
-          property !== "periodComparison"
+          property !== "periodComparison" &&
+          property !== "businessPriority"
         )
         {
           comparableResponse[property] = response[property];
@@ -1188,6 +1190,349 @@ function testPeriodComparison()
     summary.presets +
     " | finite=" +
     summary.finite
+  );
+
+  return summary;
+}
+
+function testBusinessPriorityContract()
+{
+  var fixture =
+    createBusinessPriorityFixtures();
+
+  var scenariosPassed = 0;
+  var levelsSeen = {};
+  var allContractsComplete = true;
+  var allScoresFinite = true;
+  var allInputsUnchanged = true;
+  var allOutputsDeterministic = true;
+
+  function createScenarioCache(overrides)
+  {
+    var cache =
+      JSON.parse(
+        JSON.stringify(
+          fixture.baseCache
+        )
+      );
+
+    Object.keys(overrides || {})
+      .forEach(function(key)
+      {
+        cache[key] =
+          Object.assign(
+            {},
+            cache[key] || {},
+            overrides[key]
+          );
+      });
+
+    return cache;
+  }
+
+  fixture.cases.forEach(function(testCase)
+  {
+    var cache =
+      createScenarioCache(
+        testCase.overrides
+      );
+
+    var quality =
+      JSON.parse(
+        JSON.stringify(
+          testCase.quality ||
+          fixture.dataQuality
+        )
+      );
+
+    var comparison =
+      JSON.parse(
+        JSON.stringify(
+          fixture.periodComparison
+        )
+      );
+
+    var before =
+      JSON.stringify({
+        cache: cache,
+        quality: quality,
+        comparison: comparison
+      });
+
+    var actual =
+      buildBusinessPriority(
+        cache,
+        quality,
+        testCase.rowCount == null
+          ? 5
+          : testCase.rowCount,
+        comparison
+      );
+
+    var repeated =
+      buildBusinessPriority(
+        cache,
+        quality,
+        testCase.rowCount == null
+          ? 5
+          : testCase.rowCount,
+        comparison
+      );
+
+    var requiredFields = [
+      "level",
+      "title",
+      "reason",
+      "action",
+      "source",
+      "score",
+      "evidence"
+    ];
+
+    requiredFields.forEach(function(field)
+    {
+      if (!Object.prototype.hasOwnProperty.call(actual, field))
+      {
+        allContractsComplete = false;
+      }
+    });
+
+    if (
+      !actual.evidence ||
+      !Object.prototype.hasOwnProperty.call(actual.evidence, "metric") ||
+      !Object.prototype.hasOwnProperty.call(actual.evidence, "value") ||
+      !Object.prototype.hasOwnProperty.call(actual.evidence, "comparison")
+    )
+    {
+      allContractsComplete = false;
+    }
+
+    if (
+      !isFinite(actual.score) ||
+      actual.score < 0 ||
+      actual.score > 100
+    )
+    {
+      allScoresFinite = false;
+    }
+
+    if (
+      actual.level !== testCase.expectedLevel ||
+      actual.source !== testCase.expectedSource ||
+      (
+        testCase.expectedTitle &&
+        actual.title !== testCase.expectedTitle
+      )
+    )
+    {
+      throw new Error(
+        "Business Priority winner mismatch for " +
+        testCase.name +
+        ": actual=" +
+        actual.level +
+        "/" +
+        actual.source
+      );
+    }
+
+    if (
+      testCase.expectedTitle === "No Business Activity" &&
+      (
+        actual.reason !== "No transactions are available for the selected period." ||
+        actual.action !== "Select another reporting period or verify source data."
+      )
+    )
+    {
+      throw new Error(
+        "Business Priority empty-scope fallback mismatch"
+      );
+    }
+
+    if (JSON.stringify(actual) !== JSON.stringify(repeated))
+    {
+      allOutputsDeterministic = false;
+    }
+
+    if (
+      JSON.stringify({
+        cache: cache,
+        quality: quality,
+        comparison: comparison
+      }) !== before
+    )
+    {
+      allInputsUnchanged = false;
+    }
+
+    levelsSeen[actual.level] = true;
+    scenariosPassed++;
+  });
+
+  var tieWinner =
+    selectBusinessPriorityCandidate(
+      fixture.tieCandidates
+    );
+
+  if (tieWinner.source !== "Risk")
+  {
+    throw new Error(
+      "Business Priority source tie-breaker mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var scoreWinner =
+    selectBusinessPriorityCandidate([
+      Object.assign(
+        {},
+        fixture.tieCandidates[0],
+        { score: 81 }
+      ),
+      fixture.tieCandidates[1]
+    ]);
+
+  if (scoreWinner.source !== "Revenue")
+  {
+    throw new Error(
+      "Business Priority score ordering mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  if (!allContractsComplete)
+  {
+    throw new Error(
+      "Business Priority contract or evidence is incomplete"
+    );
+  }
+  scenariosPassed++;
+
+  if (!allScoresFinite)
+  {
+    throw new Error(
+      "Business Priority score is outside finite bounds"
+    );
+  }
+  scenariosPassed++;
+
+  if (!allInputsUnchanged)
+  {
+    throw new Error(
+      "Business Priority mutated existing intelligence objects"
+    );
+  }
+  scenariosPassed++;
+
+  if (!allOutputsDeterministic)
+  {
+    throw new Error(
+      "Business Priority output is not deterministic"
+    );
+  }
+  scenariosPassed++;
+
+  var response =
+    buildDashboardResponse(
+      [],
+      "custom",
+      "2026-08-01",
+      "2026-08-01",
+      new Date(2026, 7, 1, 12, 0, 0)
+    );
+
+  if (
+    !response.businessPriority ||
+    response.businessPriority.title !== "No Business Activity"
+  )
+  {
+    throw new Error(
+      "Dashboard response has no authoritative Business Priority"
+    );
+  }
+  scenariosPassed++;
+
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  fixture.frontendTokens.forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "Business Priority frontend"
+    );
+  });
+  scenariosPassed++;
+
+  var firstViewportStart =
+    source.indexOf(
+      'id="executiveSummarySection"'
+    );
+
+  var firstViewportEnd =
+    source.indexOf(
+      "<!-- BUSINESS OVERVIEW -->"
+    );
+
+  var firstViewport =
+    source.slice(
+      firstViewportStart,
+      firstViewportEnd
+    );
+
+  if (
+    firstViewport.split('id="businessPriorityRegion"').length - 1 !== 1 ||
+    firstViewport.indexOf("priorityAction") !== -1
+  )
+  {
+    throw new Error(
+      "First viewport must contain one authoritative Business Priority"
+    );
+  }
+  scenariosPassed++;
+
+  createAccessibilityContractFixtures()
+    .concat(
+      createResponsiveShellContractFixtures()
+    )
+    .forEach(function(contract)
+    {
+      contract.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "Business Priority preserved contract"
+        );
+      });
+    });
+  scenariosPassed++;
+
+  ["Critical", "High", "Medium", "Low"]
+    .forEach(function(level)
+    {
+      if (!levelsSeen[level])
+      {
+        throw new Error(
+          "Business Priority missing level coverage: " +
+          level
+        );
+      }
+    });
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    levels: ["Critical", "High", "Medium", "Low"]
+  };
+
+  Logger.log(
+    "PASS: testBusinessPriorityContract | scenarios=" +
+    summary.scenarios +
+    " | levels=" +
+    summary.levels.join(",")
   );
 
   return summary;
@@ -2369,7 +2714,10 @@ function testSourceDataQualityPipeline()
 
   Object.keys(validResponse).forEach(function(property)
   {
-    if (property !== "dataQuality")
+    if (
+      property !== "dataQuality" &&
+      property !== "businessPriority"
+    )
     {
       comparableValid[property] =
         validResponse[property];
@@ -2378,7 +2726,10 @@ function testSourceDataQualityPipeline()
 
   Object.keys(withInvalidResponse).forEach(function(property)
   {
-    if (property !== "dataQuality")
+    if (
+      property !== "dataQuality" &&
+      property !== "businessPriority"
+    )
     {
       comparableWithInvalid[property] =
         withInvalidResponse[property];

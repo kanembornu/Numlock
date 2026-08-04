@@ -12,6 +12,7 @@ function runAllBackendTests()
     { name: "testSparseDatasetResilience", run: testSparseDatasetResilience },
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
     { name: "testPeriodComparison", run: testPeriodComparison },
+    { name: "testBusinessPriorityContract", run: testBusinessPriorityContract },
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testAccessibilityContract", run: testAccessibilityContract },
     { name: "testExecutivePresentationContract", run: testExecutivePresentationContract },

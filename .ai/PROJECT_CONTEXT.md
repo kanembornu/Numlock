@@ -16,7 +16,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
 - Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
 - Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
-- `runAllBackendTests()` is the unified local/live backend gate and requires 20/20 PASS, including period comparison, executive presentation, sparse-dataset resilience, date filtering, dashboard-state metadata, accessibility, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 21/21 PASS, including unified business priority, period comparison, executive presentation, sparse-dataset resilience, date filtering, dashboard-state metadata, accessibility, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 - Sprint 5.8 Package 001 product audit is complete. `docs/PRODUCT-BACKLOG.md` is the prioritized evidence inventory; `docs/ROADMAP.md` schedules only Packages 002–004.
 - Sprint 5.8 Package 002 empty/sparse-data resilience and Package 003 date filtering are deployed. Populated response output remains snapshot-protected.
@@ -32,6 +32,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Sprint 5.10 Package 001 completes dashboard accessibility ownership: document/landmark and table semantics, labeled and validated date controls, keyboard-visible focus, hidden-content focus exclusion, bounded live announcements, and CSS/Chart.js reduced-motion behavior.
 - Sprint 5.10 Package 002 places a concise Executive Summary before KPIs, standardizes visible dashboard terminology and badge capitalization, removes repeated executive message cards, tightens whitespace, and presents recommendations as prioritized actions without changing analytics, response fields, accessibility, or responsive behavior.
 - Sprint 5.10 Package 003 adds additive `periodComparison` metrics for all six date filters. Current and previous rows come from the same once-processed transaction array; zero baselines, signed profit movement, shorter months, leap years, and unavailable comparisons have explicit finite semantics. The Executive Summary renders the comparison once without changing KPI values.
+- Sprint 5.10 Package 004 adds one authoritative `businessPriority` selected from existing cached intelligence, Data Quality, and comparison evidence. Explicit precedence, score ordering, and fixed source tie-breaking produce one executable next action while every prior intelligence field and recommendation order remains backward compatible.
 
 ## Architecture and invariants
 

@@ -109,6 +109,10 @@ Completed locally. The dashboard now begins with one concise Executive Summary t
 
 Completed locally. Additive `periodComparison` compares each active filter with its approved previous equivalent using the Apps Script project timezone and the same once-processed transaction array. Current Month and Current Year cap shorter calendar equivalents safely; Custom preserves equal inclusive duration. Finite one-decimal changes and Up/Down/Stable/No Comparison statuses retain signed profit/loss movement and explicit zero-baseline behavior. One compact accessible Executive Summary presentation leaves KPI values and existing analytics unchanged. `testPeriodComparison()` raises the ordered fail-fast unified requirement to 20/20. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
 
+### Package 004 — unified business priority
+
+Completed locally. Additive `businessPriority` deterministically ranks existing Data Quality, profitability, risk, revenue, forecast, expense, product, and stability signals into one complete actionable result. Level and finite score ordering use fixed source precedence for ties; Critical Data Quality remains distinct from business performance. The Executive Summary primary-action card alone consumes the new result, while all existing intelligence fields and backend recommendation ordering remain unchanged. `testBusinessPriorityContract()` raises the ordered fail-fast unified requirement to 21/21. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

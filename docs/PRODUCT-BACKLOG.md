@@ -84,14 +84,16 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P1-4 — Unify decision priority and make recommendations executable
 
+**Status: Completed locally in Sprint 5.10 Package 004; upload and live/browser validation pending.**
+
 - **Problem:** diagnosis sorts by `level`, recommendations sort by independent numeric scores, business focus uses a separate ordered rule set, risk uses a count, and the executive summary uses direction/status. The UI repeats recommendations across several sections, while actions lack owner, due date, measurable outcome, evidence link, or completion state.
 - **User impact:** users can see multiple “top” messages with unclear precedence and cannot turn advice into accountable work.
-- **Proposed solution:** define one documented severity/priority vocabulary and deterministic tie-break rules; include reason/evidence, expected metric movement, and suggested next step in a backward-compatible action model; align executive summary, priority action, risk, focus, and roadmap to that model.
+- **Implemented solution:** added one backward-compatible `businessPriority` with level, title, reason, executable action, source, finite score, and evidence. It ranks existing signals without mutating them, uses score plus fixed source tie-breaking, keeps Critical Data Quality distinct, and replaces only the first-viewport primary-action presentation.
 - **Files likely affected:** `75.Intelligence.Diagnosis.js`, `80.Intelligence.Recommendation.js`, `85.Intelligence.Decision.js`, `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`.
 - **Implementation complexity:** L
 - **Regression risk:** High
-- **Validation required:** matrix fixtures proving cross-output consistency for healthy, declining, low-margin, loss, and mixed-risk scenarios; snapshot/contract checks; browser hierarchy and content review.
-- **Dependency on other items:** P1-1 for period-aware evidence; can first ship against the current all-data scope if the action schema is kept additive.
+- **Validation required:** 20 deterministic scenarios spanning all precedence branches, empty fallback, tie-breaking, finite bounds, evidence completeness, non-mutation, deterministic repeats, single first-viewport ownership, responsive/accessibility preservation, and unified 21/21; browser hierarchy/content review remains required.
+- **Dependency on other items:** P1-1 is complete and provides additive comparison evidence.
 
 ### P1-5 — Make KPI targets configurable and explainable
 

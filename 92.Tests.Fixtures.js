@@ -598,6 +598,216 @@ function createPeriodComparisonFixtures()
   };
 }
 
+function createBusinessPriorityFixtures()
+{
+  return {
+    baseCache: {
+      summary: {
+        revenue: 1000000,
+        expense: 200000,
+        profit: 800000,
+        unitsSold: 100,
+        bestSeller: "Latte",
+        topRevenueProduct: "Latte"
+      },
+      financial: {
+        netProfit: 800000,
+        profitMargin: 20
+      },
+      riskEngine: {
+        riskLevel: "Low",
+        riskCount: 0,
+        risks: []
+      },
+      revenueIntelligence: {
+        direction: "Up",
+        growthRate: 10
+      },
+      forecast: {
+        growthRate: 5
+      },
+      expenseIntelligence: {
+        highestExpense: "Supplies",
+        highestAmount: 60000,
+        expenseShare: 30
+      },
+      revenueConcentration: {
+        product: "Latte",
+        contribution: 40,
+        risk: "Low"
+      },
+      businessScore: {
+        score: 85,
+        status: "Healthy"
+      },
+      recommendations: [
+        { priority: "Low", score: 20, message: "Maintain strategy" }
+      ],
+      priorityAction: {
+        title: "Existing priority",
+        impact: "Low",
+        score: 20,
+        message: "Existing action"
+      },
+      businessFocus: {
+        focus: "Existing focus",
+        priority: "Low",
+        reason: "Existing reason",
+        expectedImpact: "Low"
+      },
+      executiveAlert: {
+        title: "Existing alert",
+        level: "Good",
+        message: "Existing message"
+      },
+      diagnosis: [
+        { level: "good", message: "Existing diagnosis" }
+      ]
+    },
+    dataQuality: {
+      status: "Good",
+      issueCount: 0
+    },
+    periodComparison: {
+      changes: {
+        revenuePercent: 10,
+        expensePercent: -5,
+        profitPercent: 15,
+        unitsSoldPercent: 8
+      },
+      status: {
+        revenue: "Up",
+        expense: "Down",
+        profit: "Up",
+        unitsSold: "Up"
+      }
+    },
+    cases: [
+      {
+        name: "Critical Data Quality wins over business signals",
+        quality: { status: "Critical", issueCount: 3 },
+        overrides: {
+          summary: { profit: -50000 },
+          financial: { netProfit: -50000, profitMargin: -5 },
+          riskEngine: { riskLevel: "High", riskCount: 4, risks: ["a", "b", "c", "d"] },
+          revenueIntelligence: { direction: "Down", growthRate: -30 },
+          forecast: { growthRate: -20 }
+        },
+        expectedLevel: "Critical",
+        expectedSource: "Data Quality"
+      },
+      {
+        name: "negative profit",
+        overrides: {
+          summary: { profit: -50000 },
+          financial: { netProfit: -50000, profitMargin: -5 }
+        },
+        expectedLevel: "Critical",
+        expectedSource: "Profitability"
+      },
+      {
+        name: "critically low profit margin",
+        overrides: {
+          summary: { profit: 20000 },
+          financial: { netProfit: 20000, profitMargin: 2 }
+        },
+        expectedLevel: "High",
+        expectedSource: "Profitability"
+      },
+      {
+        name: "High risk",
+        overrides: {
+          riskEngine: { riskLevel: "High", riskCount: 3, risks: ["a", "b", "c"] }
+        },
+        expectedLevel: "High",
+        expectedSource: "Risk"
+      },
+      {
+        name: "material revenue decline",
+        overrides: {
+          revenueIntelligence: { direction: "Down", growthRate: -20 }
+        },
+        expectedLevel: "High",
+        expectedSource: "Revenue"
+      },
+      {
+        name: "negative forecast",
+        overrides: {
+          forecast: { growthRate: -12 }
+        },
+        expectedLevel: "High",
+        expectedSource: "Forecast"
+      },
+      {
+        name: "expense concentration",
+        overrides: {
+          expenseIntelligence: { highestExpense: "Supplies", highestAmount: 140000, expenseShare: 70 }
+        },
+        expectedLevel: "Medium",
+        expectedSource: "Expense"
+      },
+      {
+        name: "product opportunity",
+        overrides: {
+          revenueConcentration: { product: "Latte", contribution: 60, risk: "High" }
+        },
+        expectedLevel: "Medium",
+        expectedSource: "Product"
+      },
+      {
+        name: "stable maintenance",
+        overrides: {},
+        expectedLevel: "Low",
+        expectedSource: "Stability"
+      },
+      {
+        name: "empty scope",
+        rowCount: 0,
+        overrides: {
+          summary: { revenue: 0, expense: 0, profit: 0, unitsSold: 0 },
+          financial: { netProfit: 0, profitMargin: 0 }
+        },
+        expectedLevel: "Low",
+        expectedSource: "Stability",
+        expectedTitle: "No Business Activity"
+      }
+    ],
+    tieCandidates: [
+      {
+        level: "High",
+        title: "Revenue tie",
+        reason: "Revenue reason",
+        action: "Revenue action",
+        source: "Revenue",
+        score: 80,
+        evidence: { metric: "Revenue", value: 1, comparison: "Down" }
+      },
+      {
+        level: "High",
+        title: "Risk tie",
+        reason: "Risk reason",
+        action: "Risk action",
+        source: "Risk",
+        score: 80,
+        evidence: { metric: "Risk", value: 1, comparison: "Current scope" }
+      }
+    ],
+    frontendTokens: [
+      'id="businessPriorityRegion"',
+      'aria-labelledby="businessPriorityHeading"',
+      'id="businessPriorityLevel"',
+      'id="priorityTitle"',
+      'id="priorityReason"',
+      'id="priorityMessage"',
+      'id="priorityMeta"',
+      'priority.level + " Priority"',
+      '"Next action: " + priority.action',
+      'priority.evidence.metric',
+      'priority.evidence.comparison'
+    ]
+  };
+}
+
 function createResponsiveShellContractFixtures()
 {
   return [

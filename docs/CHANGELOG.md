@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.10 Package 004 additive unified Business Priority without changing or removing recommendations, priorityAction, businessFocus, executiveAlert, riskEngine, diagnosis, analytics, or period comparison.
+- Added deterministic precedence for Critical Data Quality, profitability, High risk, material revenue decline, negative forecast, expense concentration, product concentration, and stable/empty fallback; equal levels use finite score ordering and fixed source precedence.
+- Replaced only the Executive Summary primary-action presentation with accessible Business Priority level, reason, action, and evidence; added `testBusinessPriorityContract()` with 20 scenarios and raised the ordered fail-fast unified gate to 21/21.
 - Completed Sprint 5.10 Package 003 additive period-over-period comparison for Today, Last 7 Days, Current Month, Previous Month, Current Year, and Custom ranges in the Apps Script project timezone.
 - Added finite one-decimal percentage and Up/Down/Stable/No Comparison semantics, including zero baselines, signed profit/loss transitions, shorter-month caps, leap-year safety, one raw read, and one processing pass without changing existing analytics or KPI values.
 - Added one compact accessible Executive Summary comparison, `testPeriodComparison()` with 23 deterministic scenarios, and raised the ordered fail-fast unified gate to 20/20.

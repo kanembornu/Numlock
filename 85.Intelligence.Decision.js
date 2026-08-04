@@ -93,6 +93,396 @@ function buildExecutiveSummary(cache)
   return summary.join(" ");
 }
 
+function clampBusinessPriorityScore(value)
+{
+  var score =
+    Number(value);
+
+  if (!isFinite(score))
+  {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.min(100, score)
+  );
+}
+
+function selectBusinessPriorityCandidate(candidates)
+{
+  var levelOrder = {
+    Critical: 4,
+    High: 3,
+    Medium: 2,
+    Low: 1
+  };
+
+  var sourceOrder = {
+    "Data Quality": 1,
+    Profitability: 2,
+    Risk: 3,
+    Revenue: 4,
+    Forecast: 5,
+    Expense: 6,
+    Product: 7,
+    Stability: 8
+  };
+
+  return (candidates || [])
+    .slice()
+    .sort(function(a, b)
+    {
+      var levelDifference =
+        (levelOrder[b.level] || 0) -
+        (levelOrder[a.level] || 0);
+
+      if (levelDifference !== 0)
+      {
+        return levelDifference;
+      }
+
+      var scoreDifference =
+        clampBusinessPriorityScore(b.score) -
+        clampBusinessPriorityScore(a.score);
+
+      if (scoreDifference !== 0)
+      {
+        return scoreDifference;
+      }
+
+      return (sourceOrder[a.source] || 99) -
+        (sourceOrder[b.source] || 99);
+    })[0];
+}
+
+function formatBusinessPriorityComparison(periodComparison, metric)
+{
+  var comparison =
+    periodComparison || {};
+
+  var status =
+    comparison.status
+      ? comparison.status[metric]
+      : null;
+
+  var changeKey =
+    metric + "Percent";
+
+  var percentage =
+    comparison.changes
+      ? comparison.changes[changeKey]
+      : null;
+
+  if (!status || status === "No Comparison")
+  {
+    return "No Comparison";
+  }
+
+  if (status === "Stable")
+  {
+    return "Stable 0.0%";
+  }
+
+  return status + " " +
+    Math.abs(Number(percentage || 0)).toFixed(1) +
+    "%";
+}
+
+function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodComparison)
+{
+  var summary =
+    cache.summary;
+
+  var financial =
+    cache.financial;
+
+  var risk =
+    cache.riskEngine;
+
+  var revenue =
+    cache.revenueIntelligence;
+
+  var forecast =
+    cache.forecast;
+
+  var expense =
+    cache.expenseIntelligence;
+
+  var concentration =
+    cache.revenueConcentration;
+
+  var quality =
+    dataQuality || {
+      status: "Good",
+      issueCount: 0
+    };
+
+  var candidates = [];
+
+  function addCandidate(candidate)
+  {
+    candidates.push({
+      level: candidate.level,
+      title: candidate.title,
+      reason: candidate.reason,
+      action: candidate.action,
+      source: candidate.source,
+      score:
+        clampBusinessPriorityScore(
+          candidate.score
+        ),
+      evidence: {
+        metric: candidate.evidence.metric,
+        value: candidate.evidence.value,
+        comparison: candidate.evidence.comparison
+      }
+    });
+  }
+
+  if (quality.status === "Critical")
+  {
+    addCandidate({
+      level: "Critical",
+      title: "Resolve Data Quality Issues",
+      reason:
+        quality.issueCount +
+        " data issue(s) may reduce confidence in this dashboard.",
+      action:
+        "Review the Data Quality details and correct high-severity source records.",
+      source: "Data Quality",
+      score: 100,
+      evidence: {
+        metric: "Data quality issues",
+        value: quality.issueCount,
+        comparison: "Current scope"
+      }
+    });
+  }
+
+  if (Number(scopedRowCount || 0) === 0)
+  {
+    addCandidate({
+      level: "Low",
+      title: "No Business Activity",
+      reason:
+        "No transactions are available for the selected period.",
+      action:
+        "Select another reporting period or verify source data.",
+      source: "Stability",
+      score: 10,
+      evidence: {
+        metric: "Transaction rows",
+        value: 0,
+        comparison: "Current scope"
+      }
+    });
+
+    return selectBusinessPriorityCandidate(
+      candidates
+    );
+  }
+
+  if (Number(summary.profit) < 0)
+  {
+    addCandidate({
+      level: "Critical",
+      title: "Restore Profitability",
+      reason:
+        "The selected period has a net loss of Rp " +
+        Math.abs(Number(summary.profit)).toLocaleString("id-ID") +
+        ".",
+      action:
+        "Review the largest expenses and pricing, then assign one immediate margin-recovery action.",
+      source: "Profitability",
+      score: 98,
+      evidence: {
+        metric: "Net profit",
+        value: summary.profit,
+        comparison:
+          formatBusinessPriorityComparison(
+            periodComparison,
+            "profit"
+          )
+      }
+    });
+  }
+  else if (Number(financial.profitMargin) < 5)
+  {
+    addCandidate({
+      level: "High",
+      title: "Improve Profit Margin",
+      reason:
+        "Profit margin is critically low at " +
+        Number(financial.profitMargin) +
+        "%.",
+      action:
+        "Compare the largest controllable cost with current pricing and choose one margin improvement.",
+      source: "Profitability",
+      score: 95,
+      evidence: {
+        metric: "Profit margin",
+        value: financial.profitMargin,
+        comparison:
+          formatBusinessPriorityComparison(
+            periodComparison,
+            "profit"
+          )
+      }
+    });
+  }
+
+  if (risk.riskLevel === "High")
+  {
+    addCandidate({
+      level: "High",
+      title: "Address Active Business Risks",
+      reason:
+        risk.riskCount +
+        " active risks are classified as High.",
+      action:
+        "Review the risk list and assign an owner to the highest-impact item today.",
+      source: "Risk",
+      score: 90,
+      evidence: {
+        metric: "Active risks",
+        value: risk.riskCount,
+        comparison: "Current scope"
+      }
+    });
+  }
+
+  if (
+    revenue.direction === "Down" &&
+    Number(revenue.growthRate) <= -10
+  )
+  {
+    addCandidate({
+      level: "High",
+      title: "Recover Revenue",
+      reason:
+        "Revenue declined materially by " +
+        Math.abs(Number(revenue.growthRate)) +
+        "%.",
+      action:
+        "Select the strongest product and run one focused sales action for the next reporting period.",
+      source: "Revenue",
+      score: 85,
+      evidence: {
+        metric: "Revenue change",
+        value: revenue.growthRate,
+        comparison:
+          formatBusinessPriorityComparison(
+            periodComparison,
+            "revenue"
+          )
+      }
+    });
+  }
+
+  if (Number(forecast.growthRate) < 0)
+  {
+    addCandidate({
+      level: "High",
+      title: "Prevent Forecast Decline",
+      reason:
+        "The revenue forecast is down " +
+        Math.abs(Number(forecast.growthRate)) +
+        "%.",
+      action:
+        "Prepare one promotion or retention action before the next forecast period begins.",
+      source: "Forecast",
+      score: 80,
+      evidence: {
+        metric: "Forecast growth",
+        value: forecast.growthRate,
+        comparison: "Forecast rate"
+      }
+    });
+  }
+
+  if (
+    expense.highestExpense &&
+    Number(expense.expenseShare) >= 50
+  )
+  {
+    addCandidate({
+      level: "Medium",
+      title: "Review Expense Concentration",
+      reason:
+        expense.highestExpense +
+        " represents " +
+        Number(expense.expenseShare) +
+        "% of expenses.",
+      action:
+        "Review this expense category and identify one saving that preserves operations.",
+      source: "Expense",
+      score: 70,
+      evidence: {
+        metric: "Top expense share",
+        value: expense.expenseShare,
+        comparison:
+          formatBusinessPriorityComparison(
+            periodComparison,
+            "expense"
+          )
+      }
+    });
+  }
+
+  if (
+    concentration.product &&
+    (
+      concentration.risk === "High" ||
+      Number(concentration.contribution) >= 50
+    )
+  )
+  {
+    addCandidate({
+      level: "Medium",
+      title: "Strengthen Product Resilience",
+      reason:
+        concentration.product +
+        " contributes " +
+        Number(concentration.contribution) +
+        "% of revenue.",
+      action:
+        "Protect availability of this product and identify one secondary revenue contributor.",
+      source: "Product",
+      score: 60,
+      evidence: {
+        metric: "Top product contribution",
+        value: concentration.contribution,
+        comparison:
+          formatBusinessPriorityComparison(
+            periodComparison,
+            "revenue"
+          )
+      }
+    });
+  }
+
+  addCandidate({
+    level: "Low",
+    title: "Maintain Current Performance",
+    reason:
+      "No higher-priority condition is active for the selected period.",
+    action:
+      "Continue the current plan and review the next period comparison.",
+    source: "Stability",
+    score: 20,
+    evidence: {
+      metric: "Business score",
+      value: cache.businessScore.score,
+      comparison: "Current scope"
+    }
+  });
+
+  return selectBusinessPriorityCandidate(
+    candidates
+  );
+}
+
 function buildRiskEngine(cache)
 {
   var risks = [];

@@ -1062,6 +1062,14 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
     filteredData
   );
 
+  var businessPriority =
+    buildBusinessPriority(
+      cache,
+      dataQuality,
+      filteredData.length,
+      periodComparison
+    );
+
     return {
       summary:
         cache.summary,
@@ -1167,6 +1175,9 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       periodComparison:
         periodComparison,
+
+      businessPriority:
+        businessPriority,
 
     };
 }

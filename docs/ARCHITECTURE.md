@@ -27,6 +27,8 @@ Source-level date inspection is deliberately separate from analytics scoping. `g
 
 Period comparison is a service-layer additive projection. `resolvePreviousComparisonDateRange()` derives the prior equivalent boundaries in the Apps Script project timezone, and both current and previous subsets filter the same processed transaction array. Only revenue, expense, signed profit, units sold, and row count are aggregated for the previous period; no second dashboard response or analytics cache is built. Today uses the previous day, Last 7 Days uses the preceding seven days, Current Month uses the same elapsed day count capped to the previous month, Previous Month uses the full month before it, Current Year uses prior-year-to-date with leap-day capping, and Custom uses the immediately preceding equal inclusive duration.
 
+Unified Business Priority is an additive decision-layer projection. `buildBusinessPriority()` receives the completed analytics/intelligence cache plus already-built Data Quality, scoped-row count, and period-comparison evidence. It never reads or rescans transactions and never mutates recommendations, diagnosis, risk, focus, alert, or legacy priority objects. Candidate selection uses level, finite score, and fixed source precedence to return exactly one complete `businessPriority`; Critical Data Quality remains explicitly sourced as Data Quality rather than a business-performance failure.
+
 ## Aggregate Engine
 
 `buildAggregate(data)` is the analytics source of truth for the migrated domains:
@@ -65,7 +67,7 @@ Period comparison is a service-layer additive projection. `resolvePreviousCompar
 | `94.Tests.Assertions.js` | Reusable test-only assertions, including recursive finite-number validation. |
 | `95.Tests.Validators.js` | Pure analytics invariant validators and diagnostics; no runnable test entry points. |
 | `96.Tests.Cases.js` | Directly runnable Apps Script backend tests. |
-| `98.Tests.Runner.js` | Ordered, fail-fast unified 20-test backend suite. |
+| `98.Tests.Runner.js` | Ordered, fail-fast unified 21-test backend suite. |
 | `100.Code.js` | Web entry points such as `doGet()`. |
 | `190.View.Index.html` | Dashboard HTML and browser runtime. |
 | `appsscript.json` | Apps Script manifest. |
@@ -104,6 +106,7 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `testHotColdFixtures()`
 - `testSparseDatasetResilience()`
 - `testPeriodComparison()`
+- `testBusinessPriorityContract()`
 - `runAllBackendTests()`
 
 The test functions are editor-run validation entry points, not UI endpoints. Apps Script does not automatically display returned objects, so `testSparseDatasetResilience()` explicitly logs its successful seven-fixture, 30-property, populated-equivalence summary. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.

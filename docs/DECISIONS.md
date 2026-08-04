@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Own one authoritative Business Priority in the decision layer
+
+The response adds exactly one `businessPriority` with level, title, factual reason, executable action, allowed source, finite 0–100 score, and complete metric/value/comparison evidence. Existing `recommendations`, `priorityAction`, `businessFocus`, `executiveAlert`, `riskEngine`, and `diagnosis` remain unchanged and backward compatible; their ordering, formulas, and messages are not inputs to mutation.
+
+Candidate precedence is Critical Data Quality, negative profit or critically low margin, High risk, material revenue decline, negative forecast, excessive top-expense concentration, product/revenue concentration opportunity, then stable maintenance. Selection sorts by Critical/High/Medium/Low, then explicit descending score, then fixed Data Quality, Profitability, Risk, Revenue, Forecast, Expense, Product, Stability source order. Critical Data Quality is labeled only as Data Quality and never as a business-performance failure. Empty scope returns the mandated Low/Stability no-activity action unless Critical source quality requires attention.
+
+`buildBusinessPriority()` consumes only the completed cache and already-built service metadata; it performs no spreadsheet read, processed-row scan, or analytics recomputation. The Executive Summary primary-action card is its sole first-viewport owner and renders status text, reason, action, and concise evidence without exposing score or relying on color. Supporting recommendations remain available and retain backend order.
+
 ### Compare active periods with one truthful prior-period contract
 
 The dashboard response adds `periodComparison` without changing any existing KPI, formula, filter boundary, forecast, intelligence output, or response property. Today compares with the previous calendar day; Last 7 Days with the preceding seven days; Current Month with the same elapsed day count in the previous month capped at that month end; Previous Month with the full month before it; Current Year with equivalent prior-year-to-date capped safely across leap years; and Custom with the immediately preceding equal inclusive duration. All boundaries use the Apps Script project timezone.

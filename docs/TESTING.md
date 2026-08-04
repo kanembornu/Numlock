@@ -26,6 +26,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testSparseDatasetResilience()` — seven deterministic end-to-end dashboard-response fixtures covering empty, sales-only, purchase-only, one-row, sparse mixed, and populated data.
 - `testDashboardDateFilter()` — 58 deterministic assertions covering normalization, preset/custom ranges, inclusivity, invalid inputs/dates, immutability, response equivalence, Revenue Trend scope/order, finite values, and empty results.
 - `testPeriodComparison()` — 23 deterministic scenarios covering all six previous-equivalent ranges, shorter months, leap years, equal inclusive duration, empty and zero baselines, signed profit/loss transitions, finite rounding, immutability, one-read/one-process architecture, and accessible frontend statuses.
+- `testBusinessPriorityContract()` — 20 deterministic scenarios covering every precedence branch, empty fallback, score/source tie-breaking, finite bounds, complete evidence, deterministic repeats, non-mutation, one authoritative response, first-viewport uniqueness, and preserved responsive/accessibility contracts.
 - `testDashboardStateContract()` — five deterministic contract scenarios covering the state vocabulary plus empty, purchase-only, sales-only, and populated scoped-row semantics.
 - `testAccessibilityContract()` — 22 deterministic/static scenarios covering document/landmark, form/validation, navigation, table, live-region, focus, keyboard, hidden-content, and reduced-motion contracts.
 - `testExecutivePresentationContract()` — seven deterministic/static scenarios covering section order, first-position Executive Summary, heading and badge consistency, recommendation priority order, non-duplicated executive messages, responsive hierarchy, and preserved accessibility.
@@ -60,21 +61,23 @@ Deterministic tests must throw on mismatches. A returned `passed: true` or succe
 
 `testHotColdFixtures()` is the authoritative Hot/Cold Split regression test. It asserts repeated Hot and Cold Sales quantity totals, zero quantities, ignored non-Sales rows, ignored unknown categories, exact case-sensitive matching that excludes differently cased values, and empty output. Expected `hot` and `cold` totals are literal and independent. The former Hot/Cold Split oracle, validator, and migration entry point were retired after this test and the unified suite passed live in Apps Script.
 
-`testSparseDatasetResilience()` calls the same `buildDashboardResponse()` composition path used by `getDashboardData()`. It requires all 34 public response properties, recursively rejects `NaN` and infinite numbers, validates diagnosis/recommendation/risk/alert/roadmap structures, and compares every pre-existing populated output with a literal snapshot while treating additive metadata separately.
+`testSparseDatasetResilience()` calls the same `buildDashboardResponse()` composition path used by `getDashboardData()`. It requires all 35 public response properties, recursively rejects `NaN` and infinite numbers, validates diagnosis/recommendation/risk/alert/roadmap structures, and compares every pre-existing populated output with a literal snapshot while treating additive metadata separately.
 
 Backend test ownership is separated by responsibility:
 
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all nineteen directly runnable `test*` functions.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 20-test suite.
+- `96.Tests.Cases.js` contains all twenty directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 21-test suite.
 
-Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=34 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
+Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=35 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
 
 `testDashboardDateFilter()` uses fixed reference dates and project-timezone date keys. It covers missing/null/unknown normalization to `currentYear`; `today`; inclusive `last7days` within one month and across two months; month/year presets; custom single/multi-month and cross-year boundaries; invalid custom input; immutable filtering; ignored invalid row dates; parameterless equivalence; current partial-month Revenue Trend inclusion; ascending trend labels; finite values; and renderable empty or zero-revenue results. Its success log reports scenarios, Current Year rows, custom rows, and the resolved timezone.
 
 `testPeriodComparison()` validates Today/previous-day, Last 7 Days/prior-seven-day, elapsed Current Month, full Previous Month, elapsed Current Year, and equal-duration Custom rules in the Apps Script project timezone. It covers shorter prior months, leap-day capping, inclusive boundaries, empty periods, zero baselines, profit-to-loss and loss-to-profit movement, finite one-decimal rounding, processed-array immutability, one raw read, one processing pass, one current analytics cache, additive response shape, and frontend Up/Down/Stable/No Comparison rendering. It logs `PASS: testPeriodComparison | scenarios=23 | presets=6 | finite=true`.
+
+`testBusinessPriorityContract()` validates Critical Data Quality precedence, negative profit, critically low margin, High risk, material revenue decline, negative forecast, expense concentration, product opportunity, stable and empty fallbacks, descending score and fixed source tie-breaking, finite bounds, complete evidence, immutable existing intelligence objects, deterministic repeated inputs, one additive response result, accessible field rendering, first-viewport uniqueness, and responsive/accessibility preservation. It logs `PASS: testBusinessPriorityContract | scenarios=20 | levels=Critical,High,Medium,Low`.
 
 `testDashboardStateContract()` validates the exact loading/success/empty/error/retry vocabulary and additive `dateFilter.rowCount` for empty, purchase-only, sales-only, and populated responses. It logs `PASS: testDashboardStateContract | scenarios=5 | states=loading,success,empty,error,retry`. Frontend lifecycle mocks separately validate request failure, render exceptions, retry request identity, duplicate blocking, stale-handler suppression, control recovery, filter retention, live-region semantics, and the no-raw-payload Console policy.
 
@@ -94,7 +97,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `20/20` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `21/21` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -111,7 +114,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `20/20`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, scoped-row state metadata, accessibility, executive presentation, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `21/21`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, scoped-row state metadata, accessibility, executive presentation, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 
