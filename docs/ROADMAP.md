@@ -127,11 +127,11 @@ Sprint 5.11 is complete. Package 001 is committed at `46e42b1` and confirms stab
 
 Completed and uploaded. Stable shell, control, skeleton, and state nodes are cached once while generated children remain uncached. The immediate render retains dashboard state, Executive Summary, KPI cards, reporting metadata, comparison, KPI-target context, Data Quality, and charts. One cancellable, request-token-guarded animation-frame phase renders detailed intelligence, recommendations, decision support, product detail, roadmap, and recent transactions exactly once. Response arrays are never sorted or mutated in place, public payloads and visible output remain unchanged, and `testClientRenderPerformanceContract()` raises the ordered fail-fast unified requirement to 23/23. API projection remains excluded pending an external-consumer inventory; Apps Script runtime and browser acceptance remain separate unverified evidence.
 
-## Recommended next package
+## Sprint 5.12 — in progress
 
 ### Sprint 5.12 Package 001 — print-ready filtered executive report
 
-Add an independently releasable print view for the current filtered Executive Summary and its supporting visible metrics, scope, freshness, and comparison context. User value is immediate meeting and archive usability without screenshots. Dependencies are ready because authoritative date scope, reporting metadata, comparison, and executive hierarchy are complete. Risk is medium and bounded to print CSS, one accessible Print action, current visible data, and print/PDF acceptance. Exclude CSV, hidden spreadsheet data, backend payload changes, drill-down, and persistence.
+Completed locally. One accessible Print Report action invokes browser-native print for the successfully rendered active period. A print-only header includes report title, active period, generated date, and unchanged NUMLOCK version; authored A4 portrait CSS retains current KPIs, Executive Summary, Business Priority, comparison, reporting metadata, freshness, Data Quality status, charts and summaries, and recommendations. Navigation, controls, skeletons, disclosures, inactive pages, and hidden content are excluded. `testPrintReportContract()` raises the ordered gate to 24/24 without analytics, backend response, CSV/PDF library, GitHub Pages, or release-version changes. Upload, Apps Script runtime, and browser print acceptance remain separate evidence.
 
 ## Ongoing release obligations
 

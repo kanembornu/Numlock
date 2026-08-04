@@ -47,6 +47,168 @@
         #dashboardSidebar { transition: none; }
         #actionRoadmapCard .text-xl { transition: none; }
       }
+
+      #printReportHeader { display: none; }
+
+      @page
+      {
+        size: A4 portrait;
+        margin: 12mm;
+      }
+
+      @media print
+      {
+        html,
+        body
+        {
+          width: 100%;
+          max-width: 100%;
+          overflow: visible !important;
+          background: #ffffff !important;
+          color: #0f172a;
+        }
+
+        body *
+        {
+          box-sizing: border-box;
+        }
+
+        #dashboardSidebar,
+        #sidebarBackdrop,
+        #sidebarMenuButton,
+        #dashboardScreenHeader,
+        #dashboardStatus,
+        #dateFilterControls > label,
+        #dateFilterControls > select,
+        #customDateRange,
+        #dateFilterValidation,
+        #dataQualityDetailsButton,
+        #dataQualityDetails,
+        #kpiTargetDetailsButton,
+        #kpiTargetDetails,
+        #transactions,
+        button,
+        .skeleton,
+        [id$="Skeleton"],
+        .page:not(#dashboard),
+        [hidden]
+        {
+          display: none !important;
+        }
+
+        #mainContent,
+        #dashboard,
+        #dashboardContent
+        {
+          display: block !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          opacity: 1 !important;
+          overflow: visible !important;
+        }
+
+        #printReportHeader
+        {
+          display: block !important;
+          margin: 0 0 8mm;
+          padding-bottom: 5mm;
+          border-bottom: 1px solid #cbd5e1;
+        }
+
+        #printReportHeader h1
+        {
+          margin: 0 0 2mm;
+          font-size: 22pt;
+          line-height: 1.15;
+        }
+
+        #printReportHeader p
+        {
+          margin: 1mm 0;
+          font-size: 9pt;
+        }
+
+        #reportingInformation
+        {
+          display: flex !important;
+          margin: 0 0 6mm !important;
+          padding: 3mm;
+          border: 1px solid #cbd5e1;
+          background: #ffffff !important;
+        }
+
+        .grid
+        {
+          display: block !important;
+        }
+
+        section,
+        #businessOverview > div,
+        #executiveCenter,
+        #diagnosisContainer > div,
+        #recommendationContainer > div,
+        #actionRoadmapCard,
+        #riskList > div
+        {
+          max-width: 100% !important;
+          overflow: visible !important;
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+
+        section,
+        #businessOverview > div,
+        #executiveCenter,
+        .grid > div
+        {
+          margin-bottom: 5mm !important;
+          box-shadow: none !important;
+        }
+
+        #mainChartWrapper,
+        #hotColdWrapper,
+        #expenseWrapper
+        {
+          width: 100% !important;
+          max-width: 100% !important;
+          height: 58mm !important;
+          overflow: hidden !important;
+        }
+
+        canvas
+        {
+          max-width: 100% !important;
+          max-height: 58mm !important;
+        }
+
+        #revenueChartSummary,
+        #hotColdChartSummary,
+        #expenseChartSummary
+        {
+          display: block !important;
+          color: #334155 !important;
+          font-size: 9pt;
+        }
+
+        table
+        {
+          width: 100% !important;
+          max-width: 100% !important;
+          table-layout: fixed;
+        }
+
+        p,
+        li,
+        td,
+        th,
+        div
+        {
+          overflow-wrap: anywhere;
+          word-break: normal;
+        }
+      }
     </style>
   </head>
 
@@ -131,7 +293,7 @@
 
     <!-- HEADER -->
     <div class="flex min-w-0 flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-      <div class="min-w-0">
+      <div id="dashboardScreenHeader" class="min-w-0">
         <div class="text-slate-500 text-sm mb-2"> Welcome Back 👋 </div>
         <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900"> Executive Dashboard </h1>
         <p class="text-slate-500 mt-3"> Business performance, attention areas, and next actions </p>
@@ -152,6 +314,16 @@
           <option value="currentYear" selected>Current Year</option>
           <option value="custom">Custom</option>
         </select>
+
+        <button
+          id="printReportButton"
+          type="button"
+          onclick="printDashboardReport()"
+          class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white sm:w-auto"
+          aria-label="Print current dashboard report"
+          disabled>
+          Print Report
+        </button>
 
         <div id="customDateRange" class="hidden w-full mt-2 flex flex-wrap gap-2">
           <label for="customStart" class="sr-only">Custom start date</label>
@@ -216,6 +388,13 @@
         </div>
       </div>
     </div>
+
+    <header id="printReportHeader" aria-label="Printed report information">
+      <h1>NUMLOCK Executive Report</h1>
+      <p><strong>Active period:</strong> <span id="printReportPeriod">Not available</span></p>
+      <p><strong>Generated:</strong> <span id="printReportGenerated">Not available</span></p>
+      <p><strong>NUMLOCK version:</strong> <span id="printReportVersion" data-version-source="template.version"><?= version ?></span></p>
+    </header>
 
     <div
       id="dashboardStatus"
@@ -548,6 +727,11 @@
         dashboardContent: document.getElementById("dashboardContent")
       };
 
+      stableDashboardElements.printReportButton =
+        stableDashboardElements.filter.nextElementSibling;
+      stableDashboardElements.printReportHeader =
+        stableDashboardElements.dashboardStatus.previousElementSibling;
+
       return stableDashboardElements;
     }
 
@@ -742,6 +926,9 @@
       setDashboardControlsDisabled(
         dashboardRequestInFlight
       );
+
+      elements.printReportButton.disabled =
+        state !== "success";
 
       status.classList.toggle(
         "hidden",
@@ -1273,6 +1460,28 @@
       }
 
       requestDashboardData(lastDashboardRequest);
+    }
+
+    function printDashboardReport()
+    {
+      var elements = initializeStableDashboardElements();
+      var printMetadata =
+        elements.printReportHeader.getElementsByTagName("span");
+      var activePeriod =
+        elements.filter.parentElement
+          .querySelector("#dateFilterLabel")
+          .innerText;
+
+      printMetadata[0].innerText =
+        activePeriod || "Not available";
+
+      printMetadata[1].innerText =
+        new Date().toLocaleString("en-GB", {
+          dateStyle: "long",
+          timeStyle: "short"
+        });
+
+      window.print();
     }
 
     function requestDashboardData(request)

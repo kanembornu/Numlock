@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.12 Package 001 with one accessible Print Report button, browser-native `window.print()`, and authored A4 portrait print CSS for the currently rendered dashboard period.
+- Added a print-only NUMLOCK Executive Report header with active period, generated date, and unchanged release version; retained KPIs, Executive Summary, Business Priority, comparison, reporting metadata, freshness, Data Quality status, charts and their text summaries, and recommendations while excluding navigation, controls, skeletons, disclosures, and hidden pages.
+- Added `testPrintReportContract()` with 13 static scenarios and raised the ordered fail-fast unified gate to 24/24 without changing analytics, backend responses, GitHub Pages, or release metadata.
 - Closed Sprint 5.11 after confirming Package 001 stable DOM-reference caching, bounded deferred rendering, stale deferred-work cancellation, and frontend mutation safety in commit `46e42b1`. The latest verified gate remains local 23/23 plus the successful 26-file clasp upload; Apps Script runtime, deployment, and browser acceptance remain unverified.
 - Completed Sprint 5.11 Package 001 bounded client-render performance without changing analytics, response contracts, visible output, filter/retry behavior, accessibility, responsive behavior, or chart lifecycle.
 - Cached only stable shell, control, skeleton, and dashboard-state DOM references; retained dynamic generated children as uncached render output; and kept response collections immutable by copying or using non-mutating iteration.

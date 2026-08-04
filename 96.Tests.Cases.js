@@ -2228,6 +2228,194 @@ function testExecutivePresentationContract()
   return summary;
 }
 
+function testPrintReportContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  [
+    'id="printReportButton"',
+    'type="button"',
+    'Print Report',
+    'aria-label="Print current dashboard report"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print button contract");
+  });
+  scenariosPassed++;
+
+  assertSourceContainsOnce(
+    source,
+    'onclick="printDashboardReport()"',
+    "print handler"
+  );
+  assertSourceContainsOnce(
+    source,
+    "function printDashboardReport()",
+    "print function"
+  );
+  scenariosPassed++;
+
+  assertSourceContainsOnce(
+    source,
+    "window.print();",
+    "browser print invocation"
+  );
+  scenariosPassed++;
+
+  [
+    'id="printReportHeader"',
+    "NUMLOCK Executive Report",
+    'id="printReportPeriod"',
+    'id="printReportGenerated"',
+    'id="printReportVersion"',
+    'data-version-source="template.version"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Print Report metadata contract");
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardSidebar,",
+    "#sidebarBackdrop,",
+    "#sidebarMenuButton,",
+    "#dashboardStatus,",
+    "#dataQualityDetailsButton,",
+    "#kpiTargetDetailsButton,",
+    "button,",
+    ".skeleton,"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print control exclusion");
+  });
+  scenariosPassed++;
+
+  [
+    'id="executiveSummarySection"',
+    'id="businessOverview"',
+    'id="businessPriorityRegion"',
+    'id="periodComparisonSection"',
+    'id="reportingInformation"',
+    'id="dataQualityInformation"',
+    'id="recommendationContainer"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print report section");
+  });
+  scenariosPassed++;
+
+  assertSourceContains(
+    source,
+    ".page:not(#dashboard),",
+    "inactive page print exclusion"
+  );
+  assertSourceContains(
+    source,
+    "#transactions,",
+    "hidden transaction page print exclusion"
+  );
+  scenariosPassed++;
+
+  [
+    "@page",
+    "size: A4 portrait;",
+    "@media print",
+    "background: #ffffff !important;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "A4 print layout");
+  });
+  scenariosPassed++;
+
+  [
+    "max-width: 100% !important;",
+    "overflow: visible !important;",
+    "overflow-wrap: anywhere;",
+    "table-layout: fixed;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print overflow protection");
+  });
+  scenariosPassed++;
+
+  [
+    "break-inside: avoid;",
+    "page-break-inside: avoid;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print card break protection");
+  });
+  scenariosPassed++;
+
+  [
+    'id="revenueChartSummary"',
+    'id="hotColdChartSummary"',
+    'id="expenseChartSummary"',
+    "#revenueChartSummary,",
+    "display: block !important;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print chart summary");
+  });
+  scenariosPassed++;
+
+  var printFunctionStart =
+    source.indexOf("function printDashboardReport()");
+  var printFunctionEnd =
+    source.indexOf("function requestDashboardData", printFunctionStart);
+  var printFunctionSource =
+    source.slice(printFunctionStart, printFunctionEnd);
+
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "CSV",
+    "PDF"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      printFunctionSource,
+      token,
+      "print backend or export dependency"
+    );
+  });
+  scenariosPassed++;
+
+  createAccessibilityContractFixtures()
+    .concat(createResponsiveShellContractFixtures())
+    .forEach(function(fixture)
+    {
+      fixture.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "preserved frontend contract / " + fixture.name
+        );
+      });
+    });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    printReady: true
+  };
+
+  Logger.log(
+    "PASS: testPrintReportContract | scenarios=" +
+    summary.scenarios +
+    " | printReady=" +
+    summary.printReady
+  );
+
+  return summary;
+}
+
 function testClientRenderPerformanceContract()
 {
   var source =

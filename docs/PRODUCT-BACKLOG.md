@@ -213,7 +213,7 @@ Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b
 
 ### P3-1 — Add print/export views
 
-**Status: The print-only current-filter executive report is recommended as Sprint 5.12 Package 001. CSV remains deferred pending field, permission, and privacy requirements.**
+**Status: The print-only current-filter executive report is completed locally in Sprint 5.12 Package 001. CSV remains deferred pending field, permission, and privacy requirements.**
 
 - **Problem:** there is no print stylesheet or export action for executive reporting.
 - **User impact:** users must copy or screenshot dashboard content for meetings and archives.
@@ -252,12 +252,16 @@ Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b
 
 ### Sprint 5.12 Package 001 — Print-ready filtered executive report
 
+**Status: Completed locally; upload, Apps Script runtime, and browser print acceptance remain separate evidence.**
+
 - **Objective:** provide one accessible Print action and a print/PDF layout for the current filtered Executive Summary, visible supporting KPIs, reporting scope, freshness, and period comparison.
 - **User value:** enables meeting handouts and archival reporting without screenshots or manual copying.
 - **Dependency readiness:** Ready; authoritative date scope, reporting metadata, period comparison, and executive hierarchy are complete.
 - **Implementation risk:** Medium and frontend-bounded; preserve on-screen behavior and print only data already visible for the active filter.
 - **Expected validation:** current/custom filter consistency, print/PDF visual acceptance, keyboard-accessible action, no hidden-data disclosure, unchanged screen styles, and the full unified gate.
 - **Scope:** bounded print portion of P3-1 only; exclude CSV, backend payload changes, hidden spreadsheet fields, drill-down, and persistence.
+
+The implemented package uses one accessible browser-print action and authored A4 portrait rules. It prints only the active dashboard's visible executive content and reporting context, preserves chart summaries, adds title/period/generated/version metadata, and suppresses navigation, controls, skeletons, disclosures, inactive pages, and hidden content. `testPrintReportContract()` adds 13 scenarios and raises the ordered gate to 24/24 without changing analytics or backend contracts.
 
 ## Explicitly not prioritized as defects
 

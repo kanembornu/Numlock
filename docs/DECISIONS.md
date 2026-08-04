@@ -2,6 +2,12 @@
 
 ## Active decisions
 
+### Keep filtered executive reporting browser-native and print-only
+
+The active dashboard DOM is the sole print-report source. One native, labeled Print Report button is enabled only after a successful dashboard render, copies the already-rendered active period into a print-only header, records the browser-generated date, retains the injected NUMLOCK version, and invokes `window.print()` exactly once. It performs no server call, analytics calculation, export transformation, persistence, or response-field access.
+
+Authored `@media print` and `@page` rules own an A4 portrait layout without altering screen styling. The print report retains the current Executive Summary, Business Priority, KPIs, period comparison, reporting scope, freshness, Data Quality status, charts, accessible chart summaries, and recommendations. Navigation, drawer controls, Retry, filter/disclosure controls, skeletons, inactive pages, and hidden content are excluded. Layout rules constrain widths, wrap text, bound chart dimensions, and avoid card breaks where practical; CSV, generated-PDF libraries, backend export, hidden fields, GitHub Pages, and release-version changes remain outside this package.
+
 ### Centralize system-defined KPI targets without implying editability
 
 `KPI_TARGET_CONFIG` is the single immutable owner of stable KPI and business-status thresholds already used in production. Package 005 moves those literals without changing formulas or boundary behavior across Business Score, Growth Score, KPI Achievement, Business Maturity, Diagnosis, Recommendations, Risk, Business Focus, Executive Alert, and Business Priority. Deeply frozen nested definitions prevent accidental runtime mutation.
