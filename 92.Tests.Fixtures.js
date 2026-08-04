@@ -653,7 +653,12 @@ function createDataQualityDiagnosticsFixtures()
           issueRows: 0,
           issueCount: 0,
           status: "Good",
-          issues: []
+          issues: [],
+          scope: {
+            sourceRows: 0,
+            scopedRows: 0,
+            excludedInvalidDateRows: 0
+          }
         }
       },
       {
@@ -665,7 +670,12 @@ function createDataQualityDiagnosticsFixtures()
           issueRows: 0,
           issueCount: 0,
           status: "Good",
-          issues: []
+          issues: [],
+          scope: {
+            sourceRows: 2,
+            scopedRows: 2,
+            excludedInvalidDateRows: 0
+          }
         }
       },
       {
@@ -760,6 +770,90 @@ function createDataQualityDiagnosticsFixtures()
       "MISSING_PURCHASE_CATEGORY",
       "INVALID_QUANTITY",
       "INVALID_PURCHASE_AMOUNT"
+    ]
+  };
+}
+
+function createSourceDataQualityPipelineFixtures()
+{
+  var header = [
+    "Date",
+    "Category",
+    "Type",
+    "Product",
+    "Purchase Category",
+    "Qty",
+    "Amount"
+  ];
+
+  var validSales = [
+    new Date(2026, 5, 10, 9, 0, 0),
+    "Hot",
+    "Sales",
+    "Latte",
+    "",
+    1,
+    0
+  ];
+
+  var validPurchase = [
+    new Date(2026, 5, 11, 9, 0, 0),
+    "",
+    "Purchase",
+    "",
+    "Supplies",
+    0,
+    5000
+  ];
+
+  var invalidDateSales = [
+    "not-a-date",
+    "Hot",
+    "Sales",
+    "Latte",
+    "",
+    1,
+    0
+  ];
+
+  return {
+    referenceDate:
+      new Date(2026, 5, 15, 12, 0, 0),
+    priceMap: {
+      Latte: { P26Hot: 30000 }
+    },
+    raw: {
+      validOnly: [header, validSales, validPurchase],
+      oneInvalid: [header, validSales, invalidDateSales],
+      multipleInvalid: [
+        header,
+        invalidDateSales,
+        ["", "", "Purchase", "", "Supplies", 0, 5000]
+      ],
+      invalidAndMedium: [
+        header,
+        invalidDateSales,
+        [new Date(2026, 5, 12), "Hot", "Sales", "", "", 1, 0]
+      ],
+      invalidOutsidePeriod: [
+        header,
+        invalidDateSales,
+        [new Date(2026, 4, 20), "Hot", "Sales", "Latte", "", 1, 0]
+      ],
+      allInvalid: [
+        header,
+        invalidDateSales,
+        ["invalid-again", "", "Purchase", "", "Supplies", 0, 5000]
+      ],
+      empty: [],
+      headerOnly: [header]
+    },
+    frontendTokens: [
+      'id="dataQualityScopeSummary"',
+      'quality.scope.scopedRows +',
+      '" scoped rows · "',
+      'quality.scope.excludedInvalidDateRows +',
+      '" invalid-date rows excluded"'
     ]
   };
 }

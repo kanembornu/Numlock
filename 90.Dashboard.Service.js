@@ -7,6 +7,11 @@ function getDashboardData(filter, customStart, customEnd) {
   var transactions =
     getTransactionData(ss);
 
+  var sourceQuality =
+    inspectSourceDateQuality(
+      transactions
+    );
+
   var priceMap =
     getPriceMap(ss);
 
@@ -19,7 +24,9 @@ function getDashboardData(filter, customStart, customEnd) {
     processedData,
     filter,
     customStart,
-    customEnd
+    customEnd,
+    null,
+    sourceQuality
   );
 }
 
@@ -438,7 +445,7 @@ function buildReportingMetadata(scopedData, dateRange, referenceDate) {
   };
 }
 
-function buildDataQualityDiagnostics(scopedData) {
+function buildDataQualityDiagnostics(scopedData, sourceQuality) {
 
   var definitions = [
     {
@@ -476,8 +483,18 @@ function buildDataQualityDiagnostics(scopedData) {
   var rows =
     scopedData || [];
 
+  var sourceInspection =
+    sourceQuality || null;
+
+  var invalidDateRowIndexes =
+    sourceInspection &&
+    Array.isArray(sourceInspection.invalidDateRowIndexes)
+      ? sourceInspection.invalidDateRowIndexes
+      : [];
+
   var counts = {};
-  var issueRows = 0;
+  var issueRowKeys = {};
+  var scopedIssueRows = 0;
   var issueCount = 0;
   var hasHighSeverityIssue = false;
 
@@ -486,7 +503,7 @@ function buildDataQualityDiagnostics(scopedData) {
     counts[definition.code] = 0;
   });
 
-  rows.forEach(function(row)
+  rows.forEach(function(row, rowIndex)
   {
     var rowIssues = [];
     var value = row || {};
@@ -494,9 +511,12 @@ function buildDataQualityDiagnostics(scopedData) {
       new Date(value.date);
 
     if (
-      value.date == null ||
-      value.date === "" ||
-      isNaN(transactionDate.getTime())
+      !sourceInspection &&
+      (
+        value.date == null ||
+        value.date === "" ||
+        isNaN(transactionDate.getTime())
+      )
     )
     {
       rowIssues.push("INVALID_DATE");
@@ -551,7 +571,14 @@ function buildDataQualityDiagnostics(scopedData) {
 
     if (rowIssues.length)
     {
-      issueRows++;
+      scopedIssueRows++;
+
+      var scopedRowKey =
+        value.sourceRowIndex != null
+          ? "source:" + value.sourceRowIndex
+          : "scoped:" + rowIndex;
+
+      issueRowKeys[scopedRowKey] = true;
     }
 
     rowIssues.forEach(function(code)
@@ -559,6 +586,13 @@ function buildDataQualityDiagnostics(scopedData) {
       counts[code]++;
       issueCount++;
     });
+  });
+
+  invalidDateRowIndexes.forEach(function(sourceRowIndex)
+  {
+    counts.INVALID_DATE++;
+    issueCount++;
+    issueRowKeys["source:" + sourceRowIndex] = true;
   });
 
   var issues =
@@ -584,8 +618,13 @@ function buildDataQualityDiagnostics(scopedData) {
 
   return {
     totalRows: rows.length,
-    validRows: rows.length - issueRows,
-    issueRows: issueRows,
+    validRows:
+      Math.max(
+        rows.length - scopedIssueRows,
+        0
+      ),
+    issueRows:
+      Object.keys(issueRowKeys).length,
     issueCount: issueCount,
     status:
       issueCount === 0
@@ -593,11 +632,20 @@ function buildDataQualityDiagnostics(scopedData) {
         : hasHighSeverityIssue
           ? "Critical"
           : "Attention",
-    issues: issues
+    issues: issues,
+    scope: {
+      sourceRows:
+        sourceInspection
+          ? sourceInspection.sourceRows
+          : rows.length,
+      scopedRows: rows.length,
+      excludedInvalidDateRows:
+        invalidDateRowIndexes.length
+    }
   };
 }
 
-function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate) {
+function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate, sourceQuality) {
 
   var generatedDate =
     referenceDate
@@ -630,7 +678,8 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
   var dataQuality =
     buildDataQualityDiagnostics(
-      filteredData
+      filteredData,
+      sourceQuality
     );
 
   var cache =

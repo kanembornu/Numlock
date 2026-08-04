@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.9 Package 004 source-level invalid-date inspection before processing and date scoping while preserving one transaction read and keeping analytics restricted to valid scoped rows.
+- Extended additive `dataQuality` with source/scoped/excluded row counts; source invalid dates now remain Critical and visible even when the selected period has no analytics rows, without exposing raw values or row identities.
+- Added `testSourceDataQualityPipeline()` with 15 deterministic scenarios and raised the ordered fail-fast unified backend gate to 15/15 while preserving analytics output.
 - Implemented Sprint 5.9 Package 003 additive scoped `dataQuality` diagnostics with total/valid/issue row counts, issue totals, six fixed issue definitions, and Good/Attention/Critical status without changing filtering or analytics.
 - Added a compact responsive Data Quality badge, issue-count text, and accessible label-only details disclosure that never renders internal issue codes.
 - Added `testDataQualityDiagnostics()` with 15 deterministic scenarios and raised the ordered fail-fast unified backend gate to 14/14 while preserving populated analytics output.

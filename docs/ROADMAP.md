@@ -83,6 +83,10 @@ Completed locally. Additive `reportingScope` and `dataFreshness` metadata is der
 
 Completed locally. Additive `dataQuality` metadata observes the active filtered rows for invalid dates, unknown transaction types, missing Sales products, missing Purchase categories, invalid Sales quantities, and invalid Purchase amounts. It changes no source row, filtering rule, or analytics formula. The responsive frontend shows status and issue count with a real-button label/count disclosure; internal codes remain hidden. `testDataQualityDiagnostics()` raises the unified requirement to 14/14; upload and live/browser acceptance remain separate evidence.
 
+### Package 004 — source-level data-quality visibility
+
+Completed locally. A pure inspection of the single raw transaction read preserves invalid-date findings before processing and date scoping, while all other issue types remain scoped and analytics continue to receive only valid scoped rows. Additive scope counts distinguish source rows, scoped rows, and excluded invalid-date rows; no raw value or row identity reaches the frontend. `testSourceDataQualityPipeline()` raises the unified requirement to 15/15; upload and live/browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

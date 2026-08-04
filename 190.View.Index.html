@@ -164,6 +164,7 @@
                 id="dataQualityStatusBadge"
                 class="hidden rounded-full px-3 py-1 font-semibold"></span>
               <span id="dataQualityIssueCount"></span>
+              <span id="dataQualityScopeSummary"></span>
               <button
                 id="dataQualityDetailsButton"
                 type="button"
@@ -849,7 +850,8 @@
 
       if (
         !quality ||
-        !Array.isArray(quality.issues)
+        !Array.isArray(quality.issues) ||
+        !quality.scope
       )
       {
         throw new Error(
@@ -862,6 +864,9 @@
 
       var issueCount =
         document.getElementById("dataQualityIssueCount");
+
+      var scopeSummary =
+        document.getElementById("dataQualityScopeSummary");
 
       var button =
         document.getElementById("dataQualityDetailsButton");
@@ -891,6 +896,12 @@
         quality.issueCount === 0
           ? "No data issues"
           : quality.issueCount + " data issues";
+
+      scopeSummary.innerText =
+        quality.scope.scopedRows +
+        " scoped rows · " +
+        quality.scope.excludedInvalidDateRows +
+        " invalid-date rows excluded";
 
       button.classList.toggle(
         "hidden",

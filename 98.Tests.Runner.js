@@ -14,7 +14,8 @@ function runAllBackendTests()
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testReportingMetadata", run: testReportingMetadata },
-    { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics }
+    { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics },
+    { name: "testSourceDataQualityPipeline", run: testSourceDataQualityPipeline }
   ];
   var passedTests = [];
 

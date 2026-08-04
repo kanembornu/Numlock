@@ -62,8 +62,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all thirteen directly runnable `test*` functions.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 14-test suite.
+- `96.Tests.Cases.js` contains all fourteen directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 15-test suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=33 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -77,7 +77,9 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testDataQualityDiagnostics()` validates empty and fully valid data; each fixed issue independently; negative and non-finite numeric inputs; multiple issues on one row; mixed valid/invalid rows; all status rules; scoped date-filter output; source-array immutability; preservation of raw numeric provenance through processing; additive response presence; and frontend accessibility/code-hiding tokens. It logs `PASS: testDataQualityDiagnostics | scenarios=15 | statuses=Good,Attention,Critical`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `14/14` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+`testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `15/15` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -94,11 +96,11 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `14/14`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, the responsive-shell source contract, reporting metadata, and scoped data-quality diagnostics. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `15/15`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, the responsive-shell source contract, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
 
 ## Data-quality diagnostics contract
 
-`dataQuality` is additive and observational. It evaluates only the rows already admitted by the active date filter, performs no additional spreadsheet read, and never mutates, repairs, writes, or automatically excludes a row. Invalid dates are unit-tested by the pure builder; production date filtering does not reintroduce unscopable invalid-date rows.
+`dataQuality` is additive and observational. A pure inspection evaluates raw source dates before processing; the other issue types evaluate only rows admitted by the active date filter. The pipeline performs one transaction read and never mutates, repairs, writes, or changes analytics inclusion. Invalid source dates remain excluded from analytics but visible in diagnostics.
 
 - `INVALID_DATE` (High): date cannot be interpreted as valid.
 - `UNKNOWN_TRANSACTION_TYPE` (High): type is neither exactly `Sales` nor `Purchase`.
@@ -107,7 +109,7 @@ Running a parameterized helper without its required value can produce a misleadi
 - `INVALID_QUANTITY` (Medium): Sales quantity is non-finite or negative.
 - `INVALID_PURCHASE_AMOUNT` (Medium): Purchase expense is non-finite.
 
-`totalRows` is the scoped row count; `issueRows` counts unique affected rows; `validRows` is their difference; and `issueCount` counts all detected issues. Status is Good at zero issues, Attention when issues are exclusively Medium severity, and Critical when any High-severity issue exists. The frontend renders only status, issue-count text, user-facing labels, and counts; its real disclosure button exposes `aria-expanded` and `aria-controls`, and internal codes must not appear in HTML.
+`totalRows` and `scope.scopedRows` are the scoped row count. `scope.sourceRows` counts raw data rows and `scope.excludedInvalidDateRows` counts source invalid dates excluded from scoping. `validRows` counts scoped rows without a scoped issue; `issueRows` counts unique affected source or scoped rows; and `issueCount` counts every detected issue. Consequently, `issueRows` may exceed `totalRows`. Status is Good at zero issues, Attention when issues are exclusively Medium severity, and Critical when any High-severity issue exists. The frontend renders only status, issue-count and scope text, user-facing labels, and counts; its real disclosure button exposes `aria-expanded` and `aria-controls`, and internal codes, raw values, and row identities must not appear in HTML.
 
 ## Reporting metadata contract
 

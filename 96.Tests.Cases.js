@@ -1445,3 +1445,363 @@ function testDataQualityDiagnostics()
 
   return summary;
 }
+
+function testSourceDataQualityPipeline()
+{
+  var fixture =
+    createSourceDataQualityPipelineFixtures();
+
+  var scenariosPassed = 0;
+
+  function buildFromRaw(rawRows, startDate, endDate)
+  {
+    var sourceQuality =
+      inspectSourceDateQuality(rawRows);
+
+    var processedRows =
+      processTransactions(
+        rawRows,
+        fixture.priceMap
+      );
+
+    return buildDashboardResponse(
+      processedRows,
+      "custom",
+      startDate || "2026-06-01",
+      endDate || "2026-06-30",
+      fixture.referenceDate,
+      sourceQuality
+    );
+  }
+
+  var validInspection =
+    inspectSourceDateQuality(
+      fixture.raw.validOnly
+    );
+
+  var validResponse =
+    buildFromRaw(
+      fixture.raw.validOnly
+    );
+
+  if (
+    validInspection.sourceRows !== 2 ||
+    validInspection.invalidDateRowIndexes.length !== 0 ||
+    validResponse.dataQuality.status !== "Good"
+  )
+  {
+    throw new Error(
+      "Valid source-quality inspection mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var oneInvalidInspection =
+    inspectSourceDateQuality(
+      fixture.raw.oneInvalid
+    );
+
+  if (
+    oneInvalidInspection.sourceRows !== 2 ||
+    JSON.stringify(oneInvalidInspection.invalidDateRowIndexes) !==
+      JSON.stringify([2])
+  )
+  {
+    throw new Error(
+      "Single invalid-date inspection mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var multipleInvalidInspection =
+    inspectSourceDateQuality(
+      fixture.raw.multipleInvalid
+    );
+
+  if (
+    multipleInvalidInspection.sourceRows !== 2 ||
+    multipleInvalidInspection.invalidDateRowIndexes.length !== 2
+  )
+  {
+    throw new Error(
+      "Multiple invalid-date inspection mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var combinedResponse =
+    buildFromRaw(
+      fixture.raw.invalidAndMedium
+    );
+
+  if (
+    combinedResponse.dataQuality.issueRows !== 2 ||
+    combinedResponse.dataQuality.issueCount !== 2 ||
+    combinedResponse.dataQuality.validRows !== 0 ||
+    combinedResponse.dataQuality.status !== "Critical" ||
+    combinedResponse.dataQuality.issues[0].code !==
+      "INVALID_DATE" ||
+    combinedResponse.dataQuality.issues[1].code !==
+      "MISSING_SALES_PRODUCT"
+  )
+  {
+    throw new Error(
+      "Source and scoped issue combination mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var outsideResponse =
+    buildFromRaw(
+      fixture.raw.invalidOutsidePeriod
+    );
+
+  if (
+    outsideResponse.dateFilter.rowCount !== 0 ||
+    outsideResponse.dataQuality.issueCount !== 1 ||
+    outsideResponse.dataQuality.status !== "Critical"
+  )
+  {
+    throw new Error(
+      "Invalid date outside selected period is not visible"
+    );
+  }
+  scenariosPassed++;
+
+  var allInvalidResponse =
+    buildFromRaw(
+      fixture.raw.allInvalid
+    );
+
+  if (
+    allInvalidResponse.dateFilter.rowCount !== 0 ||
+    allInvalidResponse.dataQuality.totalRows !== 0 ||
+    allInvalidResponse.dataQuality.validRows !== 0 ||
+    allInvalidResponse.dataQuality.issueRows !== 2 ||
+    allInvalidResponse.dataQuality.issueCount !== 2 ||
+    allInvalidResponse.dataQuality.status !== "Critical"
+  )
+  {
+    throw new Error(
+      "All-invalid source response mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var emptyInspection =
+    inspectSourceDateQuality(
+      fixture.raw.empty
+    );
+
+  if (
+    emptyInspection.sourceRows !== 0 ||
+    emptyInspection.invalidDateRowIndexes.length !== 0
+  )
+  {
+    throw new Error(
+      "Empty raw source inspection mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var headerOnlyInspection =
+    inspectSourceDateQuality(
+      fixture.raw.headerOnly
+    );
+
+  if (
+    headerOnlyInspection.sourceRows !== 0 ||
+    headerOnlyInspection.invalidDateRowIndexes.length !== 0
+  )
+  {
+    throw new Error(
+      "Header-only source inspection mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var oneInvalidResponse =
+    buildFromRaw(
+      fixture.raw.oneInvalid
+    );
+
+  if (
+    oneInvalidResponse.dataQuality.scope.sourceRows !== 2 ||
+    oneInvalidResponse.dataQuality.scope.scopedRows !== 1 ||
+    oneInvalidResponse.dataQuality.scope.excludedInvalidDateRows !== 1
+  )
+  {
+    throw new Error(
+      "Data-quality scope counts mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var rawJson =
+    JSON.stringify(fixture.raw.invalidAndMedium);
+
+  inspectSourceDateQuality(
+    fixture.raw.invalidAndMedium
+  );
+  buildFromRaw(
+    fixture.raw.invalidAndMedium
+  );
+
+  if (
+    JSON.stringify(fixture.raw.invalidAndMedium) !==
+      rawJson
+  )
+  {
+    throw new Error(
+      "Source-quality pipeline mutated raw rows"
+    );
+  }
+  scenariosPassed++;
+
+  var withInvalidRows =
+    fixture.raw.validOnly.concat([
+      fixture.raw.oneInvalid[2]
+    ]);
+
+  var withInvalidResponse =
+    buildFromRaw(withInvalidRows);
+
+  var comparableValid = {};
+  var comparableWithInvalid = {};
+
+  Object.keys(validResponse).forEach(function(property)
+  {
+    if (property !== "dataQuality")
+    {
+      comparableValid[property] =
+        validResponse[property];
+    }
+  });
+
+  Object.keys(withInvalidResponse).forEach(function(property)
+  {
+    if (property !== "dataQuality")
+    {
+      comparableWithInvalid[property] =
+        withInvalidResponse[property];
+    }
+  });
+
+  if (
+    JSON.stringify(comparableValid) !==
+      JSON.stringify(comparableWithInvalid)
+  )
+  {
+    throw new Error(
+      "Invalid source rows changed analytics output"
+    );
+  }
+  scenariosPassed++;
+
+  if (
+    allInvalidResponse.dateFilter.rowCount !== 0 ||
+    allInvalidResponse.dataQuality.status !== "Critical" ||
+    allInvalidResponse.dataQuality.scope.scopedRows !== 0
+  )
+  {
+    throw new Error(
+      "Analytics-empty Critical quality state mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var deduplicated =
+    buildDataQualityDiagnostics(
+      [{
+        date: new Date(2026, 5, 10),
+        transactionType: "Sales",
+        product: "",
+        qty: 1,
+        sourceRowIndex: 1
+      }],
+      {
+        sourceRows: 1,
+        invalidDateRowIndexes: [1]
+      }
+    );
+
+  if (
+    deduplicated.issueRows !== 1 ||
+    deduplicated.issueCount !== 2
+  )
+  {
+    throw new Error(
+      "Data-quality issue-row identity was double-counted"
+    );
+  }
+  scenariosPassed++;
+
+  var pipelineSource =
+    getDashboardData.toString();
+
+  var readToken = "getTransactionData(ss)";
+  var readIndex = pipelineSource.indexOf(readToken);
+  var inspectIndex =
+    pipelineSource.indexOf("inspectSourceDateQuality");
+  var processIndex =
+    pipelineSource.indexOf("processTransactions");
+
+  if (
+    readIndex === -1 ||
+    readIndex !== pipelineSource.lastIndexOf(readToken) ||
+    inspectIndex < readIndex ||
+    processIndex < inspectIndex
+  )
+  {
+    throw new Error(
+      "Dashboard source-quality pipeline order mismatch"
+    );
+  }
+  scenariosPassed++;
+
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  fixture.frontendTokens.forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "source-quality frontend"
+    );
+  });
+
+  assertSourceExcludes(
+    source,
+    "dataQualitySource",
+    "raw data-quality provenance"
+  );
+
+  assertSourceExcludes(
+    source,
+    "sourceRowIndex",
+    "source row identity"
+  );
+
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    invalidDateVisibility: true,
+    analyticsIsolation: true
+  };
+
+  Logger.log(
+    "PASS: testSourceDataQualityPipeline | scenarios=" +
+    summary.scenarios +
+    " | invalidDateVisibility=" +
+    summary.invalidDateVisibility +
+    " | analyticsIsolation=" +
+    summary.analyticsIsolation
+  );
+
+  return summary;
+}

@@ -1,3 +1,29 @@
+function inspectSourceDateQuality(transactions) {
+  var rows =
+    transactions || [];
+
+  var invalidDateRowIndexes = [];
+
+  for (var i = 1; i < rows.length; i++) {
+    var row = rows[i] || [];
+    var rawDate = row[0];
+    var date = new Date(rawDate);
+
+    if (
+      rawDate == null ||
+      rawDate === "" ||
+      isNaN(date.getTime())
+    ) {
+      invalidDateRowIndexes.push(i);
+    }
+  }
+
+  return {
+    sourceRows: Math.max(rows.length - 1, 0),
+    invalidDateRowIndexes: invalidDateRowIndexes
+  };
+}
+
 function processTransactions(transactions, priceMap) {
   var result = [];
 
@@ -46,6 +72,7 @@ function processTransactions(transactions, priceMap) {
       qty: qty,
       revenue: revenue,
       expense: expense,
+      sourceRowIndex: i,
       dataQualitySource: {
         quantity: row[5],
         purchaseAmount: row[6]

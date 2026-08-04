@@ -2,13 +2,19 @@
 
 ## Active decisions
 
+### Separate source date quality from scoped analytics
+
+Each dashboard request reads transaction rows once. A pure pre-processing inspection records invalid-date source-row indexes and the source row count; processing carries a stable internal source-row index so source and scoped findings can be deduplicated. Invalid dates remain excluded from date filtering, cache construction, and every analytic, but their `INVALID_DATE` findings remain visible in `dataQuality`. No raw source value or internal row identity is returned, logged, repaired, or written.
+
+All other issue types remain scoped to the active filtered rows. `totalRows` and `validRows` retain scoped meaning, where `validRows` counts scoped rows without a scoped issue. `issueRows` and `issueCount` combine source invalid-date findings with scoped findings, so `issueRows` may exceed `totalRows`. `dataQuality.scope` reports `sourceRows`, `scopedRows`, and `excludedInvalidDateRows`. An all-invalid source therefore produces empty analytics and Critical data quality without changing the dashboard empty-state contract.
+
 ### Keep data-quality diagnostics scoped and observational
 
 The final response adds `dataQuality` from the same already filtered processed-row array used by the dashboard. The builder is pure: it performs no spreadsheet read or write, does not mutate or repair rows, does not exclude additional rows, and does not affect analytics formulas. Raw source quantity and purchase-amount values are retained only as additive internal provenance on newly created processed-row objects so non-finite inputs remain observable after existing numeric normalization.
 
-The six fixed issues are: `INVALID_DATE` when a row date cannot be interpreted as valid; `UNKNOWN_TRANSACTION_TYPE` unless type is exactly `Sales` or `Purchase`; `MISSING_SALES_PRODUCT` for Sales without product; `MISSING_PURCHASE_CATEGORY` for Purchase without purchase category; `INVALID_QUANTITY` for non-finite or negative Sales quantity; and `INVALID_PURCHASE_AMOUNT` for non-finite Purchase expense. Invalid dates that cannot enter a selected date range remain excluded by the existing date-filter contract and are not reintroduced solely for diagnostics.
+The six fixed issues are: `INVALID_DATE` when a raw source-row date cannot be interpreted as valid; `UNKNOWN_TRANSACTION_TYPE` unless type is exactly `Sales` or `Purchase`; `MISSING_SALES_PRODUCT` for Sales without product; `MISSING_PURCHASE_CATEGORY` for Purchase without purchase category; `INVALID_QUANTITY` for non-finite or negative Sales quantity; and `INVALID_PURCHASE_AMOUNT` for non-finite Purchase expense. Package 004 extends this decision only for source invalid-date visibility; the other five issues remain scoped and observational.
 
-`totalRows` counts scoped evaluated rows, `issueRows` counts unique affected rows, `validRows` is total minus affected rows, and `issueCount` counts all issues across rows. Status is Good for zero issues, Attention for only Medium-severity issues, and Critical when any High-severity issue exists. The frontend displays status text, issue-count text, and user-facing labels/counts only; internal codes remain backend metadata.
+`totalRows` counts scoped evaluated rows, `validRows` counts scoped issue-free rows, and the source-aware meanings of `issueRows` and `issueCount` are defined above. Status is Good for zero issues, Attention for only Medium-severity issues, and Critical when any High-severity issue exists. The frontend displays status text, issue-count text, scope counts, and user-facing labels/counts only; internal codes, row identities, and raw row values remain undisclosed.
 
 ### Derive reporting transparency from the scoped rows
 

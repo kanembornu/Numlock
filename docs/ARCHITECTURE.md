@@ -8,9 +8,11 @@ This layout is frozen as the production ownership model after successful clasp u
 
 ```text
 Google Sheets
-  -> getTransactionData() / getPriceMap()
-  -> processTransactions()
-  -> buildAggregate()
+  -> getTransactionData() once / getPriceMap()
+  -> inspectSourceDateQuality() on raw rows
+  -> processTransactions() with internal source-row identity
+  -> active date scoping
+  -> buildAggregate() from valid scoped rows
   -> aggregate-based analytics adapters
   -> cached intelligence and decisions
   -> getDashboardData()
@@ -19,6 +21,8 @@ Google Sheets
 ```
 
 `100.Code.js#doGet()` evaluates `190.View.Index.html`. The browser calls the public server function `getDashboardData()` in `90.Dashboard.Service.js`, which returns a serializable dashboard response. Directly runnable test entry points live in `96.Tests.Cases.js`, and the unified runner lives in `98.Tests.Runner.js`. They remain global because Apps Script editor execution requires global functions; they are not browser APIs.
+
+Source-level date inspection is deliberately separate from analytics scoping. `getDashboardData()` reads transaction rows once, `inspectSourceDateQuality()` records only invalid source-row indexes and the source count, processing carries an internal stable row index, and the date filter excludes invalid dates before cache construction. `dataQuality` combines source invalid-date counts with other issues found only in scoped rows; raw values and internal row identities never cross the response boundary.
 
 ## Aggregate Engine
 
@@ -58,7 +62,7 @@ Google Sheets
 | `94.Tests.Assertions.js` | Reusable test-only assertions, including recursive finite-number validation. |
 | `95.Tests.Validators.js` | Pure analytics invariant validators and diagnostics; no runnable test entry points. |
 | `96.Tests.Cases.js` | Directly runnable Apps Script backend tests. |
-| `98.Tests.Runner.js` | Ordered, fail-fast unified 10-test backend suite. |
+| `98.Tests.Runner.js` | Ordered, fail-fast unified 15-test backend suite. |
 | `100.Code.js` | Web entry points such as `doGet()`. |
 | `190.View.Index.html` | Dashboard HTML and browser runtime. |
 | `appsscript.json` | Apps Script manifest. |
