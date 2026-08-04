@@ -1022,6 +1022,64 @@ function testResponsiveShellContract()
   return summary;
 }
 
+function testChartPresentationContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  var fixtures =
+    createChartPresentationContractFixtures();
+
+  fixtures.forEach(function(fixture)
+  {
+    fixture.tokens.forEach(function(token)
+    {
+      assertSourceContains(
+        source,
+        token,
+        "chart presentation / " + fixture.name
+      );
+    });
+
+    if (fixture.uniqueToken)
+    {
+      assertSourceContainsOnce(
+        source,
+        fixture.uniqueToken,
+        "chart presentation / " + fixture.name
+      );
+    }
+  });
+
+  var chartConstructorCount =
+    source.split("new Chart(").length - 1;
+
+  if (chartConstructorCount !== 3)
+  {
+    throw new Error(
+      "Chart presentation expected exactly three Chart constructors: actual=" +
+      chartConstructorCount
+    );
+  }
+
+  var summary = {
+    passed: true,
+    scenarios: fixtures.length,
+    charts: ["revenue", "hotCold", "expense"]
+  };
+
+  Logger.log(
+    "PASS: testChartPresentationContract | scenarios=" +
+    summary.scenarios +
+    " | charts=" +
+    summary.charts.join(",")
+  );
+
+  return summary;
+}
+
 function testReportingMetadata()
 {
   var fixture =

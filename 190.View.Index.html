@@ -207,21 +207,25 @@
 
     <!-- CHART ROW -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
-      <div class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100">
-        <h3 class="font-semibold mb-4"> Revenue Trend </h3>
+      <section class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="revenueChartTitle">
+        <h3 id="revenueChartTitle" class="font-semibold mb-2"> Revenue Trend </h3>
+        <p id="revenueChartSummary" class="mb-4 text-sm text-slate-500"></p>
         <div id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96">
-            <canvas id="mainChart"></canvas>
+            <canvas id="mainChart" aria-hidden="true"></canvas>
+            <p id="revenueChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="mainChartSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
-      </div>
+      </section>
 
-      <div class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100">
-        <h3 class="font-semibold mb-4"> Product Distribution </h3>
+      <section class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="hotColdChartTitle">
+        <h3 id="hotColdChartTitle" class="font-semibold mb-2"> Product Distribution </h3>
+        <p id="hotColdChartSummary" class="mb-4 text-sm text-slate-500"></p>
         <div id="hotColdWrapper" class="relative h-72 min-w-0 sm:h-96">
-            <canvas id="hotColdChart"></canvas>
+            <canvas id="hotColdChart" aria-hidden="true"></canvas>
+            <p id="hotColdChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="hotColdSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
-      </div>
+      </section>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
@@ -242,13 +246,15 @@
         </div>
       </div>
 
-      <div class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100">
-        <h3 class="font-semibold mb-4"> Expense Breakdown </h3>
+      <section class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="expenseChartTitle">
+        <h3 id="expenseChartTitle" class="font-semibold mb-2"> Expense Breakdown </h3>
+        <p id="expenseChartSummary" class="mb-4 text-sm text-slate-500"></p>
         <div id="expenseWrapper" class="relative h-72 min-w-0 sm:h-96">
-            <canvas id="expenseChart"></canvas>
+            <canvas id="expenseChart" aria-hidden="true"></canvas>
+            <p id="expenseChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="expenseSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- ==================================================
@@ -1517,245 +1523,257 @@
         `;
     }
 
-    function renderCharts(res)
+    function formatChartCurrency(value)
     {
-      var revenueTrend =
-        res.revenueTrend || { labels: [], values: [] };
+      return "Rp " + Number(value || 0).toLocaleString("id-ID");
+    }
 
-      var hotColdSplit =
-        res.hotColdSplit || { hot: 0, cold: 0 };
+    function formatChartQuantity(value)
+    {
+      return Number(value || 0).toLocaleString("id-ID") + " units";
+    }
 
-      var expenseBreakdown =
-        Array.isArray(res.expenseBreakdown)
-          ? res.expenseBreakdown
-          : [];
+    function formatChartMonthLabel(label)
+    {
+      var parts = String(label || "").split("-");
+      return parts.length === 2
+        ? parts[1] + "/" + parts[0]
+        : String(label || "");
+    }
 
-      var topProducts =
-        Array.isArray(res.topProducts)
-          ? res.topProducts
-          : [];
-
-      const revenueCtx = document.getElementById("mainChart").getContext("2d");
-      if (revenueChart)
+    function destroyChartInstance(chart)
+    {
+      if (chart)
       {
-        revenueChart.destroy();
+        chart.destroy();
       }
-        revenueChart = new Chart(revenueCtx,
+
+      return null;
+    }
+
+    function setChartPresentation(canvasId, emptyId, summaryId, isEmpty, message, summary)
+    {
+      var canvas = document.getElementById(canvasId);
+      var empty = document.getElementById(emptyId);
+      var summaryElement = document.getElementById(summaryId);
+      var context = canvas.getContext("2d");
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.classList.toggle("hidden", isEmpty);
+      empty.classList.toggle("hidden", !isEmpty);
+      empty.classList.toggle("flex", isEmpty);
+      empty.innerText = isEmpty ? message : "";
+      summaryElement.innerText = summary;
+    }
+
+    function renderRevenueChart(revenueTrend)
+    {
+      var labels = Array.isArray(revenueTrend.labels) ? revenueTrend.labels : [];
+      var values = Array.isArray(revenueTrend.values) ? revenueTrend.values : [];
+      var isEmpty = values.length === 0;
+      var total = values.reduce(function(sum, value) { return sum + Number(value || 0); }, 0);
+      var highestIndex = -1;
+
+      values.forEach(function(value, index)
+      {
+        if (highestIndex === -1 || value > values[highestIndex])
+        {
+          highestIndex = index;
+        }
+      });
+
+      var summary = isEmpty
+        ? "Revenue trend has no represented months."
+        : labels.length + " represented months, total " + formatChartCurrency(total) +
+          ". Highest: " + formatChartMonthLabel(labels[highestIndex]) +
+          " at " + formatChartCurrency(values[highestIndex]) + ".";
+
+      revenueChart = destroyChartInstance(revenueChart);
+      setChartPresentation(
+        "mainChart",
+        "revenueChartEmpty",
+        "revenueChartSummary",
+        isEmpty,
+        "No revenue data for the selected period.",
+        summary
+      );
+
+      if (isEmpty)
+      {
+        return;
+      }
+
+      revenueChart = new Chart(
+        document.getElementById("mainChart").getContext("2d"),
         {
           type: "line",
-          data:
-          {
-            labels: revenueTrend.labels.map(label => {
-              const month = label.split("-")[1];
-
-              return [
-                "Jan",
-                "Feb",
-                "Mar",
-                "Apr",
-                "Mei",
-                "Jun",
-                "Jul",
-                "Agu",
-                "Sep",
-                "Okt",
-                "Nov",
-                "Des"
-              ][parseInt(month, 10) - 1];
-            }),
-
-            datasets:
-            [{
+          data: {
+            labels: labels.map(formatChartMonthLabel),
+            datasets: [{
               label: "Revenue",
-              data: revenueTrend.values,
+              data: values,
               borderColor: "#6366f1",
               backgroundColor: "rgba(99,102,241,0.1)",
               borderWidth: 3,
               fill: true,
-              tension: 0.4
+              tension: 0.4,
+              spanGaps: false
             }]
-
           },
-
-          options:
-          {
+          options: {
             responsive: true,
             maintainAspectRatio: false,
-
-            plugins:
-            {
-              legend:
-              {
-                display: false
-              },
-
-              tooltip:
-              {
-                callbacks:
-                {
-                  label: function(context)
-                  {
-                    return "Revenue : Rp " +
-                      context.raw.toLocaleString("id-ID");
-                  }
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) { return "Revenue: " + formatChartCurrency(context.raw); }
                 }
               }
             },
-
-            scales:
-            {
-              x:
-              {
-                grid:
-                {
-                  display: false
-                }
-              },
-
-              y:
-              {
-                beginAtZero: true,
-
-                ticks:
-                {
-                  callback: function(value)
-                  {
-                    if (value >= 1000000)
-                    {
-                      return (value / 1000000).toFixed(1) + " M";
-                    }
-
-                    if (value >= 1000)
-                    {
-                      return (value / 1000).toFixed(0) + " K";
-                    }
-
-                    return value;
-                  }
-                },
-
-                grid:
-                {
-                  color: "#f1f5f9"
-                }
-              }
+            scales: {
+              x: { grid: { display: false } },
+              y: { beginAtZero: true, min: 0, grid: { color: "#f1f5f9" } }
             }
           }
-        });
+        }
+      );
+    }
 
-      const hotColdCtx = document.getElementById("hotColdChart").getContext("2d");
-      if (hotColdChart)
+    function renderHotColdChart(hotColdSplit)
+    {
+      var hot = Number(hotColdSplit.hot || 0);
+      var cold = Number(hotColdSplit.cold || 0);
+      var total = hot + cold;
+      var isEmpty = total === 0;
+      var result = hot === cold ? "balanced" : hot > cold ? "Hot dominant" : "Cold dominant";
+      var summary = "Hot " + formatChartQuantity(hot) + ", Cold " +
+        formatChartQuantity(cold) + "; " + result + ".";
+
+      hotColdChart = destroyChartInstance(hotColdChart);
+      setChartPresentation(
+        "hotColdChart",
+        "hotColdChartEmpty",
+        "hotColdChartSummary",
+        isEmpty,
+        "No Hot/Cold sales data for the selected period.",
+        summary
+      );
+
+      if (isEmpty)
       {
-        hotColdChart.destroy();
+        return;
       }
-        hotColdChart = new Chart(hotColdCtx,
+
+      hotColdChart = new Chart(
+        document.getElementById("hotColdChart").getContext("2d"),
         {
           type: "doughnut",
-          data:
-          {
-            labels: [ "Hot","Cold" ],
-            datasets:
-            [{
-              data: [ hotColdSplit.hot, hotColdSplit.cold ],
-              backgroundColor: [ "#f97316", "#06b6d4" ]
+          data: {
+            labels: ["Hot", "Cold"],
+            datasets: [{
+              data: [hot, cold],
+              backgroundColor: ["#f97316", "#06b6d4"]
             }]
           },
-          options:
-          {
+          options: {
             responsive: true,
-            maintainAspectRatio: false
-          }
-        });
-
-    const expenseCtx =
-      document.getElementById("expenseChart")
-      .getContext("2d");
-
-    if (expenseChart)
-    {
-      expenseChart.destroy();
-    }
-      const expenseData =
-        expenseBreakdown
-          .sort((a,b) => b.amount - a.amount)
-          .slice(0,7);
-
-      expenseChart = new Chart(expenseCtx,
-      {
-        type: "bar",
-        data:
-        {
-          labels: expenseData.map(x => x.category),
-          datasets:
-          [{
-            label: "Expense",
-            data: expenseData.map(x => x.amount)
-          }]
-        },
-        options:
-        {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins:
-          {
-            tooltip:
-            {
-              callbacks:
-              {
-                label: function(context)
-                {
-                  return "Rp " +
-                    context.raw.toLocaleString("id-ID");
-                }
-              }
-            },
-
-            legend:
-            {
-              display: false
-            }
-          },
-
-          scales:
-          {
-            x:
-            {
-              grid:
-              {
-                display: false
-              }
-            },
-
-            y:
-            {
-              beginAtZero: true,
-
-              ticks:
-              {
-                callback: function(value)
-                {
-                  if (value >= 1000000)
+            maintainAspectRatio: false,
+            plugins: {
+              tooltip: {
+                callbacks: {
+                  label: function(context)
                   {
-                    return (value / 1000000).toFixed(1) + " M";
+                    var percentage = total > 0 ? (context.raw / total) * 100 : 0;
+                    return context.label + ": " + formatChartQuantity(context.raw) +
+                      " (" + percentage.toFixed(1) + "%)";
                   }
-
-                  if (value >= 1000)
-                  {
-                    return (value / 1000).toFixed(0) + " K";
-                  }
-
-                  return value;
                 }
-              },
-
-              grid:
-              {
-                color: "#f1f5f9"
               }
             }
           }
         }
+      );
+    }
+
+    function renderExpenseChart(expenseBreakdown)
+    {
+      var expenseData = expenseBreakdown.slice();
+      var isEmpty = expenseData.length === 0;
+      var total = expenseData.reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0);
+      var largest = null;
+
+      expenseData.forEach(function(item)
+      {
+        if (!largest || item.amount > largest.amount)
+        {
+          largest = item;
+        }
       });
+
+      var summary = isEmpty
+        ? "Expense breakdown has no represented categories."
+        : expenseData.length + " expense categories, total " + formatChartCurrency(total) +
+          ". Largest: " + largest.category + " at " + formatChartCurrency(largest.amount) + ".";
+
+      expenseChart = destroyChartInstance(expenseChart);
+      setChartPresentation(
+        "expenseChart",
+        "expenseChartEmpty",
+        "expenseChartSummary",
+        isEmpty,
+        "No expense data for the selected period.",
+        summary
+      );
+
+      if (isEmpty)
+      {
+        return;
+      }
+
+      expenseChart = new Chart(
+        document.getElementById("expenseChart").getContext("2d"),
+        {
+          type: "bar",
+          data: {
+            labels: expenseData.map(function(item) { return item.category; }),
+            datasets: [{
+              label: "Expense",
+              data: expenseData.map(function(item) { return item.amount; })
+            }]
+          },
+          options: {
+            indexAxis: "y",
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { right: 8 } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: function(context) { return "Expense: " + formatChartCurrency(context.raw); }
+                }
+              }
+            },
+            scales: {
+              x: { beginAtZero: true, min: 0, grid: { color: "#f1f5f9" } },
+              y: { grid: { display: false }, ticks: { autoSkip: false } }
+            }
+          }
+        }
+      );
+    }
+
+    function renderCharts(res)
+    {
+      var revenueTrend = res.revenueTrend || { labels: [], values: [] };
+      var hotColdSplit = res.hotColdSplit || { hot: 0, cold: 0 };
+      var expenseBreakdown = Array.isArray(res.expenseBreakdown) ? res.expenseBreakdown : [];
+      var topProducts = Array.isArray(res.topProducts) ? res.topProducts : [];
+
+      renderRevenueChart(revenueTrend);
+      renderHotColdChart(hotColdSplit);
+      renderExpenseChart(expenseBreakdown);
 
     document.getElementById( "topProductsContainer" ).innerHTML = topProducts .slice(0,5) .map(function(p,index)
     {

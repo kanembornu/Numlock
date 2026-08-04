@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Keep chart presentation separate from analytics
+
+Revenue Trend, Hot/Cold Split, and Expense Breakdown keep their existing backend labels, values, category ordering, and public response fields. Frontend-only helpers format Indonesian Rupiah, quantities, and `MM/YYYY` month labels; three separate renderers own their differing Chart.js configurations. Every renderer destroys its previous instance before clearing the canvas or creating a replacement, so a chart-level empty transition cannot retain stale output or create a duplicate instance.
+
+Each chart card is an accessible titled region with a concise text summary outside its canvas. Summaries update on every dashboard render and own the non-canvas representation of represented months/totals/highest revenue, Hot/Cold totals/dominance, and expense categories/total/largest category. Empty messages are chart-specific and assistive-technology-readable. A chart with no values does not change the dashboard-level empty-state decision, which remains owned by `dateFilter.rowCount`.
+
+Revenue and expense tooltips use Indonesian Rupiah formatting; Hot/Cold tooltips use quantities and finite percentages, with zero total handled before chart creation. Revenue uses a zero baseline, chronological backend order, `MM/YYYY` labels, and no gap spanning. Expense uses backend category order and a horizontal layout so long labels remain readable. These are presentation rules only and do not authorize analytics-formula or source-data changes.
+
 ### Separate source date quality from scoped analytics
 
 Each dashboard request reads transaction rows once. A pure pre-processing inspection records invalid-date source-row indexes and the source row count; processing carries a stable internal source-row index so source and scoped findings can be deduplicated. Invalid dates remain excluded from date filtering, cache construction, and every analytic, but their `INVALID_DATE` findings remain visible in `dataQuality`. No raw source value or internal row identity is returned, logged, repaired, or written.

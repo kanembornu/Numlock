@@ -552,6 +552,28 @@ function createResponsiveShellContractFixtures()
   ];
 }
 
+function createChartPresentationContractFixtures()
+{
+  return [
+    { name: "Revenue Trend populated values", tokens: ["function renderRevenueChart(revenueTrend)", "data: values"] },
+    { name: "Revenue Trend empty state", tokens: ['"No revenue data for the selected period."', "if (isEmpty)"] },
+    { name: "month label MM/YYYY", tokens: ['parts[1] + "/" + parts[0]'] },
+    { name: "Rupiah tooltip formatting", tokens: ['Number(value || 0).toLocaleString("id-ID")', '"Revenue: " + formatChartCurrency(context.raw)'] },
+    { name: "Revenue Trend zero baseline", tokens: ["y: { beginAtZero: true, min: 0", "spanGaps: false"] },
+    { name: "stale chart cleared on empty transition", tokens: ["revenueChart = destroyChartInstance(revenueChart);", "context.clearRect(0, 0, canvas.width, canvas.height);"] },
+    { name: "Hot Cold populated totals", tokens: ["data: [hot, cold]", "formatChartQuantity(hot)", "formatChartQuantity(cold)"] },
+    { name: "Hot Cold zero-total behavior", tokens: ["var isEmpty = total === 0;", '"No Hot/Cold sales data for the selected period."'] },
+    { name: "Hot Cold safe percentage", tokens: ["total > 0 ? (context.raw / total) * 100 : 0", 'percentage.toFixed(1) + "%)"'] },
+    { name: "Expense populated values and ordering", tokens: ["var expenseData = expenseBreakdown.slice();", "item.category;", "item.amount;"] },
+    { name: "Expense empty state", tokens: ['"No expense data for the selected period."', '"Expense breakdown has no represented categories."'] },
+    { name: "long category labels", tokens: ['indexAxis: "y"', "ticks: { autoSkip: false }"] },
+    { name: "accessible titles and summaries", tokens: ['aria-labelledby="revenueChartTitle"', 'aria-labelledby="hotColdChartTitle"', 'aria-labelledby="expenseChartTitle"', 'id="revenueChartSummary"', 'id="hotColdChartSummary"', 'id="expenseChartSummary"'] },
+    { name: "summary update behavior", tokens: ["summaryElement.innerText = summary;", "renderRevenueChart(revenueTrend);", "renderHotColdChart(hotColdSplit);", "renderExpenseChart(expenseBreakdown);"] },
+    { name: "single chart lifecycle helper", tokens: ["function destroyChartInstance(chart)", "chart.destroy();"], uniqueToken: "function destroyChartInstance(chart)" },
+    { name: "responsive chart containment", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"', 'id="hotColdWrapper" class="relative h-72 min-w-0 sm:h-96"', 'id="expenseWrapper" class="relative h-72 min-w-0 sm:h-96"'] }
+  ];
+}
+
 function createReportingMetadataFixtures()
 {
   var referenceDate =

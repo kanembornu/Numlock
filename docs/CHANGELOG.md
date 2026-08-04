@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.9 Package 005 chart comprehension and zero-data behavior for Revenue Trend, Hot/Cold Split, and Expense Breakdown without changing analytics formulas or response contracts.
+- Added Rupiah/quantity tooltips, `MM/YYYY` revenue labels, safe Hot/Cold percentages, horizontal long-label Expense presentation, explicit chart-level empty messages, and filter-updated accessible summaries outside each canvas.
+- Added `testChartPresentationContract()` with 16 deterministic/static scenarios and raised the ordered fail-fast unified backend gate to 16/16 while preserving chart source values.
 - Implemented Sprint 5.9 Package 004 source-level invalid-date inspection before processing and date scoping while preserving one transaction read and keeping analytics restricted to valid scoped rows.
 - Extended additive `dataQuality` with source/scoped/excluded row counts; source invalid dates now remain Critical and visible even when the selected period has no analytics rows, without exposing raw values or row identities.
 - Added `testSourceDataQualityPipeline()` with 15 deterministic scenarios and raised the ordered fail-fast unified backend gate to 15/15 while preserving analytics output.

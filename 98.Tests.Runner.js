@@ -13,6 +13,7 @@ function runAllBackendTests()
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
+    { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testReportingMetadata", run: testReportingMetadata },
     { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics },
     { name: "testSourceDataQualityPipeline", run: testSourceDataQualityPipeline }

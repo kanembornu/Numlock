@@ -147,9 +147,11 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P2-4 — Improve chart comprehension and zero-data behavior
 
+**Status: Completed locally in Sprint 5.9 Package 005; upload and live/browser validation are pending.**
+
 - **Problem:** month labels discard the year, the doughnut relies on color/legend, expense labels can crowd, canvases have no visible empty state, and all charts use fixed 24rem height. Revenue and expense axes abbreviate values without an explicit currency/unit label.
 - **User impact:** cross-year trends can be ambiguous, color-dependent interpretation is harder, and zero-data charts can look broken.
-- **Proposed solution:** retain year context when needed, add unit-aware titles/tooltips and accessible summaries, improve label density, and render intentional zero-data placeholders.
+- **Proposed solution:** implemented `MM/YYYY` Revenue labels, unit-aware tooltips, finite Hot/Cold percentages, accessible titled regions and filter-updated summaries, readable horizontal Expense labels, strict Chart destruction, and intentional per-chart zero-data placeholders.
 - **Files likely affected:** `190.View.Index.html`, generated CSS if new classes are used.
 - **Implementation complexity:** M
 - **Regression risk:** Low

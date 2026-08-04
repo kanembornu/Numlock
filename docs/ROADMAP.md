@@ -87,6 +87,10 @@ Completed locally. Additive `dataQuality` metadata observes the active filtered 
 
 Completed locally. A pure inspection of the single raw transaction read preserves invalid-date findings before processing and date scoping, while all other issue types remain scoped and analytics continue to receive only valid scoped rows. Additive scope counts distinguish source rows, scoped rows, and excluded invalid-date rows; no raw value or row identity reaches the frontend. `testSourceDataQualityPipeline()` raises the unified requirement to 15/15; upload and live/browser acceptance remain separate evidence.
 
+### Package 005 — chart comprehension and zero-data behavior
+
+Completed locally. Revenue Trend, Hot/Cold Split, and Expense Breakdown retain their backend source values while adding unit-aware tooltips, `MM/YYYY` revenue labels, finite percentages, readable long expense labels, accessible text summaries, and chart-specific empty messages. Every transition destroys the prior Chart.js instance and clears stale canvas output; chart emptiness does not change dashboard-level state. `testChartPresentationContract()` raises the unified requirement to 16/16; upload and live/browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.
