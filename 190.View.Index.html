@@ -2,7 +2,7 @@
 <html>
   <head>
     <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
       .page { display: none; }
@@ -427,6 +427,7 @@
   let revenueChart;
   let hotColdChart;
   let expenseChart;
+  let chartUnavailableDiagnosticLogged = false;
   let dashboardRequestInFlight = false;
   let dashboardRequestSequence = 0;
   let activeDashboardRequestToken = 0;
@@ -1551,6 +1552,24 @@
       return null;
     }
 
+    function isChartLibraryAvailable()
+    {
+      return typeof Chart === "function";
+    }
+
+    function reportChartLibraryUnavailable()
+    {
+      if (chartUnavailableDiagnosticLogged)
+      {
+        return;
+      }
+
+      chartUnavailableDiagnosticLogged = true;
+      console.error(
+        "Chart.js unavailable; chart rendering was skipped."
+      );
+    }
+
     function setChartPresentation(canvasId, emptyId, summaryId, isEmpty, message, summary)
     {
       var canvas = document.getElementById(canvasId);
@@ -1587,18 +1606,21 @@
         : labels.length + " represented months, total " + formatChartCurrency(total) +
           ". Highest: " + formatChartMonthLabel(labels[highestIndex]) +
           " at " + formatChartCurrency(values[highestIndex]) + ".";
+      var chartAvailable = isChartLibraryAvailable();
 
       revenueChart = destroyChartInstance(revenueChart);
       setChartPresentation(
         "mainChart",
         "revenueChartEmpty",
         "revenueChartSummary",
-        isEmpty,
-        "No revenue data for the selected period.",
+        !chartAvailable || isEmpty,
+        chartAvailable
+          ? "No revenue data for the selected period."
+          : "Chart unavailable.",
         summary
       );
 
-      if (isEmpty)
+      if (!chartAvailable || isEmpty)
       {
         return;
       }
@@ -1649,18 +1671,21 @@
       var result = hot === cold ? "balanced" : hot > cold ? "Hot dominant" : "Cold dominant";
       var summary = "Hot " + formatChartQuantity(hot) + ", Cold " +
         formatChartQuantity(cold) + "; " + result + ".";
+      var chartAvailable = isChartLibraryAvailable();
 
       hotColdChart = destroyChartInstance(hotColdChart);
       setChartPresentation(
         "hotColdChart",
         "hotColdChartEmpty",
         "hotColdChartSummary",
-        isEmpty,
-        "No Hot/Cold sales data for the selected period.",
+        !chartAvailable || isEmpty,
+        chartAvailable
+          ? "No Hot/Cold sales data for the selected period."
+          : "Chart unavailable.",
         summary
       );
 
-      if (isEmpty)
+      if (!chartAvailable || isEmpty)
       {
         return;
       }
@@ -1715,18 +1740,21 @@
         ? "Expense breakdown has no represented categories."
         : expenseData.length + " expense categories, total " + formatChartCurrency(total) +
           ". Largest: " + largest.category + " at " + formatChartCurrency(largest.amount) + ".";
+      var chartAvailable = isChartLibraryAvailable();
 
       expenseChart = destroyChartInstance(expenseChart);
       setChartPresentation(
         "expenseChart",
         "expenseChartEmpty",
         "expenseChartSummary",
-        isEmpty,
-        "No expense data for the selected period.",
+        !chartAvailable || isEmpty,
+        chartAvailable
+          ? "No expense data for the selected period."
+          : "Chart unavailable.",
         summary
       );
 
-      if (isEmpty)
+      if (!chartAvailable || isEmpty)
       {
         return;
       }
@@ -1770,6 +1798,11 @@
       var hotColdSplit = res.hotColdSplit || { hot: 0, cold: 0 };
       var expenseBreakdown = Array.isArray(res.expenseBreakdown) ? res.expenseBreakdown : [];
       var topProducts = Array.isArray(res.topProducts) ? res.topProducts : [];
+
+      if (!isChartLibraryAvailable())
+      {
+        reportChartLibraryUnavailable();
+      }
 
       renderRevenueChart(revenueTrend);
       renderHotColdChart(hotColdSplit);

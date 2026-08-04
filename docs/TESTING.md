@@ -28,6 +28,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testDashboardStateContract()` — five deterministic contract scenarios covering the state vocabulary plus empty, purchase-only, sales-only, and populated scoped-row semantics.
 - `testResponsiveShellContract()` — 12 source-contract scenarios covering the `lg` desktop boundary, drawer controls and accessibility, close paths, scroll lock, focus restoration, active navigation, table containment, and single controller initialization.
 - `testChartPresentationContract()` — 16 deterministic/static scenarios covering chart source values, formatting, empty transitions, safe percentages, accessible summaries, instance lifecycle, and responsive containment.
+- `testFrontendDependencyContract()` — 14 deterministic/static scenarios covering exact versions, unique HTTPS URLs, no floating dependencies, retained Font Awesome usage, Chart.js availability/fallback, summaries, diagnostics, and preserved chart/responsive contracts.
 - `testReportingMetadata()` — deterministic scoped-row counts, earliest/latest dates, invalid-date handling, Current/Stale/No Data freshness, partial/complete period boundaries, project timezone, response presence, finite values, and frontend disclosure checks.
 - `testDataQualityDiagnostics()` — 15 deterministic scenarios covering all six issues, Good/Attention/Critical status, multiple issues per row, mixed validity, scoped response output, source immutability, raw numeric provenance, and the accessible frontend disclosure contract.
 - `getDashboardData()`
@@ -63,8 +64,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all fifteen directly runnable `test*` functions.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 16-test suite.
+- `96.Tests.Cases.js` contains all sixteen directly runnable `test*` functions.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 17-test suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=33 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -76,13 +77,15 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testChartPresentationContract()` reads the production HTML partial and validates populated/empty contracts for all three charts, `MM/YYYY` and Rupiah/quantity formatting, zero baselines, no stale or duplicate instances, safe zero-total percentages, backend Expense ordering, long-label behavior, accessible titles/summaries, summary updates, and responsive containment. It logs `PASS: testChartPresentationContract | scenarios=16 | charts=revenue,hotCold,expense`.
 
+`testFrontendDependencyContract()` reads the production HTML partial and validates that Tailwind remains local, Chart.js 4.5.1 and Font Awesome 6.0.0 appear exactly once over HTTPS, no floating runtime URL exists, Font Awesome matches active icon usage, the Chart.js available/unavailable paths preserve chart and responsive contracts, summaries remain present, the fallback has no alert or raw payload, and one actionable diagnostic is defined. It logs `PASS: testFrontendDependencyContract | scenarios=14 | chartPinned=true | fallback=true`.
+
 `testReportingMetadata()` validates empty, sales-only, purchase-only, mixed, and invalid-date inputs; counts; earliest/latest dates and timestamp; all freshness statuses; today, rolling, month, year, previous-month, and custom completion rules; project timezone; additive response presence; finite numbers; and the compact responsive frontend contract. It logs `PASS: testReportingMetadata | scenarios=15 | freshness=Current,Stale,No Data`.
 
 `testDataQualityDiagnostics()` validates empty and fully valid data; each fixed issue independently; negative and non-finite numeric inputs; multiple issues on one row; mixed valid/invalid rows; all status rules; scoped date-filter output; source-array immutability; preservation of raw numeric provenance through processing; additive response presence; and frontend accessibility/code-hiding tokens. It logs `PASS: testDataQualityDiagnostics | scenarios=15 | statuses=Good,Attention,Critical`.
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `16/16` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `17/17` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -99,7 +102,13 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `16/16`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, responsive-shell and chart-presentation source contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `17/17`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, scoped-row state metadata, responsive-shell, chart-presentation, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
+
+## Frontend-dependency contract
+
+Runtime dependency inventory is exactly two unique HTTPS URLs: Chart.js 4.5.1 and Font Awesome 6.0.0. Tailwind 3.4.17 is build-time only and its generated clasp-tracked CSS is local. Floating tags, unversioned package paths, duplicate includes, dynamic dependency injection, and unverified SRI hashes are prohibited.
+
+The available-path mock constructs the same three Chart.js configurations and preserves source values. The unavailable-path mock removes `Chart`, renders twice, and requires three `Chart unavailable.` regions, retained external summaries, continued non-chart rendering, safe destruction of existing instances, and exactly one actionable console diagnostic with no response payload.
 
 ## Chart-presentation contract
 

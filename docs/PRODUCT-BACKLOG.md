@@ -171,9 +171,11 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P2-6 — Pin and resilience-test external frontend dependencies
 
+**Status: Completed locally in Sprint 5.9 Package 006; upload and live/browser validation are pending.**
+
 - **Problem:** Chart.js is loaded from an unversioned jsDelivr URL; Font Awesome is pinned to 6.0.0 but remains a CDN dependency. Either CDN failure can remove charts or icons, and Chart.js availability is not checked before rendering.
 - **User impact:** third-party drift or outage can break core visualization without a useful message.
-- **Proposed solution:** pin Chart.js to a reviewed version and add graceful asset-failure behavior; separately evaluate vendoring only if Apps Script artifact size and maintenance costs are acceptable.
+- **Proposed solution:** retained locally compiled Tailwind, pinned Chart.js 4.5.1 and the actively used Font Awesome 6.0.0, prohibited floating/duplicate URLs, and added graceful Chart.js failure behavior that preserves non-chart content and accessible summaries.
 - **Files likely affected:** `190.View.Index.html`, optionally a new clasp-tracked generated asset and build configuration if vendoring is approved.
 - **Implementation complexity:** S for pin/fallback; M for vendoring.
 - **Regression risk:** Low

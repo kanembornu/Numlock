@@ -91,6 +91,10 @@ Completed locally. A pure inspection of the single raw transaction read preserve
 
 Completed locally. Revenue Trend, Hot/Cold Split, and Expense Breakdown retain their backend source values while adding unit-aware tooltips, `MM/YYYY` revenue labels, finite percentages, readable long expense labels, accessible text summaries, and chart-specific empty messages. Every transition destroys the prior Chart.js instance and clears stale canvas output; chart emptiness does not change dashboard-level state. `testChartPresentationContract()` raises the unified requirement to 16/16; upload and live/browser acceptance remain separate evidence.
 
+### Package 006 — deterministic frontend dependencies
+
+Completed locally. Tailwind remains locally compiled at 3.4.17, Chart.js is pinned to the verified 4.5.1 UMD artifact, and the eight actively used Font Awesome icons retain the exact 6.0.0 stylesheet. If Chart.js is unavailable, existing instances are destroyed, accessible summaries remain, each chart reports `Chart unavailable.`, one payload-free diagnostic is logged, and non-chart rendering continues. `testFrontendDependencyContract()` raises the unified requirement to 17/17; upload and live/browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

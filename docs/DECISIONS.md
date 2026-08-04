@@ -2,6 +2,14 @@
 
 ## Active decisions
 
+### Pin and own every runtime frontend dependency
+
+Tailwind CSS remains locally compiled from exactly pinned `tailwindcss` 3.4.17 and is included through the clasp-tracked `189.View.Tailwind.html`; it has no runtime network dependency. Chart.js is required for the three dashboard charts and is retained at the exact verified version 4.5.1 from the single HTTPS jsDelivr UMD URL. Font Awesome remains required because eight active `fas` icons still render navigation, controls, and overview-card imagery; its single HTTPS cdnjs stylesheet remains pinned at 6.0.0. No floating, duplicate, dynamically injected, or replacement-library URL is allowed.
+
+Chart.js is optional to completion of a dashboard response. The frontend checks that `Chart` is a function before chart creation. When unavailable, it destroys any existing instances, clears stale canvases, retains accessible summaries, shows `Chart unavailable.` in every chart region, logs the actionable payload-free diagnostic once, and continues KPI, intelligence, table, recommendation, filter, and state rendering. Font Awesome failure degrades icons only; text labels and controls remain usable.
+
+Dependency updates require reviewing upstream release notes, choosing an exact version, verifying the exact CDN artifact, running extracted frontend parsing plus available/unavailable dependency mocks, chart/responsive/lifecycle contracts, and the full backend suite, then documenting the new version before upload. SRI must be omitted unless its hash is independently verified against the exact retained artifact.
+
 ### Keep chart presentation separate from analytics
 
 Revenue Trend, Hot/Cold Split, and Expense Breakdown keep their existing backend labels, values, category ordering, and public response fields. Frontend-only helpers format Indonesian Rupiah, quantities, and `MM/YYYY` month labels; three separate renderers own their differing Chart.js configurations. Every renderer destroys its previous instance before clearing the canvas or creating a replacement, so a chart-level empty transition cannot retain stale output or create a duplicate instance.

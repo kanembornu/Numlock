@@ -556,7 +556,7 @@ function createChartPresentationContractFixtures()
 {
   return [
     { name: "Revenue Trend populated values", tokens: ["function renderRevenueChart(revenueTrend)", "data: values"] },
-    { name: "Revenue Trend empty state", tokens: ['"No revenue data for the selected period."', "if (isEmpty)"] },
+    { name: "Revenue Trend empty state", tokens: ['"No revenue data for the selected period."', "if (!chartAvailable || isEmpty)"] },
     { name: "month label MM/YYYY", tokens: ['parts[1] + "/" + parts[0]'] },
     { name: "Rupiah tooltip formatting", tokens: ['Number(value || 0).toLocaleString("id-ID")', '"Revenue: " + formatChartCurrency(context.raw)'] },
     { name: "Revenue Trend zero baseline", tokens: ["y: { beginAtZero: true, min: 0", "spanGaps: false"] },
@@ -572,6 +572,30 @@ function createChartPresentationContractFixtures()
     { name: "single chart lifecycle helper", tokens: ["function destroyChartInstance(chart)", "chart.destroy();"], uniqueToken: "function destroyChartInstance(chart)" },
     { name: "responsive chart containment", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"', 'id="hotColdWrapper" class="relative h-72 min-w-0 sm:h-96"', 'id="expenseWrapper" class="relative h-72 min-w-0 sm:h-96"'] }
   ];
+}
+
+function createFrontendDependencyContractFixtures()
+{
+  return {
+    chartUrl: "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
+    fontAwesomeUrl: "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css",
+    cases: [
+      { name: "Tailwind remains local", tokens: ["HtmlService.createHtmlOutputFromFile('189.View.Tailwind')"] },
+      { name: "Chart exact version", tokens: ["chart.js@4.5.1/dist/chart.umd.min.js"] },
+      { name: "Font Awesome exact version", tokens: ["font-awesome/6.0.0/css/all.min.css"] },
+      { name: "Chart availability detection", tokens: ['typeof Chart === "function"'] },
+      { name: "Chart unavailable message", tokens: ['"Chart unavailable."'] },
+      { name: "single actionable diagnostic", tokens: ['"Chart.js unavailable; chart rendering was skipped."', "chartUnavailableDiagnosticLogged = true;"] },
+      { name: "safe existing instance destruction", tokens: ["revenueChart = destroyChartInstance(revenueChart);", "hotColdChart = destroyChartInstance(hotColdChart);", "expenseChart = destroyChartInstance(expenseChart);"] },
+      { name: "accessible summaries retained", tokens: ['id="revenueChartSummary"', 'id="hotColdChartSummary"', 'id="expenseChartSummary"'] },
+      { name: "non-chart continuation", tokens: ['document.getElementById( "topProductsContainer" ).innerHTML'] },
+      { name: "Chart available constructors", tokens: ["revenueChart = new Chart(", "hotColdChart = new Chart(", "expenseChart = new Chart("] },
+      { name: "responsive contract retained", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"'] },
+      { name: "chart contract retained", tokens: ["renderRevenueChart(revenueTrend);", "renderHotColdChart(hotColdSplit);", "renderExpenseChart(expenseBreakdown);"] },
+      { name: "Font Awesome active usage", tokens: ['class="fas fa-times"', 'class="fas fa-chart-line w-6"', 'class="fas fa-receipt w-6"'] },
+      { name: "no browser alert fallback", excludedTokens: ["alert(\"Chart unavailable.\")", "alert('Chart unavailable.')"] }
+    ]
+  };
 }
 
 function createReportingMetadataFixtures()

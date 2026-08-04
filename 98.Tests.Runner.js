@@ -14,6 +14,7 @@ function runAllBackendTests()
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
+    { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },
     { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics },
     { name: "testSourceDataQualityPipeline", run: testSourceDataQualityPipeline }

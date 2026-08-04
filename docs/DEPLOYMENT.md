@@ -38,19 +38,18 @@ Pin `tailwindcss` exactly to `3.4.17` in `devDependencies` and define this packa
 
 `assets/tailwind.input.css` contains the three Tailwind directives. `tailwind.config.js` scans `./190.View.Index.html` and contains the explicit runtime-class safelist recorded in `DECISIONS.md`. Run `npm ci`, then `npm run build:tailwind` before `clasp status`; confirm the partial contains minified CSS only and review its diff. Node.js is build-time tooling and is never uploaded or executed in Apps Script.
 
-Before upload after relevant frontend changes, verify the Tailwind CDN reference remains absent while Chart.js and Font Awesome remain unchanged. Confirm all arbitrary utilities compile: `rounded-[24px]`, `rounded-[28px]`, `rounded-[32px]`, `text-[11px]`, `text-[15px]`, `text-[18px]`, `text-[24px]`, `text-[2rem]`, `tracking-[0.22em]`, `tracking-[0.25em]`, and `left-[14px]`. Confirm responsive `lg:` and `xl:` utilities and every safelisted state class exist in the generated artifact.
+Before upload after relevant frontend changes, verify the Tailwind CDN reference remains absent. Runtime dependencies are exactly Chart.js 4.5.1 from `https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js` and Font Awesome 6.0.0 from `https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css`; each must appear once and no floating URL may exist. Confirm all arbitrary utilities compile: `rounded-[24px]`, `rounded-[28px]`, `rounded-[32px]`, `text-[11px]`, `text-[15px]`, `text-[18px]`, `text-[24px]`, `text-[2rem]`, `tracking-[0.22em]`, `tracking-[0.25em]`, and `left-[14px]`. Confirm responsive `lg:` and `xl:` utilities and every safelisted state class exist in the generated artifact.
+
+For a dependency update, review the official release, choose an exact version, verify the exact HTTPS artifact, update the URL and dependency documentation together, and run `testFrontendDependencyContract()`, `testChartPresentationContract()`, extracted frontend parsing, Chart-available and Chart-unavailable mocks, and the unified suite. Never introduce `latest`, `master`, an unversioned package path, a duplicate include, or an unverified SRI hash.
 
 ## Upload and live validation
 
-Run `clasp push` only with explicit approval. The authoritative release workflow uses `clasp push --force` only after exact inventory review and upload authorization. After upload, run `runAllBackendTests()` in the Apps Script editor and require `10/10`; use these targeted functions only to diagnose failures:
+Run `clasp push` only with explicit approval. The authoritative release workflow uses `clasp push --force` only after exact inventory review and upload authorization. After upload, run `runAllBackendTests()` in the Apps Script editor and require `17/17`; use these targeted functions first to diagnose frontend dependency failures:
 
-1. `getDashboardData()`
-2. `testSummaryFixtures()`
-3. `testRevenueTrendFixtures()`
-4. `testExpenseBreakdownFixtures()`
-5. `testTopProductsFixtures()`
-6. `testProfitTrendMigration()`
-7. `testHotColdMigration()`
+1. `testFrontendDependencyContract()`
+2. `testChartPresentationContract()`
+3. `testResponsiveShellContract()`
+4. `testDashboardStateContract()`
 
 Stop on the first error or mismatch. Do not run parameterized helpers directly and do not apply speculative fixes to live-only failures.
 
@@ -67,7 +66,7 @@ Source structure and production hardening are complete. This repository contains
 
 ## Browser verification
 
-Hard-refresh the deployed dashboard so cached browser assets do not mask the new version. Verify dashboard loading, KPI cards, charts, recent transactions, filters, responsive layout, and the browser console. A browser check against an older deployment is not evidence for uploaded source.
+Hard-refresh the deployed dashboard so cached browser assets do not mask the new version. Verify dashboard loading, KPI cards, charts, recent transactions, filters, responsive layout, and the browser console. Confirm the Network panel requests each exact retained dependency once. Block Chart.js and verify all chart regions show `Chart unavailable.`, accessible summaries remain, non-chart content and filters still work, and exactly one actionable chart diagnostic appears without business payloads. A browser check against an older deployment is not evidence for uploaded source.
 
 For the styling migration, compare the candidate deployment with the current production deployment at desktop and narrow viewport widths. Exercise Analytics/Transactions navigation, loading skeletons, positive/neutral/negative data states, diagnosis cards, intelligence themes, recommendation priorities, risk/growth/concentration states, executive alert/focus states, KPI bar colors and widths, and the action roadmap. PASS requires visual parity, no missing utility styling, no Tailwind CDN request, and no Tailwind production warning. The Apps Script iframe sandbox warning neither passes nor fails this package.
 

@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Implemented Sprint 5.9 Package 006 deterministic frontend dependency ownership: retained local Tailwind 3.4.17, pinned Chart.js to 4.5.1, and retained the actively used Font Awesome 6.0.0 stylesheet.
+- Added a non-blocking Chart.js failure path that safely destroys existing instances, preserves accessible summaries and non-chart rendering, displays `Chart unavailable.`, and logs one actionable diagnostic without business payloads.
+- Added `testFrontendDependencyContract()` with 14 deterministic/static scenarios and raised the ordered fail-fast unified backend gate to 17/17 while preserving chart presentation and responsive contracts.
 - Implemented Sprint 5.9 Package 005 chart comprehension and zero-data behavior for Revenue Trend, Hot/Cold Split, and Expense Breakdown without changing analytics formulas or response contracts.
 - Added Rupiah/quantity tooltips, `MM/YYYY` revenue labels, safe Hot/Cold percentages, horizontal long-label Expense presentation, explicit chart-level empty messages, and filter-updated accessible summaries outside each canvas.
 - Added `testChartPresentationContract()` with 16 deterministic/static scenarios and raised the ordered fail-fast unified backend gate to 16/16 while preserving chart source values.

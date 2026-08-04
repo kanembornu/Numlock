@@ -1080,6 +1080,111 @@ function testChartPresentationContract()
   return summary;
 }
 
+function testFrontendDependencyContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  var fixture =
+    createFrontendDependencyContractFixtures();
+
+  fixture.cases.forEach(function(testCase)
+  {
+    (testCase.tokens || []).forEach(function(token)
+    {
+      assertSourceContains(
+        source,
+        token,
+        "frontend dependency / " + testCase.name
+      );
+    });
+
+    (testCase.excludedTokens || []).forEach(function(token)
+    {
+      assertSourceExcludes(
+        source,
+        token,
+        "frontend dependency / " + testCase.name
+      );
+    });
+  });
+
+  assertSourceExcludes(
+    source,
+    "cdn.tailwindcss.com",
+    "Tailwind runtime CDN"
+  );
+
+  [fixture.chartUrl, fixture.fontAwesomeUrl]
+    .forEach(function(url)
+    {
+      assertSourceContainsOnce(
+        source,
+        url,
+        "retained dependency URL"
+      );
+    });
+
+  var runtimeUrls = [];
+  var dependencyPattern =
+    /<(?:script|link)[^>]+(?:src|href)="(https:\/\/[^\"]+)"[^>]*>/g;
+  var match;
+
+  while ((match = dependencyPattern.exec(source)) !== null)
+  {
+    runtimeUrls.push(match[1]);
+  }
+
+  if (
+    runtimeUrls.length !== 2 ||
+    runtimeUrls[0] !== fixture.chartUrl ||
+    runtimeUrls[1] !== fixture.fontAwesomeUrl
+  )
+  {
+    throw new Error(
+      "Frontend runtime dependency inventory changed: " +
+      JSON.stringify(runtimeUrls)
+    );
+  }
+
+  runtimeUrls.forEach(function(url)
+  {
+    if (/latest|master/i.test(url))
+    {
+      throw new Error(
+        "Floating frontend dependency URL: " +
+        url
+      );
+    }
+  });
+
+  assertSourceContainsOnce(
+    source,
+    'console.error(\n        "Chart.js unavailable; chart rendering was skipped."',
+    "Chart unavailable diagnostic"
+  );
+
+  var summary = {
+    passed: true,
+    scenarios: fixture.cases.length,
+    chartPinned: true,
+    fallback: true
+  };
+
+  Logger.log(
+    "PASS: testFrontendDependencyContract | scenarios=" +
+    summary.scenarios +
+    " | chartPinned=" +
+    summary.chartPinned +
+    " | fallback=" +
+    summary.fallback
+  );
+
+  return summary;
+}
+
 function testReportingMetadata()
 {
   var fixture =
