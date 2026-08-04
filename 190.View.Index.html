@@ -386,6 +386,25 @@
 
         </div>
 
+        <div id="kpiTargetReference" class="mt-5 border-t border-slate-200 pt-5">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">Target Reference</h3>
+              <p id="kpiTargetProvenance" class="mt-1 text-xs text-slate-500">System-defined targets</p>
+            </div>
+            <button
+              id="kpiTargetDetailsButton"
+              type="button"
+              class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700"
+              aria-expanded="false"
+              aria-controls="kpiTargetDetails"
+              onclick="toggleKpiTargetDetails()">
+              View targets
+            </button>
+          </div>
+          <ul id="kpiTargetDetails" class="hidden mt-4 space-y-3"></ul>
+        </div>
+
       </section>
 
       <!-- ACTION CENTER -->
@@ -1001,6 +1020,89 @@
               <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">${metricName}</div>
               <div class="mt-1 text-lg font-bold text-slate-900">${display}</div>
             </div>
+          `;
+        }).join("");
+    }
+
+    function toggleKpiTargetDetails()
+    {
+      var button =
+        document.getElementById("kpiTargetDetailsButton");
+
+      var details =
+        document.getElementById("kpiTargetDetails");
+
+      var isExpanded =
+        button.getAttribute("aria-expanded") === "true";
+
+      button.setAttribute(
+        "aria-expanded",
+        String(!isExpanded)
+      );
+
+      details.classList.toggle(
+        "hidden",
+        isExpanded
+      );
+    }
+
+    function formatKpiTargetValue(target)
+    {
+      var value =
+        Number(target.target);
+
+      if (target.unit === "currency")
+      {
+        return "Rp " +
+          value.toLocaleString("id-ID");
+      }
+
+      if (target.unit === "percent")
+      {
+        return value.toLocaleString("id-ID") +
+          "%";
+      }
+
+      if (target.unit === "quantity")
+      {
+        return value.toLocaleString("id-ID") +
+          " units";
+      }
+
+      return String(target.target);
+    }
+
+    function renderKpiTargets(kpiTargets)
+    {
+      var targetReference =
+        kpiTargets || null;
+
+      if (
+        !targetReference ||
+        !Array.isArray(targetReference.targets) ||
+        targetReference.editable !== false ||
+        !targetReference.provenance
+      )
+      {
+        throw new Error(
+          "Dashboard KPI target reference is missing"
+        );
+      }
+
+      document.getElementById("kpiTargetProvenance").innerText =
+        targetReference.provenance;
+
+      document.getElementById("kpiTargetDetails").innerHTML =
+        targetReference.targets.map(function(target)
+        {
+          return `
+            <li class="rounded-xl bg-slate-50 p-3">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="font-semibold text-slate-900">${target.label}</span>
+                <span class="font-bold text-slate-900">${formatKpiTargetValue(target)}</span>
+              </div>
+              <p class="mt-1 text-xs leading-relaxed text-slate-600">${target.description}</p>
+            </li>
           `;
         }).join("");
     }
@@ -2377,6 +2479,7 @@
       renderBusinessOverview(res);
       renderReportingMetadata(res);
       renderPeriodComparison(res.periodComparison);
+      renderKpiTargets(res.kpiTargets);
       renderDataQuality(res);
       renderCharts(res);
       renderBusinessIntelligence(res);

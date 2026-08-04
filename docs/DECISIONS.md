@@ -2,6 +2,16 @@
 
 ## Active decisions
 
+### Centralize system-defined KPI targets without implying editability
+
+`KPI_TARGET_CONFIG` is the single immutable owner of stable KPI and business-status thresholds already used in production. Package 005 moves those literals without changing formulas or boundary behavior across Business Score, Growth Score, KPI Achievement, Business Maturity, Diagnosis, Recommendations, Risk, Business Focus, Executive Alert, and Business Priority. Deeply frozen nested definitions prevent accidental runtime mutation.
+
+The response adds `kpiTargets` for Revenue, Profit, Units Sold, and Profit Margin only. Each entry has a stable key, label, unit, target, direction, source, and description; the collection also states system provenance and `editable: false`. Revenue, Profit, and Units targets remain dynamically derived by the existing KPI Achievement calculation, while the existing 15% margin target remains fixed. The frontend explains these targets in a closed, accessible Business Performance disclosure and provides no edit control.
+
+No historical KPI, score, risk, recommendation, maturity, or priority result changes. Editable targets would require a separate approved product contract covering persistence, validation, permissions, migration, and the meaning of changed decision outcomes.
+
+Score weights and penalties, candidate ranking scores and source tie-break order, arithmetic zero checks, list limits, and mechanical percentage caps remain local. They are calculation mechanics rather than KPI targets or business-status thresholds, and centralizing them would blur layer ownership without improving explainability.
+
 ### Own one authoritative Business Priority in the decision layer
 
 The response adds exactly one `businessPriority` with level, title, factual reason, executable action, allowed source, finite 0–100 score, and complete metric/value/comparison evidence. Existing `recommendations`, `priorityAction`, `businessFocus`, `executiveAlert`, `riskEngine`, and `diagnosis` remain unchanged and backward compatible; their ordering, formulas, and messages are not inputs to mutation.

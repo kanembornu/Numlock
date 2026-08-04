@@ -348,7 +348,8 @@ function testSparseDatasetResilience()
     "dataFreshness",
     "dataQuality",
     "periodComparison",
-    "businessPriority"
+    "businessPriority",
+    "kpiTargets"
   ];
 
   var expectedNormalJson =
@@ -412,7 +413,8 @@ function testSparseDatasetResilience()
           property !== "dataFreshness" &&
           property !== "dataQuality" &&
           property !== "periodComparison" &&
-          property !== "businessPriority"
+          property !== "businessPriority" &&
+          property !== "kpiTargets"
         )
         {
           comparableResponse[property] = response[property];
@@ -1533,6 +1535,330 @@ function testBusinessPriorityContract()
     summary.scenarios +
     " | levels=" +
     summary.levels.join(",")
+  );
+
+  return summary;
+}
+
+function testKpiTargetContract()
+{
+  var fixture =
+    createKpiTargetFixtures();
+
+  var scenariosPassed = 0;
+
+  if (
+    JSON.stringify(KPI_TARGET_CONFIG.RULES) !==
+    JSON.stringify(fixture.expectedRules)
+  )
+  {
+    throw new Error(
+      "Centralized KPI thresholds changed from former literals"
+    );
+  }
+  scenariosPassed++;
+
+  var originalMarginTarget =
+    KPI_TARGET_CONFIG.RULES.KPI_ACHIEVEMENT.MARGIN_TARGET;
+
+  KPI_TARGET_CONFIG.RULES.KPI_ACHIEVEMENT.MARGIN_TARGET = 999;
+
+  if (
+    !Object.isFrozen(KPI_TARGET_CONFIG) ||
+    !Object.isFrozen(KPI_TARGET_CONFIG.PUBLIC_TARGETS) ||
+    !Object.isFrozen(KPI_TARGET_CONFIG.PUBLIC_TARGETS[0]) ||
+    !Object.isFrozen(KPI_TARGET_CONFIG.RULES) ||
+    !Object.isFrozen(KPI_TARGET_CONFIG.RULES.KPI_ACHIEVEMENT) ||
+    KPI_TARGET_CONFIG.RULES.KPI_ACHIEVEMENT.MARGIN_TARGET !== originalMarginTarget
+  )
+  {
+    throw new Error(
+      "KPI target configuration is not deeply immutable"
+    );
+  }
+  scenariosPassed++;
+
+  var cache =
+    buildAnalyticsCache(
+      fixture.historicalData
+    );
+
+  var historicalChecks = [
+    {
+      name: "Business Score",
+      actual: JSON.stringify(cache.businessScore),
+      expected: fixture.expectedHistorical.businessScore
+    },
+    {
+      name: "Growth Score",
+      actual: JSON.stringify(cache.growthScore),
+      expected: fixture.expectedHistorical.growthScore
+    },
+    {
+      name: "KPI Status",
+      actual: JSON.stringify(cache.kpiStatus),
+      expected: fixture.expectedHistorical.kpiStatus
+    },
+    {
+      name: "KPI Achievement",
+      actual: JSON.stringify(cache.kpiAchievement),
+      expected: fixture.expectedHistorical.kpiAchievement
+    },
+    {
+      name: "Business Maturity",
+      actual: JSON.stringify(cache.businessMaturity),
+      expected: fixture.expectedHistorical.businessMaturity
+    },
+    {
+      name: "Risk Engine",
+      actual: JSON.stringify(cache.riskEngine),
+      expected: fixture.expectedHistorical.riskEngine
+    },
+    {
+      name: "Recommendation ordering",
+      actual:
+        buildRecommendationEngine(cache)
+          .map(function(item)
+          {
+            return item.score;
+          })
+          .join(","),
+      expected: fixture.expectedHistorical.recommendationScores
+    },
+    {
+      name: "Business Priority",
+      actual:
+        (function()
+        {
+          var priority =
+            buildBusinessPriority(
+              cache,
+              { status: "Good", issueCount: 0 },
+              fixture.historicalData.length,
+              {
+                changes: {
+                  revenuePercent: 0,
+                  expensePercent: 0,
+                  profitPercent: 0,
+                  unitsSoldPercent: 0
+                },
+                status: {
+                  revenue: "Stable",
+                  expense: "Stable",
+                  profit: "Stable",
+                  unitsSold: "Stable"
+                }
+              }
+            );
+
+          return priority.level + "|" +
+            priority.source + "|" +
+            priority.score + "|" +
+            priority.title;
+        })(),
+      expected: fixture.expectedHistorical.businessPriority
+    }
+  ];
+
+  historicalChecks.forEach(function(check)
+  {
+    if (check.actual !== check.expected)
+    {
+      throw new Error(
+        check.name +
+        " changed after KPI target centralization: expected=" +
+        check.expected +
+        ", actual=" +
+        check.actual
+      );
+    }
+
+    scenariosPassed++;
+  });
+
+  [
+    { margin: 14.9, expectedScore: 90 },
+    { margin: 15, expectedScore: 100 },
+    { margin: 15.1, expectedScore: 100 }
+  ].forEach(function(boundary)
+  {
+    var score =
+      buildBusinessScore({
+        summary: { unitsSold: 100 },
+        financial: {
+          profitMargin: boundary.margin,
+          revenue: 1000000
+        },
+        insights: {}
+      });
+
+    if (score.score !== boundary.expectedScore)
+    {
+      throw new Error(
+        "KPI target boundary changed for margin " +
+        boundary.margin
+      );
+    }
+
+    scenariosPassed++;
+  });
+
+  var response =
+    buildDashboardResponse(
+      fixture.historicalData,
+      "custom",
+      "2024-01-01",
+      "2026-12-31",
+      new Date(2026, 7, 4, 12, 0, 0)
+    );
+
+  var publicTargets =
+    response.kpiTargets;
+
+  var requiredFields = [
+    "key",
+    "label",
+    "unit",
+    "target",
+    "direction",
+    "source",
+    "description"
+  ];
+
+  var allowedUnits = {
+    percent: true,
+    currency: true,
+    quantity: true,
+    score: true,
+    text: true
+  };
+
+  var allowedDirections = {
+    minimum: true,
+    maximum: true,
+    range: true,
+    informational: true
+  };
+
+  publicTargets.targets.forEach(function(target)
+  {
+    requiredFields.forEach(function(field)
+    {
+      if (!Object.prototype.hasOwnProperty.call(target, field))
+      {
+        throw new Error(
+          "Public KPI target missing field " +
+          field
+        );
+      }
+    });
+
+    if (
+      !allowedUnits[target.unit] ||
+      !allowedDirections[target.direction] ||
+      !isFinite(Number(target.target))
+    )
+    {
+      throw new Error(
+        "Public KPI target contains an invalid value"
+      );
+    }
+  });
+  scenariosPassed++;
+
+  var publicKeys =
+    publicTargets.targets.map(function(target)
+    {
+      return target.key;
+    });
+
+  if (
+    JSON.stringify(publicKeys) !==
+      JSON.stringify(fixture.publicKeys) ||
+    new Set(publicKeys).size !== publicKeys.length
+  )
+  {
+    throw new Error(
+      "Public KPI targets are duplicated or unexpected"
+    );
+  }
+  scenariosPassed++;
+
+  if (publicTargets.editable !== false)
+  {
+    throw new Error(
+      "Public KPI targets must not be editable"
+    );
+  }
+  scenariosPassed++;
+
+  if (
+    !publicTargets.provenance ||
+    publicTargets.provenance.indexOf("System-defined targets") !== 0
+  )
+  {
+    throw new Error(
+      "Public KPI target provenance is missing"
+    );
+  }
+  scenariosPassed++;
+
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  fixture.frontendTokens.forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "KPI Target frontend"
+    );
+  });
+  scenariosPassed++;
+
+  fixture.frontendExcludedTokens.forEach(function(token)
+  {
+    assertSourceExcludes(
+      source,
+      token,
+      "misleading editable target wording"
+    );
+  });
+  scenariosPassed++;
+
+  createAccessibilityContractFixtures()
+    .concat(
+      createResponsiveShellContractFixtures()
+    )
+    .forEach(function(contract)
+    {
+      contract.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "KPI Target preserved contract"
+        );
+      });
+    });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    centralized: true,
+    editable: false
+  };
+
+  Logger.log(
+    "PASS: testKpiTargetContract | scenarios=" +
+    summary.scenarios +
+    " | centralized=" +
+    summary.centralized +
+    " | editable=" +
+    summary.editable
   );
 
   return summary;

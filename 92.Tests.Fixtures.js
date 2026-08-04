@@ -808,6 +808,117 @@ function createBusinessPriorityFixtures()
   };
 }
 
+function createKpiTargetFixtures()
+{
+  return {
+    expectedRules: {
+      BUSINESS_SCORE: {
+        PROFIT_MARGIN_CRITICAL: 5,
+        PROFIT_MARGIN_WATCH: 10,
+        PROFIT_MARGIN_HEALTHY: 15,
+        MINIMUM_REVENUE: 1000000,
+        MINIMUM_UNITS: 100,
+        EXCELLENT_SCORE: 90,
+        HEALTHY_SCORE: 75,
+        WATCH_SCORE: 60
+      },
+      GROWTH_SCORE: {
+        STRONG_FORECAST_GROWTH: 10,
+        NON_NEGATIVE_FORECAST_GROWTH: 0,
+        STRONG_PROFIT_MARGIN: 15,
+        HEALTHY_PROFIT_MARGIN: 10,
+        STRONG_REVENUE_PER_CUP: 15000,
+        HEALTHY_REVENUE_PER_CUP: 12000,
+        HIGH_POTENTIAL_SCORE: 80,
+        MODERATE_POTENTIAL_SCORE: 60
+      },
+      KPI_ACHIEVEMENT: {
+        REVENUE_STEP: 1000000,
+        REVENUE_ADDITIONAL_STEP: 1000000,
+        PROFIT_MINIMUM: 1000000,
+        PROFIT_STEP: 500000,
+        UNIT_STEP: 100,
+        MARGIN_TARGET: 15,
+        MAXIMUM_ACHIEVEMENT: 100
+      },
+      BUSINESS_MATURITY: {
+        OPTIMIZED_SCORE: 90,
+        GROWING_SCORE: 75,
+        STABLE_SCORE: 60,
+        EMERGING_SCORE: 40
+      },
+      DIAGNOSIS: {
+        LOW_PROFIT_MARGIN: 10,
+        CATEGORY_DOMINANCE: 60
+      },
+      RECOMMENDATION: {
+        LOW_PROFIT_MARGIN: 10,
+        BUSINESS_SCORE_FLOOR: 70,
+        PRICING_OPPORTUNITY_REVENUE_PER_CUP: 12000
+      },
+      RISK_ENGINE: {
+        LOW_PROFIT_MARGIN: 10,
+        HIGH_RISK_COUNT: 3,
+        MEDIUM_RISK_COUNT: 1
+      },
+      BUSINESS_FOCUS: {
+        LOW_PROFIT_MARGIN: 10,
+        OPTIMIZATION_SCORE: 80
+      },
+      EXECUTIVE_ALERT: {
+        EXCELLENT_SCORE: 90
+      },
+      BUSINESS_PRIORITY: {
+        CRITICALLY_LOW_PROFIT_MARGIN: 5,
+        MATERIAL_REVENUE_DECLINE: -10,
+        EXPENSE_CONCENTRATION: 50,
+        PRODUCT_CONCENTRATION: 50
+      }
+    },
+    historicalData: [
+      { date: new Date(2025, 0, 10), category: "Hot", transactionType: "Sales", product: "Latte", purchaseCategory: "", qty: 2, revenue: 60000, expense: 0 },
+      { date: new Date(2025, 1, 10), category: "Hot", transactionType: "Sales", product: "Espresso", purchaseCategory: "", qty: 4, revenue: 200000, expense: 0 },
+      { date: new Date(2025, 2, 11), category: "Cold", transactionType: "Sales", product: "Latte", purchaseCategory: "", qty: 3, revenue: 90000, expense: 0 },
+      { date: new Date(2025, 2, 12), category: "", transactionType: "Purchase", product: "", purchaseCategory: "Supplies", qty: 0, revenue: 0, expense: 50000 }
+    ],
+    expectedHistorical: {
+      businessScore:
+        '{"score":75,"status":"Healthy","breakdown":{"profitMargin":85.7,"revenue":350000,"unitsSold":9}}',
+      growthScore:
+        '{"growthScore":100,"status":"High Potential","breakdown":{"revenue":"Up","forecast":233.3,"profitMargin":85.7,"revenuePerCup":38889}}',
+      kpiStatus:
+        '{"revenue":{"trend":"Up","growth":233.3,"label":"Strong"},"profit":{"trend":"Up","growth":85.7,"label":"Strong"},"business":{"score":75,"status":"Healthy"}}',
+      kpiAchievement:
+        '{"revenue":{"actual":350000,"target":2000000,"achievement":17.5},"profit":{"actual":300000,"target":1000000,"achievement":30},"units":{"actual":9,"target":100,"achievement":9},"margin":{"actual":85.7,"target":15,"achievement":100}}',
+      businessMaturity:
+        '{"score":88,"level":"Growing","description":"Bisnis berkembang dengan baik namun masih memiliki ruang untuk peningkatan."}',
+      riskEngine:
+        '{"riskLevel":"Low","riskCount":0,"risks":[]}',
+      recommendationScores: "70,40,35,20",
+      businessPriority: "Medium|Expense|70|Review Expense Concentration"
+    },
+    publicKeys: ["revenue", "profit", "units", "margin"],
+    frontendTokens: [
+      'id="kpiTargetReference"',
+      'id="kpiTargetDetailsButton"',
+      'type="button"',
+      'aria-expanded="false"',
+      'aria-controls="kpiTargetDetails"',
+      'onclick="toggleKpiTargetDetails()"',
+      'id="kpiTargetDetails"',
+      "System-defined targets",
+      "function renderKpiTargets(kpiTargets)",
+      "formatKpiTargetValue(target)",
+      "renderKpiTargets(res.kpiTargets);"
+    ],
+    frontendExcludedTokens: [
+      "User-defined targets",
+      "Edit targets",
+      ">Editable<"
+    ]
+  };
+}
+
 function createResponsiveShellContractFixtures()
 {
   return [

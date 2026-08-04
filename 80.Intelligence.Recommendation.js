@@ -1,5 +1,8 @@
 function buildRecommendationEngine(cache)
 {
+  var rules =
+    KPI_TARGET_CONFIG.RULES.RECOMMENDATION;
+
   var insights =
     cache.insights;
 
@@ -41,7 +44,7 @@ function buildRecommendationEngine(cache)
 
   // Profit Margin
 
-  if(Number(insights.profitMargin) < 10)
+  if(Number(insights.profitMargin) < rules.LOW_PROFIT_MARGIN)
   {
     recommendations.push({
 
@@ -161,7 +164,7 @@ function buildRecommendationEngine(cache)
 
   // Business Score
 
-  if(score.score < 70)
+  if(score.score < rules.BUSINESS_SCORE_FLOOR)
   {
     recommendations.push({
 
@@ -268,6 +271,9 @@ function buildPriorityAction(cache) {
 
 function buildOpportunityEngine(cache) {
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.RECOMMENDATION;
+
   var summary =
     cache.summary;
 
@@ -316,7 +322,7 @@ function buildOpportunityEngine(cache) {
 
   // Revenue per Cup
 
-  if (insights.revenuePerCup > 12000) {
+  if (insights.revenuePerCup > rules.PRICING_OPPORTUNITY_REVENUE_PER_CUP) {
 
     opportunities.push({
 
@@ -350,6 +356,9 @@ function buildOpportunityEngine(cache) {
 
 function buildActionRoadmap(cache) {
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.RECOMMENDATION;
+
   var roadmap = [];
 
   var insights =
@@ -370,7 +379,7 @@ function buildActionRoadmap(cache) {
   // Week 1
 
   if (
-    Number(insights.profitMargin) < 10
+    Number(insights.profitMargin) < rules.LOW_PROFIT_MARGIN
   ) {
 
     roadmap.push({

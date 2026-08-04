@@ -4,6 +4,9 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.10 Package 005 by moving existing stable KPI and business-status thresholds into deeply immutable `KPI_TARGET_CONFIG` without changing formulas, boundaries, classifications, recommendations, or analytics.
+- Added backward-compatible `kpiTargets` metadata for the existing Revenue, Profit, Units Sold, and Profit Margin targets with explicit system provenance and non-editable status, plus a compact accessible Business Performance disclosure.
+- Added `testKpiTargetContract()` with 20 deterministic boundary, historical-output, immutability, public-contract, accessibility, and responsive scenarios; raised the ordered fail-fast unified gate to 22/22.
 - Completed Sprint 5.10 Package 004 additive unified Business Priority without changing or removing recommendations, priorityAction, businessFocus, executiveAlert, riskEngine, diagnosis, analytics, or period comparison.
 - Added deterministic precedence for Critical Data Quality, profitability, High risk, material revenue decline, negative forecast, expense concentration, product concentration, and stable/empty fallback; equal levels use finite score ordering and fixed source precedence.
 - Replaced only the Executive Summary primary-action presentation with accessible Business Priority level, reason, action, and evidence; added `testBusinessPriorityContract()` with 20 scenarios and raised the ordered fail-fast unified gate to 21/21.

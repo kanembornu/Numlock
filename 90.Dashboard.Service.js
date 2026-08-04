@@ -1070,6 +1070,11 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       periodComparison
     );
 
+  var kpiTargets =
+    buildKpiTargets(
+      cache
+    );
+
     return {
       summary:
         cache.summary,
@@ -1178,6 +1183,9 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       businessPriority:
         businessPriority,
+
+      kpiTargets:
+        kpiTargets,
 
     };
 }

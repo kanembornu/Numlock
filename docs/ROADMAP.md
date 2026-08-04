@@ -113,6 +113,10 @@ Completed locally. Additive `periodComparison` compares each active filter with 
 
 Completed locally. Additive `businessPriority` deterministically ranks existing Data Quality, profitability, risk, revenue, forecast, expense, product, and stability signals into one complete actionable result. Level and finite score ordering use fixed source precedence for ties; Critical Data Quality remains distinct from business performance. The Executive Summary primary-action card alone consumes the new result, while all existing intelligence fields and backend recommendation ordering remain unchanged. `testBusinessPriorityContract()` raises the ordered fail-fast unified requirement to 21/21. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
 
+### Package 005 — centralized and explainable KPI targets
+
+Completed locally. Existing KPI and business-status thresholds now have one immutable configuration owner, while calculation mechanics remain with their domains. Additive `kpiTargets` explains the four existing KPI Achievement targets with explicit system provenance and no editing claim; a compact accessible disclosure appears in Business Performance outside the first viewport. `testKpiTargetContract()` raises the ordered fail-fast unified requirement to 22/22. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

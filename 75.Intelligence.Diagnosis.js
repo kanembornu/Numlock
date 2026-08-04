@@ -47,6 +47,9 @@ function buildInsights(cache)
 
 function buildDiagnosis(data, cache) {
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.DIAGNOSIS;
+
   var summary =
     cache.summary;
 
@@ -69,7 +72,7 @@ function buildDiagnosis(data, cache) {
 
   // Profit Margin
 
-  if (insights.profitMargin < 10) {
+  if (insights.profitMargin < rules.LOW_PROFIT_MARGIN) {
 
       diagnosis.push({
 
@@ -280,6 +283,9 @@ function buildDiagnosis(data, cache) {
 
 function detectCategoryDominance(cache) {
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.DIAGNOSIS;
+
   var split =
     cache.hotColdSplit;
 
@@ -305,7 +311,7 @@ function detectCategoryDominance(cache) {
   var coldPct =
     (split.cold / total) * 100;
 
-  if (hotPct >= 60) {
+  if (hotPct >= rules.CATEGORY_DOMINANCE) {
 
     return {
 
@@ -320,7 +326,7 @@ function detectCategoryDominance(cache) {
 
   }
 
-  if (coldPct >= 60) {
+  if (coldPct >= rules.CATEGORY_DOMINANCE) {
 
     return {
 

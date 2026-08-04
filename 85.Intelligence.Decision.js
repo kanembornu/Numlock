@@ -191,6 +191,9 @@ function formatBusinessPriorityComparison(periodComparison, metric)
 
 function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodComparison)
 {
+  var rules =
+    KPI_TARGET_CONFIG.RULES.BUSINESS_PRIORITY;
+
   var summary =
     cache.summary;
 
@@ -307,7 +310,7 @@ function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodCompari
       }
     });
   }
-  else if (Number(financial.profitMargin) < 5)
+  else if (Number(financial.profitMargin) < rules.CRITICALLY_LOW_PROFIT_MARGIN)
   {
     addCandidate({
       level: "High",
@@ -354,7 +357,7 @@ function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodCompari
 
   if (
     revenue.direction === "Down" &&
-    Number(revenue.growthRate) <= -10
+    Number(revenue.growthRate) <= rules.MATERIAL_REVENUE_DECLINE
   )
   {
     addCandidate({
@@ -403,7 +406,7 @@ function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodCompari
 
   if (
     expense.highestExpense &&
-    Number(expense.expenseShare) >= 50
+    Number(expense.expenseShare) >= rules.EXPENSE_CONCENTRATION
   )
   {
     addCandidate({
@@ -434,7 +437,7 @@ function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodCompari
     concentration.product &&
     (
       concentration.risk === "High" ||
-      Number(concentration.contribution) >= 50
+      Number(concentration.contribution) >= rules.PRODUCT_CONCENTRATION
     )
   )
   {
@@ -485,6 +488,9 @@ function buildBusinessPriority(cache, dataQuality, scopedRowCount, periodCompari
 
 function buildRiskEngine(cache)
 {
+  var rules =
+    KPI_TARGET_CONFIG.RULES.RISK_ENGINE;
+
   var risks = [];
 
   var revenue =
@@ -510,7 +516,7 @@ function buildRiskEngine(cache)
 
   // Profit Margin Risk
 
-  if(financial.profitMargin < 10)
+  if(financial.profitMargin < rules.LOW_PROFIT_MARGIN)
   {
     risks.push(
       "Profit margin rendah"
@@ -537,11 +543,11 @@ function buildRiskEngine(cache)
 
   var level = "Low";
 
-  if(risks.length >= 3)
+  if(risks.length >= rules.HIGH_RISK_COUNT)
   {
     level = "High";
   }
-  else if(risks.length >= 1)
+  else if(risks.length >= rules.MEDIUM_RISK_COUNT)
   {
     level = "Medium";
   }
@@ -563,6 +569,9 @@ function buildRiskEngine(cache)
 
 function buildBusinessFocus(cache) {
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.BUSINESS_FOCUS;
+
   var score =
     cache.businessScore;
 
@@ -580,7 +589,7 @@ function buildBusinessFocus(cache) {
 
   // 1. Profit Margin
 
-  if (Number(insights.profitMargin) < 10) {
+  if (Number(insights.profitMargin) < rules.LOW_PROFIT_MARGIN) {
 
     return {
 
@@ -670,7 +679,7 @@ function buildBusinessFocus(cache) {
 
   // 5. Business Score
 
-  if (score.score < 80) {
+  if (score.score < rules.OPTIMIZATION_SCORE) {
 
     return {
 
@@ -709,6 +718,9 @@ function buildBusinessFocus(cache) {
 }
 
 function buildExecutiveAlert(cache) {
+
+  var rules =
+    KPI_TARGET_CONFIG.RULES.EXECUTIVE_ALERT;
 
   var risk =
     cache.riskEngine;
@@ -763,7 +775,7 @@ function buildExecutiveAlert(cache) {
 
   }
 
-  else if (score.score >= 90) {
+  else if (score.score >= rules.EXCELLENT_SCORE) {
 
     title =
       "Business Performing Well";

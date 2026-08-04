@@ -29,6 +29,8 @@ Period comparison is a service-layer additive projection. `resolvePreviousCompar
 
 Unified Business Priority is an additive decision-layer projection. `buildBusinessPriority()` receives the completed analytics/intelligence cache plus already-built Data Quality, scoped-row count, and period-comparison evidence. It never reads or rescans transactions and never mutates recommendations, diagnosis, risk, focus, alert, or legacy priority objects. Candidate selection uses level, finite score, and fixed source precedence to return exactly one complete `businessPriority`; Critical Data Quality remains explicitly sourced as Data Quality rather than a business-performance failure.
 
+KPI target ownership begins in immutable `KPI_TARGET_CONFIG`. Stable thresholds used by KPI achievement, business status, maturity, diagnosis, recommendations, risk, focus, alert, and Business Priority are named there without changing their values or formulas. `buildKpiTargets()` projects the four existing Revenue, Profit, Units Sold, and Profit Margin targets into additive response metadata; dynamic targets continue to come from the existing KPI Achievement calculation. Score weights, penalties, priority tie-break scores, zero guards, display limits, and mechanical percentage caps remain local because they are formula mechanics rather than user-facing targets or classification boundaries.
+
 ## Aggregate Engine
 
 `buildAggregate(data)` is the analytics source of truth for the migrated domains:
@@ -67,7 +69,7 @@ Unified Business Priority is an additive decision-layer projection. `buildBusine
 | `94.Tests.Assertions.js` | Reusable test-only assertions, including recursive finite-number validation. |
 | `95.Tests.Validators.js` | Pure analytics invariant validators and diagnostics; no runnable test entry points. |
 | `96.Tests.Cases.js` | Directly runnable Apps Script backend tests. |
-| `98.Tests.Runner.js` | Ordered, fail-fast unified 21-test backend suite. |
+| `98.Tests.Runner.js` | Ordered, fail-fast unified 22-test backend suite. |
 | `100.Code.js` | Web entry points such as `doGet()`. |
 | `190.View.Index.html` | Dashboard HTML and browser runtime. |
 | `appsscript.json` | Apps Script manifest. |
@@ -107,6 +109,7 @@ Dependencies flow toward data and foundational analytics. Lower-numbered data/an
 - `testSparseDatasetResilience()`
 - `testPeriodComparison()`
 - `testBusinessPriorityContract()`
+- `testKpiTargetContract()`
 - `runAllBackendTests()`
 
 The test functions are editor-run validation entry points, not UI endpoints. Apps Script does not automatically display returned objects, so `testSparseDatasetResilience()` explicitly logs its successful seven-fixture, 30-property, populated-equivalence summary. Helper functions requiring parameters are internal even though Apps Script exposes global declarations in the editor.

@@ -97,6 +97,13 @@ The current dashboard already has a clear two-destination navigation model, a br
 
 ### P1-5 — Make KPI targets configurable and explainable
 
+**Status: Explainability completed locally in Sprint 5.10 Package 005; editing remains intentionally out of scope. Upload and live/browser validation are pending.**
+
+- **Implemented solution:** centralize all stable existing KPI and business-status thresholds in deeply immutable `KPI_TARGET_CONFIG`; preserve dynamic Revenue, Profit, and Units targets from KPI Achievement; expose additive system-defined target metadata; and render a compact accessible Business Performance disclosure with no editing affordance.
+- **Classification boundary:** score weights/penalties, candidate scores/tie-breaks, arithmetic zero guards, collection limits, and mechanical percentage caps remain local because they are formula mechanics rather than target or status thresholds.
+- **Files affected:** `10.Config.js`, intelligence consumers, `90.Dashboard.Service.js`, `190.View.Index.html`, deterministic test fixtures/cases/runner, and governing documentation.
+- **Validation required:** exact historical boundary/output preservation, deep immutability, public metadata completeness and uniqueness, accessible/responsive disclosure behavior, unified 22/22, deterministic Tailwind build, clasp inventory/upload, live Apps Script tests, and browser acceptance.
+
 - **Problem:** revenue, profit, and unit targets are derived from current actuals, the margin target is hard-coded to 15%, and Business Score uses other hard-coded thresholds. Users cannot see target provenance or set business-specific goals.
 - **User impact:** KPI achievement can appear authoritative while moving with actual performance and may not match management goals.
 - **Proposed solution:** define validated configuration storage and fallback defaults, expose actual/target/provenance, and document how targets influence scoring and recommendations.

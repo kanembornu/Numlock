@@ -9,33 +9,36 @@ function buildBusinessScore(cache)
   var insights =
     cache.insights;
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.BUSINESS_SCORE;
+
   var score = 100;
 
   // Profit Margin
 
-  if(financial.profitMargin < 5)
+  if(financial.profitMargin < rules.PROFIT_MARGIN_CRITICAL)
   {
     score -= 35;
   }
-  else if(financial.profitMargin < 10)
+  else if(financial.profitMargin < rules.PROFIT_MARGIN_WATCH)
   {
     score -= 25;
   }
-  else if(financial.profitMargin < 15)
+  else if(financial.profitMargin < rules.PROFIT_MARGIN_HEALTHY)
   {
     score -= 10;
   }
 
   // Revenue
 
-  if(financial.revenue < 1000000)
+  if(financial.revenue < rules.MINIMUM_REVENUE)
   {
     score -= 15;
   }
 
   // Units Sold
 
-  if(summary.unitsSold < 100)
+  if(summary.unitsSold < rules.MINIMUM_UNITS)
   {
     score -= 10;
   }
@@ -45,15 +48,15 @@ function buildBusinessScore(cache)
 
   var status;
 
-  if(score >= 90)
+  if(score >= rules.EXCELLENT_SCORE)
   {
     status = "Excellent";
   }
-  else if(score >= 75)
+  else if(score >= rules.HEALTHY_SCORE)
   {
     status = "Healthy";
   }
-  else if(score >= 60)
+  else if(score >= rules.WATCH_SCORE)
   {
     status = "Watch";
   }
@@ -100,6 +103,9 @@ function buildGrowthScore(cache)
   var insights =
     cache.insights;
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.GROWTH_SCORE;
+
   // Revenue Trend (30)
 
   if(revenue.direction === "Up")
@@ -113,11 +119,11 @@ function buildGrowthScore(cache)
 
   // Forecast (30)
 
-  if(forecast.growthRate >= 10)
+  if(forecast.growthRate >= rules.STRONG_FORECAST_GROWTH)
   {
     score += 30;
   }
-  else if(forecast.growthRate >= 0)
+  else if(forecast.growthRate >= rules.NON_NEGATIVE_FORECAST_GROWTH)
   {
     score += 20;
   }
@@ -128,11 +134,11 @@ function buildGrowthScore(cache)
 
   // Profit Margin (20)
 
-  if(financial.profitMargin >= 15)
+  if(financial.profitMargin >= rules.STRONG_PROFIT_MARGIN)
   {
     score += 20;
   }
-  else if(financial.profitMargin >= 10)
+  else if(financial.profitMargin >= rules.HEALTHY_PROFIT_MARGIN)
   {
     score += 10;
   }
@@ -143,11 +149,11 @@ function buildGrowthScore(cache)
 
   // Revenue Per Cup (20)
 
-  if(insights.revenuePerCup >= 15000)
+  if(insights.revenuePerCup >= rules.STRONG_REVENUE_PER_CUP)
   {
     score += 20;
   }
-  else if(insights.revenuePerCup >= 12000)
+  else if(insights.revenuePerCup >= rules.HEALTHY_REVENUE_PER_CUP)
   {
     score += 15;
   }
@@ -158,11 +164,11 @@ function buildGrowthScore(cache)
 
   var status = "Low Potential";
 
-  if(score >= 80)
+  if(score >= rules.HIGH_POTENTIAL_SCORE)
   {
     status = "High Potential";
   }
-  else if(score >= 60)
+  else if(score >= rules.MODERATE_POTENTIAL_SCORE)
   {
     status = "Moderate Potential";
   }
@@ -193,28 +199,32 @@ function buildKpiAchievement(cache) {
   var insights =
     cache.insights;
 
+  var rules =
+    KPI_TARGET_CONFIG.RULES.KPI_ACHIEVEMENT;
+
   var revenueTarget =
     Math.ceil(
-      summary.revenue / 1000000
-    ) * 1000000;
+      summary.revenue / rules.REVENUE_STEP
+    ) * rules.REVENUE_STEP;
 
   revenueTarget +=
-    1000000;
+    rules.REVENUE_ADDITIONAL_STEP;
 
   var profitTarget =
     Math.max(
-      1000000,
+      rules.PROFIT_MINIMUM,
       Math.ceil(
-        summary.profit / 500000
-      ) * 500000
+        summary.profit / rules.PROFIT_STEP
+      ) * rules.PROFIT_STEP
     );
 
   var unitTarget =
     Math.ceil(
-      summary.unitsSold / 100
-    ) * 100;
+      summary.unitsSold / rules.UNIT_STEP
+    ) * rules.UNIT_STEP;
 
-  var marginTarget = 15;
+  var marginTarget =
+    rules.MARGIN_TARGET;
 
   function calc(actual,target){
 
@@ -226,7 +236,7 @@ function buildKpiAchievement(cache) {
 
     return Math.min(
 
-      100,
+      rules.MAXIMUM_ACHIEVEMENT,
 
       Number(
 
@@ -317,6 +327,40 @@ function buildKpiAchievement(cache) {
 
 }
 
+function buildKpiTargets(cache)
+{
+  var achievement =
+    cache.kpiAchievement;
+
+  var targets =
+    KPI_TARGET_CONFIG.PUBLIC_TARGETS
+      .map(function(definition)
+      {
+        var currentTarget =
+          achievement[definition.key]
+            ? achievement[definition.key].target
+            : definition.target;
+
+        return {
+          key: definition.key,
+          label: definition.label,
+          unit: definition.unit,
+          target: currentTarget,
+          direction: definition.direction,
+          source: definition.source,
+          description: definition.description
+        };
+      });
+
+  return {
+    targets: targets,
+    provenance:
+      KPI_TARGET_CONFIG.PROVENANCE,
+    editable:
+      KPI_TARGET_CONFIG.EDITABLE
+  };
+}
+
 function buildBusinessMaturity(cache) {
 
   var score =
@@ -327,6 +371,9 @@ function buildBusinessMaturity(cache) {
 
   var risk =
     cache.riskEngine.riskLevel;
+
+  var rules =
+    KPI_TARGET_CONFIG.RULES.BUSINESS_MATURITY;
 
   var maturity = 0;
 
@@ -367,7 +414,7 @@ function buildBusinessMaturity(cache) {
   var description =
     "";
 
-  if (maturity >= 90) {
+  if (maturity >= rules.OPTIMIZED_SCORE) {
 
     level =
       "Optimized";
@@ -377,7 +424,7 @@ function buildBusinessMaturity(cache) {
 
   }
 
-  else if (maturity >= 75) {
+  else if (maturity >= rules.GROWING_SCORE) {
 
     level =
       "Growing";
@@ -387,7 +434,7 @@ function buildBusinessMaturity(cache) {
 
   }
 
-  else if (maturity >= 60) {
+  else if (maturity >= rules.STABLE_SCORE) {
 
     level =
       "Stable";
@@ -397,7 +444,7 @@ function buildBusinessMaturity(cache) {
 
   }
 
-  else if (maturity >= 40) {
+  else if (maturity >= rules.EMERGING_SCORE) {
 
     level =
       "Emerging";
