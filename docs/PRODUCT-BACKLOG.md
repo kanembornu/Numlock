@@ -6,6 +6,8 @@ This backlog is the documentation outcome of Sprint 5.8 Package 001. It is groun
 
 The current dashboard already has a clear two-destination navigation model, a broad executive-to-operational information hierarchy, KPI cards, three Chart.js visualizations, skeletons for initial KPIs/charts, recent transactions, deterministic backend coverage, and explicit Chart destruction before recreation. Generated Tailwind CSS is approximately 18 KB and is not presently a size concern. No duplicated event-listener registration was found.
 
+Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1 and P2 are covered by the ordered 22-test unified gate. Upload, Apps Script runtime, deployment, and browser acceptance were not rerun during the closure audit and remain separate unverified evidence. P1-5 target editing remains requirement-gated; P2-5 is the only open implementation-ready P0/P1/P2 item.
+
 ## Priority rules
 
 - **P0:** a current control is misleading, a valid state can break the dashboard, or the user can be blocked.
@@ -227,34 +229,16 @@ The current dashboard already has a clear two-destination navigation model, a br
 - **Validation required:** scope/authorization tests, aggregation-to-detail reconciliation, large-result pagination, keyboard/modal behavior, privacy review.
 - **Dependency on other items:** P1-1, P1-3, and P1-4; detail fields and authorization are unavailable requirements.
 
-## Recommended next three implementation packages
+## Recommended next implementation package
 
-### Sprint 5.8 Package 002 — Empty-data resilience
+### Sprint 5.11 Package 001 — Bounded client-render performance
 
-**Status: Completed and deployed.**
-
-- **Objective:** make every valid empty or sparse dataset return and render a usable, explicit state.
-- **Independent release:** yes; it preserves populated-data response fields and requires no filter/date contract.
-- **Expected tests:** seven deterministic empty/sales-only/purchase-only/one-row/sparse/populated backend fixtures, local 11/11 gate, extracted frontend syntax, mocked sparse rendering, and live Apps Script validation. Empty-state redesign and browser acceptance remain Package 004 scope.
-- **Scope:** P0-1 only.
-
-### Sprint 5.8 Package 003 — Truthful transaction scope
-
-**Status: Completed and deployed.**
-
-- **Objective:** replace the misleading transaction-type control with the approved end-to-end date filter.
-- **Independent release:** yes; parameterless `getDashboardData()` remains compatible and defaults to Current Year.
-- **Expected tests:** deterministic date-range and Revenue Trend assertions, response compatibility, inclusive boundaries, custom validation, finite/empty outputs, frontend request locking, and every-visible-output scope checks.
-- **Scope:** P0-2 only; transaction-type filtering was not implemented.
-
-### Sprint 5.8 Package 004 — Recoverable dashboard states
-
-**Status: Completed locally; upload and live/browser validation are pending.**
-
-- **Objective:** replace indefinite loading with visible, accessible success/empty/error/retry states.
-- **Independent release:** yes; it can consume existing response/error behavior and does not change analytics formulas.
-- **Expected tests:** deterministic row-count semantics plus mocked success/failure/render exception/retry/stale response, skeleton cleanup, keyboard/live-region checks, Console policy verification, desktop and narrow browser acceptance.
-- **Scope:** P2-3 only, reusing the empty-state vocabulary established by Package 002.
+- **Objective:** implement the ready portion of P2-5 by caching stable DOM references, avoiding response-array mutation, and rendering the active executive view before below-the-fold sections.
+- **User value:** improves initial interaction and repeat-filter responsiveness without removing business detail.
+- **Implementation risk:** Medium, bounded by preserving the public response, current filter lifecycle, stale-response suppression, chart summaries, and Chart instance destruction.
+- **Dependency readiness:** Ready for frontend-only work. API payload projection is explicitly excluded until external consumers are inventoried.
+- **Expected validation:** render-order and stale-response tests, response immutability, Chart instance counts, representative performance trace, ordered unified 22/22 gate, and desktop/narrow browser acceptance.
+- **Scope:** P2-5 only.
 
 ## Explicitly not prioritized as defects
 

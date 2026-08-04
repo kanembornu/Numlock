@@ -4,6 +4,7 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Closed Sprint 5.10 locally after confirming all five packages: accessibility and keyboard semantics, executive dashboard presentation, period comparison, unified Business Priority, and centralized explainable KPI targets. The ordered unified suite contains 22 checks and requires 22/22; this documentation-only closure audit did not rerun upload, Apps Script runtime, deployment, or browser acceptance.
 - Completed Sprint 5.10 Package 005 by moving existing stable KPI and business-status thresholds into deeply immutable `KPI_TARGET_CONFIG` without changing formulas, boundaries, classifications, recommendations, or analytics.
 - Added backward-compatible `kpiTargets` metadata for the existing Revenue, Profit, Units Sold, and Profit Margin targets with explicit system provenance and non-editable status, plus a compact accessible Business Performance disclosure.
 - Added `testKpiTargetContract()` with 20 deterministic boundary, historical-output, immutability, public-contract, accessibility, and responsive scenarios; raised the ordered fail-fast unified gate to 22/22.

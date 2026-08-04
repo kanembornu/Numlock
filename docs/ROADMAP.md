@@ -95,7 +95,9 @@ Completed locally. Revenue Trend, Hot/Cold Split, and Expense Breakdown retain t
 
 Completed locally. Tailwind remains locally compiled at 3.4.17, Chart.js is pinned to the verified 4.5.1 UMD artifact, and the eight actively used Font Awesome icons retain the exact 6.0.0 stylesheet. If Chart.js is unavailable, existing instances are destroyed, accessible summaries remain, each chart reports `Chart unavailable.`, one payload-free diagnostic is logged, and non-chart rendering continues. `testFrontendDependencyContract()` raises the unified requirement to 17/17; upload and live/browser acceptance remain separate evidence.
 
-## Sprint 5.10 — complete dashboard accessibility
+## Sprint 5.10 — complete
+
+Sprint 5.10 is complete locally. Its five packages establish dashboard accessibility and keyboard semantics, executive presentation, truthful period comparison, one unified business priority, and centralized explainable KPI targets. The ordered unified gate now contains 22 checks and requires 22/22. This closure audit did not perform upload, Apps Script runtime, deployment, or browser acceptance; those evidence classes remain unverified.
 
 ### Package 001 — document, keyboard, announcement, and reduced-motion contract
 
@@ -116,6 +118,12 @@ Completed locally. Additive `businessPriority` deterministically ranks existing 
 ### Package 005 — centralized and explainable KPI targets
 
 Completed locally. Existing KPI and business-status thresholds now have one immutable configuration owner, while calculation mechanics remain with their domains. Additive `kpiTargets` explains the four existing KPI Achievement targets with explicit system provenance and no editing claim; a compact accessible disclosure appears in Business Performance outside the first viewport. `testKpiTargetContract()` raises the ordered fail-fast unified requirement to 22/22. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
+
+## Recommended next package
+
+### Sprint 5.11 Package 001 — bounded client-render performance
+
+Implement only the ready, compatibility-safe portion of P2-5: cache stable element references, avoid mutating response arrays during rendering, and defer below-the-fold sections until after the active executive view. This is the highest-value remaining P0/P1/P2 package that is not already complete or blocked on product requirements. Keep the public response contract unchanged and exclude payload projection until external consumers are inventoried. Validate render order, stale-response suppression, Chart instance counts, representative performance, and desktop/narrow browser behavior.
 
 ## Ongoing release obligations
 
