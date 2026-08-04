@@ -183,6 +183,8 @@ Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1
 
 ### P2-5 — Defer noncritical rendering and reduce avoidable client work
 
+**Status: Bounded frontend-only scope completed and uploaded in Sprint 5.11 Package 001; live Apps Script and browser validation are pending. API projection remains requirement-gated by an external-consumer inventory.**
+
 - **Problem:** one approximately 48 KB HTML file contains the full runtime, and success synchronously renders every hidden and below-the-fold section. It performs 41 ID lookups and 18 HTML replacements per render; expense sorting mutates the response array. Six response fields (`financial`, `profitIntelligence`, `profitTrend`, `opportunities`, `kpiStatus`, and `productContribution`) are not directly consumed by the current view.
 - **User impact:** initial interaction can be delayed on slower devices, repeated loads rebuild all charts/markup, and oversized responses/renders do work that is not immediately visible.
 - **Proposed solution:** cache stable element references, render the active/above-the-fold view first, defer lower sections/transactions, avoid response mutation, suppress stale responses, and evaluate additive API projection only after confirming no external consumers.
@@ -233,11 +235,13 @@ Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1
 
 ### Sprint 5.11 Package 001 — Bounded client-render performance
 
+**Status: Completed and uploaded; live Apps Script and browser validation are pending.**
+
 - **Objective:** implement the ready portion of P2-5 by caching stable DOM references, avoiding response-array mutation, and rendering the active executive view before below-the-fold sections.
 - **User value:** improves initial interaction and repeat-filter responsiveness without removing business detail.
 - **Implementation risk:** Medium, bounded by preserving the public response, current filter lifecycle, stale-response suppression, chart summaries, and Chart instance destruction.
 - **Dependency readiness:** Ready for frontend-only work. API payload projection is explicitly excluded until external consumers are inventoried.
-- **Expected validation:** render-order and stale-response tests, response immutability, Chart instance counts, representative performance trace, ordered unified 22/22 gate, and desktop/narrow browser acceptance.
+- **Expected validation:** render-order and stale-response tests, response immutability, Chart instance counts, representative performance trace, ordered unified 23/23 gate, and desktop/narrow browser acceptance.
 - **Scope:** P2-5 only.
 
 ## Explicitly not prioritized as defects

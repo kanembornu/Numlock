@@ -119,11 +119,11 @@ Completed locally. Additive `businessPriority` deterministically ranks existing 
 
 Completed locally. Existing KPI and business-status thresholds now have one immutable configuration owner, while calculation mechanics remain with their domains. Additive `kpiTargets` explains the four existing KPI Achievement targets with explicit system provenance and no editing claim; a compact accessible disclosure appears in Business Performance outside the first viewport. `testKpiTargetContract()` raises the ordered fail-fast unified requirement to 22/22. Upload, Apps Script runtime, and browser acceptance remain separate evidence.
 
-## Recommended next package
+## Sprint 5.11 — bounded client-render performance
 
 ### Sprint 5.11 Package 001 — bounded client-render performance
 
-Implement only the ready, compatibility-safe portion of P2-5: cache stable element references, avoid mutating response arrays during rendering, and defer below-the-fold sections until after the active executive view. This is the highest-value remaining P0/P1/P2 package that is not already complete or blocked on product requirements. Keep the public response contract unchanged and exclude payload projection until external consumers are inventoried. Validate render order, stale-response suppression, Chart instance counts, representative performance, and desktop/narrow browser behavior.
+Completed and uploaded. Stable shell, control, skeleton, and state nodes are cached once while generated children remain uncached. The immediate render retains dashboard state, Executive Summary, KPI cards, reporting metadata, comparison, KPI-target context, Data Quality, and charts. One cancellable, request-token-guarded animation-frame phase renders detailed intelligence, recommendations, decision support, product detail, roadmap, and recent transactions exactly once. Response arrays are never sorted or mutated in place, public payloads and visible output remain unchanged, and `testClientRenderPerformanceContract()` raises the ordered fail-fast unified requirement to 23/23. API projection remains excluded pending an external-consumer inventory; Apps Script runtime and browser acceptance remain separate unverified evidence.
 
 ## Ongoing release obligations
 

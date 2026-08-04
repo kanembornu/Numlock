@@ -2228,6 +2228,200 @@ function testExecutivePresentationContract()
   return summary;
 }
 
+function testClientRenderPerformanceContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+
+  var stableCacheStart =
+    source.indexOf("function initializeStableDashboardElements()");
+  var immediateRenderStart =
+    source.indexOf("function render(res, requestToken)");
+  var deferredRenderStart =
+    source.indexOf("function renderDeferredDashboardContent(res)");
+  var deferredScheduleStart =
+    source.indexOf("function scheduleDeferredDashboardRender(res, requestToken)");
+
+  if (
+    stableCacheStart === -1 ||
+    immediateRenderStart === -1 ||
+    deferredRenderStart === -1 ||
+    deferredScheduleStart === -1
+  )
+  {
+    throw new Error(
+      "Client render performance architecture is incomplete"
+    );
+  }
+
+  var immediateRenderEnd =
+    source.indexOf(
+      "function renderDeferredDashboardContent(res)",
+      immediateRenderStart
+    );
+  var immediateSource =
+    source.slice(immediateRenderStart, immediateRenderEnd);
+  var deferredSource =
+    source.slice(deferredRenderStart);
+  var cacheSource =
+    source.slice(
+      stableCacheStart,
+      source.indexOf(
+        "function setSidebarOpen",
+        stableCacheStart
+      )
+    );
+
+  [
+    "renderBusinessOverview(res);",
+    "renderReportingMetadata(res);",
+    "renderPeriodComparison(res.periodComparison);",
+    "renderKpiTargets(res.kpiTargets);",
+    "renderDataQuality(res);",
+    "renderExecutiveSummary(res);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      immediateSource,
+      token,
+      "immediate first-visible render"
+    );
+  });
+
+  [
+    "renderBusinessIntelligence(res);",
+    "renderExecutiveCenter(res);",
+    "renderTransactions(res);",
+    'document.getElementById( "actionRoadmapCard" ).innerHTML'
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      deferredSource,
+      token,
+      "deferred lower-priority render"
+    );
+    assertSourceExcludes(
+      immediateSource,
+      token,
+      "immediate lower-priority render"
+    );
+  });
+
+  [
+    'filter: document.getElementById("filter")',
+    'customStart: document.getElementById("customStart")',
+    'customEnd: document.getElementById("customEnd")',
+    'dashboardStatus: document.getElementById("dashboardStatus")',
+    'pageElements: document.querySelectorAll(".page")',
+    'pageButtons: document.querySelectorAll("[data-page]")'
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      cacheSource,
+      token,
+      "stable DOM cache"
+    );
+  });
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Repeated DOM query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+
+  assertSourceContainsOnce(
+    source,
+    "window.requestAnimationFrame(function()",
+    "single deferred phase"
+  );
+  assertSourceContains(
+    source,
+    "if (requestToken !== activeDashboardRequestToken)",
+    "stale deferred render guard"
+  );
+  assertSourceContains(
+    source,
+    "window.cancelAnimationFrame(",
+    "superseded deferred render cancellation"
+  );
+
+  [
+    ".sort(",
+    ".reverse(",
+    ".splice("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      source,
+      token,
+      "in-place frontend response mutation"
+    );
+  });
+
+  [
+    'id="recommendationContainer"',
+    'id="actionRoadmapCard"',
+    'id="topProductsContainer"',
+    'id="tableBody"'
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(
+      source,
+      token,
+      "preserved populated output container"
+    );
+  });
+
+  createAccessibilityContractFixtures()
+    .concat(createDashboardStateContractFixtures())
+    .forEach(function(fixture)
+    {
+      (fixture.tokens || []).forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "preserved frontend contract / " + fixture.name
+        );
+      });
+    });
+
+  var summary = {
+    passed: true,
+    scenarios: 7,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    deferredPhases: 1,
+    responseMutation: false
+  };
+
+  Logger.log(
+    "PASS: testClientRenderPerformanceContract | scenarios=" +
+    summary.scenarios +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries +
+    " | deferredPhases=" +
+    summary.deferredPhases +
+    " | responseMutation=" +
+    summary.responseMutation
+  );
+
+  return summary;
+}
+
 function testChartPresentationContract()
 {
   var source =

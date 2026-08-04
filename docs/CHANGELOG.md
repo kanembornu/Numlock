@@ -4,6 +4,10 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.11 Package 001 bounded client-render performance without changing analytics, response contracts, visible output, filter/retry behavior, accessibility, responsive behavior, or chart lifecycle.
+- Cached only stable shell, control, skeleton, and dashboard-state DOM references; retained dynamic generated children as uncached render output; and kept response collections immutable by copying or using non-mutating iteration.
+- Added one request-token-guarded `requestAnimationFrame` phase for detailed intelligence, recommendations, decision support, product detail, roadmap, and recent transactions while keeping first-visible dashboard state, Executive Summary, KPIs, reporting metadata, comparison, targets, data quality, and charts immediate. Added `testClientRenderPerformanceContract()` and raised the ordered fail-fast unified gate to 23/23.
+- Uploaded the reviewed 26-file clasp inventory after the local 23/23 gate passed; Apps Script runtime, deployment, and browser acceptance were not run.
 - Closed Sprint 5.10 locally after confirming all five packages: accessibility and keyboard semantics, executive dashboard presentation, period comparison, unified Business Priority, and centralized explainable KPI targets. The ordered unified suite contains 22 checks and requires 22/22; this documentation-only closure audit did not rerun upload, Apps Script runtime, deployment, or browser acceptance.
 - Completed Sprint 5.10 Package 005 by moving existing stable KPI and business-status thresholds into deeply immutable `KPI_TARGET_CONFIG` without changing formulas, boundaries, classifications, recommendations, or analytics.
 - Added backward-compatible `kpiTargets` metadata for the existing Revenue, Profit, Units Sold, and Profit Margin targets with explicit system provenance and non-editable status, plus a compact accessible Business Performance disclosure.

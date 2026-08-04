@@ -515,12 +515,48 @@
   let activeDashboardRequestToken = 0;
   let lastDashboardRequest = null;
   let responsiveShellInitialized = false;
+  let stableDashboardElements = null;
+  let pendingDashboardRenderFrame = null;
+
+    function initializeStableDashboardElements()
+    {
+      if (stableDashboardElements)
+      {
+        return stableDashboardElements;
+      }
+
+      stableDashboardElements = {
+        sidebar: document.getElementById("dashboardSidebar"),
+        sidebarBackdrop: document.getElementById("sidebarBackdrop"),
+        sidebarMenuButton: document.getElementById("sidebarMenuButton"),
+        sidebarCloseButton: document.getElementById("sidebarCloseButton"),
+        pageElements: document.querySelectorAll(".page"),
+        pageButtons: document.querySelectorAll("[data-page]"),
+        businessOverview: document.getElementById("businessOverview"),
+        mainChartSkeleton: document.getElementById("mainChartSkeleton"),
+        hotColdSkeleton: document.getElementById("hotColdSkeleton"),
+        expenseSkeleton: document.getElementById("expenseSkeleton"),
+        topProductSkeleton: document.getElementById("topProductSkeleton"),
+        filter: document.getElementById("filter"),
+        customDateRange: document.getElementById("customDateRange"),
+        customStart: document.getElementById("customStart"),
+        customEnd: document.getElementById("customEnd"),
+        dateFilterValidation: document.getElementById("dateFilterValidation"),
+        dashboardStatus: document.getElementById("dashboardStatus"),
+        dashboardStatusText: document.getElementById("dashboardStatusText"),
+        dashboardRetryButton: document.getElementById("dashboardRetryButton"),
+        dashboardContent: document.getElementById("dashboardContent")
+      };
+
+      return stableDashboardElements;
+    }
 
     function setSidebarOpen(isOpen, restoreFocus)
     {
-      var sidebar = document.getElementById("dashboardSidebar");
-      var backdrop = document.getElementById("sidebarBackdrop");
-      var menuButton = document.getElementById("sidebarMenuButton");
+      var elements = initializeStableDashboardElements();
+      var sidebar = elements.sidebar;
+      var backdrop = elements.sidebarBackdrop;
+      var menuButton = elements.sidebarMenuButton;
       var isDesktop =
         window.matchMedia("(min-width: 1024px)").matches;
 
@@ -549,19 +585,21 @@
 
       responsiveShellInitialized = true;
 
-      document.getElementById("sidebarMenuButton")
+      var elements = initializeStableDashboardElements();
+
+      elements.sidebarMenuButton
         .addEventListener("click", function()
         {
           setSidebarOpen(true, false);
         });
 
-      document.getElementById("sidebarCloseButton")
+      elements.sidebarCloseButton
         .addEventListener("click", function()
         {
           setSidebarOpen(false, true);
         });
 
-      document.getElementById("sidebarBackdrop")
+      elements.sidebarBackdrop
         .addEventListener("click", function()
         {
           setSidebarOpen(false, true);
@@ -571,7 +609,7 @@
       {
         if (
           event.key === "Escape" &&
-          document.getElementById("sidebarMenuButton")
+          elements.sidebarMenuButton
             .getAttribute("aria-expanded") === "true"
         )
         {
@@ -579,7 +617,7 @@
         }
       });
 
-      document.querySelectorAll("[data-page]")
+      elements.pageButtons
         .forEach(function(button)
         {
           button.addEventListener("click", function()
@@ -600,14 +638,16 @@
 
     function showPage(pageId)
     {
-      document.querySelectorAll(".page").forEach(function(page)
+      var elements = initializeStableDashboardElements();
+
+      elements.pageElements.forEach(function(page)
       {
         var isActivePage = page.id === pageId;
         page.classList.toggle("active", isActivePage);
         page.hidden = !isActivePage;
       });
 
-      document.querySelectorAll("[data-page]")
+      elements.pageButtons
         .forEach(function(button)
         {
           var isActive =
@@ -633,7 +673,7 @@
     //--------------------------------------------------
     function showBusinessOverviewSkeleton()
     {
-      document.getElementById("businessOverview").innerHTML = new Array(4) .fill("")
+      initializeStableDashboardElements().businessOverview.innerHTML = new Array(4) .fill("")
         .map(function()
           {
             return `
@@ -654,10 +694,11 @@
     //--------------------------------------------------
     function showChartSkeleton()
     {
-      document.getElementById("mainChartSkeleton").classList.remove("hidden");
-      document.getElementById("hotColdSkeleton").classList.remove("hidden");
-      document.getElementById("expenseSkeleton").classList.remove("hidden");
-      document.getElementById("topProductSkeleton").classList.remove("hidden");
+      var elements = initializeStableDashboardElements();
+      elements.mainChartSkeleton.classList.remove("hidden");
+      elements.hotColdSkeleton.classList.remove("hidden");
+      elements.expenseSkeleton.classList.remove("hidden");
+      elements.topProductSkeleton.classList.remove("hidden");
     }
 
     //--------------------------------------------------
@@ -665,39 +706,35 @@
     //--------------------------------------------------
     function hideChartSkeleton()
     {
-      document.getElementById("mainChartSkeleton").classList.add("hidden");
-      document.getElementById("hotColdSkeleton").classList.add("hidden");
-      document.getElementById("expenseSkeleton").classList.add("hidden");
-      document.getElementById("topProductSkeleton").classList.add("hidden");
+      var elements = initializeStableDashboardElements();
+      elements.mainChartSkeleton.classList.add("hidden");
+      elements.hotColdSkeleton.classList.add("hidden");
+      elements.expenseSkeleton.classList.add("hidden");
+      elements.topProductSkeleton.classList.add("hidden");
     }
 
     function setDashboardControlsDisabled(disabled)
     {
-      document.getElementById("filter").disabled = disabled;
+      var elements = initializeStableDashboardElements();
+      elements.filter.disabled = disabled;
 
       var isCustom =
-        document.getElementById("filter").value === "custom";
+        elements.filter.value === "custom";
 
-      document.getElementById("customStart").disabled =
+      elements.customStart.disabled =
         disabled || !isCustom;
 
-      document.getElementById("customEnd").disabled =
+      elements.customEnd.disabled =
         disabled || !isCustom;
     }
 
     function setDashboardState(state, message)
     {
-      var status =
-        document.getElementById("dashboardStatus");
-
-      var statusText =
-        document.getElementById("dashboardStatusText");
-
-      var retryButton =
-        document.getElementById("dashboardRetryButton");
-
-      var content =
-        document.getElementById("dashboardContent");
+      var elements = initializeStableDashboardElements();
+      var status = elements.dashboardStatus;
+      var statusText = elements.dashboardStatusText;
+      var retryButton = elements.dashboardRetryButton;
+      var content = elements.dashboardContent;
 
       dashboardRequestInFlight =
         state === "loading";
@@ -768,35 +805,35 @@
 
     function updateCustomDateVisibility()
     {
-      var isCustom =
-        document.getElementById("filter").value === "custom";
+      var elements = initializeStableDashboardElements();
+      var isCustom = elements.filter.value === "custom";
 
-      document.getElementById("customDateRange").classList.toggle(
+      elements.customDateRange.classList.toggle(
         "hidden",
         !isCustom
       );
 
       if (!dashboardRequestInFlight)
       {
-        document.getElementById("customStart").disabled = !isCustom;
-        document.getElementById("customEnd").disabled = !isCustom;
+        elements.customStart.disabled = !isCustom;
+        elements.customEnd.disabled = !isCustom;
       }
     }
 
     function setDateFilterValidation(message)
     {
-      var validation =
-        document.getElementById("dateFilterValidation");
+      var elements = initializeStableDashboardElements();
+      var validation = elements.dateFilterValidation;
 
       var hasError = Boolean(message);
 
       validation.innerText = message || "";
       validation.classList.toggle("hidden", !hasError);
-      document.getElementById("customStart").setAttribute(
+      elements.customStart.setAttribute(
         "aria-invalid",
         String(hasError)
       );
-      document.getElementById("customEnd").setAttribute(
+      elements.customEnd.setAttribute(
         "aria-invalid",
         String(hasError)
       );
@@ -804,14 +841,12 @@
 
     function getDashboardFilterRequest()
     {
-      var filter =
-        document.getElementById("filter").value;
+      var elements = initializeStableDashboardElements();
+      var filter = elements.filter.value;
 
-      var customStart =
-        document.getElementById("customStart").value;
+      var customStart = elements.customStart.value;
 
-      var customEnd =
-        document.getElementById("customEnd").value;
+      var customEnd = elements.customEnd.value;
 
       if (filter === "custom")
       {
@@ -1259,6 +1294,14 @@
       activeDashboardRequestToken =
         requestToken;
 
+      if (pendingDashboardRenderFrame !== null)
+      {
+        window.cancelAnimationFrame(
+          pendingDashboardRenderFrame
+        );
+        pendingDashboardRenderFrame = null;
+      }
+
       setDashboardState("loading");
 
       google.script.run
@@ -1274,7 +1317,7 @@
 
           try
           {
-            render(res);
+            render(res, requestToken);
 
             var isEmpty =
               res &&
@@ -2251,7 +2294,7 @@
     //--------------------------------------------------
     // Render Executive Center
     //--------------------------------------------------
-    function renderExecutiveCenter(res)
+    function renderExecutiveSummary(res)
     {
       document.getElementById("executiveSummary").innerText = res.executiveSummary || "-";
 
@@ -2295,6 +2338,10 @@
           " · " +
           priority.evidence.comparison;
       }
+    }
+
+    function renderExecutiveCenter(res)
+    {
 
       if (res.riskEngine)
       {
@@ -2461,7 +2508,38 @@
     //--------------------------------------------------
     // Render Res
     //--------------------------------------------------
-    function render(res)
+    function scheduleDeferredDashboardRender(res, requestToken)
+    {
+      pendingDashboardRenderFrame =
+        window.requestAnimationFrame(function()
+        {
+          pendingDashboardRenderFrame = null;
+
+          if (requestToken !== activeDashboardRequestToken)
+          {
+            return;
+          }
+
+          try
+          {
+            renderDeferredDashboardContent(res);
+          }
+          catch (error)
+          {
+            console.error(
+              "Dashboard deferred render failed",
+              error
+            );
+
+            setDashboardState(
+              "error",
+              "Unable to load dashboard data."
+            );
+          }
+        });
+    }
+
+    function render(res, requestToken)
     {
       if (!res)
       {
@@ -2482,9 +2560,19 @@
       renderKpiTargets(res.kpiTargets);
       renderDataQuality(res);
       renderCharts(res);
+      renderExecutiveSummary(res);
+
+      scheduleDeferredDashboardRender(
+        res,
+        requestToken
+      );
+    }
+
+    function renderDeferredDashboardContent(res)
+    {
       renderBusinessIntelligence(res);
       renderExecutiveCenter(res);
-      renderTransactions(res)
+      renderTransactions(res);
 
       //--------------------------------------------------
       // Executive Alert

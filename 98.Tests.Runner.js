@@ -17,6 +17,7 @@ function runAllBackendTests()
     { name: "testDashboardStateContract", run: testDashboardStateContract },
     { name: "testAccessibilityContract", run: testAccessibilityContract },
     { name: "testExecutivePresentationContract", run: testExecutivePresentationContract },
+    { name: "testClientRenderPerformanceContract", run: testClientRenderPerformanceContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
