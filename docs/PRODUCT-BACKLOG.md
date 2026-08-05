@@ -12,7 +12,7 @@ Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b
 
 Sprint 5.12 is complete at verified commit `0e6dcdc`. Its print-ready filtered executive report includes print metadata, an authored A4 portrait contract, and preserved accessibility, and the latest verified ordered gate is local 24/24. Upload, Apps Script runtime, deployment, and browser print acceptance remain unverified. Remaining backlog is editable KPI targets, API projection, CSV export beyond the completed print capability, and KPI/chart drill-down.
 
-Sprint 5.13 Package 001 is implemented, committed at `563a7e4`, and uploaded, but closure remains blocked. Its frontend-only CSV action exports the current filter's already rendered recent-transaction rows and visible columns in displayed order through a UTF-8 browser Blob download, with accessible empty-state behavior and the verified 72-ID/two-selector performance budget. Quote escaping is present, but leading `=`, `+`, `-`, and `@` spreadsheet-formula characters are neither neutralized nor covered by `testCsvExportContract()`. The runner contains 25 entries, but no post-fix unified 25/25 result is recorded; the latest fully verified gate remains Sprint 5.12's local 24/24.
+Sprint 5.13 is complete. Package 001 CSV export and Package 002 formula-injection hardening passed live `testCsvExportContract()`, live `testClientRenderPerformanceContract()`, and live `runAllBackendTests()` 25/25. The accepted client-render contract preserves 72 ID queries, two selector queries, and no response mutation.
 
 ## Priority rules
 
@@ -217,7 +217,7 @@ Sprint 5.13 Package 001 is implemented, committed at `563a7e4`, and uploaded, bu
 
 ### P3-1 — Add print/export views
 
-**Status: Print completed in Sprint 5.12 Package 001; visible-transactions CSV is implemented in Sprint 5.13 Package 001 but requires formula-injection hardening and a verified 25/25 gate before closure.**
+**Status: Print completed in Sprint 5.12 Package 001; visible-transactions CSV and formula-injection hardening completed with live 25/25 acceptance in Sprint 5.13 Packages 001–002.**
 
 - **Problem:** there is no print stylesheet or export action for executive reporting.
 - **User impact:** users must copy or screenshot dashboard content for meetings and archives.
@@ -267,17 +267,17 @@ Sprint 5.13 Package 001 is implemented, committed at `563a7e4`, and uploaded, bu
 
 The implemented package uses one accessible browser-print action and authored A4 portrait rules. It prints only the active dashboard's visible executive content and reporting context, preserves chart summaries, adds title/period/generated/version metadata, and suppresses navigation, controls, skeletons, disclosures, inactive pages, and hidden content. `testPrintReportContract()` adds 13 scenarios and raises the ordered gate to 24/24 without changing analytics or backend contracts.
 
-## Recommended next implementation package
+## Completed implementation package
 
 ### Sprint 5.13 Package 002 — CSV formula-injection hardening and acceptance closure
 
-**Status: Recommended; bounded frontend-only scope is ready for implementation.**
+**Status: Complete; focused CSV and client-render contracts passed live, and the unified live gate passed 25/25.**
 
 - **Objective:** neutralize leading `=`, `+`, `-`, and `@` spreadsheet-formula characters in exported cells and close the missing acceptance evidence.
 - **User value:** makes the existing portable reconciliation artifact safe to open in spreadsheet software without changing which transactions or fields users receive.
 - **Dependency readiness:** Ready; the export path, active-filter ownership, visible DOM projection, filename, UTF-8 encoding, accessibility, and performance budget already exist.
 - **Implementation risk:** Low; the change is isolated to CSV cell serialization and its contract test, with no new data or authorization surface.
-- **Expected validation:** dangerous-prefix and ordinary-value fixtures, commas/quotes/newlines and UTF-8 preservation, exact visible row/column/order parity, accessible empty-state behavior, unchanged print behavior, 72-ID/two-selector performance budget, no response mutation, and unified 25/25.
+- **Verified validation:** live `testCsvExportContract()` PASS, live `testClientRenderPerformanceContract()` PASS with the 72-ID/two-selector query budget and no response mutation preserved, and live `runAllBackendTests()` PASS 25/25.
 - **Scope:** bounded CSV serialization hardening and acceptance only; exclude new fields, expanded history, backend/API changes, spreadsheet access/export, permissions, persistence, drill-down, editable targets, layout changes, and deployment.
 
 ## Explicitly not prioritized as defects

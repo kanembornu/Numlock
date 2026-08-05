@@ -135,17 +135,19 @@ Sprint 5.12 is complete at verified commit `0e6dcdc`. Package 001 delivers the b
 
 Completed locally. One accessible Print Report action invokes browser-native print for the successfully rendered active period. A print-only header includes report title, active period, generated date, and unchanged NUMLOCK version; authored A4 portrait CSS retains current KPIs, Executive Summary, Business Priority, comparison, reporting metadata, freshness, Data Quality status, charts and summaries, and recommendations. Navigation, controls, skeletons, disclosures, inactive pages, and hidden content are excluded. `testPrintReportContract()` raises the ordered gate to 24/24 without analytics, backend response, CSV/PDF library, GitHub Pages, or release-version changes. Upload, Apps Script runtime, and browser print acceptance remain separate evidence.
 
-## Sprint 5.13 — in progress
+## Sprint 5.13 — complete
+
+Sprint 5.13 is complete. Package 001 CSV export and Package 002 formula-injection hardening passed live `testCsvExportContract()`, live `testClientRenderPerformanceContract()`, and live `runAllBackendTests()` 25/25 while preserving the 72-ID/two-selector query budget and no-response-mutation contract.
 
 ### Sprint 5.13 Package 001 — visible recent-transactions CSV export
 
-Implemented, committed at `563a7e4`, and uploaded, but not closed. One native Export CSV action beside Print Report exports the current filter's already rendered recent-transaction rows and visible columns in displayed order. It creates a UTF-8 CSV with a header row and deterministic `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` filename through browser Blob/object-URL APIs, remains disabled without visible rows, and preserves the verified 72-ID/two-selector client-render budget without response mutation. No backend response, spreadsheet read/export, hidden field, expanded history, API, drill-down, persistence, GitHub Pages, generated CSS, or release metadata changed.
+Completed, committed at `563a7e4`, and uploaded. One native Export CSV action beside Print Report exports the current filter's already rendered recent-transaction rows and visible columns in displayed order. It creates a UTF-8 CSV with a header row and deterministic `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` filename through browser Blob/object-URL APIs, remains disabled without visible rows, and preserves the verified 72-ID/two-selector client-render budget without response mutation. No backend response, spreadsheet read/export, hidden field, expanded history, API, drill-down, persistence, GitHub Pages, generated CSS, or release metadata changed.
 
-Package 001's original closure gaps were spreadsheet-formula neutralization and a missing post-fix unified 25/25 result. Package 002 closes the implementation and focused-coverage gap; live 25/25 remains the final Sprint 5.13 acceptance gate.
+Package 001's original closure gaps were spreadsheet-formula neutralization and a missing post-fix unified 25/25 result. Package 002 closed the implementation and focused-coverage gap, and the subsequent live 25/25 gate closed Sprint 5.13 acceptance.
 
 ### Sprint 5.13 Package 002 — CSV formula-injection hardening and acceptance closure
 
-Completed locally. Before CSV quoting, the serializer inserts one apostrophe before a first non-whitespace `=`, `+`, `-`, or `@`. It preserves normal text, dates, currency display, the numeric-column `-` placeholder, valid negative numeric values such as `-12500`, and already-neutralized values without adding a second apostrophe. Eight behavioral cases raise `testCsvExportContract()` to 14 scenarios while the runner remains at 25 entries and the client-render contract remains exactly 72 ID queries, two selector queries, and no response mutation. The package adds no data, permission, backend/API, spreadsheet, history, persistence, or layout scope. Live unified 25/25 remains required for Sprint closure.
+Complete. Before CSV quoting, the serializer inserts one apostrophe before a first non-whitespace `=`, `+`, `-`, or `@`. It preserves normal text, dates, currency display, the numeric-column `-` placeholder, valid negative numeric values such as `-12500`, and already-neutralized values without adding a second apostrophe. Eight behavioral cases raise `testCsvExportContract()` to 14 scenarios while the runner remains at 25 entries and the client-render contract remains exactly 72 ID queries, two selector queries, and no response mutation. The package adds no data, permission, backend/API, spreadsheet, history, persistence, or layout scope. Live `testCsvExportContract()` and `testClientRenderPerformanceContract()` passed, followed by live `runAllBackendTests()` PASS 25/25.
 
 ## Ongoing release obligations
 
