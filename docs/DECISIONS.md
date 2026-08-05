@@ -1,5 +1,7 @@
 # Engineering Decisions
 
+This document owns durable engineering and product decisions. [Project Status](PROJECT_STATUS.md) owns the current executive state; decisions recorded here are constraints and rationale, not status claims or backlog scheduling.
+
 ## Active decisions
 
 ### Bound drill-down to already-loaded recent transaction evidence

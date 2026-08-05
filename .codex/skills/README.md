@@ -9,7 +9,7 @@
 | `$numlock-development` | General implementation scope, repository safeguards, and behavior preservation. |
 | `$numlock-testing` | Test owners, deterministic fixtures, runner semantics, and suite membership. |
 | `$numlock-frontend` | Shared browser implementation, responsive UX, Tailwind, and frontend dependencies. |
-| `$numlock-documentation` | Documentation ownership, evidence accuracy, and historical continuity. |
+| `$numlock-documentation` | `PROJECT_STATUS.md`, documentation ownership, evidence accuracy, and historical continuity. |
 | `$numlock-appscript` | Apps Script V8, globals, HtmlService, services, quotas, and flat source compatibility. |
 | `$numlock-validation` | Ordered local checks and exact local, live, and browser evidence classification. |
 | `$numlock-performance` | Spreadsheet passes, cache reuse, DOM budgets, immutability, races, and deferred work. |
@@ -92,6 +92,7 @@
 | CSV and print | `$numlock-export` |
 | Chart rendering | `$numlock-chart` |
 | Performance budgets and races | `$numlock-performance` |
+| Current executive project status | `$numlock-documentation` via `docs/PROJECT_STATUS.md` |
 
 Reference the owning skill instead of repeating its generic rules in another skill.
 
