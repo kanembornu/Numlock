@@ -1,5 +1,11 @@
 # Engineering Decisions
 
+### Adopt the UI/UX 2.0 component, theme, and four-destination contract
+
+UI/UX 2.0 Package 004 approves a one-viewport desktop Dashboard with secondary information organized through Overview, Performance, Analytics, Intelligence, and Planning tabs. Transactions uses Recent, Sales, Expenses, and Purchases taxonomy, but only Recent and truthful client-filtered views of the current bounded projection are initially implementable; migrated-data views stay disabled with an explanation or are omitted. The approved visual system combines Executive Minimal hierarchy/restraint with Modern Financial numeric, table, and chart precision, using complete semantic light and deep-navy dark themes.
+
+Dashboard, Transactions, Settings, and Logs are the approved primary destinations for later v2 implementation. This later product decision supersedes the Package 001 two-destination discovery decision for UI/UX 2.0 planning without rewriting that historical record or changing current v1.0 production. Settings is limited to Appearance and authoritative About metadata. Logs is limited initially to sanitized, session-local client events and explicitly excludes raw payloads, credentials, identifiers, personal data, source rows, and fabricated history. Future financial modules remain absent until they have approved populated workflows. The complete implementation contract is owned by [UI/UX 2.0 Component Library and Theme Contract](UIUX-2.0-COMPONENT-LIBRARY.md).
+
 This document owns durable engineering and product decisions. [Project Status](PROJECT_STATUS.md) owns the current executive state; decisions recorded here are constraints and rationale, not status claims or backlog scheduling.
 
 ## Active decisions
