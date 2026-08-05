@@ -18,6 +18,7 @@ function runAllBackendTests()
     { name: "testAccessibilityContract", run: testAccessibilityContract },
     { name: "testExecutivePresentationContract", run: testExecutivePresentationContract },
     { name: "testPrintReportContract", run: testPrintReportContract },
+    { name: "testCsvExportContract", run: testCsvExportContract },
     { name: "testClientRenderPerformanceContract", run: testClientRenderPerformanceContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },

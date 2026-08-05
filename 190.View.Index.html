@@ -325,6 +325,16 @@
           Print Report
         </button>
 
+        <button
+          id="exportCsvButton"
+          type="button"
+          onclick="exportVisibleTransactionsToCsv()"
+          class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white sm:w-auto"
+          aria-label="Export visible transactions to CSV"
+          disabled>
+          Export CSV
+        </button>
+
         <div id="customDateRange" class="hidden w-full mt-2 flex flex-wrap gap-2">
           <label for="customStart" class="sr-only">Custom start date</label>
           <input
@@ -696,6 +706,7 @@
   let responsiveShellInitialized = false;
   let stableDashboardElements = null;
   let pendingDashboardRenderFrame = null;
+  let visibleTransactionRowCount = 0;
 
     function initializeStableDashboardElements()
     {
@@ -724,11 +735,14 @@
         dashboardStatus: document.getElementById("dashboardStatus"),
         dashboardStatusText: document.getElementById("dashboardStatusText"),
         dashboardRetryButton: document.getElementById("dashboardRetryButton"),
-        dashboardContent: document.getElementById("dashboardContent")
+        dashboardContent: document.getElementById("dashboardContent"),
+        tableBody: document.getElementById("tableBody")
       };
 
       stableDashboardElements.printReportButton =
         stableDashboardElements.filter.nextElementSibling;
+      stableDashboardElements.exportCsvButton =
+        stableDashboardElements.printReportButton.nextElementSibling;
       stableDashboardElements.printReportHeader =
         stableDashboardElements.dashboardStatus.previousElementSibling;
 
@@ -923,12 +937,20 @@
       dashboardRequestInFlight =
         state === "loading";
 
+      if (dashboardRequestInFlight)
+      {
+        visibleTransactionRowCount = 0;
+      }
+
       setDashboardControlsDisabled(
         dashboardRequestInFlight
       );
 
       elements.printReportButton.disabled =
         state !== "success";
+
+      elements.exportCsvButton.disabled =
+        state !== "success" || visibleTransactionRowCount === 0;
 
       status.classList.toggle(
         "hidden",
@@ -1482,6 +1504,85 @@
         });
 
       window.print();
+    }
+
+    function escapeCsvCell(value)
+    {
+      return '"' + String(value).replace(/"/g, '""') + '"';
+    }
+
+    function formatCsvFilename(date)
+    {
+      function pad(value)
+      {
+        return String(value).padStart(2, "0");
+      }
+
+      return "NUMLOCK_Transactions_" +
+        date.getFullYear() +
+        pad(date.getMonth() + 1) +
+        pad(date.getDate()) + "_" +
+        pad(date.getHours()) +
+        pad(date.getMinutes()) +
+        ".csv";
+    }
+
+    function exportVisibleTransactionsToCsv()
+    {
+      var tableBody = initializeStableDashboardElements().tableBody;
+      var table = tableBody.parentElement;
+      var headers = Array.from(table.tHead.rows[0].cells);
+      var visibleColumnIndexes = headers
+        .map(function(header, index)
+        {
+          return header.hidden || header.classList.contains("hidden")
+            ? -1
+            : index;
+        })
+        .filter(function(index)
+        {
+          return index !== -1;
+        });
+      var visibleRows = Array.from(tableBody.rows).filter(function(row)
+      {
+        return !row.hidden &&
+          !row.classList.contains("hidden") &&
+          row.cells.length === headers.length;
+      });
+
+      if (!visibleRows.length)
+      {
+        return;
+      }
+
+      var csvRows = [visibleColumnIndexes.map(function(index)
+      {
+        return escapeCsvCell(headers[index].textContent.trim());
+      }).join(",")];
+
+      visibleRows.forEach(function(row)
+      {
+        var cells = row.cells;
+        csvRows.push(visibleColumnIndexes.map(function(index)
+        {
+          return escapeCsvCell(cells[index].textContent.trim());
+        }).join(","));
+      });
+
+      var blob = new Blob(
+        ["\uFEFF" + csvRows.join("\r\n")],
+        { type: "text/csv;charset=utf-8" }
+      );
+      var downloadUrl = URL.createObjectURL(blob);
+      var downloadLink = document.createElement("a");
+
+      downloadLink.href = downloadUrl;
+      downloadLink.download = formatCsvFilename(new Date());
+      downloadLink.hidden = true;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      URL.revokeObjectURL(downloadUrl);
     }
 
     function requestDashboardData(request)
@@ -2687,7 +2788,7 @@
           ? res.recentTransactions
           : [];
 
-      document.getElementById("tableBody").innerHTML =
+      initializeStableDashboardElements().tableBody.innerHTML =
         recentTransactions.length
           ? recentTransactions.map(function(r)
             {
@@ -2712,6 +2813,10 @@
                 </tr>`;
             }).join("")
           : '<tr><td colspan="5" class="p-6 text-center text-slate-500">No recent transactions for the selected period.</td></tr>';
+
+      visibleTransactionRowCount = recentTransactions.length;
+      initializeStableDashboardElements().exportCsvButton.disabled =
+        visibleTransactionRowCount === 0;
     }
 
     //--------------------------------------------------

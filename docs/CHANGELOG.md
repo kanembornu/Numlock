@@ -4,6 +4,8 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Completed Sprint 5.13 Package 001 with one accessible Export CSV button beside Print Report. The browser builds a UTF-8 CSV with a header row from only the currently rendered transaction table's visible rows and columns, preserving displayed order, and downloads `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` through Blob and object-URL APIs.
+- Added `testCsvExportContract()` covering filename, header, visible row/column scope, ordering, empty-state disabling, UTF-8 output, hidden-field exclusion, browser Blob download, and preserved accessibility; raised the ordered fail-fast unified gate to 25/25 without backend/API, spreadsheet, history, GitHub Pages, or release-metadata changes.
 - Closed Sprint 5.12 at verified commit `0e6dcdc` after confirming the print-ready filtered executive report, print metadata, authored A4 portrait contract, preserved accessibility contracts, and the ordered 24-entry runner with the latest verified local 24/24 gate. The closure audit was documentation-only and did not run clasp upload, Apps Script runtime, deployment, or browser print acceptance.
 - Recommended Sprint 5.13 Package 001 as a bounded frontend-only CSV export of the current filter's already visible recent-transaction rows and columns, explicitly excluding hidden data, backend/API changes, expanded history, drill-down, and persistence.
 - Completed Sprint 5.12 Package 001 with one accessible Print Report button, browser-native `window.print()`, and authored A4 portrait print CSS for the currently rendered dashboard period.

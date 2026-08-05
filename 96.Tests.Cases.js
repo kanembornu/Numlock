@@ -2416,6 +2416,175 @@ function testPrintReportContract()
   return summary;
 }
 
+function testCsvExportContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  [
+    'id="exportCsvButton"',
+    'type="button"',
+    'Export CSV',
+    'aria-label="Export visible transactions to CSV"',
+    'disabled'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "CSV accessibility contract");
+  });
+  scenariosPassed++;
+
+  assertSourceContains(
+    source,
+    'printReportButton.nextElementSibling',
+    "CSV action beside Print Report"
+  );
+  scenariosPassed++;
+
+  [
+    '"NUMLOCK_Transactions_"',
+    'pad(date.getMonth() + 1)',
+    'pad(date.getDate()) + "_"',
+    'pad(date.getHours())',
+    'pad(date.getMinutes())',
+    '".csv"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "CSV filename contract");
+  });
+  scenariosPassed++;
+
+  [
+    'var tableBody = initializeStableDashboardElements().tableBody;',
+    'var headers = Array.from(table.tHead.rows[0].cells);',
+    'headers[index].textContent.trim()',
+    'var csvRows = [visibleColumnIndexes.map'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "CSV header row");
+  });
+  scenariosPassed++;
+
+  [
+    'var visibleRows = Array.from(tableBody.rows)',
+    '!row.hidden',
+    '!row.classList.contains("hidden")',
+    'row.cells.length === headers.length'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "visible CSV rows only");
+  });
+  scenariosPassed++;
+
+  [
+    'header.hidden || header.classList.contains("hidden")',
+    'visibleColumnIndexes.map(function(index)',
+    'var cells = row.cells;',
+    'cells[index].textContent.trim()'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "visible CSV columns only");
+  });
+  scenariosPassed++;
+
+  [
+    'visibleRows.forEach(function(row)',
+    'csvRows.push(visibleColumnIndexes.map(function(index)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "CSV ordering preserved");
+  });
+  scenariosPassed++;
+
+  [
+    'visibleTransactionRowCount = recentTransactions.length;',
+    'visibleTransactionRowCount === 0;',
+    'if (!visibleRows.length)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "empty CSV export disabled");
+  });
+  scenariosPassed++;
+
+  [
+    '["\\uFEFF" + csvRows.join("\\r\\n")]',
+    '{ type: "text/csv;charset=utf-8" }',
+    'String(value).replace(/"/g, \'""\')'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "UTF-8 CSV output");
+  });
+  scenariosPassed++;
+
+  [
+    'new Blob(',
+    'URL.createObjectURL(blob)',
+    'document.createElement("a")',
+    'downloadLink.download = formatCsvFilename(new Date());',
+    'downloadLink.click();',
+    'URL.revokeObjectURL(downloadUrl);'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "browser Blob download path");
+  });
+  scenariosPassed++;
+
+  var exportFunctionStart =
+    source.indexOf("function exportVisibleTransactionsToCsv()");
+  var exportFunctionEnd =
+    source.indexOf("function requestDashboardData", exportFunctionStart);
+  var exportFunctionSource =
+    source.slice(exportFunctionStart, exportFunctionEnd);
+
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "recentTransactions",
+    "spreadsheet",
+    "hiddenFields"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      exportFunctionSource,
+      token,
+      "CSV backend, source-object, or hidden-field access"
+    );
+  });
+  scenariosPassed++;
+
+  createAccessibilityContractFixtures()
+    .concat(createResponsiveShellContractFixtures())
+    .forEach(function(fixture)
+    {
+      fixture.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "preserved frontend contract / " + fixture.name
+        );
+      });
+    });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    csvReady: true
+  };
+
+  Logger.log(
+    "PASS: testCsvExportContract | scenarios=" +
+    summary.scenarios +
+    " | csvReady=" +
+    summary.csvReady
+  );
+
+  return summary;
+}
+
 function testClientRenderPerformanceContract()
 {
   var source =

@@ -135,11 +135,11 @@ Sprint 5.12 is complete at verified commit `0e6dcdc`. Package 001 delivers the b
 
 Completed locally. One accessible Print Report action invokes browser-native print for the successfully rendered active period. A print-only header includes report title, active period, generated date, and unchanged NUMLOCK version; authored A4 portrait CSS retains current KPIs, Executive Summary, Business Priority, comparison, reporting metadata, freshness, Data Quality status, charts and summaries, and recommendations. Navigation, controls, skeletons, disclosures, inactive pages, and hidden content are excluded. `testPrintReportContract()` raises the ordered gate to 24/24 without analytics, backend response, CSV/PDF library, GitHub Pages, or release-version changes. Upload, Apps Script runtime, and browser print acceptance remain separate evidence.
 
-## Sprint 5.13 — recommended
+## Sprint 5.13 — in progress
 
 ### Sprint 5.13 Package 001 — visible recent-transactions CSV export
 
-Export only the current filter's already visible recent-transaction rows and existing visible columns from the browser. This bounded extension of P3-1 gives users a portable meeting and reconciliation artifact using data already disclosed by the dashboard. It is ready for frontend-only implementation with low-to-medium risk because it requires no backend response, hidden spreadsheet field, permission, API, expanded-history, drill-down, or persistence change. Acceptance must cover exact filter/row/column parity, RFC 4180-compatible escaping, spreadsheet-formula injection neutralization, deterministic filename metadata, keyboard access, empty-state behavior, and the full unified gate.
+Completed locally. One native Export CSV action beside Print Report exports the current filter's already rendered recent-transaction rows and visible columns in displayed order. It creates a UTF-8 CSV with a header row and deterministic `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` filename through browser Blob/object-URL APIs, and remains disabled without visible rows. `testCsvExportContract()` raises the ordered gate to 25/25. No backend response, spreadsheet read/export, hidden field, expanded history, API, drill-down, persistence, GitHub Pages, generated CSS, or release metadata changed. Upload, live Apps Script execution, and browser acceptance remain separate evidence until performed.
 
 ## Ongoing release obligations
 
