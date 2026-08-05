@@ -159,7 +159,11 @@ Complete at commit `fe6c424`, pushed to `origin/main`, with the Apps Script sour
 
 ### Sprint 5.15 Package 001 — dashboard external-consumer inventory
 
-Complete as a documentation-only repository audit. [`DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md) classifies the production frontend, test-only, documentation/example, and unknown/external consumers; inventories all 37 top-level response fields exactly once; and records ownership, permission, privacy, compatibility, projection, evidence, and rollback constraints. Thirty-one fields are consumed by the current view and six are non-rendered but remain contract-tested. The sparse test's 36-entry required-property list omits separately covered `dateFilter`. Unknown external callers and deployment permission evidence cannot be resolved from Git, so payload reduction is not implementation-ready and the default full response must remain unchanged.
+Complete as a documentation/discovery sprint. The inventory is committed at `e373b9a`. [`DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md) classifies the production frontend, test-only, documentation/example, and unknown/external consumers; inventories all 37 top-level response fields exactly once; and records ownership, permission, privacy, compatibility, projection, evidence, and rollback constraints. Thirty-one fields are consumed by the current view and six are opt-in projection candidates that remain contract-tested. Unknown external callers and deployment permission evidence cannot be resolved from Git, and permission review is incomplete, so API projection is not implementation-ready and the default full response must remain unchanged.
+
+## Recommended next — Sprint 5.16 Package 001
+
+Bounded response-contract completeness is the only implementation-ready package selected after reviewing the remaining backlog. Add `dateFilter` to the sparse test's 36-entry required-property list so the default 37-field response is asserted completely. Preserve production source, response behavior, ordered runner membership, persistence, and authorization. The package is independently releasable and requires the focused sparse-response contract plus the unchanged unified 25/25 gate.
 
 ## Ongoing release obligations
 
