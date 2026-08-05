@@ -59,6 +59,8 @@
       #mainContent { background: var(--canvas); }
       #topUtilityBar { height: 64px; background: var(--surface-1); border-color: var(--border-subtle); }
       #contentViewport { background: var(--canvas); }
+      #dashboardTabList { height: 48px; }
+      .dashboard-tab-panel { min-width: 0; }
       #sidebarBackdrop { background: var(--overlay); }
       .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
       .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
@@ -80,6 +82,8 @@
         #dashboardSidebar { transform: translateX(0); }
         #mainContent { margin-left: 240px; height: 100vh; height: 100dvh; overflow: hidden; }
         #contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow-y: auto; }
+        .dashboard-tab-panel:not(#dashboardPanelOverview) { max-height: calc(100dvh - 152px); overflow-y: auto; }
+        #dashboardPanelOverview { overflow: visible; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -214,6 +218,7 @@
         #sidebarMenuButton,
         #topUtilityBar,
         #dashboardScreenHeader,
+        #dashboardTabList,
         #dashboardStatus,
         #dateFilterControls > label,
         #dateFilterControls > select,
@@ -231,6 +236,13 @@
         [hidden]
         {
           display: none !important;
+        }
+
+        #dashboardTabPanels [role="tabpanel"]
+        {
+          display: block !important;
+          max-height: none !important;
+          overflow: visible !important;
         }
 
         #mainContent,
@@ -473,7 +485,7 @@
     <div id="dashboard" class="page active">
 
     <!-- HEADER -->
-    <div class="flex min-w-0 flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
+    <div id="dashboardHeaderRegion" class="flex min-w-0 flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
       <div id="dashboardScreenHeader" class="min-w-0">
         <h1 id="dashboardHeading" class="text-3xl sm:text-4xl lg:text-4xl font-bold text-slate-900" tabindex="-1"> Executive Dashboard </h1>
         <p class="text-slate-500 mt-3"> Business performance, attention areas, and next actions </p>
@@ -605,6 +617,27 @@
     </div>
 
     <div id="dashboardContent" aria-busy="false">
+      <div
+        id="dashboardTabList"
+        class="mb-4 flex items-center gap-1 overflow-x-auto border-b border-slate-200"
+        role="tablist"
+        aria-label="Dashboard sections">
+        <button id="dashboardTabOverview" type="button" role="tab" aria-selected="true" aria-controls="dashboardPanelOverview" tabindex="0" data-dashboard-tab="overview" class="min-h-11 shrink-0 border-b-2 border-indigo-600 px-4 text-sm font-semibold text-indigo-700">Overview</button>
+        <button id="dashboardTabPerformance" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPerformance" tabindex="-1" data-dashboard-tab="performance" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Performance</button>
+        <button id="dashboardTabAnalytics" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelAnalytics" tabindex="-1" data-dashboard-tab="analytics" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Analytics</button>
+        <button id="dashboardTabIntelligence" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelIntelligence" tabindex="-1" data-dashboard-tab="intelligence" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Intelligence</button>
+        <button id="dashboardTabPlanning" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPlanning" tabindex="-1" data-dashboard-tab="planning" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Planning</button>
+      </div>
+
+      <div id="dashboardTabPanels">
+        <section id="dashboardPanelOverview" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabOverview" data-dashboard-panel="overview"></section>
+        <section id="dashboardPanelPerformance" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabPerformance" data-dashboard-panel="performance" hidden></section>
+        <section id="dashboardPanelAnalytics" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabAnalytics" data-dashboard-panel="analytics" hidden></section>
+        <section id="dashboardPanelIntelligence" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabIntelligence" data-dashboard-panel="intelligence" hidden></section>
+        <section id="dashboardPanelPlanning" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabPlanning" data-dashboard-panel="planning" hidden></section>
+      </div>
+
+      <div id="dashboardSectionStaging" hidden>
     <!-- EXECUTIVE SUMMARY -->
     <section id="executiveSummarySection" class="min-w-0 bg-white rounded-[32px] shadow-lg border border-slate-100 p-5 sm:p-7 mb-6" aria-labelledby="executiveSummaryTitle">
       <div class="mb-5">
@@ -640,7 +673,7 @@
     </section>
 
     <!-- BUSINESS OVERVIEW -->
-    <section aria-labelledby="keyMetricsTitle" class="mb-6">
+    <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-6">
       <div class="mb-4">
         <h2 id="keyMetricsTitle" class="text-2xl font-bold text-slate-900">Key Metrics</h2>
         <p class="mt-1 text-sm text-slate-500">Core financial, sales, product, and health indicators.</p>
@@ -650,7 +683,7 @@
 
     <!-- CHART ROW -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
-      <section class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="revenueChartTitle">
+      <section id="revenueChartSection" class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="revenueChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="revenueChartTitle" class="font-semibold"> Revenue Trend </h2>
           <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
@@ -663,7 +696,7 @@
         </div>
       </section>
 
-      <section class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="hotColdChartTitle">
+      <section id="hotColdChartSection" class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="hotColdChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="hotColdChartTitle" class="font-semibold"> Product Distribution </h2>
           <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Product distribution transactions')">View transactions</button>
@@ -678,8 +711,8 @@
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
-      <div class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100">
-        <h2 class="font-semibold mb-4"> Top Products </h2>
+      <section id="topProductsSection" class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" aria-labelledby="topProductsTitle">
+        <h2 id="topProductsTitle" class="font-semibold mb-4"> Top Products </h2>
         <div id="topProductWrapper" class="relative">
           <div id="topProductsContainer"></div>
           <div id="topProductSkeleton" class="hidden absolute inset-0 bg-white rounded-[32px] p-7">
@@ -693,9 +726,9 @@
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <section class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="expenseChartTitle">
+      <section id="expenseChartSection" class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="expenseChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="expenseChartTitle" class="font-semibold"> Expense Breakdown </h2>
           <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('purchase', '', 'Expense transactions')">View transactions</button>
@@ -715,7 +748,7 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
 
       <!-- EXECUTIVE SUMMARY -->
-      <section class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 flex flex-col">
+      <section id="diagnosisSection" class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 flex flex-col">
 
         <div class="mb-5">
           <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
@@ -736,7 +769,7 @@
       </section>
 
       <!-- BUSINESS INTELLIGENCE -->
-      <section class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 h-full flex flex-col">
+      <section id="businessPerformanceSection" class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 h-full flex flex-col">
 
         <div class="mb-6">
           <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
@@ -786,7 +819,7 @@
       </section>
 
       <!-- ACTION CENTER -->
-      <section class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 flex flex-col">
+      <section id="recommendationsSection" class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 flex flex-col">
 
         <div class="mb-6">
           <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
@@ -826,7 +859,7 @@
     </div>
 
     <!-- RISK AND GROWTH -->
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
+    <div id="riskOpportunitySection" class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
       <div class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100">
         <div class="text-sm uppercase tracking-wider text-slate-500 mb-2"> Risk Status </div>
         <div id="riskLevel" class="text-3xl font-bold">Loading...</div>
@@ -843,7 +876,7 @@
     </div>
 
     <!-- PRODUCT PERFORMANCE -->
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
+    <div id="productConcentrationSection" class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
       <div class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100">
         <div class="text-sm uppercase tracking-wider text-slate-500 mb-2"> 🎯 Revenue Dependency </div>
         <div id="revenueDependencyContainer"> </div>
@@ -855,6 +888,7 @@
       </div>
     </div>
 
+    </div>
     </div>
     </div>
 
@@ -964,6 +998,8 @@
   let activeTransactionDrilldown = null;
   let themeFoundationInitialized = false;
   let sessionClientLogs = [];
+  let dashboardTabsInitialized = false;
+  let activeDashboardTab = "overview";
 
     function initializeStableDashboardElements()
     {
@@ -1050,8 +1086,191 @@
         stableDashboardElements.logsPage.querySelector("p[id]");
       stableDashboardElements.sessionLogsList =
         stableDashboardElements.logsPage.querySelector("ol");
+      stableDashboardElements.dashboardHeaderRegion =
+        stableDashboardElements.printReportHeader.previousElementSibling;
+      stableDashboardElements.dashboardTabList =
+        stableDashboardElements.dashboardContent.firstElementChild;
+      stableDashboardElements.dashboardTabPanels =
+        stableDashboardElements.dashboardTabList.nextElementSibling;
+      stableDashboardElements.dashboardSectionStaging =
+        stableDashboardElements.dashboardTabPanels.nextElementSibling;
+      stableDashboardElements.dashboardTabs =
+        stableDashboardElements.dashboardTabList.querySelectorAll(
+          '[role="tab"]'
+        );
+      stableDashboardElements.dashboardPanels =
+        stableDashboardElements.dashboardTabPanels.querySelectorAll(
+          '[role="tabpanel"]'
+        );
 
       return stableDashboardElements;
+    }
+
+    function resizeVisibleDashboardCharts(tabName)
+    {
+      var chartsByTab = {
+        performance: [revenueChart],
+        analytics: [hotColdChart, expenseChart]
+      };
+
+      (chartsByTab[tabName] || [])
+        .forEach(function(chart)
+        {
+          if (chart)
+          {
+            chart.resize();
+          }
+        });
+    }
+
+    function setActiveDashboardTab(tabName, moveFocus)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedIndex = -1;
+
+      elements.dashboardTabs.forEach(function(tab, index)
+      {
+        var isSelected =
+          tab.getAttribute("data-dashboard-tab") === tabName;
+
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.setAttribute("tabindex", isSelected ? "0" : "-1");
+        tab.classList.toggle("border-indigo-600", isSelected);
+        tab.classList.toggle("text-indigo-700", isSelected);
+        tab.classList.toggle("border-transparent", !isSelected);
+        tab.classList.toggle("text-slate-600", !isSelected);
+
+        if (isSelected)
+        {
+          selectedIndex = index;
+        }
+      });
+
+      if (selectedIndex === -1)
+      {
+        return;
+      }
+
+      elements.dashboardPanels.forEach(function(panel)
+      {
+        panel.hidden =
+          panel.getAttribute("data-dashboard-panel") !== tabName;
+      });
+
+      activeDashboardTab = tabName;
+
+      if (moveFocus)
+      {
+        elements.dashboardTabs[selectedIndex].focus();
+      }
+
+      resizeVisibleDashboardCharts(tabName);
+    }
+
+    function initializeDashboardTabs()
+    {
+      if (dashboardTabsInitialized)
+      {
+        return;
+      }
+
+      dashboardTabsInitialized = true;
+
+      var elements = initializeStableDashboardElements();
+      var staging = elements.dashboardSectionStaging;
+      var sectionOwnership = {
+        overview: [
+          elements.dashboardHeaderRegion,
+          staging.querySelector("#executiveSummarySection"),
+          staging.querySelector("#keyMetricsSection")
+        ],
+        performance: [
+          staging.querySelector("#businessPerformanceSection"),
+          staging.querySelector("#revenueChartSection")
+        ],
+        analytics: [
+          staging.querySelector("#hotColdChartSection"),
+          staging.querySelector("#expenseChartSection"),
+          staging.querySelector("#topProductsSection"),
+          staging.querySelector("#productConcentrationSection")
+        ],
+        intelligence: [
+          staging.querySelector("#diagnosisSection"),
+          staging.querySelector("#recommendationsSection"),
+          staging.querySelector("#riskOpportunitySection")
+        ],
+        planning: [
+          staging.querySelector("#kpiTargetReference"),
+          staging.querySelector("#executiveCenter")
+        ]
+      };
+
+      elements.dashboardPanels.forEach(function(panel)
+      {
+        var panelName = panel.getAttribute("data-dashboard-panel");
+
+        sectionOwnership[panelName].forEach(function(section)
+        {
+          if (!section)
+          {
+            throw new Error(
+              "Dashboard tab section ownership is incomplete"
+            );
+          }
+
+          panel.appendChild(section);
+        });
+      });
+
+      staging.remove();
+
+      elements.dashboardTabs.forEach(function(tab, index)
+      {
+        tab.addEventListener("click", function()
+        {
+          setActiveDashboardTab(
+            tab.getAttribute("data-dashboard-tab"),
+            false
+          );
+        });
+
+        tab.addEventListener("keydown", function(event)
+        {
+          var targetIndex = index;
+
+          if (event.key === "ArrowRight")
+          {
+            targetIndex = (index + 1) % elements.dashboardTabs.length;
+          }
+          else if (event.key === "ArrowLeft")
+          {
+            targetIndex =
+              (index - 1 + elements.dashboardTabs.length) %
+              elements.dashboardTabs.length;
+          }
+          else if (event.key === "Home")
+          {
+            targetIndex = 0;
+          }
+          else if (event.key === "End")
+          {
+            targetIndex = elements.dashboardTabs.length - 1;
+          }
+          else
+          {
+            return;
+          }
+
+          event.preventDefault();
+          setActiveDashboardTab(
+            elements.dashboardTabs[targetIndex]
+              .getAttribute("data-dashboard-tab"),
+            true
+          );
+        });
+      });
+
+      setActiveDashboardTab(activeDashboardTab, false);
     }
 
     function setDesktopSidebarCollapsed(isCollapsed)
@@ -3897,6 +4116,7 @@ window.onload = function()
 {
   initializeThemeFoundation();
   initializeResponsiveShell();
+  initializeDashboardTabs();
   updateCustomDateVisibility();
   loadData();
 };

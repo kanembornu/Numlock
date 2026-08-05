@@ -26,7 +26,7 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 005 implemen
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 005 — application shell and theme foundation — implemented and uploaded on 2026-08-05.** The frontend now has a 240px/72px desktop sidebar, 64px utility bar, bounded viewport shell, four approved destinations, truthful Appearance/About Settings, sanitized session-local Logs, and exact Light/Dark/System semantic themes with browser-local preference, pre-render application, Chart.js synchronization, and print-light behavior. Existing Dashboard and Transactions content remains unmigrated and compatible. Focused contracts and the ordered local suite pass 26/26; the exact 26-file clasp inventory was uploaded. Apps Script runtime and deployed-browser acceptance remain separate unverified evidence.
+**UI/UX 2.0 Package 006 — Dashboard tab framework — implemented and uploaded on 2026-08-05.** The five approved tabs now own all existing Dashboard sections exactly once: Overview, Performance, Analytics, Intelligence, and Planning. Native hidden panels, roving keyboard focus, selected-tab preservation, chart resize, bounded desktop panel overflow, natural mobile flow, and print-time cross-tab visibility are implemented without new backend requests, response mutation, card redesign, or Transactions tabs. Six focused contracts and the ordered local suite pass 27/27; the exact 26-file clasp inventory was uploaded. Apps Script runtime and deployed-browser acceptance remain separate unverified evidence.
 
 ## 6. Current test gate and evidence level
 
@@ -36,6 +36,8 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 005 implemen
 | --- | --- |
 | Local/static | Release candidate `658f4ab1011633e86634f14ce838a514c5205df0`: dependency install, production/frontend syntax, manifest parse, Markdown links, eight focused release contracts, unified 25/25, runner count, and Git checks passed on 2026-08-05. |
 | Current UI/UX 2.0 local/static | Package 005: all numbered JavaScript and extracted frontend JavaScript parsed; five focused frontend contracts passed; deterministic Tailwind builds matched; ordered suite passed 26/26 with 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
+| Current UI/UX 2.0 tabs local/static | Package 006: all numbered JavaScript and extracted frontend JavaScript parsed; six focused frontend contracts passed; deterministic Tailwind builds matched; ordered suite passed 27/27 with five tabs, 14 uniquely owned sections, zero tab-switch backend requests, 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
+| Current UI/UX 2.0 tabs upload | Package 006: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
@@ -81,7 +83,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 26/26.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 27/27.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -122,7 +124,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Active runner membership is 26 and the latest Package 005 local 26/26 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Active runner membership is 27 and the latest Package 006 local 27/27 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
@@ -137,7 +139,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 Hold release promotion and new feature implementation when any of these conditions is true:
 
-- the active local unified gate is not exactly 26/26;
+- the active local unified gate is not exactly 27/27;
 - the release candidate differs from the reviewed/uploaded inventory;
 - Git status contains unexplained or unreviewed changes;
 - Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
@@ -169,7 +171,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 Package 006 — Dashboard tab framework, pending separate authorization.** Package 005 leaves all current Dashboard content in its existing order; the next slice may add the approved tab framework without migrating content until its own bounded package authorizes that move.
+**UI/UX 2.0 Package 007 — Overview refinement, pending separate authorization.** Package 006 completes tab ownership without redesigning individual blocks; the next slice may make the Overview panel meet its approved density and first-viewport measurements without changing the other panels.
 
 ## 19. Status-history log
 
@@ -184,3 +186,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | UI/UX 2.0 discovery | Package 003 compared four visual directions, selected Executive Minimal and Modern Financial for later high-fidelity comparison, and defined preliminary shortlisted tokens; documentation only, with no production or Tailwind change. |
 | 2026-08-05 | UI/UX 2.0 design contract | Package 004 defined the one-viewport tabbed shell, four approved destinations, full light/dark tokens, component/accessibility rules, truthful Settings and session-local Logs boundaries, and implementation slices; documentation only, with no production or Tailwind change. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 005 implemented and uploaded the 26-file shell/theme foundation with four destinations and raised the ordered local gate to 26/26; runtime, deployment, and browser acceptance remain unverified. |
+| 2026-08-05 | UI/UX 2.0 implementation | Package 006 migrated 14 existing Dashboard sections exactly once into five accessible panels, raised the ordered local gate to 27/27, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain unverified. |

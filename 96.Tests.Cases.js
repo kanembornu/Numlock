@@ -2277,6 +2277,303 @@ function testUiShellThemeContract()
   return summary;
 }
 
+function testDashboardTabFrameworkContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+  var tabNames = [
+    "overview",
+    "performance",
+    "analytics",
+    "intelligence",
+    "planning"
+  ];
+
+  assertSourceContainsOnce(
+    source,
+    'role="tablist"',
+    "single Dashboard tablist"
+  );
+  tabNames.forEach(function(tabName)
+  {
+    assertSourceContainsOnce(
+      source,
+      'data-dashboard-tab="' + tabName + '"',
+      "Dashboard tab " + tabName
+    );
+    assertSourceContainsOnce(
+      source,
+      'data-dashboard-panel="' + tabName + '"',
+      "Dashboard panel " + tabName
+    );
+  });
+  scenariosPassed++;
+
+  [
+    'id="dashboardTabOverview"',
+    'aria-selected="true"',
+    'tabindex="0"',
+    'data-dashboard-tab="overview"',
+    'let activeDashboardTab = "overview";'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "default Overview tab");
+  });
+  scenariosPassed++;
+
+  var ownership = {
+    overview: [
+      "dashboardHeaderRegion",
+      "executiveSummarySection",
+      "keyMetricsSection"
+    ],
+    performance: [
+      "businessPerformanceSection",
+      "revenueChartSection"
+    ],
+    analytics: [
+      "hotColdChartSection",
+      "expenseChartSection",
+      "topProductsSection",
+      "productConcentrationSection"
+    ],
+    intelligence: [
+      "diagnosisSection",
+      "recommendationsSection",
+      "riskOpportunitySection"
+    ],
+    planning: [
+      "kpiTargetReference",
+      "executiveCenter"
+    ]
+  };
+
+  Object.keys(ownership).forEach(function(panelName)
+  {
+    ownership[panelName].forEach(function(sectionId)
+    {
+      assertSourceContainsOnce(
+        source,
+        'id="' + sectionId + '"',
+        "unique Dashboard section " + sectionId
+      );
+
+      if (sectionId !== "dashboardHeaderRegion")
+      {
+        assertSourceContainsOnce(
+          source,
+          'staging.querySelector("#' + sectionId + '")',
+          "section ownership " + panelName + " / " + sectionId
+        );
+      }
+    });
+  });
+  assertSourceContainsOnce(
+    source,
+    "elements.dashboardHeaderRegion,",
+    "Overview header ownership"
+  );
+  scenariosPassed++;
+
+  tabNames.forEach(function(tabName)
+  {
+    var titleCase =
+      tabName.charAt(0).toUpperCase() + tabName.slice(1);
+
+    [
+      'id="dashboardTab' + titleCase + '"',
+      'aria-controls="dashboardPanel' + titleCase + '"',
+      'id="dashboardPanel' + titleCase + '"',
+      'aria-labelledby="dashboardTab' + titleCase + '"'
+    ].forEach(function(token)
+    {
+      assertSourceContains(source, token, "tab ARIA relationship");
+    });
+  });
+  scenariosPassed++;
+
+  [
+    'event.key === "ArrowRight"',
+    'event.key === "ArrowLeft"',
+    'event.key === "Home"',
+    'event.key === "End"',
+    "event.preventDefault();",
+    "elements.dashboardTabs[targetIndex]",
+    ".focus();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Dashboard tab keyboard behavior");
+  });
+  scenariosPassed++;
+
+  [
+    'role="tabpanel"',
+    "panel.hidden =",
+    'tab.setAttribute("tabindex", isSelected ? "0" : "-1");',
+    'tab.setAttribute("aria-selected", String(isSelected));'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "inactive panel focus exclusion");
+  });
+  scenariosPassed++;
+
+  [
+    "let dashboardTabsInitialized = false;",
+    'let activeDashboardTab = "overview";',
+    "if (dashboardTabsInitialized)",
+    "setActiveDashboardTab(activeDashboardTab, false);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "selected tab preservation");
+  });
+  scenariosPassed++;
+
+  var tabFunctionStart =
+    source.indexOf("function resizeVisibleDashboardCharts(tabName)");
+  var tabFunctionEnd =
+    source.indexOf("function setDesktopSidebarCollapsed", tabFunctionStart);
+  var tabFunctionSource =
+    source.slice(tabFunctionStart, tabFunctionEnd);
+
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "requestDashboardData(",
+    "loadData()"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      tabFunctionSource,
+      token,
+      "tab switch backend request"
+    );
+  });
+  scenariosPassed++;
+
+  assertSourceContainsOnce(
+    source,
+    "function initializeDashboardTabs()",
+    "single Dashboard tab initializer"
+  );
+  assertSourceContains(
+    source,
+    "dashboardTabsInitialized = true;",
+    "Dashboard tab listener guard"
+  );
+  scenariosPassed++;
+
+  [
+    '#dashboardTabPanels [role="tabpanel"]',
+    "display: block !important;",
+    "max-height: none !important;",
+    "overflow: visible !important;",
+    "#dashboardTabList,"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "cross-tab print visibility");
+  });
+  ownership.analytics.concat(ownership.performance)
+    .forEach(function(sectionId)
+    {
+      assertSourceContains(
+        source,
+        'id="' + sectionId + '"',
+        "print-owned Dashboard content"
+      );
+    });
+  scenariosPassed++;
+
+  [
+    "function resizeVisibleDashboardCharts(tabName)",
+    "chart.resize();",
+    "revenueChart = destroyChartInstance(revenueChart);",
+    "hotColdChart = destroyChartInstance(hotColdChart);",
+    "expenseChart = destroyChartInstance(expenseChart);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "chart lifecycle preservation");
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardTabList { height: 48px; }",
+    ".dashboard-tab-panel:not(#dashboardPanelOverview)",
+    "max-height: calc(100dvh - 152px);",
+    "#dashboardPanelOverview { overflow: visible; }",
+    "@media (max-width: 1023px)",
+    "#contentViewport { overflow: visible; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "responsive one-viewport tab contract");
+  });
+  scenariosPassed++;
+
+  [
+    'id="dashboardStatus"',
+    'id="dashboardContent" aria-busy="false"',
+    'onclick="retryDashboardData()"',
+    "if (requestToken !== activeDashboardRequestToken)",
+    'id="dataQualityInformation"',
+    'id="printReportButton"',
+    'id="exportCsvButton"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Dashboard state compatibility");
+  });
+  scenariosPassed++;
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Dashboard tab query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "Dashboard tab response mutation");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    tabs: tabNames.length,
+    ownedSections: 14,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    backendRequests: 0
+  };
+
+  Logger.log(
+    "PASS: testDashboardTabFrameworkContract | scenarios=" +
+    summary.scenarios +
+    " | tabs=" +
+    summary.tabs +
+    " | ownedSections=" +
+    summary.ownedSections +
+    " | backendRequests=" +
+    summary.backendRequests +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testAccessibilityContract()
 {
   var source =

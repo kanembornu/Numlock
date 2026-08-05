@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Keep Dashboard tab state client-local and migrate each existing section once
+
+UI/UX 2.0 Package 006 uses exactly Overview, Performance, Analytics, Intelligence, and Planning. Overview is the default. Existing DOM regions are moved once during guarded frontend initialization into their approved panels; no response field, formula, request, or renderer is duplicated. Tab activation changes ARIA/hidden/roving-focus state and resizes already-created charts when necessary, but it does not call the backend, mutate the response, rebuild unrelated content, or reset during date refresh, retry, theme changes, or sidebar collapse. Print exposes all Dashboard panels while suppressing the tab controls, so the active browser tab does not narrow report content.
+
 ### Persist only the validated UI theme preference in browser-local storage
 
 UI/UX 2.0 Package 005 uses the namespaced key `numlock.ui.theme` with exactly `light`, `dark`, and `system` values. Missing, invalid, or unavailable storage falls back to System; System follows `prefers-color-scheme`. A pre-style bootstrap resolves the valid preference before visible paint where HtmlService permits. Theme changes update semantic tokens and existing Chart.js instances without rebuilding dashboard sections or requesting backend data, while print forces the approved light presentation. No business setting, log entry, payload, identifier, or server state is persisted.
