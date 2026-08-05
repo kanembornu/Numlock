@@ -85,9 +85,9 @@ Production rollback means editing the existing production deployment to point ba
 - [ ] Commit and push occurred only with explicit authorization.
 - [ ] The prior immutable Apps Script version was recorded for rollback.
 
-## v1.0 release-candidate closeout
+## v1.0 release closeout
 
-The 2026-08-05 audit classifies the repository as **Release Candidate**. The bounded v1.0 feature baseline is complete, but final `Feature Complete v1.0` promotion requires one uninterrupted evidence chain for the exact candidate:
+NUMLOCK reached **Feature Complete v1.0** on 2026-08-05. Candidate `658f4ab1011633e86634f14ce838a514c5205df0` completed the required evidence chain:
 
 1. Start from a clean, reviewed Git boundary; record the candidate commit and confirm `10.Config.js` and this changelog agree.
 2. Run dependency installation, applicable Tailwind generation checks, production JavaScript parsing, focused contracts, Markdown links, `git diff --check`, and local `runAllBackendTests()`; require 25/25.
@@ -99,11 +99,30 @@ The 2026-08-05 audit classifies the repository as **Release Candidate**. The bou
 8. Confirm the served version/build, deployment identity, current response contract, and production health match the candidate; record each evidence level separately.
 9. Only after all prior gates pass, explicitly stage the approved release files, review the cached diff, commit, create annotated tag `v1.0.0`, and push only with separate authorization.
 
-Any failed or missing step holds promotion. Resume at the first incomplete step only after the candidate identity remains unchanged or all earlier affected gates are rerun. Roll back production by repointing the same deployment to the recorded known-good immutable version.
+All mandatory v1.0 gates passed. Roll back production by repointing the same stable deployment to immutable version 184.
 
 The final v1.0 baseline should be the single reviewed commit that contains the complete bounded implementation, synchronized `1.0.0` production metadata and changelog, passing 25-entry runner, and final evidence record. Permission-, privacy-, governance-, consumer-, persistence-, pagination-, and payload-measurement-gated expansions are not part of this baseline.
 
 After release, allow patch releases only for backward-compatible defect, security, dependency, documentation, or operational fixes. Require a minor release for additive approved capability and a major release for incompatible contracts. Preserve the full default dashboard response, retain rollback versions, keep release evidence by level, and route new feature work to UI/UX 2.0 or a separately approved backlog package.
+
+### Current v1.0 candidate record — 2026-08-05
+
+- **Candidate Git commit:** `658f4ab1011633e86634f14ce838a514c5205df0`; clean `main`, `origin/main`, and `HEAD` boundary before preflight.
+- **Metadata:** `1.0.0`, Production; unchanged.
+- **Local evidence:** dependency install passed; all numbered production JavaScript and extracted frontend JavaScript parsed; `appsscript.json` parsed; repository Markdown links passed; eight focused release contracts passed; `runAllBackendTests()` passed 25/25; `git diff --check` passed.
+- **Tailwind:** not rebuilt because the candidate introduced no frontend, styling, build-input, configuration, or generated-CSS delta.
+- **Clasp identity/inventory:** authorized account and configured project confirmed without recording the private script ID; exact expected 26-file inventory confirmed.
+- **Upload:** `clasp push --force` completed with `Script is already up to date.`, confirming the remote source already matches the reviewed candidate inventory. This is upload/synchronization evidence only.
+- **Apps Script live:** `runAllBackendTests()` PASS 25/25.
+- **Production deployment:** existing stable deployment updated to immutable version 185; stable URL unchanged.
+- **Browser acceptance:** PASS against immutable version 185.
+- **Production health:** PASS with `1.0.0 — Production` metadata unchanged.
+- **Known-good rollback:** immutable version 184 on the same stable deployment. The separate `@HEAD` deployment is not the production rollback reference.
+- **Git completion:** release evidence commit, annotated `v1.0.0` tag, and push remain operator-controlled and were not performed by this documentation closeout.
+
+### Post-release mode
+
+Feature development is paused after release closeout. Accept only maintenance and demand-driven enhancements with explicit evidence and rollback boundaries. UI/UX 2.0 discovery is separately authorized work outside the v1.0 baseline. Editable KPI targets, API projection, and expanded drill-down remain non-blocking gated scopes.
 
 ## Legacy migration audit
 

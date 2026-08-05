@@ -167,11 +167,11 @@ Complete as a documentation/discovery sprint. The inventory is committed at `e37
 
 Complete and uploaded. The sparse required-property oracle now covers exactly all 37 top-level dashboard response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`. Existing additive metadata checks, production behavior, response shape, targeted test entry points, and the ordered 25-entry runner remain unchanged. Focused local validation passed seven fixtures and the unified local gate passed 25/25; Apps Script runtime, deployment, and browser acceptance remain unverified.
 
-## v1.0 release-candidate closeout
+## v1.0 release closeout — complete
 
-The bounded feature baseline is complete and the project is a **Release Candidate**. No new v1.0 feature package is scheduled. Promotion to `Feature Complete v1.0` is held only on exact-candidate release evidence: current local 25/25, authorized inventory/upload, Apps Script live 25/25, recorded rollback target, immutable deployment update, deployed desktop/narrow acceptance, and production identity/health confirmation.
+NUMLOCK is **Feature Complete v1.0** as of 2026-08-05. Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed live 25/25, immutable deployment version 185, deployed-browser acceptance, and production-health acceptance at the unchanged stable URL. Immutable version 184 remains the rollback target.
 
-Editable KPI targets, dashboard payload projection, and drill-down expansion remain optional requirement-gated work and do not block v1.0. After release closeout, **UI/UX 2.0** is the next planned phase; it begins with research, measurable usability baselines, and separately approved slices rather than changes to the v1.0 baseline.
+Feature development is paused. Maintenance and demand-driven enhancements may proceed only through separately approved bounded work. Editable KPI targets, dashboard payload projection, and drill-down expansion remain optional requirement-gated work and do not block v1.0. **UI/UX 2.0 discovery** is the next planned phase, outside the v1.0 baseline and subject to separate authorization.
 
 ## Ongoing release obligations
 

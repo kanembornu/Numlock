@@ -8,9 +8,9 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## 2. Current status
 
-**Release Candidate**
+**Feature Complete v1.0**
 
-The documented bounded v1.0 feature baseline is implemented and locally stabilized. Final `Feature Complete v1.0` status is not supported yet because the exact current candidate has not passed Apps Script live, immutable-deployment, deployed-browser, and production verification in one release sequence.
+The documented bounded v1.0 feature baseline is implemented, stabilized, and accepted in production. Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed the repository preflight, Apps Script live 25/25 suite, immutable deployment, deployed-browser acceptance, and production-health verification.
 
 ## 3. Current version
 
@@ -20,13 +20,13 @@ The documented bounded v1.0 feature baseline is implemented and locally stabiliz
 
 ## 4. Current phase
 
-**NUMLOCK v1.0 Stabilization**
+**Post-release maintenance**
 
-The phase is limited to contract integrity, evidence closure, documentation consistency, and approved low-risk hardening. It does not authorize new feature scope.
+Feature development is paused after v1.0 closeout. Current work is limited to maintenance and demand-driven enhancements; UI/UX 2.0 discovery requires separate authorization and remains outside the v1.0 baseline.
 
 ## 5. Latest completed sprint/package
 
-**Sprint 5.16 Package 001 — complete sparse response contract.** Committed and pushed at `0114ca4` on `main` and `origin/main`. The sparse oracle requires exactly all 37 top-level dashboard fields and validates the five-member `dateFilter` contract. Production behavior, response shape, and ordered runner membership remain unchanged. The committed documentation records focused validation across seven fixtures, unified 25/25 PASS, and a successful reviewed clasp upload; Apps Script runtime, deployment, and browser acceptance were not performed for this package.
+**NUMLOCK v1.0 release closeout — complete on 2026-08-05.** Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed live `runAllBackendTests()` 25/25, was deployed as immutable version 185 at the unchanged stable production URL, and passed deployed-browser and production-health acceptance. Immutable version 184 remains the rollback target.
 
 ## 6. Current test gate and evidence level
 
@@ -34,11 +34,12 @@ The phase is limited to contract integrity, evidence closure, documentation cons
 
 | Evidence class | Current recorded evidence |
 | --- | --- |
-| Local/static | Latest recorded unified result: 25/25 PASS for Sprint 5.16; focused sparse validation passed seven fixtures. |
-| Upload | Sprint 5.16 documentation records a reviewed 26-file clasp inventory and successful upload. |
-| Apps Script runtime | Latest recorded unified live result: 25/25 PASS for Sprint 5.13; not rerun for Sprint 5.16. |
-| Deployment | No deployment performed for Sprint 5.16. |
-| Deployed browser | No browser acceptance performed for Sprint 5.16. |
+| Local/static | Release candidate `658f4ab1011633e86634f14ce838a514c5205df0`: dependency install, production/frontend syntax, manifest parse, Markdown links, eight focused release contracts, unified 25/25, runner count, and Git checks passed on 2026-08-05. |
+| Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
+| Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
+| Deployment | Existing stable production deployment updated to immutable version 185; stable URL unchanged. Immutable version 184 retained for rollback. |
+| Deployed browser | PASS for the version 185 production deployment. |
+| Production health | PASS for version `1.0.0 — Production` on immutable deployment version 185. |
 
 An upload is not runtime, deployment, or browser evidence.
 
@@ -61,11 +62,11 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 | Sprint 5.13 | Visible-row CSV and formula-injection hardening complete with live unified 25/25 evidence. |
 | Sprint 5.14 | Bounded recent-transaction drill-down complete, committed, pushed, and uploaded. |
 | Sprint 5.15 | Dashboard-response consumer inventory complete as documentation/discovery work. |
-| Sprint 5.16 | Sparse 37-field response contract committed and pushed at `0114ca4`, with local 25/25 and upload evidence; current runtime, deployment, and browser evidence remains open. |
+| Sprint 5.16 and v1.0 closeout | Sparse 37-field response contract complete; candidate live 25/25, deployment version 185, browser acceptance, and production health passed with rollback version 184 retained. |
 
 ## 9. Implementation-ready backlog
 
-**Count: 0.** The bounded Sprint 5.16 contract-hardening package consumed the last implementation-ready item identified by the backlog review. New implementation work requires either release-evidence closure or satisfaction of a blocked scope's prerequisites.
+**Count: 0.** The bounded v1.0 baseline is closed. New implementation work requires a demand-driven maintenance need or satisfaction and separate authorization of a blocked scope's prerequisites.
 
 ## 10. Blocked backlog
 
@@ -77,9 +78,8 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 
 ## 11. Technical debt
 
-- Current Sprint 5.16 Apps Script runtime and deployed-browser acceptance are unverified.
-- Historical milestone sections retain their original runner totals; the active release workflow and current gate now require exactly 25/25.
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
+- Historical milestone sections retain their original runner totals; the active release workflow and current gate now require exactly 25/25.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -103,33 +103,33 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 | Release criterion | Status | Highest current evidence | Closeout requirement |
 | --- | --- | --- | --- |
-| Production architecture | PASS | Repository/static | Preserve the numbered Apps Script architecture and one Aggregate Engine build. |
-| Analytics and intelligence | PASS | Local test; earlier production evidence exists for the 2026-08-03 baseline | Reconfirm the current 25-entry suite live. |
-| Dashboard functionality | PASS | Local test | Reconfirm the current candidate in the deployed browser. |
-| Responsive behavior | UNVERIFIED | Repository/static and local contract | Pass desktop and representative narrow-width browser acceptance. |
-| Accessibility | UNVERIFIED | Repository/static and local contract | Complete keyboard, focus, reduced-motion, automated scan, and screen-reader spot checks in the deployed browser. |
-| Performance | UNVERIFIED | Local deterministic query/deferred-render contract | Capture representative deployed-browser behavior and confirm no stale work or response mutation. |
-| Print and CSV export | UNVERIFIED | CSV has Apps Script live contract evidence; print and both browser paths have local/static evidence | Verify print/PDF and CSV download against the deployed candidate. |
-| Drill-down | UNVERIFIED | Repository/static and local four-scenario contract | Verify keyboard/canvas actions, bounded results, clear/reset, and focus transfer in the deployed browser. |
-| Response-contract coverage | PASS | Local 25/25; sparse seven-fixture exact 37-field contract | Reconfirm 25/25 in Apps Script against the current candidate. |
-| Documentation | PASS | Repository/static | Keep the release record synchronized through final validation and Git completion. |
-| Rollback readiness | BLOCKED | Documented procedure only | Record the current known-good immutable Apps Script version and intended production deployment before promotion. |
-| Dependency pinning | PASS | Repository/static and local contract | Confirm exact dependency requests and no Tailwind CDN request in deployed-browser Network inspection. |
+| Production architecture | PASS | Repository/static and production acceptance | Preserve the numbered Apps Script architecture and one Aggregate Engine build. |
+| Analytics and intelligence | PASS | Apps Script live 25/25 and production acceptance | Maintain through the ordered unified gate. |
+| Dashboard functionality | PASS | Deployed-browser and production acceptance | Maintain the accepted response and interaction contracts. |
+| Responsive behavior | PASS | Deployed-browser acceptance | Recheck for any frontend maintenance release. |
+| Accessibility | PASS | Deployed-browser acceptance | Preserve keyboard, focus, semantic, live-region, and reduced-motion contracts. |
+| Performance | PASS | Local contract and deployed-browser acceptance | Preserve bounded DOM queries, deferred work, and response immutability. |
+| Print and CSV export | PASS | Apps Script live contract and deployed-browser acceptance | Preserve visible-scope and CSV-safety contracts. |
+| Drill-down | PASS | Local contract and deployed-browser acceptance | Preserve the existing maximum-ten-row boundary. |
+| Response-contract coverage | PASS | Local and Apps Script live 25/25 | Preserve exactly 37 top-level fields and the five-member `dateFilter` contract. |
+| Documentation | PASS | Repository/static | Record release completion and retain historical evidence. |
+| Rollback readiness | PASS | Immutable version 184 retained | Repoint the same stable deployment to version 184 if rollback is required. |
+| Dependency pinning | PASS | Repository/static and deployed-browser acceptance | Keep exact dependency versions and local Tailwind ownership. |
 | Known technical debt | PASS | Repository/documentation | Keep the three gated expansions deferred; accept only the documented Apps Script iframe warning. |
 
-The mandatory blockers are only the missing release evidence for the exact candidate: clean baseline review, current local 25/25 preflight, authorized inventory/upload, current Apps Script live 25/25, recorded rollback version and intended deployment, immutable deployment update, deployed-browser acceptance, and production identity/health confirmation. Editable targets, payload projection, and expanded drill-down are optional future work and are not v1.0 blockers.
+**Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
-- [x] Current phase and Release Candidate status are recorded without claiming final release acceptance.
+- [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
 - [x] Current runner membership is 25 and the latest local 25/25 result is recorded.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
-- [ ] Start release operations from a clean, reviewed Git worktree.
-- [ ] Run the current 25-entry unified gate locally against the exact release candidate.
-- [ ] Review clasp inventory and upload only with explicit authorization.
-- [ ] Run `runAllBackendTests()` successfully in the intended Apps Script project.
-- [ ] Create or update the approved immutable deployment while retaining the stable URL.
-- [ ] Pass desktop and narrow-width browser acceptance, including Console and Network review.
-- [ ] Confirm release metadata, changelog, deployed version, and rollback target agree.
+- [x] Start release operations from a clean, reviewed Git worktree.
+- [x] Run the current 25-entry unified gate locally against the exact release candidate.
+- [x] Review clasp inventory and upload only with explicit authorization.
+- [x] Run `runAllBackendTests()` successfully in the intended Apps Script project: 25/25 PASS.
+- [x] Update the existing production deployment to immutable version 185 while retaining the stable URL.
+- [x] Pass desktop and narrow-width browser acceptance, including Console and Network review.
+- [x] Confirm `1.0.0 — Production`, deployment version 185, production health, and rollback version 184 agree.
 
 ## 14. Hold criteria
 
@@ -145,7 +145,7 @@ Hold release promotion and new feature implementation when any of these conditio
 
 ## 15. Resume criteria
 
-Resume release promotion only when the exact candidate has a reviewed clean boundary, the current local 25/25 gate passes, release documentation is reconciled, the approved clasp inventory is uploaded, Apps Script `runAllBackendTests()` passes 25/25, the approved deployment is identifiable and reversible, and desktop/narrow browser acceptance passes with reviewed Console and Network output.
+The v1.0 release is complete. Resume feature implementation only for approved demand-driven maintenance or a separately authorized enhancement whose acceptance and rollback boundaries are defined in advance.
 
 Resume a blocked feature only when every dependency listed for that scope in [PRODUCT-BACKLOG.md](PRODUCT-BACKLOG.md) has an evidence-backed decision, acceptance contract, privacy/permission boundary, rollback approach, and independently releasable validation plan.
 
@@ -167,9 +167,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**v1.0 stabilization evidence closure.** Reconcile the release document with the current 25-entry gate, establish a clean release-candidate boundary, then obtain current Apps Script runtime and deployed-browser evidence through the operator-controlled release process. No new feature package is selected.
-
-After final v1.0 closeout, the next planned phase is **UI/UX 2.0 discovery and validation**. It remains outside the v1.0 feature baseline and requires separately approved packages.
+**UI/UX 2.0 discovery and validation.** This is the next planned phase, remains outside the v1.0 feature baseline, and requires separate authorization before any research or implementation package begins.
 
 ## 19. Status-history log
 
@@ -177,4 +175,5 @@ After final v1.0 closeout, the next planned phase is **UI/UX 2.0 discovery and v
 | --- | --- | --- |
 | 2026-08-03 | Production 1.0.0 | Release history records production 1.0.0 and earlier deployment/browser acceptance. |
 | 2026-08-04 | Stabilization expansion | Sprints 5.10–5.12 completed locally with evidence levels recorded separately. |
-| 2026-08-05 | Release Candidate | Sprints 5.13–5.16 closed the bounded export, drill-down, discovery, and response-contract work; the current runner is 25 entries and latest verified local result is 25/25, while exact-candidate Apps Script live, deployment, deployed-browser, rollback-reference, and production evidence remain mandatory closeout blockers. |
+| 2026-08-05 | Release Candidate | Repository preflight and upload prerequisites passed for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
+| 2026-08-05 | Feature Complete v1.0 | Live suite passed 25/25; immutable deployment version 185, unchanged stable URL, deployed-browser acceptance, and production health passed; version 184 retained for rollback. |

@@ -26,9 +26,9 @@ Sprint 5.16 Package 001 completes and uploads bounded response-contract complete
 
 - **Implementation-ready:** 0 items.
 - **Blocked optional work:** 3 scopes — editable KPI targets; additive dashboard projection/payload reduction; drill-down expansion beyond the current maximum-ten-row projection.
-- **Mandatory v1.0 blockers:** none from this product backlog. The remaining mandatory work is release evidence, owned by [`RELEASE.md`](RELEASE.md), not feature implementation.
+- **Mandatory v1.0 blockers:** none. Release evidence is complete and owned by [`RELEASE.md`](RELEASE.md).
 
-The three blocked scopes remain non-blocking because current v1.0 criteria do not require editable configuration, a reduced payload, expanded transaction access, new persistence, or pagination. Resume any one only after all of its documented governance, consumer, permission/privacy, measurement, compatibility, and rollback prerequisites are approved and measurable. UI/UX 2.0 planning must not silently absorb these scopes.
+The v1.0 release evidence is complete. The three blocked scopes remain non-blocking because v1.0 does not require editable configuration, a reduced payload, expanded transaction access, new persistence, or pagination. Resume any one only after all of its documented governance, consumer, permission/privacy, measurement, compatibility, and rollback prerequisites are approved and measurable. Feature development is otherwise paused; maintenance and demand-driven enhancements require explicit bounded authorization. UI/UX 2.0 discovery must not silently absorb these scopes.
 
 ## Priority rules
 
