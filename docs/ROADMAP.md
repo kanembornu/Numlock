@@ -141,11 +141,11 @@ Completed locally. One accessible Print Report action invokes browser-native pri
 
 Implemented, committed at `563a7e4`, and uploaded, but not closed. One native Export CSV action beside Print Report exports the current filter's already rendered recent-transaction rows and visible columns in displayed order. It creates a UTF-8 CSV with a header row and deterministic `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` filename through browser Blob/object-URL APIs, remains disabled without visible rows, and preserves the verified 72-ID/two-selector client-render budget without response mutation. No backend response, spreadsheet read/export, hidden field, expanded history, API, drill-down, persistence, GitHub Pages, generated CSS, or release metadata changed.
 
-Closure is blocked on two acceptance gaps: `escapeCsvCell()` quotes CSV values but does not neutralize leading `=`, `+`, `-`, or `@` spreadsheet-formula characters, and the 25-entry unified runner has no recorded post-fix 25/25 result. The latest fully verified unified gate remains Sprint 5.12's local 24/24.
+Package 001's original closure gaps were spreadsheet-formula neutralization and a missing post-fix unified 25/25 result. Package 002 closes the implementation and focused-coverage gap; live 25/25 remains the final Sprint 5.13 acceptance gate.
 
 ### Sprint 5.13 Package 002 — CSV formula-injection hardening and acceptance closure
 
-Recommended next. Neutralize spreadsheet-formula prefixes while preserving the current DOM-derived row/column scope, displayed ordering, UTF-8 output, accessibility, empty-state behavior, and 72/2 query budget; add explicit contract coverage for every dangerous prefix and safe ordinary values; then require the complete 25/25 unified gate. This frontend-only package is independently releasable, low complexity, and adds no data, permission, backend/API, spreadsheet, history, persistence, or layout scope.
+Completed locally. Before CSV quoting, the serializer inserts one apostrophe before a first non-whitespace `=`, `+`, `-`, or `@`. It preserves normal text, dates, currency display, the numeric-column `-` placeholder, valid negative numeric values such as `-12500`, and already-neutralized values without adding a second apostrophe. Eight behavioral cases raise `testCsvExportContract()` to 14 scenarios while the runner remains at 25 entries and the client-render contract remains exactly 72 ID queries, two selector queries, and no response mutation. The package adds no data, permission, backend/API, spreadsheet, history, persistence, or layout scope. Live unified 25/25 remains required for Sprint closure.
 
 ## Ongoing release obligations
 

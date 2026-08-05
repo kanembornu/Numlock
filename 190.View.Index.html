@@ -1506,9 +1506,41 @@
       window.print();
     }
 
-    function escapeCsvCell(value)
+    function sanitizeCsvCellValue(value, isNumericColumn)
     {
-      return '"' + String(value).replace(/"/g, '""') + '"';
+      var text = String(value);
+      var leadingWhitespace = text.match(/^\s*/)[0];
+      var trimmedValue = text.slice(leadingWhitespace.length);
+      var firstCharacter = trimmedValue.charAt(0);
+      var isNegativeNumeric =
+        isNumericColumn &&
+        /^-\d+(?:[.,]\d+)*$/.test(trimmedValue);
+      var isNumericPlaceholder =
+        isNumericColumn && trimmedValue === "-";
+      var isFormulaPrefix =
+        firstCharacter === "=" ||
+        firstCharacter === "+" ||
+        firstCharacter === "-" ||
+        firstCharacter === "@";
+
+      if (
+        isFormulaPrefix &&
+        !isNegativeNumeric &&
+        !isNumericPlaceholder
+      )
+      {
+        return leadingWhitespace + "'" + trimmedValue;
+      }
+
+      return text;
+    }
+
+    function escapeCsvCell(value, isNumericColumn)
+    {
+      var safeValue =
+        sanitizeCsvCellValue(value, isNumericColumn);
+
+      return '"' + safeValue.replace(/"/g, '""') + '"';
     }
 
     function formatCsvFilename(date)
@@ -1532,6 +1564,7 @@
       var tableBody = initializeStableDashboardElements().tableBody;
       var table = tableBody.parentElement;
       var headers = Array.from(table.tHead.rows[0].cells);
+      var numericColumnIndexes = [3, 4];
       var visibleColumnIndexes = headers
         .map(function(header, index)
         {
@@ -1557,7 +1590,10 @@
 
       var csvRows = [visibleColumnIndexes.map(function(index)
       {
-        return escapeCsvCell(headers[index].textContent.trim());
+        return escapeCsvCell(
+          headers[index].textContent.trim(),
+          false
+        );
       }).join(",")];
 
       visibleRows.forEach(function(row)
@@ -1565,7 +1601,10 @@
         var cells = row.cells;
         csvRows.push(visibleColumnIndexes.map(function(index)
         {
-          return escapeCsvCell(cells[index].textContent.trim());
+          return escapeCsvCell(
+            cells[index].textContent.trim(),
+            numericColumnIndexes.indexOf(index) !== -1
+          );
         }).join(","));
       });
 

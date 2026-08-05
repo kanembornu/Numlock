@@ -2511,10 +2511,65 @@ function testCsvExportContract()
   [
     '["\\uFEFF" + csvRows.join("\\r\\n")]',
     '{ type: "text/csv;charset=utf-8" }',
-    'String(value).replace(/"/g, \'""\')'
+    'safeValue.replace(/"/g, \'""\')'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "UTF-8 CSV output");
+  });
+  scenariosPassed++;
+
+  var sanitizerStart =
+    source.indexOf("function sanitizeCsvCellValue(");
+  var sanitizerEnd =
+    source.indexOf("function escapeCsvCell", sanitizerStart);
+  var sanitizerSource =
+    source.slice(sanitizerStart, sanitizerEnd).trim();
+  var sanitizeCsvCellValue =
+    Function("return (" + sanitizerSource + ");")();
+  var sanitizerCases = [
+    { value: "=SUM(A1:A2)", numeric: false, expected: "'=SUM(A1:A2)" },
+    { value: "+CMD", numeric: false, expected: "'+CMD" },
+    { value: "-CMD", numeric: false, expected: "'-CMD" },
+    { value: "@SUM(A1:A2)", numeric: false, expected: "'@SUM(A1:A2)" },
+    { value: "  =SUM(A1:A2)", numeric: false, expected: "  '=SUM(A1:A2)" },
+    { value: "Latte", numeric: false, expected: "Latte" },
+    { value: "-12500", numeric: true, expected: "-12500" },
+    { value: "'=SUM(A1:A2)", numeric: false, expected: "'=SUM(A1:A2)" }
+  ];
+
+  sanitizerCases.forEach(function(testCase)
+  {
+    var actual =
+      sanitizeCsvCellValue(testCase.value, testCase.numeric);
+
+    if (actual !== testCase.expected)
+    {
+      throw new Error(
+        "CSV formula neutralization mismatch: value=" +
+        testCase.value +
+        ", expected=" +
+        testCase.expected +
+        ", actual=" +
+        actual
+      );
+    }
+  });
+  scenariosPassed++;
+
+  [
+    "var numericColumnIndexes = [3, 4];",
+    "numericColumnIndexes.indexOf(index) !== -1",
+    "sanitizeCsvCellValue(value, isNumericColumn)",
+    "isFormulaPrefix &&",
+    "!isNegativeNumeric &&",
+    "!isNumericPlaceholder"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      source,
+      token,
+      "CSV formula neutralization wiring"
+    );
   });
   scenariosPassed++;
 
