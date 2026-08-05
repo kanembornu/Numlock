@@ -4,6 +4,12 @@ This document owns durable engineering and product decisions. [Project Status](P
 
 ## Active decisions
 
+### Advance the Executive-first low-fidelity direction
+
+UI/UX 2.0 Package 002 compares two implementation-neutral Dashboard arrangements and selects Executive-first for later high-fidelity mockups. Performance, attention status, one authoritative Business Priority, and period comparison remain ahead of Key Metrics and secondary analytics. The Analytical-first alternative uses existing capabilities but is not advanced because it delays the synthesized conclusion and next action, particularly across multiple narrow-screen viewports.
+
+The four desktop/mobile wireframes preserve one semantic order, explicit mobile behavior, current loading/empty/error/exact-request Retry semantics, accessible disclosures and chart summaries, bounded transaction drill-down, Dashboard-owned Print, and Transactions-owned visible-row CSV. This is a discovery direction, not implementation authorization. The detailed comparison and capability traceability are owned by [UI/UX 2.0 Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md).
+
 ### Use two evidence-backed destinations for UI/UX 2.0
 
 UI/UX 2.0 begins with exactly two primary destinations: Dashboard and Transactions. Dashboard owns the reporting period, Executive Summary, KPIs, analytics, intelligence, Forecast, Performance, Data Quality, recommendations, decision support, risk/growth, product concentration, and Print Report. Transactions owns the bounded recent-transaction table, drill-down result state, clear action, and visible-row CSV export. Section labels and disclosures do not become primary navigation.

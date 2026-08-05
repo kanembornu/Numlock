@@ -10,7 +10,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## Current state
 
-- UI/UX 2.0 Package 001 is complete as documentation-only discovery. `docs/UIUX-2.0-INFORMATION-ARCHITECTURE.md` maps the complete v1.0 user-facing capability set and selects Dashboard plus Transactions as the only immediate destinations. Reports remains contextual through Dashboard print and Transactions CSV; Settings, expanded transaction detail, and payload projection remain deferred. No mockup or production change is authorized by this package.
+- UI/UX 2.0 Packages 001–002 are complete as documentation-only discovery. `docs/UIUX-2.0-INFORMATION-ARCHITECTURE.md` maps the complete v1.0 user-facing capability set and selects Dashboard plus Transactions as the only immediate destinations. `docs/UIUX-2.0-WIREFRAMES.md` defines those destinations at desktop and mobile widths, compares Executive-first with Analytical-first, and recommends Executive-first for later high-fidelity mockups. Reports remains contextual through Dashboard print and Transactions CSV; Settings, expanded transaction detail, and payload projection remain deferred. No high-fidelity mockup or production change is authorized by these packages.
 - Sprint 5.5 Dashboard Intelligence: complete.
 - Sprint 5.6 backend refactor: complete.
 - Aggregate migrations validated live: summary, revenue trend, expense breakdown, products, profit trend, and Hot/Cold split.

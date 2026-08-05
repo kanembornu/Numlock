@@ -184,4 +184,8 @@ Feature development is paused. Maintenance and demand-driven enhancements may pr
 
 Complete as documentation-only discovery. [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md) inventories the complete v1.0 user-facing capability set, compares the required two-, three-, and four-destination models, and selects Dashboard plus Transactions as the authoritative immediate menu. Reports remains contextual through Dashboard print and Transactions CSV; Settings remains deferred because no editable configuration or approved persistence/permission contract exists. No mockup, production source, Tailwind, API, data, deployment, or release behavior changed.
 
-The next UI/UX 2.0 package may compare mockups against the Package 001 hierarchy and journeys, but requires separate authorization. It must not introduce placeholder destinations or expose blocked editable-target, expanded-transaction, or payload-projection capabilities.
+### Package 002 — low-fidelity wireframes
+
+Complete as documentation-only discovery. [UI/UX 2.0 Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md) defines the approved Dashboard and Transactions destinations at desktop and mobile widths, including explicit content order, responsive behavior, interactions, accessibility, states, omissions, bounded drill-down, Dashboard Print, and Transactions CSV placement. It compares Executive-first and Analytical-first Dashboard layouts and recommends Executive-first for later high-fidelity mockups. Every block maps to current v1.0 capability IDs `V01`–`V35`; no Reports or Settings page, blocked capability, production source, Tailwind, API, data, clasp, deployment, or release behavior changed.
+
+The next UI/UX 2.0 package may produce high-fidelity mockups for the recommended Executive-first direction, but requires separate authorization. UI/UX 2.0 remains in discovery until an implementation package is independently approved.
