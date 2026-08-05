@@ -16,7 +16,7 @@ Sprint 5.13 is complete. Package 001 CSV export and Package 002 formula-injectio
 
 Sprint 5.14 is complete at commit `fe6c424`, pushed to `origin/main`, with the Apps Script source upload current. Its bounded drill-down uses only the active response's maximum ten recent transactions, introduces no backend/API/persistence behavior, and leaves CSV export scoped to the visible filtered table. Focused drill-down and local unified 25/25 validation were reconfirmed during closure; live Apps Script and deployed-browser acceptance remain unverified.
 
-The remaining requirement-gated backlog is editable KPI targets, dashboard API projection or payload reduction, and any drill-down expansion beyond the existing recent-transaction projection. Exactly one next package is recommended: Sprint 5.15 Package 001, a documentation-only external-consumer inventory for dashboard API projection. It is independently releasable, changes no production behavior, and must establish consumer, compatibility, permission, and rollback evidence before payload changes are proposed.
+The remaining requirement-gated backlog is editable KPI targets, dashboard API projection or payload reduction, and any drill-down expansion beyond the existing recent-transaction projection. Sprint 5.15 Package 001 completed the repository-side consumer inventory without production changes. It found 31 production-view fields and six non-rendered but contract-tested fields among the 37-property response; the sparse test's 36-entry required-property list omits separately covered `dateFilter`. Unknown external consumers, deployment access evidence, field-level authorization, payload measurement, and an additive compatibility design still block projection implementation.
 
 ## Priority rules
 
@@ -193,7 +193,7 @@ The remaining requirement-gated backlog is editable KPI targets, dashboard API p
 
 ### P2-5 — Defer noncritical rendering and reduce avoidable client work
 
-**Status: Bounded frontend-only scope completed and uploaded in Sprint 5.11 Package 001; live Apps Script and browser validation are pending. API projection remains requirement-gated by an external-consumer inventory.**
+**Status: Bounded frontend-only scope completed and uploaded in Sprint 5.11 Package 001; live Apps Script and browser validation are pending. Sprint 5.15 Package 001 completed the repository inventory, but API projection remains blocked by unknown external consumers, deployment/permission evidence, payload measurement, and an additive compatibility design.**
 
 - **Problem:** one approximately 48 KB HTML file contains the full runtime, and success synchronously renders every hidden and below-the-fold section. It performs 41 ID lookups and 18 HTML replacements per render; expense sorting mutates the response array. Six response fields (`financial`, `profitIntelligence`, `profitTrend`, `opportunities`, `kpiStatus`, and `productContribution`) are not directly consumed by the current view.
 - **User impact:** initial interaction can be delayed on slower devices, repeated loads rebuild all charts/markup, and oversized responses/renders do work that is not immediately visible.
@@ -202,7 +202,7 @@ The remaining requirement-gated backlog is editable KPI targets, dashboard API p
 - **Implementation complexity:** M
 - **Regression risk:** Medium
 - **Validation required:** render-order/stale-response tests, Chart instance-count check, performance trace on representative payload, response-contract compatibility, desktop/narrow browser acceptance.
-- **Dependency on other items:** P0-2 if reloads remain filter-driven; external-consumer inventory before payload reduction.
+- **Dependency on other items:** P0-2 if reloads remain filter-driven; the repository inventory is complete in [`DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md), but external discovery, permission verification, payload measurement, and an additive full-response fallback remain required before payload reduction.
 
 ### P2-6 — Pin and resilience-test external frontend dependencies
 

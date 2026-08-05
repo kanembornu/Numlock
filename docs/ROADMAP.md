@@ -155,11 +155,11 @@ Complete. Before CSV quoting, the serializer inserts one apostrophe before a fir
 
 Complete at commit `fe6c424`, pushed to `origin/main`, with the Apps Script source upload current. Existing KPI and chart summaries open filtered evidence from only the active response's maximum ten `recentTransactions`; no backend/API/persistence behavior was added, and CSV export reads the visible filtered table. The focused four-scenario drill-down contract and local unified 25/25 gate were reconfirmed with the runner fixed at 25 entries. Apps Script runtime, deployment, and browser acceptance were not performed during closure.
 
-## Recommended next package
+## Sprint 5.15 — complete
 
 ### Sprint 5.15 Package 001 — dashboard external-consumer inventory
 
-Recommend exactly this one independently releasable documentation package. Inventory every known consumer of `getDashboardData()` and its public fields; record compatibility, permission, ownership, and rollback constraints; and decide whether API projection or payload reduction can be proposed safely. The package must not change production source, response fields, Apps Script behavior, spreadsheet access, or deployment state.
+Complete as a documentation-only repository audit. [`DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md) classifies the production frontend, test-only, documentation/example, and unknown/external consumers; inventories all 37 top-level response fields exactly once; and records ownership, permission, privacy, compatibility, projection, evidence, and rollback constraints. Thirty-one fields are consumed by the current view and six are non-rendered but remain contract-tested. The sparse test's 36-entry required-property list omits separately covered `dateFilter`. Unknown external callers and deployment permission evidence cannot be resolved from Git, so payload reduction is not implementation-ready and the default full response must remain unchanged.
 
 ## Ongoing release obligations
 
