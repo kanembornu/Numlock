@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Persist only the validated UI theme preference in browser-local storage
+
+UI/UX 2.0 Package 005 uses the namespaced key `numlock.ui.theme` with exactly `light`, `dark`, and `system` values. Missing, invalid, or unavailable storage falls back to System; System follows `prefers-color-scheme`. A pre-style bootstrap resolves the valid preference before visible paint where HtmlService permits. Theme changes update semantic tokens and existing Chart.js instances without rebuilding dashboard sections or requesting backend data, while print forces the approved light presentation. No business setting, log entry, payload, identifier, or server state is persisted.
+
 ### Adopt the UI/UX 2.0 component, theme, and four-destination contract
 
 UI/UX 2.0 Package 004 approves a one-viewport desktop Dashboard with secondary information organized through Overview, Performance, Analytics, Intelligence, and Planning tabs. Transactions uses Recent, Sales, Expenses, and Purchases taxonomy, but only Recent and truthful client-filtered views of the current bounded projection are initially implementable; migrated-data views stay disabled with an explanation or are omitted. The approved visual system combines Executive Minimal hierarchy/restraint with Modern Financial numeric, table, and chart precision, using complete semantic light and deep-navy dark themes.

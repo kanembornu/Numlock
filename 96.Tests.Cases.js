@@ -2013,6 +2013,270 @@ function testResponsiveShellContract()
   return summary;
 }
 
+function testUiShellThemeContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var tailwindSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  [
+    'id="appShell"',
+    'data-sidebar-collapsed="false"',
+    '#dashboardSidebar { width: 240px;',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px;',
+    'id="sidebarCollapseButton"',
+    'function setDesktopSidebarCollapsed(isCollapsed)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "sidebar size contract");
+  });
+  scenariosPassed++;
+
+  [
+    'id="topUtilityBar"',
+    '#topUtilityBar { height: 64px;',
+    'height: 100dvh;',
+    'overflow: hidden;',
+    'id="contentViewport"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "viewport utility shell");
+  });
+  scenariosPassed++;
+
+  ["dashboard", "transactions", "settings", "logs"]
+    .forEach(function(pageId)
+    {
+      assertSourceContainsOnce(
+        source,
+        'data-page="' + pageId + '"',
+        "primary destination " + pageId
+      );
+    });
+  scenariosPassed++;
+
+  [
+    "Products",
+    "Capital & Equity",
+    "Assets",
+    "Depreciation",
+    "Financial Statements"
+  ].forEach(function(label)
+  {
+    assertSourceExcludes(source, 'data-page="' + label, "future module");
+    assertSourceExcludes(source, ">" + label + "</", "future module label");
+  });
+  scenariosPassed++;
+
+  [
+    'value="light"',
+    'value="dark"',
+    'value="system"',
+    'name="themePreference"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "theme option");
+  });
+  scenariosPassed++;
+
+  [
+    'var storageKey = "numlock.ui.theme";',
+    'window.localStorage.getItem(storageKey)',
+    'window.localStorage.setItem(',
+    'safePreference'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "local theme persistence");
+  });
+  scenariosPassed++;
+
+  [
+    'var preference = "system";',
+    'preference === "system"',
+    '"(prefers-color-scheme: dark)"',
+    'data-theme-preference'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "System theme fallback");
+  });
+  scenariosPassed++;
+
+  var preloadEnd = source.indexOf(
+    "<style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>"
+  );
+  var preloadStart = source.indexOf("function applyStoredThemeBeforeRender()");
+
+  if (preloadStart === -1 || preloadStart > preloadEnd)
+  {
+    throw new Error("Theme is not applied before authored styles render");
+  }
+  scenariosPassed++;
+
+  [
+    "--canvas:#07111f",
+    "--sidebar:#0b1627",
+    "--surface-1:#0f1c2e",
+    "--surface-2:#142338",
+    "--surface-3:#1a2c45",
+    "--text-primary:#f1f5f9",
+    "--focus:#60a5fa"
+  ].forEach(function(token)
+  {
+    assertSourceContains(tailwindSource, token, "dark semantic token");
+  });
+  assertSourceExcludes(tailwindSource, "--canvas:#000", "pure black canvas");
+  scenariosPassed++;
+
+  [
+    "@media print",
+    'synchronizeChartTheme(true);',
+    'window.addEventListener("beforeprint"',
+    "background: #ffffff !important;",
+    "color: #0f172a;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print-light theme");
+  });
+  scenariosPassed++;
+
+  [
+    "function synchronizeChartTheme(forceLight)",
+    'chart.update("none");',
+    "palette.tooltipBackground",
+    "palette.grid",
+    "palette.axis"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Chart.js theme synchronization");
+  });
+  scenariosPassed++;
+
+  createResponsiveShellContractFixtures()
+    .concat(createAccessibilityContractFixtures())
+    .forEach(function(fixture)
+    {
+      fixture.tokens.forEach(function(token)
+      {
+        assertSourceContains(
+          source,
+          token,
+          "preserved shell accessibility / " + fixture.name
+        );
+      });
+    });
+  scenariosPassed++;
+
+  [
+    'aria-label="Dashboard"',
+    'aria-label="Transactions"',
+    'aria-label="Settings"',
+    'aria-label="Logs"',
+    'aria-current="page"',
+    'title="Dashboard"',
+    'heading.focus();',
+    'sidebar.inert = !isOpen && !isDesktop;'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "navigation focus and labels");
+  });
+  scenariosPassed++;
+
+  [
+    "global search",
+    "notifications",
+    "avatar/profile",
+    "Welcome Back",
+    "Customize widget",
+    "Upgrade"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "forbidden SaaS decoration");
+  });
+  assertSourceExcludes(source, ">Source<", "source label");
+  scenariosPassed++;
+
+  [
+    'id="dashboard" class="page active"',
+    'id="transactions" class="page"',
+    'id="filter"',
+    'id="printReportButton"',
+    'id="exportCsvButton"',
+    'id="dashboardStatus"',
+    'id="dataQualityInformation"',
+    'function applyTransactionDrilldown('
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "v1 destination compatibility");
+  });
+  scenariosPassed++;
+
+  [
+    'let responsiveShellInitialized = false;',
+    'let themeFoundationInitialized = false;',
+    'if (responsiveShellInitialized)',
+    'if (themeFoundationInitialized)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "single listener initialization");
+  });
+  assertSourceContainsOnce(
+    source,
+    "function initializeThemeFoundation()",
+    "theme initialization"
+  );
+  scenariosPassed++;
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "UI shell query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "response mutation");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    destinations: 4,
+    themes: 3,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testUiShellThemeContract | scenarios=" +
+    summary.scenarios +
+    " | destinations=" +
+    summary.destinations +
+    " | themes=" +
+    summary.themes +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testAccessibilityContract()
 {
   var source =

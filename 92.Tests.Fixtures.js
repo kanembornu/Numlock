@@ -932,7 +932,7 @@ function createResponsiveShellContractFixtures()
     { name: "active navigation", tokens: ['button.setAttribute("aria-current", "page");'] },
     { name: "table scroll wrapper", tokens: ['id="transactionsTableScroll"', 'overflow-x-auto'] },
     { name: "narrow content width", tokens: ['<main id="mainContent" class="ml-0 min-w-0 w-full flex-1'] },
-    { name: "desktop sidebar", tokens: ['w-72 -translate-x-full', 'lg:translate-x-0', 'lg:ml-72'] },
+    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 240px;', 'lg:translate-x-0', '#mainContent { margin-left: 240px;'] },
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
   ];
 }
@@ -944,7 +944,7 @@ function createAccessibilityContractFixtures()
     { name: "viewport metadata", tokens: ['<meta name="viewport" content="width=device-width, initial-scale=1.0">'] },
     { name: "document title", tokens: ['<title>NUMLOCK Coffee Shop Analytics</title>'] },
     { name: "primary main landmark", tokens: ['<main id="mainContent"'], uniqueToken: '<main id="mainContent"' },
-    { name: "labelled navigation", tokens: ['<nav class="flex-1 p-4 space-y-2" aria-label="Primary">'] },
+    { name: "labelled navigation", tokens: ['<nav class="flex-1 space-y-2 p-3" aria-label="Primary">'] },
     { name: "logical chart headings", tokens: ['<h2 id="revenueChartTitle"', '<h2 id="hotColdChartTitle"', '<h2 id="expenseChartTitle"'] },
     { name: "filter selector label", tokens: ['<label for="filter" class="sr-only">Reporting period</label>'] },
     { name: "custom date labels", tokens: ['<label for="customStart" class="sr-only">Custom start date</label>', '<label for="customEnd" class="sr-only">Custom end date</label>'] },
@@ -954,7 +954,7 @@ function createAccessibilityContractFixtures()
     { name: "table accessible name and empty state", tokens: ['<caption class="sr-only">Recent business transactions</caption>', 'colspan="5" class="p-6 text-center text-slate-500">No recent transactions for the selected period.</td>'] },
     { name: "scoped table headers", tokens: ['<th scope="col" class="p-4 text-left"> Date </th>', '<th scope="col" class="p-4 text-left"> Amount </th>'] },
     { name: "dynamic status regions", tokens: ['id="dashboardStatus"', 'id="reportingInformation"', 'role="status"', 'aria-live="polite"'] },
-    { name: "visible keyboard focus", tokens: ['button:focus-visible,', 'select:focus-visible,', 'input:focus-visible,', 'outline: 3px solid #6366f1;'] },
+    { name: "visible keyboard focus", tokens: ['button:focus-visible,', 'select:focus-visible,', 'input:focus-visible,', 'outline: 3px solid var(--focus);'] },
     { name: "hidden drawer focus exclusion", tokens: ['sidebar.inert = !isOpen && !isDesktop;', 'sidebar.setAttribute(', '"aria-hidden",'] },
     { name: "Escape drawer close", tokens: ['event.key === "Escape"', 'setSidebarOpen(false, true);'] },
     { name: "Retry keyboard operation", tokens: ['id="dashboardRetryButton"', 'type="button"', 'onclick="retryDashboardData()"'] },
@@ -979,7 +979,7 @@ function createChartPresentationContractFixtures()
     { name: "Hot Cold safe percentage", tokens: ["total > 0 ? (context.raw / total) * 100 : 0", 'percentage.toFixed(1) + "%)"'] },
     { name: "Expense populated values and ordering", tokens: ["var expenseData = expenseBreakdown.slice();", "item.category;", "item.amount;"] },
     { name: "Expense empty state", tokens: ['"No expense data for the selected period."', '"Expense breakdown has no represented categories."'] },
-    { name: "long category labels", tokens: ['indexAxis: "y"', "ticks: { autoSkip: false }"] },
+    { name: "long category labels", tokens: ['indexAxis: "y"', "ticks: { autoSkip: false, color: chartPalette.axis }"] },
     { name: "accessible titles and summaries", tokens: ['aria-labelledby="revenueChartTitle"', 'aria-labelledby="hotColdChartTitle"', 'aria-labelledby="expenseChartTitle"', 'id="revenueChartSummary"', 'id="hotColdChartSummary"', 'id="expenseChartSummary"'] },
     { name: "summary update behavior", tokens: ["summaryElement.innerText = summary;", "renderRevenueChart(revenueTrend);", "renderHotColdChart(hotColdSplit);", "renderExpenseChart(expenseBreakdown);"] },
     { name: "single chart lifecycle helper", tokens: ["function destroyChartInstance(chart)", "chart.destroy();"], uniqueToken: "function destroyChartInstance(chart)" },
@@ -1005,7 +1005,7 @@ function createFrontendDependencyContractFixtures()
       { name: "Chart available constructors", tokens: ["revenueChart = new Chart(", "hotColdChart = new Chart(", "expenseChart = new Chart("] },
       { name: "responsive contract retained", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"'] },
       { name: "chart contract retained", tokens: ["renderRevenueChart(revenueTrend);", "renderHotColdChart(hotColdSplit);", "renderExpenseChart(expenseBreakdown);"] },
-      { name: "Font Awesome active usage", tokens: ['class="fas fa-times"', 'class="fas fa-chart-line w-6"', 'class="fas fa-receipt w-6"'] },
+      { name: "Font Awesome active usage", tokens: ['class="fas fa-times"', 'class="fas fa-chart-line w-6 text-center"', 'class="fas fa-receipt w-6 text-center"'] },
       { name: "no browser alert fallback", excludedTokens: ["alert(\"Chart unavailable.\")", "alert('Chart unavailable.')"] }
     ]
   };

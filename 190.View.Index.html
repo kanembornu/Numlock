@@ -4,20 +4,144 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NUMLOCK Coffee Shop Analytics</title>
+    <script>
+      (function applyStoredThemeBeforeRender()
+      {
+        var storageKey = "numlock.ui.theme";
+        var allowedThemes = {
+          light: true,
+          dark: true,
+          system: true
+        };
+        var preference = "system";
+
+        try
+        {
+          var storedPreference = window.localStorage.getItem(storageKey);
+
+          if (allowedThemes[storedPreference])
+          {
+            preference = storedPreference;
+          }
+        }
+        catch (error)
+        {
+          preference = "system";
+        }
+
+        var resolvedTheme =
+          preference === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : preference;
+
+        document.documentElement.setAttribute(
+          "data-theme-preference",
+          preference
+        );
+        document.documentElement.setAttribute(
+          "data-theme",
+          resolvedTheme
+        );
+      })();
+    </script>
     <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
       .page { display: none; }
       .page.active { display: block; }
-      body { background: #f8fafc; font-family: 'Inter', sans-serif; }
+      body { background: var(--canvas); color: var(--text-primary); font-family: 'Inter', sans-serif; }
+
+      #appShell { background: var(--canvas); }
+      #dashboardSidebar { width: 240px; background: var(--sidebar); }
+      #mainContent { background: var(--canvas); }
+      #topUtilityBar { height: 64px; background: var(--surface-1); border-color: var(--border-subtle); }
+      #contentViewport { background: var(--canvas); }
+      #sidebarBackdrop { background: var(--overlay); }
+      .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
+      .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
+      .ui-theme-primary { color: var(--text-primary) !important; }
+      .ui-theme-secondary { color: var(--text-secondary) !important; }
+      .ui-theme-muted { color: var(--text-muted) !important; }
+
+      @media (min-width: 1024px)
+      {
+        html,
+        body,
+        #appShell
+        {
+          height: 100vh;
+          height: 100dvh;
+          overflow: hidden;
+        }
+
+        #dashboardSidebar { transform: translateX(0); }
+        #mainContent { margin-left: 240px; height: 100vh; height: 100dvh; overflow: hidden; }
+        #contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow-y: auto; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
+        #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
+        #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
+        #appShell[data-sidebar-collapsed="true"] .sidebar-brand { justify-content: center; }
+        #appShell[data-sidebar-collapsed="true"] .ui-sidebar-item { justify-content: center; padding-left: 0; padding-right: 0; }
+        #appShell[data-sidebar-collapsed="true"] #sidebarCollapseIcon { transform: rotate(180deg); }
+      }
+
+      @media (max-width: 1023px)
+      {
+        #dashboardSidebar { width: min(320px, calc(100vw - 32px)); }
+        #contentViewport { overflow: visible; }
+      }
+
+      :root[data-theme="dark"] .bg-white,
+      :root[data-theme="dark"] .bg-slate-50
+      {
+        background-color: var(--surface-1) !important;
+      }
+
+      :root[data-theme="dark"] .bg-slate-100,
+      :root[data-theme="dark"] .bg-slate-200
+      {
+        background-color: var(--surface-2) !important;
+      }
+
+      :root[data-theme="dark"] .text-slate-900,
+      :root[data-theme="dark"] .text-slate-800,
+      :root[data-theme="dark"] .text-slate-700
+      {
+        color: var(--text-primary) !important;
+      }
+
+      :root[data-theme="dark"] .text-slate-600,
+      :root[data-theme="dark"] .text-slate-500,
+      :root[data-theme="dark"] .text-slate-400
+      {
+        color: var(--text-secondary) !important;
+      }
+
+      :root[data-theme="dark"] .border-slate-100,
+      :root[data-theme="dark"] .border-slate-200,
+      :root[data-theme="dark"] .border-slate-300,
+      :root[data-theme="dark"] .border-b,
+      :root[data-theme="dark"] .border-t
+      {
+        border-color: var(--border-subtle) !important;
+      }
+
+      :root[data-theme="dark"] .bg-indigo-50 { background-color: var(--brand-soft) !important; }
+      :root[data-theme="dark"] .bg-amber-50 { background-color: var(--warning-soft) !important; }
+      :root[data-theme="dark"] .bg-red-50 { background-color: var(--critical-soft) !important; }
+      :root[data-theme="dark"] .bg-emerald-50 { background-color: var(--success-soft) !important; }
+      :root[data-theme="dark"] .shadow-lg,
+      :root[data-theme="dark"] .shadow-sm { box-shadow: var(--shadow-1) !important; }
 
       button:focus-visible,
       select:focus-visible,
       input:focus-visible,
       [tabindex="0"]:focus-visible
       {
-        outline: 3px solid #6366f1;
+        outline: 3px solid var(--focus);
         outline-offset: 3px;
       }
 
@@ -58,6 +182,18 @@
 
       @media print
       {
+        :root[data-theme="dark"] .bg-white,
+        :root[data-theme="dark"] .bg-slate-50,
+        :root[data-theme="dark"] .bg-slate-100,
+        :root[data-theme="dark"] .bg-slate-200,
+        :root[data-theme="dark"] .ui-theme-surface,
+        :root[data-theme="dark"] .ui-theme-inset
+        {
+          background: #ffffff !important;
+          color: #0f172a !important;
+          border-color: #cbd5e1 !important;
+        }
+
         html,
         body
         {
@@ -76,6 +212,7 @@
         #dashboardSidebar,
         #sidebarBackdrop,
         #sidebarMenuButton,
+        #topUtilityBar,
         #dashboardScreenHeader,
         #dashboardStatus,
         #dateFilterControls > label,
@@ -212,8 +349,8 @@
     </style>
   </head>
 
-<body class="bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 text-slate-800 overflow-x-hidden">
-<div class="flex min-h-screen min-w-0">
+<body class="text-slate-800 overflow-x-hidden">
+<div id="appShell" class="flex min-h-screen min-w-0" data-sidebar-collapsed="false">
 
   <!-- ==================================================
      SIDEBAR
@@ -225,15 +362,15 @@
 
   <aside
     id="dashboardSidebar"
-    class="fixed inset-y-0 left-0 z-50 flex h-full w-72 -translate-x-full flex-col bg-slate-950 text-slate-300 shadow-2xl transition-transform duration-200 lg:translate-x-0"
-    aria-label="Dashboard navigation">
-    <div class="p-8 border-b border-slate-800">
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-4 min-w-0">
-        <div class="w-14 h-14 rounded-2xl bg-indigo-600 flex items-center justify-center text-white text-xl font-bold"></div>
-        <div class="min-w-0">
+    class="fixed inset-y-0 left-0 z-50 flex h-full -translate-x-full flex-col text-slate-300 shadow-2xl transition-all duration-200 lg:translate-x-0"
+    aria-label="NUMLOCK navigation">
+    <div class="border-b border-slate-800 p-4">
+      <div class="sidebar-brand flex items-center justify-between gap-3">
+        <div class="flex min-w-0 items-center gap-3">
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-base font-bold text-white" aria-hidden="true">N</div>
+        <div class="sidebar-expanded-content min-w-0">
           <div class="text-2xl font-bold text-white"> NUMLOCK </div>
-          <p class="text-xs text-slate-400"> Executive Dashboard </p>
+          <p class="text-xs text-slate-400"> Business Intelligence </p>
         </div>
         </div>
         <button
@@ -244,47 +381,91 @@
           <i class="fas fa-times" aria-hidden="true"></i>
         </button>
       </div>
+    </div>
 
-      <nav class="flex-1 p-4 space-y-2" aria-label="Primary">
+      <nav class="flex-1 space-y-2 p-3" aria-label="Primary">
         <button
           type="button"
           data-page="dashboard"
           aria-current="page"
-          class="w-full text-left px-4 py-3 rounded-2xl bg-indigo-600 text-white font-medium hover:bg-indigo-500 transition">
-          <i class="fas fa-chart-line w-6"></i> Dashboard
+          aria-label="Dashboard"
+          title="Dashboard"
+          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left font-medium transition">
+          <i class="fas fa-chart-line w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Dashboard</span>
         </button>
 
         <button
           type="button"
           data-page="transactions"
-          class="w-full text-left px-4 py-3 rounded-2xl hover:bg-slate-800 transition">
-          <i class="fas fa-receipt w-6"></i> Transactions
+          aria-label="Transactions"
+          title="Transactions"
+          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition">
+          <i class="fas fa-receipt w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Transactions</span>
+        </button>
+
+        <button
+          type="button"
+          data-page="settings"
+          aria-label="Settings"
+          title="Settings"
+          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition">
+          <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
+        </button>
+
+        <button
+          type="button"
+          data-page="logs"
+          aria-label="Logs"
+          title="Logs"
+          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition">
+          <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
         </button>
       </nav>
 
-      <div class="p-6 border-t border-slate-800">
-      <div class="text-xs text-slate-500"> Version <?= version ?> </div>
-      <div class="text-sm text-slate-400 mt-1"> Dekker ft. ChatGPT </div>
+    <div class="border-t border-slate-800 p-3">
+      <button
+        id="sidebarCollapseButton"
+        type="button"
+        class="ui-sidebar-item hidden min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left lg:flex"
+        aria-label="Collapse navigation"
+        aria-expanded="true"
+        title="Collapse navigation">
+        <i id="sidebarCollapseIcon" class="fas fa-chevron-left w-6 text-center transition-transform" aria-hidden="true"></i>
+        <span class="sidebar-expanded-content">Collapse</span>
+      </button>
+      <div class="sidebar-expanded-content px-3 pt-3 text-xs text-slate-500">Version <?= version ?></div>
     </div>
   </aside>
 
   <!-- ==================================================
      MAIN
 ================================================== -->
-  <main id="mainContent" class="ml-0 min-w-0 w-full flex-1 p-4 sm:p-6 lg:ml-72 lg:p-10">
-
-    <div class="mb-6 lg:hidden">
+  <main id="mainContent" class="ml-0 min-w-0 w-full flex-1 transition-[margin] duration-200">
+    <header id="topUtilityBar" class="flex min-h-16 items-center justify-between gap-4 border-b px-4 sm:px-6" aria-label="Page utility bar">
+      <div class="flex min-w-0 items-center gap-3">
       <button
         id="sidebarMenuButton"
         type="button"
-        class="inline-flex items-center gap-3 rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white shadow-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+        class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-3 font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 lg:hidden"
         aria-label="Open navigation menu"
         aria-expanded="false"
         aria-controls="dashboardSidebar">
         <i class="fas fa-bars" aria-hidden="true"></i>
-        Menu
+        <span class="sr-only">Menu</span>
       </button>
-    </div>
+        <div class="min-w-0">
+          <div id="utilityPageTitle" class="truncate text-base font-bold ui-theme-primary">Dashboard</div>
+          <div id="utilityPageContext" class="truncate text-xs ui-theme-muted">Business performance and next actions</div>
+        </div>
+      </div>
+      <div class="hidden min-w-0 items-center gap-4 text-xs ui-theme-muted sm:flex" aria-label="Dashboard metadata">
+        <span><span class="sr-only">Current period: </span><span id="utilityActivePeriod">Current Year</span></span>
+        <span><span class="sr-only">Last sync: </span><span id="utilityLastSync">Waiting for data</span></span>
+        <span>v<?= version ?></span>
+      </div>
+    </header>
+
+    <div id="contentViewport" class="min-w-0 p-4 sm:p-6 lg:p-5">
 
     <!-- ==================================================
      DASHBOARD
@@ -294,8 +475,7 @@
     <!-- HEADER -->
     <div class="flex min-w-0 flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
       <div id="dashboardScreenHeader" class="min-w-0">
-        <div class="text-slate-500 text-sm mb-2"> Welcome Back 👋 </div>
-        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-bold text-slate-900"> Executive Dashboard </h1>
+        <h1 id="dashboardHeading" class="text-3xl sm:text-4xl lg:text-4xl font-bold text-slate-900" tabindex="-1"> Executive Dashboard </h1>
         <p class="text-slate-500 mt-3"> Business performance, attention areas, and next actions </p>
       </div>
 
@@ -706,6 +886,63 @@
           </thead>
           <tbody id="tableBody"></tbody>
         </table>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
+      <div class="mb-6">
+        <h1 id="settingsHeading" class="text-3xl font-bold text-slate-900" tabindex="-1">Settings</h1>
+        <p class="mt-2 text-sm text-slate-500">Appearance and authoritative application information.</p>
+      </div>
+
+      <div class="grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2">
+        <section class="ui-theme-surface rounded-2xl border p-5" aria-labelledby="appearanceHeading">
+          <h2 id="appearanceHeading" class="text-xl font-bold">Appearance</h2>
+          <p class="mt-2 text-sm ui-theme-secondary">Choose how NUMLOCK appears in this browser.</p>
+          <fieldset class="mt-5 space-y-3">
+            <legend class="sr-only">Theme</legend>
+            <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3">
+              <input type="radio" name="themePreference" value="light">
+              <span><strong>Light</strong><span class="block text-xs ui-theme-muted">Use the light NUMLOCK theme.</span></span>
+            </label>
+            <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3">
+              <input type="radio" name="themePreference" value="dark">
+              <span><strong>Dark</strong><span class="block text-xs ui-theme-muted">Use deep navy and slate surfaces.</span></span>
+            </label>
+            <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3">
+              <input type="radio" name="themePreference" value="system">
+              <span><strong>System</strong><span class="block text-xs ui-theme-muted">Follow this device’s color preference.</span></span>
+            </label>
+          </fieldset>
+          <p id="themeStatus" class="mt-4 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
+        </section>
+
+        <section class="ui-theme-surface rounded-2xl border p-5" aria-labelledby="aboutHeading">
+          <h2 id="aboutHeading" class="text-xl font-bold">About</h2>
+          <dl class="mt-5 grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 text-sm">
+            <dt class="ui-theme-muted">Version</dt>
+            <dd class="font-semibold"><?= version ?></dd>
+            <dt class="ui-theme-muted">Environment</dt>
+            <dd class="font-semibold"><?= environment ?></dd>
+          </dl>
+          <p class="mt-5 text-xs ui-theme-muted">Business configuration remains system-defined and is not editable here.</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- LOGS -->
+    <section id="logs" class="page" hidden aria-labelledby="logsHeading">
+      <div class="mb-6">
+        <h1 id="logsHeading" class="text-3xl font-bold text-slate-900" tabindex="-1">Logs</h1>
+        <p class="mt-2 text-sm text-slate-500">Sanitized client application events from this browser session.</p>
+      </div>
+      <div class="ui-theme-surface max-w-5xl rounded-2xl border p-5">
+        <p class="text-sm ui-theme-secondary">Logs include this browser session only and are cleared when the session ends or the page is reloaded.</p>
+        <p id="sessionLogsEmpty" class="mt-5 rounded-xl border border-dashed p-5 text-sm ui-theme-muted">No client events in this session.</p>
+        <ol id="sessionLogsList" class="mt-5 hidden space-y-3" aria-label="Session client events"></ol>
+      </div>
+    </section>
     </div>
   </main>
 </div>
@@ -725,6 +962,8 @@
   let visibleTransactionRowCount = 0;
   let latestDashboardTransactions = [];
   let activeTransactionDrilldown = null;
+  let themeFoundationInitialized = false;
+  let sessionClientLogs = [];
 
     function initializeStableDashboardElements()
     {
@@ -773,8 +1012,69 @@
         stableDashboardElements.transactionsPage.children[1];
       stableDashboardElements.transactionDrilldownText =
         stableDashboardElements.transactionDrilldownSummary.firstElementChild.firstElementChild;
+      stableDashboardElements.appShell =
+        stableDashboardElements.sidebar.parentElement;
+      stableDashboardElements.sidebarCollapseButton =
+        stableDashboardElements.sidebar.lastElementChild.firstElementChild;
+      stableDashboardElements.mainContent =
+        stableDashboardElements.sidebar.nextElementSibling;
+      stableDashboardElements.topUtilityBar =
+        stableDashboardElements.mainContent.firstElementChild;
+      stableDashboardElements.utilityPageTitle =
+        stableDashboardElements.topUtilityBar.firstElementChild.lastElementChild.firstElementChild;
+      stableDashboardElements.utilityPageContext =
+        stableDashboardElements.utilityPageTitle.nextElementSibling;
+      stableDashboardElements.utilityMetadata =
+        stableDashboardElements.topUtilityBar.lastElementChild;
+      stableDashboardElements.utilityActivePeriod =
+        stableDashboardElements.utilityMetadata.children[0].lastElementChild;
+      stableDashboardElements.utilityLastSync =
+        stableDashboardElements.utilityMetadata.children[1].lastElementChild;
+      stableDashboardElements.settingsPage =
+        Array.prototype.find.call(
+          stableDashboardElements.pageElements,
+          function(page) { return page.id === "settings"; }
+        );
+      stableDashboardElements.logsPage =
+        Array.prototype.find.call(
+          stableDashboardElements.pageElements,
+          function(page) { return page.id === "logs"; }
+        );
+      stableDashboardElements.themeControls =
+        stableDashboardElements.settingsPage.querySelectorAll(
+          'input[name="themePreference"]'
+        );
+      stableDashboardElements.themeStatus =
+        stableDashboardElements.settingsPage.querySelector('[role="status"]');
+      stableDashboardElements.sessionLogsEmpty =
+        stableDashboardElements.logsPage.querySelector("p[id]");
+      stableDashboardElements.sessionLogsList =
+        stableDashboardElements.logsPage.querySelector("ol");
 
       return stableDashboardElements;
+    }
+
+    function setDesktopSidebarCollapsed(isCollapsed)
+    {
+      var elements = initializeStableDashboardElements();
+      var collapseButton = elements.sidebarCollapseButton;
+
+      elements.appShell.setAttribute(
+        "data-sidebar-collapsed",
+        String(isCollapsed)
+      );
+      collapseButton.setAttribute(
+        "aria-expanded",
+        String(!isCollapsed)
+      );
+      collapseButton.setAttribute(
+        "aria-label",
+        isCollapsed ? "Expand navigation" : "Collapse navigation"
+      );
+      collapseButton.setAttribute(
+        "title",
+        isCollapsed ? "Expand navigation" : "Collapse navigation"
+      );
     }
 
     function setSidebarOpen(isOpen, restoreFocus)
@@ -831,6 +1131,17 @@
           setSidebarOpen(false, true);
         });
 
+      elements.sidebarCollapseButton
+        .addEventListener("click", function()
+        {
+          var isCollapsed =
+            elements.appShell.getAttribute(
+              "data-sidebar-collapsed"
+            ) === "true";
+
+          setDesktopSidebarCollapsed(!isCollapsed);
+        });
+
       document.addEventListener("keydown", function(event)
       {
         if (
@@ -849,7 +1160,7 @@
           button.addEventListener("click", function()
           {
             showPage(button.getAttribute("data-page"));
-            setSidebarOpen(false, true);
+            setSidebarOpen(false, false);
           });
         });
 
@@ -860,6 +1171,7 @@
         });
 
       setSidebarOpen(false, false);
+      setDesktopSidebarCollapsed(false);
     }
 
     function showPage(pageId)
@@ -892,6 +1204,298 @@
             button.removeAttribute("aria-current");
           }
         });
+
+      var pageContract = {
+        dashboard: {
+          title: "Dashboard",
+          context: "Business performance and next actions"
+        },
+        transactions: {
+          title: "Transactions",
+          context: "Bounded recent transaction evidence"
+        },
+        settings: {
+          title: "Settings",
+          context: "Appearance and application information"
+        },
+        logs: {
+          title: "Logs",
+          context: "Sanitized events from this browser session"
+        }
+      };
+      var activePage = Array.prototype.find.call(
+        elements.pageElements,
+        function(page) { return page.id === pageId; }
+      );
+      var contract = pageContract[pageId];
+
+      if (!activePage || !contract)
+      {
+        return;
+      }
+
+      elements.utilityPageTitle.innerText = contract.title;
+      elements.utilityPageContext.innerText = contract.context;
+
+      var heading = activePage.querySelector("h1");
+
+      if (heading)
+      {
+        heading.focus();
+      }
+    }
+
+    function getResolvedTheme(preference)
+    {
+      if (preference === "dark" || preference === "light")
+      {
+        return preference;
+      }
+
+      return window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches
+        ? "dark"
+        : "light";
+    }
+
+    function getCurrentThemePalette(forceLight)
+    {
+      var isDark =
+        !forceLight &&
+        document.documentElement.getAttribute("data-theme") === "dark";
+
+      return isDark
+        ? {
+            series: ["#818CF8", "#38BDF8", "#34D399", "#FBBF24"],
+            grid: "#243750",
+            axis: "#CBD5E1",
+            tooltipBackground: "#F8FAFC",
+            tooltipText: "#0F172A",
+            revenueFill: "rgba(129, 140, 248, 0.18)"
+          }
+        : {
+            series: ["#4F46E5", "#0284C7", "#059669", "#D97706"],
+            grid: "#E2E8F0",
+            axis: "#64748B",
+            tooltipBackground: "#0F172A",
+            tooltipText: "#F8FAFC",
+            revenueFill: "rgba(79, 70, 229, 0.10)"
+          };
+    }
+
+    function synchronizeChartTheme(forceLight)
+    {
+      var palette = getCurrentThemePalette(forceLight === true);
+
+      if (revenueChart)
+      {
+        revenueChart.data.datasets[0].borderColor = palette.series[0];
+        revenueChart.data.datasets[0].backgroundColor = palette.revenueFill;
+      }
+
+      if (hotColdChart)
+      {
+        hotColdChart.data.datasets[0].backgroundColor = [
+          palette.series[3],
+          palette.series[1]
+        ];
+      }
+
+      if (expenseChart)
+      {
+        expenseChart.data.datasets[0].backgroundColor = palette.series[2];
+        expenseChart.data.datasets[0].borderColor = palette.series[2];
+      }
+
+      [revenueChart, hotColdChart, expenseChart]
+        .forEach(function(chart)
+        {
+          if (!chart)
+          {
+            return;
+          }
+
+          chart.options.plugins.tooltip.backgroundColor =
+            palette.tooltipBackground;
+          chart.options.plugins.tooltip.titleColor = palette.tooltipText;
+          chart.options.plugins.tooltip.bodyColor = palette.tooltipText;
+
+          Object.keys(chart.options.scales || {})
+            .forEach(function(axisKey)
+            {
+              var axis = chart.options.scales[axisKey];
+              axis.ticks = axis.ticks || {};
+              axis.ticks.color = palette.axis;
+              axis.grid = axis.grid || {};
+
+              if (axis.grid.display !== false)
+              {
+                axis.grid.color = palette.grid;
+              }
+            });
+
+          chart.update("none");
+        });
+    }
+
+    function applyThemePreference(preference, persist, announce)
+    {
+      var allowedThemes = {
+        light: true,
+        dark: true,
+        system: true
+      };
+      var safePreference = allowedThemes[preference]
+        ? preference
+        : "system";
+      var resolvedTheme = getResolvedTheme(safePreference);
+      var elements = initializeStableDashboardElements();
+
+      document.documentElement.setAttribute(
+        "data-theme-preference",
+        safePreference
+      );
+      document.documentElement.setAttribute(
+        "data-theme",
+        resolvedTheme
+      );
+
+      if (persist)
+      {
+        try
+        {
+          window.localStorage.setItem(
+            "numlock.ui.theme",
+            safePreference
+          );
+        }
+        catch (error)
+        {
+          elements.themeStatus.innerText =
+            "Theme applied for this session; browser storage is unavailable.";
+        }
+      }
+
+      elements.themeControls.forEach(function(control)
+      {
+        control.checked = control.value === safePreference;
+      });
+
+      if (announce)
+      {
+        elements.themeStatus.innerText =
+          safePreference.charAt(0).toUpperCase() +
+          safePreference.slice(1) +
+          " theme selected.";
+      }
+
+      synchronizeChartTheme();
+    }
+
+    function initializeThemeFoundation()
+    {
+      if (themeFoundationInitialized)
+      {
+        return;
+      }
+
+      themeFoundationInitialized = true;
+
+      var elements = initializeStableDashboardElements();
+      var initialPreference =
+        document.documentElement.getAttribute(
+          "data-theme-preference"
+        ) || "system";
+      var systemThemeQuery = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      );
+
+      elements.themeControls.forEach(function(control)
+      {
+        control.addEventListener("change", function()
+        {
+          if (control.checked)
+          {
+            applyThemePreference(control.value, true, true);
+          }
+        });
+      });
+
+      systemThemeQuery.addEventListener("change", function()
+      {
+        if (
+          document.documentElement.getAttribute(
+            "data-theme-preference"
+          ) === "system"
+        )
+        {
+          applyThemePreference("system", false, false);
+        }
+      });
+
+      window.addEventListener("beforeprint", function()
+      {
+        synchronizeChartTheme(true);
+      });
+
+      window.addEventListener("afterprint", function()
+      {
+        synchronizeChartTheme(false);
+      });
+
+      applyThemePreference(initialPreference, false, false);
+    }
+
+    function renderSessionClientLogs()
+    {
+      var elements = initializeStableDashboardElements();
+
+      elements.sessionLogsEmpty.classList.toggle(
+        "hidden",
+        sessionClientLogs.length > 0
+      );
+      elements.sessionLogsList.classList.toggle(
+        "hidden",
+        sessionClientLogs.length === 0
+      );
+      elements.sessionLogsList.innerHTML = sessionClientLogs
+        .map(function(entry)
+        {
+          return '<li class="ui-theme-inset rounded-xl border p-4 text-sm">' +
+            '<div class="flex flex-wrap items-center justify-between gap-2">' +
+            '<strong>' + entry.severity + " · " + entry.context + '</strong>' +
+            '<time class="ui-theme-muted">' + entry.timestamp + '</time>' +
+            '</div><p class="mt-2 ui-theme-secondary">' + entry.message + '</p></li>';
+        })
+        .join("");
+    }
+
+    function logClientEvent(severity, context, message)
+    {
+      var allowedSeverity = {
+        Info: true,
+        Warning: true,
+        Error: true
+      };
+      var safeSeverity = allowedSeverity[severity]
+        ? severity
+        : "Info";
+      var safeContext = String(context || "Application")
+        .replace(/[^A-Za-z0-9 -]/g, "")
+        .slice(0, 40);
+      var safeMessage = String(message || "Application event")
+        .replace(/[<>]/g, "")
+        .slice(0, 160);
+
+      sessionClientLogs.push({
+        timestamp: new Date().toLocaleTimeString("id-ID"),
+        severity: safeSeverity,
+        context: safeContext,
+        message: safeMessage
+      });
+      sessionClientLogs = sessionClientLogs.slice(-50);
+      renderSessionClientLogs();
     }
 
     //--------------------------------------------------
@@ -1180,6 +1784,12 @@
           res.dateFilter.startDate,
           res.dateFilter.endDate
         );
+      initializeStableDashboardElements().utilityActivePeriod.innerText =
+        res.dateFilter.label ||
+        formatDashboardMonthRange(
+          res.dateFilter.startDate,
+          res.dateFilter.endDate
+        );
 
       document.getElementById("transactionCountLabel").innerText =
         scope.transactionCount + " transactions";
@@ -1191,6 +1801,10 @@
         latestDate
           ? "Updated " + latestDate
           : "No transaction data";
+      initializeStableDashboardElements().utilityLastSync.innerText =
+        latestDate
+          ? freshness.status + " · " + latestDate
+          : freshness.status;
 
       var badge =
         document.getElementById("freshnessStatusBadge");
@@ -1509,6 +2123,11 @@
         return;
       }
 
+      logClientEvent(
+        "Info",
+        "Dashboard",
+        "Retrying the last dashboard request."
+      );
       requestDashboardData(lastDashboardRequest);
     }
 
@@ -1704,6 +2323,13 @@
             setDashboardState(
               isEmpty ? "empty" : "success"
             );
+            logClientEvent(
+              "Info",
+              "Dashboard",
+              isEmpty
+                ? "Dashboard loaded with no rows for the active period."
+                : "Dashboard loaded successfully."
+            );
           }
           catch (error)
           {
@@ -1715,6 +2341,11 @@
             setDashboardState(
               "error",
               "Unable to load dashboard data."
+            );
+            logClientEvent(
+              "Error",
+              "Dashboard",
+              "Dashboard rendering failed."
             );
           }
         })
@@ -1736,6 +2367,11 @@
           setDashboardState(
             "error",
             "Unable to load dashboard data."
+          );
+          logClientEvent(
+            "Error",
+            "Dashboard",
+            "Dashboard request failed."
           );
         })
         .getDashboardData(
@@ -2277,6 +2913,7 @@
 
     function renderRevenueChart(revenueTrend)
     {
+      var chartPalette = getCurrentThemePalette();
       var labels = Array.isArray(revenueTrend.labels) ? revenueTrend.labels : [];
       var values = Array.isArray(revenueTrend.values) ? revenueTrend.values : [];
       var isEmpty = values.length === 0;
@@ -2324,8 +2961,8 @@
             datasets: [{
               label: "Revenue",
               data: values,
-              borderColor: "#6366f1",
-              backgroundColor: "rgba(99,102,241,0.1)",
+              borderColor: chartPalette.series[0],
+              backgroundColor: chartPalette.revenueFill,
               borderWidth: 3,
               fill: true,
               tension: 0.4,
@@ -2351,14 +2988,17 @@
             plugins: {
               legend: { display: false },
               tooltip: {
+                backgroundColor: chartPalette.tooltipBackground,
+                titleColor: chartPalette.tooltipText,
+                bodyColor: chartPalette.tooltipText,
                 callbacks: {
                   label: function(context) { return "Revenue: " + formatChartCurrency(context.raw); }
                 }
               }
             },
             scales: {
-              x: { grid: { display: false } },
-              y: { beginAtZero: true, min: 0, grid: { color: "#f1f5f9" } }
+              x: { grid: { display: false }, ticks: { color: chartPalette.axis } },
+              y: { beginAtZero: true, min: 0, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis } }
             }
           }
         }
@@ -2367,6 +3007,7 @@
 
     function renderHotColdChart(hotColdSplit)
     {
+      var chartPalette = getCurrentThemePalette();
       var hot = Number(hotColdSplit.hot || 0);
       var cold = Number(hotColdSplit.cold || 0);
       var total = hot + cold;
@@ -2401,7 +3042,7 @@
             labels: ["Hot", "Cold"],
             datasets: [{
               data: [hot, cold],
-              backgroundColor: ["#f97316", "#06b6d4"]
+              backgroundColor: [chartPalette.series[3], chartPalette.series[1]]
             }]
           },
           options: {
@@ -2421,6 +3062,9 @@
             },
             plugins: {
               tooltip: {
+                backgroundColor: chartPalette.tooltipBackground,
+                titleColor: chartPalette.tooltipText,
+                bodyColor: chartPalette.tooltipText,
                 callbacks: {
                   label: function(context)
                   {
@@ -2438,6 +3082,7 @@
 
     function renderExpenseChart(expenseBreakdown)
     {
+      var chartPalette = getCurrentThemePalette();
       var expenseData = expenseBreakdown.slice();
       var isEmpty = expenseData.length === 0;
       var total = expenseData.reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0);
@@ -2482,7 +3127,9 @@
             labels: expenseData.map(function(item) { return item.category; }),
             datasets: [{
               label: "Expense",
-              data: expenseData.map(function(item) { return item.amount; })
+              data: expenseData.map(function(item) { return item.amount; }),
+              backgroundColor: chartPalette.series[2],
+              borderColor: chartPalette.series[2]
             }]
           },
           options: {
@@ -2506,14 +3153,17 @@
             plugins: {
               legend: { display: false },
               tooltip: {
+                backgroundColor: chartPalette.tooltipBackground,
+                titleColor: chartPalette.tooltipText,
+                bodyColor: chartPalette.tooltipText,
                 callbacks: {
                   label: function(context) { return "Expense: " + formatChartCurrency(context.raw); }
                 }
               }
             },
             scales: {
-              x: { beginAtZero: true, min: 0, grid: { color: "#f1f5f9" } },
-              y: { grid: { display: false }, ticks: { autoSkip: false } }
+              x: { beginAtZero: true, min: 0, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis } },
+              y: { grid: { display: false }, ticks: { autoSkip: false, color: chartPalette.axis } }
             }
           }
         }
@@ -3245,6 +3895,7 @@
 
 window.onload = function()
 {
+  initializeThemeFoundation();
   initializeResponsiveShell();
   updateCustomDateVisibility();
   loadData();

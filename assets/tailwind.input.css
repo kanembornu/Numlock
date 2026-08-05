@@ -1,3 +1,107 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root,
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --canvas: #F4F7FB;
+    --sidebar: #0F1B2D;
+    --sidebar-hover: #19283D;
+    --surface-1: #FFFFFF;
+    --surface-2: #F8FAFC;
+    --surface-3: #EEF2F7;
+    --border-subtle: #E2E8F0;
+    --border-strong: #CBD5E1;
+    --text-primary: #0F172A;
+    --text-secondary: #475569;
+    --text-muted: #64748B;
+    --text-on-dark: #F8FAFC;
+    --brand: #4F46E5;
+    --brand-hover: #4338CA;
+    --brand-soft: #EEF2FF;
+    --success: #047857;
+    --success-soft: #ECFDF5;
+    --info: #0369A1;
+    --info-soft: #F0F9FF;
+    --warning: #B45309;
+    --warning-soft: #FFFBEB;
+    --critical: #B91C1C;
+    --critical-soft: #FEF2F2;
+    --hover: #F1F5F9;
+    --focus: #2563EB;
+    --selected: #E0E7FF;
+    --disabled-bg: #F1F5F9;
+    --disabled-text: #94A3B8;
+    --overlay: rgba(15, 23, 42, 0.56);
+    --shadow-1: 0 1px 2px rgba(15, 23, 42, 0.06);
+    --shadow-2: 0 8px 24px rgba(15, 23, 42, 0.10);
+  }
+
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --canvas: #07111F;
+    --sidebar: #0B1627;
+    --sidebar-hover: #15243A;
+    --surface-1: #0F1C2E;
+    --surface-2: #142338;
+    --surface-3: #1A2C45;
+    --border-subtle: #243750;
+    --border-strong: #36506F;
+    --text-primary: #F1F5F9;
+    --text-secondary: #CBD5E1;
+    --text-muted: #94A3B8;
+    --text-on-dark: #F8FAFC;
+    --brand: #818CF8;
+    --brand-hover: #A5B4FC;
+    --brand-soft: #252B5B;
+    --success: #34D399;
+    --success-soft: #0B352C;
+    --info: #38BDF8;
+    --info-soft: #0B3044;
+    --warning: #FBBF24;
+    --warning-soft: #3B2A0B;
+    --critical: #FB7185;
+    --critical-soft: #421822;
+    --hover: #17283D;
+    --focus: #60A5FA;
+    --selected: #293263;
+    --disabled-bg: #162235;
+    --disabled-text: #64748B;
+    --overlay: rgba(2, 6, 23, 0.72);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.28);
+    --shadow-2: 0 12px 30px rgba(0, 0, 0, 0.38);
+  }
+
+  html,
+  body {
+    background: var(--canvas);
+    color: var(--text-primary);
+  }
+}
+
+@layer components {
+  .ui-surface {
+    background: var(--surface-1);
+    border-color: var(--border-subtle);
+    color: var(--text-primary);
+  }
+
+  .ui-muted {
+    color: var(--text-muted);
+  }
+
+  .ui-sidebar-item {
+    color: var(--text-on-dark);
+  }
+
+  .ui-sidebar-item:hover {
+    background: var(--sidebar-hover);
+  }
+
+  .ui-sidebar-item[aria-current="page"] {
+    background: var(--brand);
+    color: var(--text-on-dark);
+  }
+}

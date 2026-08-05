@@ -20,13 +20,13 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Post-release maintenance and authorized UI/UX 2.0 discovery**
+**Post-release maintenance and authorized UI/UX 2.0 implementation**
 
-Feature development remains paused after v1.0 closeout. UI/UX 2.0 Packages 001–004 completed authorized documentation-only information architecture, low-fidelity wireframes, visual-direction discovery, and an implementation-ready component/theme contract without changing the v1.0 application, source, styling, data contracts, deployment, or release metadata.
+The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 005 implements the separately authorized shell/theme foundation without changing dashboard data, formulas, response fields, version metadata, or deployment.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 004 — component library and theme contract — complete on 2026-08-05.** The documentation-only package defines the approved one-viewport tabbed shell, four primary destinations, complete light/dark semantic tokens, component/state/accessibility contracts, bounded Settings and session-local Logs scopes, measurable responsive behavior, and nine independently reviewable implementation slices. It supersedes the earlier two-destination discovery decision only for later UI/UX 2.0 work; current v1.0 production remains unchanged. No production source, Tailwind, production HTML, clasp, deployment, release metadata, commit, or push changed.
+**UI/UX 2.0 Package 005 — application shell and theme foundation — implemented and uploaded on 2026-08-05.** The frontend now has a 240px/72px desktop sidebar, 64px utility bar, bounded viewport shell, four approved destinations, truthful Appearance/About Settings, sanitized session-local Logs, and exact Light/Dark/System semantic themes with browser-local preference, pre-render application, Chart.js synchronization, and print-light behavior. Existing Dashboard and Transactions content remains unmigrated and compatible. Focused contracts and the ordered local suite pass 26/26; the exact 26-file clasp inventory was uploaded. Apps Script runtime and deployed-browser acceptance remain separate unverified evidence.
 
 ## 6. Current test gate and evidence level
 
@@ -35,6 +35,8 @@ Feature development remains paused after v1.0 closeout. UI/UX 2.0 Packages 001�
 | Evidence class | Current recorded evidence |
 | --- | --- |
 | Local/static | Release candidate `658f4ab1011633e86634f14ce838a514c5205df0`: dependency install, production/frontend syntax, manifest parse, Markdown links, eight focused release contracts, unified 25/25, runner count, and Git checks passed on 2026-08-05. |
+| Current UI/UX 2.0 local/static | Package 005: all numbered JavaScript and extracted frontend JavaScript parsed; five focused frontend contracts passed; deterministic Tailwind builds matched; ordered suite passed 26/26 with 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
+| Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
 | Deployment | Existing stable production deployment updated to immutable version 185; stable URL unchanged. Immutable version 184 retained for rollback. |
@@ -79,7 +81,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active release workflow and current gate now require exactly 25/25.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 26/26.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -120,11 +122,11 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Current runner membership is 25 and the latest local 25/25 result is recorded.
+- [x] Active runner membership is 26 and the latest Package 005 local 26/26 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
-- [x] Run the current 25-entry unified gate locally against the exact release candidate.
+- [x] Run the then-current 25-entry unified gate locally against the exact v1.0 release candidate.
 - [x] Review clasp inventory and upload only with explicit authorization.
 - [x] Run `runAllBackendTests()` successfully in the intended Apps Script project: 25/25 PASS.
 - [x] Update the existing production deployment to immutable version 185 while retaining the stable URL.
@@ -135,7 +137,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 Hold release promotion and new feature implementation when any of these conditions is true:
 
-- the current local unified gate is not exactly 25/25;
+- the active local unified gate is not exactly 26/26;
 - the release candidate differs from the reviewed/uploaded inventory;
 - Git status contains unexplained or unreviewed changes;
 - Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
@@ -167,7 +169,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 implementation Package 005 — shell and theme foundation, pending separate authorization.** The component contract is complete enough to begin the first bounded implementation slice without new visual invention. No production implementation, high-fidelity mockup, or browser acceptance is currently authorized or complete.
+**UI/UX 2.0 Package 006 — Dashboard tab framework, pending separate authorization.** Package 005 leaves all current Dashboard content in its existing order; the next slice may add the approved tab framework without migrating content until its own bounded package authorizes that move.
 
 ## 19. Status-history log
 
@@ -181,3 +183,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | UI/UX 2.0 discovery | Package 002 defined four low-fidelity desktop/mobile wireframes, compared two Dashboard variants, and recommended Executive-first for later high-fidelity work; documentation only, with no production or Tailwind change. |
 | 2026-08-05 | UI/UX 2.0 discovery | Package 003 compared four visual directions, selected Executive Minimal and Modern Financial for later high-fidelity comparison, and defined preliminary shortlisted tokens; documentation only, with no production or Tailwind change. |
 | 2026-08-05 | UI/UX 2.0 design contract | Package 004 defined the one-viewport tabbed shell, four approved destinations, full light/dark tokens, component/accessibility rules, truthful Settings and session-local Logs boundaries, and implementation slices; documentation only, with no production or Tailwind change. |
+| 2026-08-05 | UI/UX 2.0 implementation | Package 005 implemented and uploaded the 26-file shell/theme foundation with four destinations and raised the ordered local gate to 26/26; runtime, deployment, and browser acceptance remain unverified. |

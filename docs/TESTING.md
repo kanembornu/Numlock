@@ -36,6 +36,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testCsvExportContract()` — 14 static/behavioral scenarios covering the accessible Export CSV action, filename, header, visible row/column scope, displayed ordering, empty-state disabling, UTF-8 output, quote escaping, formula-prefix neutralization, numeric-value preservation, hidden-field exclusion, browser Blob download, and preserved accessibility/responsive contracts.
 - `testClientRenderPerformanceContract()` — seven static contract scenarios covering stable DOM caching, reduced repeated queries, immediate first-visible rendering, one deferred phase, stale-work cancellation/guarding, response immutability, preserved output containers, and retained accessibility/state contracts.
 - `testResponsiveShellContract()` — 12 source-contract scenarios covering the `lg` desktop boundary, drawer controls and accessibility, close paths, scroll lock, focus restoration, active navigation, table containment, and single controller initialization.
+- `testUiShellThemeContract()` — 17 static scenarios covering 240px/72px desktop sidebar states, the 64px utility bar, four approved destinations, absent future modules and SaaS decoration, Light/Dark/System selection, validated browser-local persistence, System fallback, pre-render theme application, exact dark tokens, print-light and Chart.js synchronization, mobile drawer/focus preservation, v1 destination compatibility, single listener initialization, and the 72-ID/two-selector query ceiling.
 - `testChartPresentationContract()` — 16 deterministic/static scenarios covering chart source values, formatting, empty transitions, safe percentages, accessible summaries, instance lifecycle, and responsive containment.
 - `testInteractiveDrilldownContract()` — four deterministic/static scenarios covering accessible KPI/chart controls, Sales/Purchase/month/expense-category filtering, ordering and response immutability, maximum-ten-row scope, focus/clear behavior, and absence of backend/API, spreadsheet, storage, or expanded-history access. It is targeted directly for debugging and invoked by `testChartPresentationContract()` so the ordered runner remains 25 entries.
 - `testFrontendDependencyContract()` — 14 deterministic/static scenarios covering exact versions, unique HTTPS URLs, no floating dependencies, retained Font Awesome usage, Chart.js availability/fallback, summaries, diagnostics, and preserved chart/responsive contracts.
@@ -74,8 +75,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all twenty-five directly runnable `test*` functions; the ordered runner selects 24 of them plus `getDashboardData()` for its fixed 25-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 25-entry suite.
+- `96.Tests.Cases.js` contains all twenty-six directly runnable `test*` functions; the ordered runner selects 25 of them plus `getDashboardData()` for its fixed 26-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 26-entry suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=37 | populatedOutputUnchanged=true`. The oracle requires exactly all 37 top-level response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`; existing additive metadata checks remain unchanged. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -101,6 +102,8 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testResponsiveShellContract()` reads the production HTML partial and validates the menu, labeled drawer, backdrop, ARIA controls, Escape/navigation close paths, body scroll lock, focus restoration, active-page semantics, table scroll wrapper, narrow full-width main content, retained desktop sidebar classes, and the single initialization guard. It logs `PASS: testResponsiveShellContract | scenarios=12 | breakpoint=lg | drawer=true`.
 
+`testUiShellThemeContract()` reads the production HTML and generated Tailwind partials. It validates the approved shell dimensions, destination inventory, semantic theme options/tokens, validated `numlock.ui.theme` persistence with System default, theme application before compiled styles, print-light/chart synchronization, accessible mobile and collapsed navigation, retained Dashboard/Transactions entry points, absence of forbidden decoration/source labels/future modules, guarded listener initialization, response immutability, and the current 71-ID/two-selector count under the established ceiling. It logs `PASS: testUiShellThemeContract | scenarios=17 | destinations=4 | themes=3 | idQueries=71 | selectorQueries=2`.
+
 `testInteractiveDrilldownContract()` reads the production HTML partial and executes the pure transaction filter against literal Sales/Purchase/month/category cases. It verifies source order and response immutability, accessible controls and focus, the explicit maximum-ten-row disclosure, clear behavior, and frontend-only operation. It logs `PASS: testInteractiveDrilldownContract | scenarios=4 | boundedRows=10 | responseMutation=false`.
 
 `testChartPresentationContract()` reads the production HTML partial, invokes the interactive drill-down contract, and validates populated/empty contracts for all three charts, `MM/YYYY` and Rupiah/quantity formatting, zero baselines, no stale or duplicate instances, safe zero-total percentages, backend Expense ordering, long-label behavior, accessible titles/summaries, summary updates, and responsive containment. It logs `PASS: testChartPresentationContract | scenarios=16 | charts=revenue,hotCold,expense`.
@@ -113,7 +116,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `25/25` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `26/26` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -130,7 +133,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `25/25`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, centralized KPI targets, scoped-row state metadata, accessibility, executive presentation, print reporting, CSV export, client-render performance, responsive-shell, chart-presentation plus bounded drill-down, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `26/26`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, centralized KPI targets, scoped-row state metadata, accessibility, executive presentation, print reporting, CSV export, client-render performance, responsive shell, UI shell/theme, chart presentation plus bounded drill-down, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 

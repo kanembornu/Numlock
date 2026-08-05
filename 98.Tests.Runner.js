@@ -21,6 +21,7 @@ function runAllBackendTests()
     { name: "testCsvExportContract", run: testCsvExportContract },
     { name: "testClientRenderPerformanceContract", run: testClientRenderPerformanceContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
+    { name: "testUiShellThemeContract", run: testUiShellThemeContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },

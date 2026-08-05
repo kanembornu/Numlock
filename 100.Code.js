@@ -4,6 +4,7 @@ function doGet() {
     HtmlService.createTemplateFromFile("190.View.Index");
 
   template.version = PROJECT_CONFIG.VERSION;
+  template.environment = PROJECT_CONFIG.ENVIRONMENT;
 
   return template
     .evaluate()
