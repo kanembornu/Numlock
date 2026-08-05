@@ -20,13 +20,13 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Post-release maintenance and authorized UI/UX 2.0 implementation**
+**Project hold — maintenance only**
 
-The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 013 performs final frontend stabilization only, without changing dashboard data, formulas, response fields, version metadata, persistence, or deployment.
+The bounded v1.0 feature baseline and UI/UX 2.0 are complete. No implementation-ready feature backlog remains. Only explicitly authorized maintenance may proceed until measurable resume criteria are satisfied.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 013 — final stabilization — implemented and uploaded on 2026-08-06.** The bounded delta completes semantic disabled and dark status/skeleton mappings, tokenizes Action Roadmap hover motion, honors reduced motion across coordinated shell transitions, removes one proven-unused placeholder icon helper, and adds a final cross-cutting source contract. All 12 focused contracts and the ordered 34/34 local suite passed; deterministic Tailwind builds matched and the exact 26-file inventory was uploaded. Live runtime, deployment, and browser acceptance remain separate evidence.
+**UI/UX 2.0 closure — COMPLETE on 2026-08-06.** Packages 004–013 cover the approved component contract, shell and Light/Dark/System themes, Dashboard tabs and all five tab presentations, Transactions, Settings, Logs, and final stabilization. Commit `7fbd2a3` contains the final stabilization and is pushed with local `main`, `origin/main`, and `HEAD` aligned. The final local and Apps Script live gate passed 34/34, browser acceptance passed, version remains `1.0.0`, and the established production baseline and rollback process remain unchanged.
 
 ## 6. Current test gate and evidence level
 
@@ -54,6 +54,9 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 013 performs
 | Current UI/UX 2.0 Logs upload | Package 012: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 stabilization local/static | Package 013: all 12 focused contracts and the ordered 34/34 suite passed; numbered and extracted frontend JavaScript parsed, Markdown links and Git diff checks passed, and deterministic Tailwind builds matched. The final contract reports four destinations, two tablists, zero duplicate static IDs, 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
 | Current UI/UX 2.0 stabilization upload | Package 013: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
+| Current UI/UX 2.0 Apps Script runtime | Final `runAllBackendTests()` PASS 34/34. |
+| Current UI/UX 2.0 browser | PASS at 320px, 375px, 768px, 1280×768, and 1440×900 across responsive containment, accessibility, Light/Dark/System, navigation, charts, tables, print, CSV, drill-down, Settings, and Logs. |
+| Current UI/UX 2.0 Git completion | Final stabilization committed as `7fbd2a3` and pushed; `main`, `origin/main`, and `HEAD` align. |
 | Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
@@ -86,7 +89,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 
 ## 9. Implementation-ready backlog
 
-**Count: 0.** The bounded v1.0 baseline is closed. New implementation work requires a demand-driven maintenance need or satisfaction and separate authorization of a blocked scope's prerequisites.
+**Count: 0.** The bounded v1.0 and UI/UX 2.0 scopes satisfy their documented needs. New feature implementation requires satisfaction of a blocked scope's prerequisites or approval of a future major capability.
 
 ## 10. Blocked backlog
 
@@ -95,6 +98,8 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 1. Editable KPI targets — blocked by unapproved persistence, validation, permissions, migration, governance, and business-target semantics.
 2. Dashboard API projection or payload reduction — blocked by unknown external consumers, deployment-access evidence, permission review, payload measurement, and an additive compatibility design.
 3. Drill-down expansion beyond the existing maximum-ten-row projection — blocked by authorization, pagination, privacy, and approved detail-field requirements.
+
+Five additional concepts are future major capabilities rather than defects or ready backlog: a migrated Products module, Capital & Equity, Assets, Depreciation, and Financial Statements. Each requires a separately approved data model, migration, governance, permissions, calculations, acceptance criteria, and release plan.
 
 ## 11. Technical debt
 
@@ -141,6 +146,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
 - [x] Active runner membership is 34; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Final UI/UX 2.0 Apps Script live evidence is 34/34 and browser acceptance is complete.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
@@ -153,43 +159,44 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 ## 14. Hold criteria
 
-Hold release promotion and new feature implementation when any of these conditions is true:
+Keep the project on hold while all of these conditions remain true:
 
-- the active local unified gate is not exactly 34/34;
-- the release candidate differs from the reviewed/uploaded inventory;
-- Git status contains unexplained or unreviewed changes;
-- Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
-- release metadata or current-status documents conflict;
-- a proposed scope depends on unresolved permissions, privacy, persistence, external-consumer, pagination, payload-benefit, or business-rule decisions; or
-- a change would alter the default dashboard response or expand data access without an approved compatibility and authorization contract.
+- implementation-ready feature backlog remains zero;
+- version `1.0.0` continues to satisfy the documented bounded product need;
+- the mandatory 34-entry gate remains green at the latest accepted boundary;
+- documentation, Git, production baseline, and rollback records remain consistent; and
+- remaining feature concepts require new product decisions, governance, permissions, privacy boundaries, or major data migration.
 
 ## 15. Resume criteria
 
-The v1.0 release is complete. Resume feature implementation only for approved demand-driven maintenance or a separately authorized enhancement whose acceptance and rollback boundaries are defined in advance.
+Resume active development only when at least one item has an approved owner, user need, bounded requirements, data and permission model, privacy/governance decisions, compatibility strategy, acceptance tests, migration plan when applicable, and rollback boundary.
 
 Resume a blocked feature only when every dependency listed for that scope in [PRODUCT-BACKLOG.md](PRODUCT-BACKLOG.md) has an evidence-backed decision, acceptance contract, privacy/permission boundary, rollback approach, and independently releasable validation plan.
 
-## 16. Future vision
+## 16. Maintenance policy
+
+- Review operational health and dependency/security advisories monthly; perform a broader backlog and product-need review quarterly.
+- Accept PATCH work for reproducible defects, security fixes, dependency maintenance, accessibility regressions, documentation corrections, monitoring/operational fixes, and behavior-preserving performance improvements.
+- Accept MINOR work only for an explicitly approved backward-compatible capability with complete requirements, no incompatible default response change, an independently releasable test plan, and rollback evidence.
+- Require a MAJOR version for incompatible response/schema/workflow/permission/deployment/data-ownership changes or an approved migrated Products, Capital & Equity, Assets, Depreciation, or Financial Statements architecture.
+- Preserve the 34-entry fail-fast gate, response contracts, spreadsheet ownership, accessibility, query budget, stable production URL, and immutable rollback history for every maintenance release.
+- Treat support requests and monitoring signals as intake, not automatic authorization for feature development.
+
+## 17. Future vision
 
 After v1.0 stabilization, NUMLOCK may evolve from a bounded dashboard into a governed decision-support workspace with configurable goals, faster purpose-specific payloads, and authorized transaction exploration. Each capability remains optional and must preserve spreadsheet ownership, Apps Script compatibility, privacy, accessibility, and backward-compatible defaults.
 
-## 17. UI/UX 2.0 roadmap
+## 18. UI/UX 2.0 closure
 
-**Design contract complete; not implemented.** Package 001 records the historical [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md), Package 002 records the [Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md), Package 003 records the [Visual Direction System](UIUX-2.0-VISUAL-DIRECTIONS.md), and Package 004 records the approved [Component Library and Theme Contract](UIUX-2.0-COMPONENT-LIBRARY.md). Package 004's later product decisions supersede the two-destination discovery baseline for UI/UX 2.0: Dashboard, Transactions, Settings, and Logs are approved primary destinations, while future financial modules remain absent until usable. Existing analytics, intelligence, forecast, performance, and Data Quality capabilities remain bounded tab content, disclosures, or contextual actions.
-
-1. Validate user roles, top decision journeys, device profiles, and measurable usability baselines.
-2. Prototype a clearer task-oriented information architecture without replacing the current accessible responsive shell.
-3. Define a versioned design system for tokens, components, states, tables, charts, focus, reduced motion, and print/export parity.
-4. Test prototypes for executive scanning, data-quality triage, bounded evidence exploration, keyboard use, and narrow screens.
-5. Ship only approved, independently releasable slices with preserved v1 contracts and explicit rollback.
+**COMPLETE.** The [Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md), [Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md), [Visual Direction System](UIUX-2.0-VISUAL-DIRECTIONS.md), and [Component Library and Theme Contract](UIUX-2.0-COMPONENT-LIBRARY.md) govern the implemented Packages 005–013. The accepted application includes the four approved destinations, shell, Light/Dark/System themes, Dashboard tabs and redesigned content, Transactions tabs, Appearance/About Settings, session-local sanitized Logs, responsive/accessibility contracts, bounded performance, and final stabilization.
 
 UI/UX 2.0 must not imply editable targets, broader transaction access, API projection, or new persistence until the corresponding backlog blockers are resolved.
 
-## 18. Next milestone
+## 19. Next milestone
 
-**UI/UX 2.0 Package 013 final stabilization, implemented and uploaded.** Obtain named live-test and desktop/mobile browser acceptance without deployment or product-scope changes.
+**None scheduled — project hold.** The next active-development milestone must satisfy the resume criteria and receive separate authorization.
 
-## 19. Status-history log
+## 20. Status-history log
 
 | Date | Status | Evidence summary |
 | --- | --- | --- |
@@ -206,3 +213,5 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | UI/UX 2.0 implementation | Package 007 redesigned only Overview, raised the ordered local gate to 28/28, retained the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 008 redesigned only Performance and Analytics, raised the ordered local gate to 29/29, retained chart source/order plus the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 009 redesigned only Intelligence and Planning, raised the ordered local gate to 30/30, retained intelligence output/order plus the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
+| 2026-08-06 | UI/UX 2.0 completion | Packages 010–013 completed Transactions, Settings, Logs, and final stabilization; the runner reached 34 entries. |
+| 2026-08-06 | UI/UX 2.0 complete / Project hold | Packages 004–013 complete; final local/live suite passed 34/34, browser acceptance passed, final stabilization commit `7fbd2a3` was pushed, and the project entered hold with maintenance-only intake. |

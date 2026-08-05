@@ -1,5 +1,11 @@
 # Engineering Decisions
 
+### Enter project hold after UI/UX 2.0 closure
+
+UI/UX 2.0 is complete after Packages 004–013, final local/live 34/34, browser acceptance, and pushed stabilization commit `7fbd2a3`. With zero implementation-ready feature items and the documented product need satisfied at version `1.0.0`, NUMLOCK enters project hold rather than continuing speculative development. PATCH maintenance remains allowed for bounded defects, security, dependencies, accessibility, documentation, operations, monitoring, and behavior-preserving performance work. MINOR work requires an approved backward-compatible capability and full acceptance/rollback contract. A MAJOR version is required for incompatible response, schema, workflow, permission, deployment, or data-ownership changes, or for the migrated Products, Capital & Equity, Assets, Depreciation, or Financial Statements capabilities when their new data architecture and migration contracts are approved.
+
+Resume active development only when a proposed item has an accountable owner, validated need, bounded requirements, data/privacy/permission/governance decisions, compatibility and migration strategy, acceptance tests, and rollback plan. Monthly operational/dependency review and quarterly backlog/product review do not themselves authorize implementation.
+
 ### Keep final UI stabilization semantic, bounded, and behavior-neutral
 
 UI/UX 2.0 Package 013 corrects only cross-cutting presentation contracts proven by the final audit. Disabled controls and dark status/skeleton states consume approved semantic tokens; Action Roadmap hover is token-driven and transitions color only; reduced-motion preference disables every coordinated shell transition plus shimmer; chart containment and lifecycle remain unchanged. Dead code may be removed only when repository search proves no caller and the code exposes no runtime contract, as with the obsolete placeholder-only `getIntelIcon()` helper. The final source contract must preserve four destinations, scoped Dashboard/Transactions tablists, hidden-content focus exclusion, the existing query/deferred budget, response immutability, and truthful Settings/Logs scope.

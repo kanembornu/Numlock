@@ -2,6 +2,19 @@
 
 This document owns remaining work, readiness, blockers, dependencies, and acceptance needs. [Project Status](PROJECT_STATUS.md) owns the current executive summary; [Roadmap](ROADMAP.md) owns direction and sequencing. Historical implementation detail belongs in [CHANGELOG.md](CHANGELOG.md).
 
+## Current closure classification
+
+UI/UX 2.0 is complete and the project is on hold. This classification supersedes stale readiness wording inside historical item narratives without rewriting their history.
+
+| Classification | Count | Items | Resume boundary |
+| --- | ---: | --- | --- |
+| Implementation-ready | 0 | None | No active feature package is authorized. |
+| Blocked by requirements, governance, privacy, or permissions | 3 | Editable KPI targets; API projection/payload reduction; expanded transaction history/drill-down | Resolve every documented persistence, governance, consumer, permission, privacy, pagination, measurement, compatibility, and rollback prerequisite. |
+| Future major capability | 5 | Migrated Products module; Capital & Equity; Assets; Depreciation; Financial Statements | Approve a new product/data architecture, migration plan, calculation ownership, permissions, acceptance suite, semantic-version boundary, and rollback plan. |
+| Maintenance-only | Demand-driven | Defect, security, dependency, accessibility, documentation, operational, monitoring, or behavior-preserving performance work | Require a reproducible need, bounded scope, preserved contracts, validation, and release evidence appropriate to risk. |
+
+The blocked and future-major items are not current defects. Their supporting data, permissions, governance, or migration contracts do not yet exist.
+
 ## Scope and evidence
 
 This backlog is the documentation outcome of Sprint 5.8 Package 001. It is grounded in the production contracts in `10.Config.js`, `70.Intelligence.Score.js`, `75.Intelligence.Diagnosis.js`, `80.Intelligence.Recommendation.js`, `85.Intelligence.Decision.js`, `90.Dashboard.Service.js`, the responsibility-split `92`–`98` test files, and `190.View.Index.html`, plus the governing repository documentation. It proposes product work only; no production source, frontend, deployment, or release metadata changed during the audit.
