@@ -208,4 +208,8 @@ Package 006 may implement the approved Dashboard tab framework only after separa
 
 Implemented and uploaded. Overview, Performance, Analytics, Intelligence, and Planning now form one accessible tablist with exactly one visible panel, automatic Left/Right/Home/End activation, native hidden-panel focus exclusion, and selected-tab persistence across refresh, retry, theme, and sidebar operations. Fourteen existing Dashboard regions move once into their approved owners without duplicating content or changing card/chart markup. Tab switching performs no backend request; print reveals all panels, and chart instances resize rather than rebuild. The local gate passes 27/27 with 71 ID queries, two document selectors, one deferred phase, and no response mutation; the exact 26-file clasp inventory was uploaded. Apps Script runtime and deployed-browser acceptance remain pending.
 
-Package 007 may refine the Overview density and measurable first-viewport composition only after separate authorization. Transactions tabs remain deferred to their approved package.
+### Package 007 — Dashboard Overview redesign
+
+Implemented and uploaded. Overview now uses a compact reporting toolbar, an executive condition/attention/action hierarchy, one score-free Business Priority, five truthful drill-down KPI cards, four compact period comparisons, and a collapsed Data Quality disclosure. Desktop uses the approved bounded first-viewport composition and mobile retains natural flow. Other Dashboard tabs, Transactions, backend contracts, formulas, charts, version, and deployment remain unchanged. The local gate passes 28/28 with the existing 71-ID/two-selector query budget, and the exact 26-file clasp inventory was uploaded. Live Apps Script tests and browser acceptance remain pending evidence.
+
+Transactions tabs remain deferred to their separately approved package.

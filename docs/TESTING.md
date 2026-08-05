@@ -76,8 +76,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all twenty-seven directly runnable `test*` functions; the ordered runner selects 26 of them plus `getDashboardData()` for its fixed 27-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 27-entry suite.
+- `96.Tests.Cases.js` contains all twenty-eight directly runnable `test*` functions; the ordered runner selects 27 of them plus `getDashboardData()` for its fixed 28-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 28-entry suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=37 | populatedOutputUnchanged=true`. The oracle requires exactly all 37 top-level response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`; existing additive metadata checks remain unchanged. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -105,7 +105,9 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testUiShellThemeContract()` reads the production HTML and generated Tailwind partials. It validates the approved shell dimensions, destination inventory, semantic theme options/tokens, validated `numlock.ui.theme` persistence with System default, theme application before compiled styles, print-light/chart synchronization, accessible mobile and collapsed navigation, retained Dashboard/Transactions entry points, absence of forbidden decoration/source labels/future modules, guarded listener initialization, response immutability, and the current 71-ID/two-selector count under the established ceiling. It logs `PASS: testUiShellThemeContract | scenarios=17 | destinations=4 | themes=3 | idQueries=71 | selectorQueries=2`.
 
-`testDashboardTabFrameworkContract()` reads the production HTML partial and verifies one five-member Dashboard tablist, its five linked tab panels, roving focus and automatic keyboard activation, exact one-time ownership for 14 current sections, retained selected state across unrelated UI/data operations, zero backend calls in the tab path, one guarded initializer, print-time revelation of every panel, chart resize without recreation, desktop/mobile overflow rules, Dashboard-level state ownership, response immutability, and the current 71-ID/two-selector count. It logs `PASS: testDashboardTabFrameworkContract | scenarios=14 | tabs=5 | ownedSections=14 | backendRequests=0 | idQueries=71 | selectorQueries=2`.
+`testDashboardTabFrameworkContract()` reads the production HTML partial and verifies one five-member Dashboard tablist, its five linked tab panels, roving focus and automatic keyboard activation, exact one-time ownership for 15 current regions, retained selected state across unrelated UI/data operations, zero backend calls in the tab path, one guarded initializer, print-time revelation of every panel, chart resize without recreation, desktop/mobile overflow rules, Dashboard-level state ownership, response immutability, and the current 71-ID/two-selector count. It logs `PASS: testDashboardTabFrameworkContract | scenarios=14 | tabs=5 | ownedSections=15 | backendRequests=0 | idQueries=71 | selectorQueries=2`.
+
+`testDashboardOverviewContract()` reads the production HTML partial and validates the six reporting periods plus custom controls, Print and quiet metadata, executive condition/attention/action hierarchy, score-free Business Priority evidence, five exact KPI cards with preserved drill-down and comparison data, compact four-metric comparison, collapsed Data Quality disclosure, desktop/mobile overflow, light/dark/print parity, absence of Overview charts or requests, guarded state, response immutability, and the current query budget. It logs `PASS: testDashboardOverviewContract | scenarios=8 | kpiCards=5 | backendRequests=0 | idQueries=71 | selectorQueries=2`.
 
 `testInteractiveDrilldownContract()` reads the production HTML partial and executes the pure transaction filter against literal Sales/Purchase/month/category cases. It verifies source order and response immutability, accessible controls and focus, the explicit maximum-ten-row disclosure, clear behavior, and frontend-only operation. It logs `PASS: testInteractiveDrilldownContract | scenarios=4 | boundedRows=10 | responseMutation=false`.
 
@@ -119,7 +121,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `27/27` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `28/28` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -136,7 +138,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `27/27`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, centralized KPI targets, scoped-row state metadata, accessibility, executive presentation, print reporting, CSV export, client-render performance, responsive shell, UI shell/theme, Dashboard tabs, chart presentation plus bounded drill-down, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `28/28`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, centralized KPI targets, scoped-row state metadata, accessibility, executive presentation, print reporting, CSV export, client-render performance, responsive shell, UI shell/theme, Dashboard tabs, Dashboard Overview, chart presentation plus bounded drill-down, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 

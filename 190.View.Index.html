@@ -61,6 +61,8 @@
       #contentViewport { background: var(--canvas); }
       #dashboardTabList { height: 48px; }
       .dashboard-tab-panel { min-width: 0; }
+      .overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
+      .overview-kpi-value { font-variant-numeric: tabular-nums; }
       #sidebarBackdrop { background: var(--overlay); }
       .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
       .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
@@ -81,9 +83,12 @@
 
         #dashboardSidebar { transform: translateX(0); }
         #mainContent { margin-left: 240px; height: 100vh; height: 100dvh; overflow: hidden; }
-        #contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow-y: auto; }
+        #contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow: hidden; }
         .dashboard-tab-panel:not(#dashboardPanelOverview) { max-height: calc(100dvh - 152px); overflow-y: auto; }
-        #dashboardPanelOverview { overflow: visible; }
+        #dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }
+        #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
+        #dashboardPanelOverview #executiveSummarySection,
+        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -485,20 +490,20 @@
     <div id="dashboard" class="page active">
 
     <!-- HEADER -->
-    <div id="dashboardHeaderRegion" class="flex min-w-0 flex-col lg:flex-row lg:items-center lg:justify-between mb-8">
-      <div id="dashboardScreenHeader" class="min-w-0">
-        <h1 id="dashboardHeading" class="text-3xl sm:text-4xl lg:text-4xl font-bold text-slate-900" tabindex="-1"> Executive Dashboard </h1>
-        <p class="text-slate-500 mt-3"> Business performance, attention areas, and next actions </p>
+    <div id="dashboardHeaderRegion" class="mb-3 min-w-0">
+      <div id="dashboardScreenHeader" class="sr-only">
+        <h1 id="dashboardHeading" tabindex="-1">Executive Dashboard</h1>
+        <p>Business performance, attention areas, and next actions</p>
       </div>
 
       <div
         id="dateFilterControls"
         onchange="handleDateFilterChange()"
-        class="mt-4 flex min-w-0 flex-wrap gap-2 lg:mt-0 lg:block">
+        class="overview-surface flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border p-2">
         <label for="filter" class="sr-only">Reporting period</label>
         <select
           id="filter"
-          class="min-w-0 w-full bg-white border border-slate-200 rounded-xl px-4 py-3 sm:w-auto">
+          class="min-h-11 min-w-0 w-full bg-white border border-slate-200 rounded-xl px-3 py-2 sm:w-auto">
           <option value="today">Today</option>
           <option value="last7days">Last 7 Days</option>
           <option value="currentMonth">Current Month</option>
@@ -511,7 +516,7 @@
           id="printReportButton"
           type="button"
           onclick="printDashboardReport()"
-          class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white sm:w-auto"
+          class="min-h-11 w-full rounded-xl bg-slate-950 px-4 py-2 font-semibold text-white sm:w-auto"
           aria-label="Print current dashboard report"
           disabled>
           Print Report
@@ -521,7 +526,7 @@
           id="exportCsvButton"
           type="button"
           onclick="exportVisibleTransactionsToCsv()"
-          class="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white sm:w-auto"
+          class="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 sm:w-auto"
           aria-label="Export visible transactions to CSV"
           disabled>
           Export CSV
@@ -553,7 +558,7 @@
 
         <div
           id="reportingInformation"
-          class="w-full mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-slate-600"
+          class="min-w-0 flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-slate-600"
           role="status"
           aria-live="polite"
           aria-atomic="true"
@@ -564,29 +569,6 @@
           <span
             id="freshnessStatusBadge"
             class="hidden rounded-full px-3 py-1 font-semibold"></span>
-          <div
-            id="dataQualityInformation"
-            class="w-full min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <span
-                id="dataQualityStatusBadge"
-                class="hidden rounded-full px-3 py-1 font-semibold"></span>
-              <span id="dataQualityIssueCount"></span>
-              <span id="dataQualityScopeSummary"></span>
-              <button
-                id="dataQualityDetailsButton"
-                type="button"
-                class="hidden rounded-xl border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700"
-                aria-expanded="false"
-                aria-controls="dataQualityDetails"
-                onclick="toggleDataQualityDetails()">
-                Details
-              </button>
-            </div>
-            <ul
-              id="dataQualityDetails"
-              class="hidden mt-2 space-y-1 pl-5 text-slate-700"></ul>
-          </div>
         </div>
       </div>
     </div>
@@ -639,47 +621,62 @@
 
       <div id="dashboardSectionStaging" hidden>
     <!-- EXECUTIVE SUMMARY -->
-    <section id="executiveSummarySection" class="min-w-0 bg-white rounded-[32px] shadow-lg border border-slate-100 p-5 sm:p-7 mb-6" aria-labelledby="executiveSummaryTitle">
-      <div class="mb-5">
+    <section id="executiveSummarySection" class="overview-surface min-w-0 rounded-2xl border p-4 mb-3" aria-labelledby="executiveSummaryTitle">
+      <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+        <div>
         <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">At a Glance</p>
-        <h2 id="executiveSummaryTitle" class="mt-2 text-2xl font-bold text-slate-900">Executive Summary</h2>
-        <p class="mt-2 text-sm text-slate-500">Performance, attention required, and the next priority.</p>
+        <h2 id="executiveSummaryTitle" class="mt-1 text-lg font-bold text-slate-900">Executive Summary</h2>
+        </div>
+        <p class="text-xs text-slate-500">Condition, attention, and the next action</p>
       </div>
 
-      <div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        <div class="rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
-          <div class="text-xs font-bold uppercase tracking-wider text-indigo-700">Performance</div>
-          <div id="executiveSummary" class="mt-3 text-base font-semibold leading-relaxed text-slate-900">Loading...</div>
+      <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
+        <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3 lg:col-span-3">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Business condition</div>
+          <div id="executiveSummary" class="mt-2 text-sm font-semibold leading-snug text-slate-900">Loading...</div>
         </div>
 
-        <div id="executiveAlertCard" class="rounded-2xl border p-5">Loading attention status...</div>
+        <div id="executiveAlertCard" class="rounded-xl border p-3 lg:col-span-3">Loading attention status...</div>
 
-        <section id="businessPriorityRegion" class="rounded-2xl border border-amber-200 bg-amber-50 p-5" aria-labelledby="businessPriorityHeading">
+        <section id="businessPriorityRegion" class="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:col-span-6" aria-labelledby="businessPriorityHeading">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 id="businessPriorityHeading" class="text-xs font-bold uppercase tracking-wider text-amber-700">Business Priority</h3>
             <span id="businessPriorityLevel" class="rounded-full px-3 py-1 text-xs font-bold">Loading</span>
           </div>
-          <div id="priorityTitle" class="mt-3 text-xl font-bold text-slate-900">Loading...</div>
-          <div id="priorityReason" class="mt-2 text-sm leading-relaxed text-slate-700">...</div>
-          <div id="priorityMessage" class="mt-3 text-sm font-semibold leading-relaxed text-slate-900">...</div>
-          <div id="priorityMeta" class="mt-3 text-xs text-slate-600">...</div>
+          <div id="priorityTitle" class="mt-2 text-base font-bold text-slate-900">Loading...</div>
+          <div id="priorityReason" class="mt-1 text-xs leading-snug text-slate-700">...</div>
+          <div id="priorityMessage" class="mt-2 text-xs font-semibold leading-snug text-slate-900">...</div>
+          <div id="priorityMeta" class="mt-2 text-[11px] text-slate-600">...</div>
         </section>
-      </div>
-
-      <div id="periodComparisonSection" class="mt-5 border-t border-slate-200 pt-5" role="region" aria-labelledby="periodComparisonLabel">
-        <h3 id="periodComparisonLabel" class="text-sm font-semibold text-slate-700">Loading period comparison...</h3>
-        <div id="periodComparisonMetrics" class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4" role="list"></div>
       </div>
     </section>
 
     <!-- BUSINESS OVERVIEW -->
-    <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-6">
-      <div class="mb-4">
-        <h2 id="keyMetricsTitle" class="text-2xl font-bold text-slate-900">Key Metrics</h2>
-        <p class="mt-1 text-sm text-slate-500">Core financial, sales, product, and health indicators.</p>
+    <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-3">
+      <div class="mb-2 flex items-end justify-between gap-3">
+        <h2 id="keyMetricsTitle" class="text-base font-bold text-slate-900">Key Metrics</h2>
+        <p class="text-xs text-slate-500">Select a card to view supporting transactions</p>
       </div>
-      <div id="businessOverview" class="grid grid-cols-1 xl:grid-cols-4 gap-5"></div>
+      <div id="businessOverview" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"></div>
     </section>
+
+    <div id="overviewContextRow" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
+      <section id="periodComparisonSection" class="overview-surface min-w-0 rounded-2xl border p-3 lg:col-span-2" role="region" aria-labelledby="periodComparisonLabel">
+        <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700">Loading period comparison...</h3>
+        <div id="periodComparisonMetrics" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="list"></div>
+      </section>
+
+      <section id="dataQualityInformation" class="overview-surface min-w-0 rounded-2xl border p-3 text-xs text-slate-600" aria-labelledby="dataQualityHeading">
+        <div class="flex flex-wrap items-center gap-2">
+          <h3 id="dataQualityHeading" class="font-semibold text-slate-700">Data Quality</h3>
+          <span id="dataQualityStatusBadge" class="hidden rounded-full px-2 py-1 font-semibold"></span>
+          <span id="dataQualityIssueCount"></span>
+          <button id="dataQualityDetailsButton" type="button" class="hidden rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700" aria-expanded="false" aria-controls="dataQualityDetails" onclick="toggleDataQualityDetails()">Details</button>
+        </div>
+        <span id="dataQualityScopeSummary" class="mt-1 block"></span>
+        <ul id="dataQualityDetails" class="hidden mt-2 space-y-1 pl-5 text-slate-700"></ul>
+      </section>
+    </div>
 
     <!-- CHART ROW -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
@@ -1182,7 +1179,8 @@
         overview: [
           elements.dashboardHeaderRegion,
           staging.querySelector("#executiveSummarySection"),
-          staging.querySelector("#keyMetricsSection")
+          staging.querySelector("#keyMetricsSection"),
+          staging.querySelector("#overviewContextRow")
         ],
         performance: [
           staging.querySelector("#businessPerformanceSection"),
@@ -1722,16 +1720,14 @@
     //--------------------------------------------------
     function showBusinessOverviewSkeleton()
     {
-      initializeStableDashboardElements().businessOverview.innerHTML = new Array(4) .fill("")
+      initializeStableDashboardElements().businessOverview.innerHTML = new Array(5) .fill("")
         .map(function()
           {
             return `
-            <div class=" bg-white rounded-[32px] p-7 shadow-lg">
-              <div class=" skeleton h-10 w-10 rounded-2xl mb-6"> </div>
-              <div class=" skeleton h-4 w-32 mb-5"> </div>
-              <div class=" skeleton h-4 w-full mb-4"> </div>
-              <div class=" skeleton h-4 w-5/6 mb-4"> </div>
-              <div class=" skeleton h-4 w-2/3"> </div>
+            <div class="overview-surface rounded-2xl border p-4">
+              <div class="skeleton h-3 w-20 mb-4"></div>
+              <div class="skeleton h-7 w-32 mb-3"></div>
+              <div class="skeleton h-3 w-24"></div>
             </div>
             `;
           })
@@ -2121,9 +2117,9 @@
             metricName + " " + status + " " + display + " " + comparison.label;
 
           return `
-            <div class="rounded-xl bg-slate-50 p-3" role="listitem" aria-label="${accessibleText}">
-              <div class="text-xs font-semibold uppercase tracking-wider text-slate-500">${metricName}</div>
-              <div class="mt-1 text-lg font-bold text-slate-900">${display}</div>
+            <div class="rounded-lg bg-slate-50 px-3 py-2" role="listitem" aria-label="${accessibleText}">
+              <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">${metricName}</div>
+              <div class="mt-1 text-sm font-bold text-slate-900">${display}</div>
             </div>
           `;
         }).join("");
@@ -2603,89 +2599,41 @@
     //--------------------------------------------------
     // Render Business Overview
     //--------------------------------------------------
-    function renderDrilldownMetric(label, value, type, drilldownLabel, valueClass)
+    function renderOverviewKpiCard(label, value, type, drilldownLabel, delta, status, valueClass)
     {
       return `
         <button
           type="button"
-          class="flex w-full items-center justify-between rounded-xl p-2 text-left"
+          class="overview-surface min-h-[112px] w-full rounded-2xl border p-4 text-left"
           onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
           aria-label="View transactions for ${label}">
-          <span>${label}</span>
-          <strong class="${valueClass || ""}">${value}</strong>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">${label}</span>
+          <strong class="overview-kpi-value mt-2 block truncate text-xl ${valueClass || "text-slate-900"}">${value}</strong>
+          <span class="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+            <span>${delta}</span><span class="font-semibold">${status}</span>
+          </span>
         </button>`;
     }
 
     function renderBusinessOverview(res)
     {
+      var comparison = res.periodComparison;
+      var changes = comparison.changes;
+      var statuses = comparison.status;
+      var comparisonLabel = comparison.label;
 
-      initializeStableDashboardElements().businessOverview.innerHTML =`
+      function comparisonText(value, status)
+      {
+        return formatPeriodComparisonValue(value, status) + " · " + comparisonLabel;
+      }
 
-          <!-- Financial -->
-
-          <div class="bg-white rounded-[32px] p-6 shadow-lg border border-slate-100">
-            <div class="flex items-center gap-3 mb-5">
-                <i class="fas fa-wallet text-emerald-500 text-xl"></i>
-                <div class="text-xs uppercase tracking-wider text-slate-400"> Financial </div>
-            </div>
-
-            <div class="space-y-4">
-                ${renderDrilldownMetric("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions")}
-                ${renderDrilldownMetric("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions")}
-                ${renderDrilldownMetric("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600")}
-            </div>
-          </div>
-
-          <!-- Sales Performance -->
-
-          <div class="bg-white rounded-[32px] p-6 shadow-lg border border-slate-100">
-            <div class="flex items-center gap-3 mb-5">
-                <i class="fas fa-chart-line text-indigo-500 text-xl"></i>
-                <div class="text-xs uppercase tracking-wider text-slate-400"> Sales Performance </div>
-            </div>
-
-            <div class="space-y-4">
-                ${renderDrilldownMetric("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions")}
-                ${renderDrilldownMetric("Revenue / Cup", "Rp " + res.insights.revenuePerCup.toLocaleString("id-ID"), "sales", "Revenue per cup transactions")}
-                ${renderDrilldownMetric("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600")}
-            </div>
-          </div>
-
-          <!-- Product Performance -->
-
-          <div class="bg-white rounded-[32px] p-6 shadow-lg border border-slate-100">
-            <div class="flex items-center gap-3 mb-5">
-                <i class="fas fa-crown text-yellow-500 text-xl"></i>
-                <div class="text-xs uppercase tracking-wider text-slate-400"> Product Performance </div>
-            </div>
-
-            <div class="space-y-4">
-                ${renderDrilldownMetric("Best Seller", res.summary.bestSeller || "-", "sales", "Best seller supporting transactions")}
-                ${renderDrilldownMetric("Top Revenue", res.summary.topRevenueProduct || "-", "sales", "Top revenue supporting transactions")}
-            </div>
-          </div>
-
-          <!-- Business Health -->
-
-          <div class="bg-white rounded-[32px] p-6 shadow-lg border border-slate-100">
-            <div class="flex items-center gap-3 mb-5">
-              <i class="fas fa-heart-pulse text-rose-500 text-xl"></i>
-              <div class="text-xs uppercase tracking-wider text-slate-400"> Business Health </div>
-            </div>
-
-            <div class="mt-6 flex items-center justify-between">
-              <div>
-                <div class="text-5xl font-bold ${res.businessScore.score >= 80 ? "text-emerald-600" : res.businessScore.score >= 60 ? "text-amber-500" : "text-red-600"}"> ${res.businessScore.score}
-              </div>
-
-            <div class="text-sm text-slate-400 mt-2"> Health Score </div>
-            </div>
-                <div>
-                  <span class="px-4 py-2 rounded-full text-sm font-semibold ${ res.businessScore.score >= 80 ? "bg-emerald-100 text-emerald-700" : res.businessScore.score >= 60 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700" }"> ${res.businessScore.status} </span>
-                </div>
-            </div>
-          </div>
-        `;
+      initializeStableDashboardElements().businessOverview.innerHTML = [
+        renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions", comparisonText(changes.revenuePercent, statuses.revenue), statuses.revenue),
+        renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions", comparisonText(changes.expensePercent, statuses.expense), statuses.expense),
+        renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", comparisonText(changes.profitPercent, statuses.profit), statuses.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
+        renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", comparisonText(changes.unitsSoldPercent, statuses.unitsSold), statuses.unitsSold),
+        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", "Current reporting period", "Current", Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600")
+      ].join("");
     }
 
     //--------------------------------------------------
@@ -3955,15 +3903,15 @@
           }
 
         document.getElementById("executiveAlertCard").className =
-          alertColor + " rounded-2xl border p-5";
+          alertColor + " rounded-xl border p-3 lg:col-span-3";
         document.getElementById( "executiveAlertCard" ).innerHTML = `
         <div class="h-full">
-          <div class="text-xs font-bold uppercase tracking-wider text-slate-600"> Attention Status </div>
-          <div class="text-2xl font-bold mt-3">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-600"> Attention Status </div>
+          <div class="mt-2 text-base font-bold">
             ${alertIcon}
             ${res.executiveAlert.title}
           </div>
-          <div class="mt-4 text-slate-600"> ${res.executiveAlert.message} </div>
+          <div class="mt-2 text-xs leading-snug text-slate-600"> ${res.executiveAlert.message} </div>
         </div>
         `;
       }

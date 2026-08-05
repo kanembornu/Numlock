@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Keep Overview executive-first and score-free
+
+UI/UX 2.0 Package 007 limits the first Dashboard panel to reporting controls and quiet metadata, one condition statement, one attention statement, one executable Business Priority, five exact KPI cards, four comparison metrics, and compact Data Quality. Business Priority renders its approved level, title, reason, next action, and evidence but never its internal score. KPI deltas reuse the existing period-comparison response, every KPI retains the existing bounded Transactions drill-down route, and switching or refreshing makes no new request beyond the established dashboard lifecycle. Desktop prevents page-level scrolling at the reference viewports; mobile flows naturally. No new visualization, metric, persistence, response field, or backend calculation is authorized by this composition.
+
 ### Keep Dashboard tab state client-local and migrate each existing section once
 
 UI/UX 2.0 Package 006 uses exactly Overview, Performance, Analytics, Intelligence, and Planning. Overview is the default. Existing DOM regions are moved once during guarded frontend initialization into their approved panels; no response field, formula, request, or renderer is duplicated. Tab activation changes ARIA/hidden/roving-focus state and resizes already-created charts when necessary, but it does not call the backend, mutate the response, rebuild unrelated content, or reset during date refresh, retry, theme changes, or sidebar collapse. Print exposes all Dashboard panels while suppressing the tab controls, so the active browser tab does not narrow report content.

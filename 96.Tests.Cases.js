@@ -2328,7 +2328,8 @@ function testDashboardTabFrameworkContract()
     overview: [
       "dashboardHeaderRegion",
       "executiveSummarySection",
-      "keyMetricsSection"
+      "keyMetricsSection",
+      "overviewContextRow"
     ],
     performance: [
       "businessPerformanceSection",
@@ -2502,7 +2503,7 @@ function testDashboardTabFrameworkContract()
     "#dashboardTabList { height: 48px; }",
     ".dashboard-tab-panel:not(#dashboardPanelOverview)",
     "max-height: calc(100dvh - 152px);",
-    "#dashboardPanelOverview { overflow: visible; }",
+    "#dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }",
     "@media (max-width: 1023px)",
     "#contentViewport { overflow: visible; }"
   ].forEach(function(token)
@@ -2550,7 +2551,7 @@ function testDashboardTabFrameworkContract()
     passed: true,
     scenarios: scenariosPassed,
     tabs: tabNames.length,
-    ownedSections: 14,
+    ownedSections: 15,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount,
     backendRequests: 0
@@ -2563,6 +2564,186 @@ function testDashboardTabFrameworkContract()
     summary.tabs +
     " | ownedSections=" +
     summary.ownedSections +
+    " | backendRequests=" +
+    summary.backendRequests +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
+function testDashboardOverviewContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  [
+    'id="dashboardHeaderRegion"',
+    'id="filter"',
+    '<option value="today">Today</option>',
+    '<option value="last7days">Last 7 Days</option>',
+    '<option value="currentMonth">Current Month</option>',
+    '<option value="previousMonth">Previous Month</option>',
+    '<option value="currentYear" selected>Current Year</option>',
+    '<option value="custom">Custom</option>',
+    'id="printReportButton"',
+    'id="dateFilterLabel"',
+    'id="latestDataLabel"',
+    'id="freshnessStatusBadge"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Overview reporting toolbar");
+  });
+  assertSourceExcludes(source, "Source:", "Overview source label");
+  scenariosPassed++;
+
+  [
+    'id="executiveSummarySection"',
+    "Business condition",
+    'id="executiveAlertCard"',
+    "Attention Status",
+    'id="businessPriorityRegion"',
+    'id="businessPriorityLevel"',
+    'id="priorityTitle"',
+    'id="priorityReason"',
+    'id="priorityMessage"',
+    'id="priorityMeta"',
+    '"Next action: " + priority.action',
+    "priority.evidence.metric"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "executive action hierarchy");
+  });
+  assertSourceExcludes(
+    source.slice(
+      source.indexOf('id="businessPriorityRegion"'),
+      source.indexOf('</section>', source.indexOf('id="businessPriorityRegion"'))
+    ),
+    "score",
+    "internal Business Priority score"
+  );
+  scenariosPassed++;
+
+  [
+    'id="businessOverview"',
+    "function renderOverviewKpiCard(",
+    'renderOverviewKpiCard("Revenue"',
+    'renderOverviewKpiCard("Expense"',
+    'renderOverviewKpiCard("Profit"',
+    'renderOverviewKpiCard("Units Sold"',
+    'renderOverviewKpiCard("Profit Margin"',
+    "res.summary.revenue.toLocaleString",
+    "res.summary.expense.toLocaleString",
+    "res.summary.profit.toLocaleString",
+    "res.summary.unitsSold.toLocaleString",
+    "res.insights.profitMargin",
+    "applyTransactionDrilldown("
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "five KPI cards");
+  });
+  assertSourceContainsOnce(
+    source,
+    "new Array(5)",
+    "five-card loading skeleton"
+  );
+  scenariosPassed++;
+
+  [
+    'id="periodComparisonSection"',
+    'id="periodComparisonMetrics"',
+    'id="dataQualityInformation"',
+    'id="dataQualityDetailsButton"',
+    'aria-expanded="false"',
+    'aria-controls="dataQualityDetails"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact comparison and Data Quality");
+  });
+  scenariosPassed++;
+
+  [
+    "#contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow: hidden; }",
+    "#dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }",
+    "@media (max-width: 1023px)",
+    "#contentViewport { overflow: visible; }",
+    "overview-surface",
+    ':root[data-theme="dark"] .bg-white',
+    "background: #ffffff !important;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "viewport and theme parity");
+  });
+  scenariosPassed++;
+
+  var overviewStart = source.indexOf('id="dashboardPanelOverview"');
+  var overviewEnd = source.indexOf('id="dashboardPanelPerformance"', overviewStart);
+  var overviewPanelSource = source.slice(overviewStart, overviewEnd);
+  [
+    "canvas",
+    "new Chart(",
+    "sparkline",
+    "google.script.run",
+    "getDashboardData("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(overviewPanelSource, token, "Overview-only additions");
+  });
+  scenariosPassed++;
+
+  [
+    "let dashboardTabsInitialized = false;",
+    "if (dashboardTabsInitialized)",
+    "let activeDashboardTab = \"overview\";",
+    "if (requestToken !== activeDashboardRequestToken)",
+    "window.requestAnimationFrame(function()"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "state and performance preservation");
+  });
+  scenariosPassed++;
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Dashboard Overview query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "Overview response mutation");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    kpiCards: 5,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testDashboardOverviewContract | scenarios=" +
+    summary.scenarios +
+    " | kpiCards=" +
+    summary.kpiCards +
     " | backendRequests=" +
     summary.backendRequests +
     " | idQueries=" +
@@ -2750,8 +2931,8 @@ function testExecutivePresentationContract()
   });
 
   [
-    "grid grid-cols-1 xl:grid-cols-3 gap-5",
-    "grid grid-cols-1 xl:grid-cols-4 gap-5",
+    "grid grid-cols-1 gap-3 lg:grid-cols-12",
+    "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5",
     "grid grid-cols-1 xl:grid-cols-2 gap-5"
   ].forEach(function(token)
   {
@@ -3439,10 +3620,10 @@ function testInteractiveDrilldownContract()
   scenariosPassed++;
 
   [
-    'renderDrilldownMetric("Revenue",',
-    'renderDrilldownMetric("Expense",',
-    'renderDrilldownMetric("Profit",',
-    'renderDrilldownMetric("Units Sold",',
+    'renderOverviewKpiCard("Revenue",',
+    'renderOverviewKpiCard("Expense",',
+    'renderOverviewKpiCard("Profit",',
+    'renderOverviewKpiCard("Units Sold",',
     '"month",',
     '"expenseCategory",',
     'showPage("transactions");',
