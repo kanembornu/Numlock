@@ -127,11 +127,19 @@ Sprint 5.11 is complete. Package 001 is committed at `46e42b1` and confirms stab
 
 Completed and uploaded. Stable shell, control, skeleton, and state nodes are cached once while generated children remain uncached. The immediate render retains dashboard state, Executive Summary, KPI cards, reporting metadata, comparison, KPI-target context, Data Quality, and charts. One cancellable, request-token-guarded animation-frame phase renders detailed intelligence, recommendations, decision support, product detail, roadmap, and recent transactions exactly once. Response arrays are never sorted or mutated in place, public payloads and visible output remain unchanged, and `testClientRenderPerformanceContract()` raises the ordered fail-fast unified requirement to 23/23. API projection remains excluded pending an external-consumer inventory; Apps Script runtime and browser acceptance remain separate unverified evidence.
 
-## Sprint 5.12 — in progress
+## Sprint 5.12 — complete
+
+Sprint 5.12 is complete at verified commit `0e6dcdc`. Package 001 delivers the bounded print-ready filtered executive report, including print metadata, an authored A4 portrait contract, preserved accessible summaries and interaction semantics, and the ordered 24-test gate. The latest verified result is local 24/24. This documentation-only closure audit did not run clasp upload, Apps Script runtime, deployment, or browser print acceptance.
 
 ### Sprint 5.12 Package 001 — print-ready filtered executive report
 
 Completed locally. One accessible Print Report action invokes browser-native print for the successfully rendered active period. A print-only header includes report title, active period, generated date, and unchanged NUMLOCK version; authored A4 portrait CSS retains current KPIs, Executive Summary, Business Priority, comparison, reporting metadata, freshness, Data Quality status, charts and summaries, and recommendations. Navigation, controls, skeletons, disclosures, inactive pages, and hidden content are excluded. `testPrintReportContract()` raises the ordered gate to 24/24 without analytics, backend response, CSV/PDF library, GitHub Pages, or release-version changes. Upload, Apps Script runtime, and browser print acceptance remain separate evidence.
+
+## Sprint 5.13 — recommended
+
+### Sprint 5.13 Package 001 — visible recent-transactions CSV export
+
+Export only the current filter's already visible recent-transaction rows and existing visible columns from the browser. This bounded extension of P3-1 gives users a portable meeting and reconciliation artifact using data already disclosed by the dashboard. It is ready for frontend-only implementation with low-to-medium risk because it requires no backend response, hidden spreadsheet field, permission, API, expanded-history, drill-down, or persistence change. Acceptance must cover exact filter/row/column parity, RFC 4180-compatible escaping, spreadsheet-formula injection neutralization, deterministic filename metadata, keyboard access, empty-state behavior, and the full unified gate.
 
 ## Ongoing release obligations
 

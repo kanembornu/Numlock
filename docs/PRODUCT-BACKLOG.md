@@ -10,6 +10,8 @@ Sprint 5.10 is complete locally. All P0 items and the implemented portions of P1
 
 Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b1`, covered by the ordered local 23/23 gate, and uploaded in the reviewed 26-file clasp inventory. Live Apps Script, deployment, and browser evidence remain unverified. Remaining gated work includes editable KPI targets, API projection, CSV export, and drill-down; each requires additional product, consumer, permission, or privacy decisions.
 
+Sprint 5.12 is complete at verified commit `0e6dcdc`. Its print-ready filtered executive report includes print metadata, an authored A4 portrait contract, and preserved accessibility, and the latest verified ordered gate is local 24/24. Upload, Apps Script runtime, deployment, and browser print acceptance remain unverified. Remaining backlog is editable KPI targets, API projection, CSV export beyond the completed print capability, and KPI/chart drill-down.
+
 ## Priority rules
 
 - **P0:** a current control is misleading, a valid state can break the dashboard, or the user can be blocked.
@@ -248,7 +250,7 @@ Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b
 - **Expected validation:** render-order and stale-response tests, response immutability, Chart instance counts, representative performance trace, ordered unified 23/23 gate, and desktop/narrow browser acceptance.
 - **Scope:** P2-5 only.
 
-## Recommended next implementation package
+## Completed implementation package
 
 ### Sprint 5.12 Package 001 — Print-ready filtered executive report
 
@@ -262,6 +264,19 @@ Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b
 - **Scope:** bounded print portion of P3-1 only; exclude CSV, backend payload changes, hidden spreadsheet fields, drill-down, and persistence.
 
 The implemented package uses one accessible browser-print action and authored A4 portrait rules. It prints only the active dashboard's visible executive content and reporting context, preserves chart summaries, adds title/period/generated/version metadata, and suppresses navigation, controls, skeletons, disclosures, inactive pages, and hidden content. `testPrintReportContract()` adds 13 scenarios and raises the ordered gate to 24/24 without changing analytics or backend contracts.
+
+## Recommended next implementation package
+
+### Sprint 5.13 Package 001 — Visible recent-transactions CSV export
+
+**Status: Recommended; bounded frontend-only scope is ready for implementation.**
+
+- **Objective:** download only the current filter's already visible recent-transaction rows and existing visible columns as CSV.
+- **User value:** provides a portable reconciliation and meeting artifact without manual copying and complements the completed executive print report.
+- **Dependency readiness:** Ready because the active filter, visible recent transactions, and their displayed fields already exist in the browser; no new data authorization is assumed.
+- **Implementation risk:** Low to Medium when limited to already disclosed browser data, with CSV escaping and spreadsheet-formula injection handled explicitly.
+- **Expected validation:** exact filter/row/column parity, commas/quotes/newlines and UTF-8 handling, formula-injection neutralization, deterministic filename metadata, keyboard-accessible action, empty-state behavior, no hidden-data disclosure, unchanged screen/print behavior, and the full unified gate.
+- **Scope:** bounded remainder of P3-1 only; exclude backend response changes, hidden spreadsheet fields, expanded transaction history, API projection, KPI/chart drill-down, editable targets, and persistence.
 
 ## Explicitly not prioritized as defects
 

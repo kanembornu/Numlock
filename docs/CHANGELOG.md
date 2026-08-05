@@ -4,6 +4,8 @@ This document records verified engineering milestones. Semantic versioning begin
 
 ## Unreleased
 
+- Closed Sprint 5.12 at verified commit `0e6dcdc` after confirming the print-ready filtered executive report, print metadata, authored A4 portrait contract, preserved accessibility contracts, and the ordered 24-entry runner with the latest verified local 24/24 gate. The closure audit was documentation-only and did not run clasp upload, Apps Script runtime, deployment, or browser print acceptance.
+- Recommended Sprint 5.13 Package 001 as a bounded frontend-only CSV export of the current filter's already visible recent-transaction rows and columns, explicitly excluding hidden data, backend/API changes, expanded history, drill-down, and persistence.
 - Completed Sprint 5.12 Package 001 with one accessible Print Report button, browser-native `window.print()`, and authored A4 portrait print CSS for the currently rendered dashboard period.
 - Added a print-only NUMLOCK Executive Report header with active period, generated date, and unchanged release version; retained KPIs, Executive Summary, Business Priority, comparison, reporting metadata, freshness, Data Quality status, charts and their text summaries, and recommendations while excluding navigation, controls, skeletons, disclosures, and hidden pages.
 - Added `testPrintReportContract()` with 13 static scenarios and raised the ordered fail-fast unified gate to 24/24 without changing analytics, backend responses, GitHub Pages, or release metadata.
