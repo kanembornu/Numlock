@@ -2330,21 +2330,51 @@ function testDashboardTabFrameworkContract()
     "intelligence",
     "planning"
   ];
+  var dashboardTabRegion = getSourceRegion(
+    source,
+    'id="dashboardTabList"',
+    'id="dashboardSectionStaging"',
+    "Dashboard tab framework"
+  );
 
-  assertSourceContainsOnce(
+  assertSourceOccurrenceCount(
     source,
     'role="tablist"',
-    "single Dashboard tablist"
+    2,
+    "application tablists"
+  );
+  assertSourceContainsOnce(
+    source,
+    'id="dashboardTabList"',
+    "Dashboard tablist ID"
+  );
+  assertSourceOccurrenceCount(
+    dashboardTabRegion,
+    'role="tablist"',
+    1,
+    "Dashboard tablist"
+  );
+  assertSourceOccurrenceCount(
+    dashboardTabRegion,
+    'role="tab"',
+    tabNames.length,
+    "Dashboard tabs"
+  );
+  assertSourceOccurrenceCount(
+    dashboardTabRegion,
+    'role="tabpanel"',
+    tabNames.length,
+    "Dashboard panels"
   );
   tabNames.forEach(function(tabName)
   {
     assertSourceContainsOnce(
-      source,
+      dashboardTabRegion,
       'data-dashboard-tab="' + tabName + '"',
       "Dashboard tab " + tabName
     );
     assertSourceContainsOnce(
-      source,
+      dashboardTabRegion,
       'data-dashboard-panel="' + tabName + '"',
       "Dashboard panel " + tabName
     );
@@ -2430,9 +2460,14 @@ function testDashboardTabFrameworkContract()
       'aria-labelledby="dashboardTab' + titleCase + '"'
     ].forEach(function(token)
     {
-      assertSourceContains(source, token, "tab ARIA relationship");
+      assertSourceContains(dashboardTabRegion, token, "Dashboard tab ARIA relationship");
     });
   });
+  assertSourceExcludes(
+    dashboardTabRegion,
+    "transactionsPanel",
+    "Dashboard control of Transactions panels"
+  );
   scenariosPassed++;
 
   [
@@ -3240,8 +3275,8 @@ function testCsvExportContract()
 
   assertSourceContains(
     source,
-    'printReportButton.nextElementSibling',
-    "CSV action beside Print Report"
+    'transactionsEvidenceRegion.firstElementChild.lastElementChild',
+    "CSV action owned by Transactions toolbar"
   );
   scenariosPassed++;
 
@@ -3666,7 +3701,7 @@ function testInteractiveDrilldownContract()
     '"month",',
     '"expenseCategory",',
     'showPage("transactions");',
-    'transactionsHeading.focus();'
+    'transactionsResultHeading.focus();'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "KPI and chart drill-down wiring");
@@ -3724,9 +3759,9 @@ function testInteractiveDrilldownContract()
 
   [
     "latestDashboardTransactions =",
-    "res.recentTransactions.slice()",
+    "res.recentTransactions.slice(0, 10)",
     "Filtered from the latest 10 transactions already loaded for the active period.",
-    "latestDashboardTransactions.slice()"
+    'setActiveTransactionsTab("recent", false);'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "bounded existing-response scope");
@@ -3765,6 +3800,213 @@ function testInteractiveDrilldownContract()
     summary.boundedRows +
     " | responseMutation=" +
     summary.responseMutation
+  );
+
+  return summary;
+}
+
+function testTransactionsVisualContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var scenariosPassed = 0;
+  var tabs = ["recent", "sales", "expenses", "purchases"];
+  var transactionsTabRegion = getSourceRegion(
+    source,
+    'id="transactions"',
+    'id="settings"',
+    "Transactions destination"
+  );
+
+  assertSourceOccurrenceCount(source, 'role="tablist"', 2, "application tablists");
+  assertSourceContainsOnce(source, 'id="transactions"', "Transactions destination ID");
+  assertSourceContainsOnce(source, 'id="transactionsTabList"', "Transactions tablist ID");
+  assertSourceOccurrenceCount(transactionsTabRegion, 'role="tablist"', 1, "Transactions tablist");
+  assertSourceOccurrenceCount(transactionsTabRegion, 'role="tab"', tabs.length, "Transactions tabs");
+  assertSourceOccurrenceCount(transactionsTabRegion, 'role="tabpanel"', tabs.length, "Transactions panels");
+
+  tabs.forEach(function(tabName)
+  {
+    var titleCase = tabName.charAt(0).toUpperCase() + tabName.slice(1);
+
+    assertSourceContainsOnce(transactionsTabRegion, 'data-transactions-tab="' + tabName + '"', "exact Transactions tab");
+    assertSourceContainsOnce(transactionsTabRegion, 'data-transactions-panel="' + tabName + '"', "exact Transactions panel");
+    [
+      'id="transactionsTab' + titleCase + '"',
+      'aria-controls="transactionsPanel' + titleCase + '"',
+      'id="transactionsPanel' + titleCase + '"',
+      'aria-labelledby="transactionsTab' + titleCase + '"'
+    ].forEach(function(token)
+    {
+      assertSourceContains(transactionsTabRegion, token, "Transactions tab ARIA relationship");
+    });
+  });
+  assertSourceExcludes(
+    transactionsTabRegion,
+    "dashboardPanel",
+    "Transactions control of Dashboard panels"
+  );
+  scenariosPassed++;
+
+  [
+    'id="transactionsTabList"', 'role="tablist"', 'role="tab"',
+    'role="tabpanel"', 'aria-selected="true"',
+    'aria-controls="transactionsPanelRecent"',
+    'aria-labelledby="transactionsTabRecent"',
+    'let activeTransactionsTab = "recent";'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Transactions tab semantics");
+  });
+  scenariosPassed++;
+
+  [
+    'event.key === "ArrowRight"', 'event.key === "ArrowLeft"',
+    'event.key === "Home"', 'event.key === "End"',
+    "event.preventDefault();", "tab.tabIndex = isSelected ? 0 : -1;",
+    "panel.hidden = !isSelected;",
+    "selectedPanel.appendChild(elements.transactionsEvidenceRegion);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Transactions keyboard and hidden-panel behavior");
+  });
+  scenariosPassed++;
+
+  var filterStart = source.indexOf("function filterTransactionsForTab(");
+  var filterEnd = source.indexOf("function getVisibleTransactions", filterStart);
+  var filterTransactionsForTab =
+    Function("return (" + source.slice(filterStart, filterEnd).trim() + ");")();
+  var rows = [
+    { transactionType: "Purchase", label: "first" },
+    { transactionType: "Sales", label: "second" },
+    { transactionType: "Purchase", label: "third" },
+    { transactionType: "Sales", label: "fourth" }
+  ];
+  var original = JSON.stringify(rows);
+  var expected = {
+    recent: "first,second,third,fourth",
+    sales: "second,fourth",
+    expenses: "first,third",
+    purchases: "first,third"
+  };
+
+  tabs.forEach(function(tabName)
+  {
+    var actual = filterTransactionsForTab(rows, tabName)
+      .map(function(row) { return row.label; }).join(",");
+
+    if (actual !== expected[tabName])
+    {
+      throw new Error("Transactions filter mismatch for " + tabName);
+    }
+  });
+
+  if (JSON.stringify(rows) !== original)
+  {
+    throw new Error("Transactions tab filtering mutated response rows");
+  }
+  scenariosPassed++;
+
+  [
+    "res.recentTransactions.slice(0, 10)",
+    'transaction.transactionType === "Sales"',
+    'transaction.transactionType === "Purchase"',
+    "Visible recent sales", "Visible recent expenses",
+    "Visible recent purchases", "separate purchase history is unavailable",
+    "latest 10 transactions already loaded"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "truthful bounded Transactions scope");
+  });
+  scenariosPassed++;
+
+  [
+    '>Date</th>', '>Type</th>', '>Item</th>', '>Qty</th>', '>Amount</th>',
+    'class="transactions-table-row border-b"', 'class="transactions-number',
+    'id="transactionsTableScroll"', 'overflow-x-auto', 'min-w-[720px]'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "five-column compact table");
+  });
+  scenariosPassed++;
+
+  [
+    'id="transactionDrilldownSummary"', 'aria-live="polite"',
+    'setActiveTransactionsTab("recent", false);',
+    "transactionsResultHeading.focus();",
+    'onclick="clearTransactionDrilldown()"',
+    "activeTransactionDrilldown = null;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "drill-down context, focus, and reset");
+  });
+  scenariosPassed++;
+
+  [
+    'id="exportCsvButton"', "var visibleRows = Array.from(tableBody.rows)",
+    "visibleTransactionRowCount === 0;", 'new Blob(',
+    'URL.createObjectURL(blob)', "sanitizeCsvCellValue(value, isNumericColumn)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "visible Transactions CSV");
+  });
+  scenariosPassed++;
+
+  var switchStart = source.indexOf("function setActiveTransactionsTab(");
+  var switchEnd = source.indexOf("function initializeTransactionsTabs", switchStart);
+  var switchSource = source.slice(switchStart, switchEnd);
+
+  [
+    "google.script.run", "getDashboardData(", "fetch(", "localStorage",
+    "sessionStorage", ".sort(", ".reverse(", ".splice("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(switchSource, token, "request-free immutable tab switch");
+  });
+  scenariosPassed++;
+
+  [
+    'role="status"', 'No visible transactions in this bounded view',
+    ':root[data-theme="dark"] .bg-white',
+    '#transactions.active { height: 100%; overflow: hidden; }',
+    '#transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }',
+    '#transactionsTableScroll { overflow-x: auto; }',
+    '@media (max-width: 1023px)', '@media (prefers-reduced-motion: reduce)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "states, theme, and responsive containment");
+  });
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Transactions query budget exceeded");
+  }
+
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase preserved");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    tabs: tabs.length,
+    boundedRows: 10,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    responseMutation: false,
+    extraRequests: false
+  };
+
+  Logger.log(
+    "PASS: testTransactionsVisualContract | scenarios=" + summary.scenarios +
+    " | tabs=" + summary.tabs + " | boundedRows=" + summary.boundedRows +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries +
+    " | responseMutation=" + summary.responseMutation +
+    " | extraRequests=" + summary.extraRequests
   );
 
   return summary;

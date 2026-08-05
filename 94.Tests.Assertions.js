@@ -106,6 +106,68 @@ function assertSourceContainsOnce(source, token, scenarioName)
   }
 }
 
+function assertSourceOccurrenceCount(source, token, expectedCount, scenarioName)
+{
+  var actualCount = source.split(token).length - 1;
+
+  if (actualCount !== expectedCount)
+  {
+    throw new Error(
+      "Source contract expected " +
+      expectedCount +
+      " " +
+      scenarioName +
+      ": " +
+      token +
+      ", actual=" +
+      actualCount
+    );
+  }
+}
+
+function getSourceRegion(source, startToken, endToken, scenarioName)
+{
+  var startIndex = source.indexOf(startToken);
+
+  if (startIndex === -1)
+  {
+    throw new Error(
+      "Source contract missing " +
+      scenarioName +
+      " start boundary: " +
+      startToken
+    );
+  }
+
+  var endIndex = source.indexOf(endToken, startIndex + startToken.length);
+
+  if (endIndex === -1)
+  {
+    throw new Error(
+      "Source contract missing " +
+      scenarioName +
+      " end boundary after " +
+      startToken +
+      ": " +
+      endToken
+    );
+  }
+
+  if (endIndex <= startIndex)
+  {
+    throw new Error(
+      "Source contract invalid " +
+      scenarioName +
+      " boundary order: start=" +
+      startToken +
+      ", end=" +
+      endToken
+    );
+  }
+
+  return source.slice(startIndex, endIndex);
+}
+
 function assertSourceExcludes(source, token, scenarioName)
 {
   if (source.indexOf(token) !== -1)

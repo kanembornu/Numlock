@@ -224,3 +224,7 @@ Static checks, local mocks, clasp upload, live Apps Script execution, deployment
 - KPI target values, storage location, and who may edit them.
 - Export format, included fields, and access policy.
 - Drill-down detail fields and authorization boundary.
+
+### Keep Transactions tabs as client projections of one bounded table
+
+Recent, Sales, Expenses, and Purchases share one five-column table and operate only on a copied maximum-ten-row `recentTransactions` collection. Sales is exact `Sales`; Expenses and Purchases are exact `Purchase` evidence, with Purchases explicitly stating that separate purchase history is unavailable. Moving the single evidence region between tab panels prevents duplicate content and keeps inactive panels natively hidden and non-focusable. Tab changes never request data. Drill-down always activates Recent, and CSV reads the currently rendered cells. Broader history, pagination, hidden fields, or separate purchase semantics require a separately approved backend contract.

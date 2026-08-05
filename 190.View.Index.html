@@ -61,6 +61,9 @@
       #contentViewport { background: var(--canvas); }
       #dashboardTabList { height: 48px; }
       .dashboard-tab-panel { min-width: 0; }
+      .transactions-tab-panel { min-width: 0; }
+      .transactions-table-row:hover { background: var(--surface-2); }
+      .transactions-number { text-align: right; font-variant-numeric: tabular-nums; }
       .overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
       .analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
@@ -112,6 +115,12 @@
         #dashboardPanelPlanning:not([hidden]) { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
         #dashboardPanelPlanning #executiveCenter { min-height: 0; flex: 1 1 auto; height: auto; margin: 0; overflow: hidden; }
         #dashboardPanelPlanning > #kpiTargetReference { flex: 0 0 auto; margin: 0; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-1); }
+        #transactions.active { height: 100%; overflow: hidden; }
+        #transactionsPanelGroup { min-height: 0; height: calc(100dvh - 208px); }
+        .transactions-tab-panel:not([hidden]) { display: flex; min-height: 0; height: 100%; flex-direction: column; }
+        #transactionsEvidenceRegion { min-height: 0; flex: 1 1 auto; }
+        #transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }
+        #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -131,6 +140,12 @@
         #dashboardPanelIntelligence #diagnosisContainer,
         #dashboardPanelIntelligence #recommendationContainer { overflow: visible; }
         #dashboardPanelPlanning #executiveCenter { overflow: visible; }
+        #transactions.active,
+        #transactionsPanelGroup,
+        .transactions-tab-panel:not([hidden]),
+        #transactionsEvidenceRegion,
+        #transactionsTableScroll { height: auto; overflow: visible; }
+        #transactionsTableScroll { overflow-x: auto; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -552,16 +567,6 @@
           Print Report
         </button>
 
-        <button
-          id="exportCsvButton"
-          type="button"
-          onclick="exportVisibleTransactionsToCsv()"
-          class="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 font-semibold text-slate-700 sm:w-auto"
-          aria-label="Export visible transactions to CSV"
-          disabled>
-          Export CSV
-        </button>
-
         <div id="customDateRange" class="hidden w-full mt-2 flex flex-wrap gap-2">
           <label for="customStart" class="sr-only">Custom start date</label>
           <input
@@ -925,35 +930,63 @@
     </div>
 
     <!-- TRANSACTIONS -->
-    <div id="transactions" class="page" hidden>
-      <div class="mb-8">
-        <h1 id="transactionsHeading" class="text-4xl font-bold" tabindex="-1"> Recent Transactions </h1>
-        <p id="transactionsDescription" class="text-slate-500 mt-2"> Latest business activities </p>
-      </div>
-
-      <div id="transactionDrilldownSummary" class="hidden mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4" role="status" aria-live="polite" aria-atomic="true">
-        <div class="flex flex-wrap items-center justify-between gap-3">
-          <p id="transactionDrilldownText" class="font-semibold text-slate-700"></p>
-          <button id="clearTransactionDrilldownButton" type="button" class="rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white" onclick="clearTransactionDrilldown()">Show all recent</button>
+    <section id="transactions" class="page" hidden aria-labelledby="transactionsHeading">
+      <header class="mb-3 flex min-w-0 flex-wrap items-end justify-between gap-3">
+        <div class="min-w-0">
+          <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Bounded transaction evidence</p>
+          <h1 id="transactionsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Transactions</h1>
+          <p id="transactionsDescription" class="mt-1 text-sm ui-theme-secondary">Latest 10 transactions for the active period.</p>
         </div>
+      </header>
+
+      <div id="transactionsTabList" class="mb-3 flex min-w-0 overflow-x-auto border-b" role="tablist" aria-label="Transaction views">
+        <button id="transactionsTabRecent" type="button" role="tab" aria-selected="true" aria-controls="transactionsPanelRecent" tabindex="0" data-transactions-tab="recent" class="min-h-11 shrink-0 border-b-2 border-indigo-600 px-4 text-sm font-semibold text-indigo-700">Recent</button>
+        <button id="transactionsTabSales" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelSales" tabindex="-1" data-transactions-tab="sales" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Sales</button>
+        <button id="transactionsTabExpenses" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelExpenses" tabindex="-1" data-transactions-tab="expenses" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Expenses</button>
+        <button id="transactionsTabPurchases" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelPurchases" tabindex="-1" data-transactions-tab="purchases" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Purchases</button>
       </div>
 
-      <div id="transactionsTableScroll" class="max-w-full overflow-x-auto rounded-3xl bg-white shadow-sm border border-slate-100" tabindex="0" aria-label="Recent transactions table, horizontally scrollable">
-        <table class="w-full min-w-[720px]">
-          <caption class="sr-only">Recent business transactions</caption>
-          <thead class="bg-slate-50 border-b">
-            <tr>
-              <th scope="col" class="p-4 text-left"> Date </th>
-              <th scope="col" class="p-4 text-left"> Type </th>
-              <th scope="col" class="p-4 text-left"> Item </th>
-              <th scope="col" class="p-4 text-left"> Qty </th>
-              <th scope="col" class="p-4 text-left"> Amount </th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
+      <div id="transactionsPanelGroup">
+        <section id="transactionsPanelRecent" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabRecent" data-transactions-panel="recent">
+          <div id="transactionsEvidenceRegion" class="flex min-h-0 flex-1 flex-col" aria-labelledby="transactionsResultHeading">
+            <div class="ui-theme-surface mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3">
+              <div class="min-w-0">
+                <h2 id="transactionsResultHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Visible recent transactions</h2>
+                <p id="transactionsScopeText" class="mt-1 text-xs ui-theme-muted">Up to 10 rows already loaded for the active period.</p>
+              </div>
+              <button id="exportCsvButton" type="button" onclick="exportVisibleTransactionsToCsv()" class="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700" aria-label="Export visible transactions to CSV" disabled>Export CSV</button>
+            </div>
+
+            <div id="transactionDrilldownSummary" class="hidden mb-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-3" role="status" aria-live="polite" aria-atomic="true">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <p id="transactionDrilldownText" class="font-semibold text-slate-700"></p>
+                <button id="clearTransactionDrilldownButton" type="button" class="min-h-11 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white" onclick="clearTransactionDrilldown()">Show all recent</button>
+              </div>
+            </div>
+
+            <p id="transactionsStateAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+            <div id="transactionsTableScroll" class="ui-theme-surface max-w-full overflow-x-auto rounded-2xl border" tabindex="0" aria-label="Visible transactions table, horizontally scrollable">
+              <table class="w-full min-w-[720px]">
+                <caption class="sr-only">Visible bounded transactions for the selected Transactions tab</caption>
+                <thead class="bg-slate-50 border-b">
+                  <tr>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Date</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Type</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Item</th>
+                    <th scope="col" class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider">Qty</th>
+                    <th scope="col" class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+        <section id="transactionsPanelSales" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabSales" data-transactions-panel="sales" hidden></section>
+        <section id="transactionsPanelExpenses" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabExpenses" data-transactions-panel="expenses" hidden></section>
+        <section id="transactionsPanelPurchases" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabPurchases" data-transactions-panel="purchases" hidden></section>
       </div>
-    </div>
+    </section>
 
     <!-- SETTINGS -->
     <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
@@ -1032,6 +1065,8 @@
   let sessionClientLogs = [];
   let dashboardTabsInitialized = false;
   let activeDashboardTab = "overview";
+  let transactionsTabsInitialized = false;
+  let activeTransactionsTab = "recent";
 
     function initializeStableDashboardElements()
     {
@@ -1066,20 +1101,39 @@
 
       stableDashboardElements.printReportButton =
         stableDashboardElements.filter.nextElementSibling;
-      stableDashboardElements.exportCsvButton =
-        stableDashboardElements.printReportButton.nextElementSibling;
       stableDashboardElements.printReportHeader =
         stableDashboardElements.dashboardStatus.previousElementSibling;
       stableDashboardElements.transactionsPage =
-        stableDashboardElements.tableBody.parentElement.parentElement.parentElement;
+        Array.prototype.find.call(
+          stableDashboardElements.pageElements,
+          function(page) { return page.id === "transactions"; }
+        );
       stableDashboardElements.transactionsHeading =
-        stableDashboardElements.transactionsPage.firstElementChild.firstElementChild;
+        stableDashboardElements.transactionsPage.firstElementChild.firstElementChild.children[1];
       stableDashboardElements.transactionsDescription =
         stableDashboardElements.transactionsHeading.nextElementSibling;
-      stableDashboardElements.transactionDrilldownSummary =
+      stableDashboardElements.transactionsTabList =
         stableDashboardElements.transactionsPage.children[1];
+      stableDashboardElements.transactionsPanelGroup =
+        stableDashboardElements.transactionsTabList.nextElementSibling;
+      stableDashboardElements.transactionsTabs =
+        stableDashboardElements.transactionsTabList.querySelectorAll('[role="tab"]');
+      stableDashboardElements.transactionsPanels =
+        stableDashboardElements.transactionsPanelGroup.querySelectorAll('[role="tabpanel"]');
+      stableDashboardElements.transactionsEvidenceRegion =
+        stableDashboardElements.transactionsPanels[0].firstElementChild;
+      stableDashboardElements.exportCsvButton =
+        stableDashboardElements.transactionsEvidenceRegion.firstElementChild.lastElementChild;
+      stableDashboardElements.transactionsResultHeading =
+        stableDashboardElements.transactionsEvidenceRegion.firstElementChild.firstElementChild.firstElementChild;
+      stableDashboardElements.transactionsScopeText =
+        stableDashboardElements.transactionsResultHeading.nextElementSibling;
+      stableDashboardElements.transactionDrilldownSummary =
+        stableDashboardElements.transactionsEvidenceRegion.children[1];
       stableDashboardElements.transactionDrilldownText =
         stableDashboardElements.transactionDrilldownSummary.firstElementChild.firstElementChild;
+      stableDashboardElements.transactionsStateAnnouncement =
+        stableDashboardElements.transactionDrilldownSummary.nextElementSibling;
       stableDashboardElements.appShell =
         stableDashboardElements.sidebar.parentElement;
       stableDashboardElements.sidebarCollapseButton =
@@ -3620,6 +3674,203 @@
     //--------------------------------------------------
     // Render Transactions
     //--------------------------------------------------
+    function filterTransactionsForTab(transactions, tabName)
+    {
+      if (tabName === "sales")
+      {
+        return transactions.filter(function(transaction)
+        {
+          return transaction.transactionType === "Sales";
+        });
+      }
+
+      if (tabName === "expenses" || tabName === "purchases")
+      {
+        return transactions.filter(function(transaction)
+        {
+          return transaction.transactionType === "Purchase";
+        });
+      }
+
+      return transactions.slice();
+    }
+
+    function getVisibleTransactions()
+    {
+      if (activeTransactionsTab === "recent" && activeTransactionDrilldown)
+      {
+        return filterTransactionDrilldown(
+          latestDashboardTransactions,
+          activeTransactionDrilldown
+        );
+      }
+
+      return filterTransactionsForTab(
+        latestDashboardTransactions,
+        activeTransactionsTab
+      );
+    }
+
+    function updateTransactionsViewPresentation(transactions)
+    {
+      var elements = initializeStableDashboardElements();
+      var viewCopy = {
+        recent: {
+          heading: "Visible recent transactions",
+          scope: "Up to 10 rows already loaded for the active period."
+        },
+        sales: {
+          heading: "Visible recent sales",
+          scope: "Sales rows within the latest 10 transactions already loaded."
+        },
+        expenses: {
+          heading: "Visible recent expenses",
+          scope: "Purchase-type expense evidence within the latest 10 transactions already loaded."
+        },
+        purchases: {
+          heading: "Visible recent purchases",
+          scope: "Purchase rows within the latest 10 transactions already loaded; separate purchase history is unavailable."
+        }
+      }[activeTransactionsTab];
+      var isDrilldown =
+        activeTransactionsTab === "recent" &&
+        Boolean(activeTransactionDrilldown);
+
+      elements.transactionsResultHeading.innerText = isDrilldown
+        ? activeTransactionDrilldown.label
+        : viewCopy.heading;
+      elements.transactionsScopeText.innerText = isDrilldown
+        ? "Filtered from the latest 10 transactions already loaded for the active period."
+        : viewCopy.scope;
+      elements.transactionsDescription.innerText =
+        "Latest 10 transactions for the active period.";
+      elements.transactionDrilldownSummary.classList.toggle(
+        "hidden",
+        !isDrilldown
+      );
+      elements.transactionDrilldownText.innerText = isDrilldown
+        ? activeTransactionDrilldown.label + " · " + transactions.length + " matching rows"
+        : "";
+      elements.transactionsStateAnnouncement.innerText =
+        (isDrilldown ? "Drill-down" : viewCopy.heading) +
+        ": " + transactions.length +
+        (transactions.length === 1 ? " visible row." : " visible rows.");
+    }
+
+    function setActiveTransactionsTab(tabName, moveFocus)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedTab = null;
+      var selectedPanel = null;
+
+      Array.prototype.forEach.call(elements.transactionsTabs, function(tab)
+      {
+        var isSelected =
+          tab.getAttribute("data-transactions-tab") === tabName;
+
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.tabIndex = isSelected ? 0 : -1;
+        tab.classList.toggle("border-indigo-600", isSelected);
+        tab.classList.toggle("text-indigo-700", isSelected);
+        tab.classList.toggle("border-transparent", !isSelected);
+        tab.classList.toggle("text-slate-600", !isSelected);
+
+        if (isSelected)
+        {
+          selectedTab = tab;
+        }
+      });
+
+      Array.prototype.forEach.call(elements.transactionsPanels, function(panel)
+      {
+        var isSelected =
+          panel.getAttribute("data-transactions-panel") === tabName;
+
+        panel.hidden = !isSelected;
+
+        if (isSelected)
+        {
+          selectedPanel = panel;
+        }
+      });
+
+      if (!selectedTab || !selectedPanel)
+      {
+        return;
+      }
+
+      activeTransactionsTab = tabName;
+      selectedPanel.appendChild(elements.transactionsEvidenceRegion);
+
+      var transactions = getVisibleTransactions();
+      renderTransactionRows(transactions);
+      updateTransactionsViewPresentation(transactions);
+
+      if (moveFocus)
+      {
+        selectedTab.focus();
+      }
+    }
+
+    function initializeTransactionsTabs()
+    {
+      if (transactionsTabsInitialized)
+      {
+        return;
+      }
+
+      var elements = initializeStableDashboardElements();
+
+      Array.prototype.forEach.call(elements.transactionsTabs, function(tab, index)
+      {
+        tab.addEventListener("click", function()
+        {
+          setActiveTransactionsTab(
+            tab.getAttribute("data-transactions-tab"),
+            false
+          );
+        });
+
+        tab.addEventListener("keydown", function(event)
+        {
+          var targetIndex = index;
+
+          if (event.key === "ArrowRight")
+          {
+            targetIndex = (index + 1) % elements.transactionsTabs.length;
+          }
+          else if (event.key === "ArrowLeft")
+          {
+            targetIndex =
+              (index - 1 + elements.transactionsTabs.length) %
+              elements.transactionsTabs.length;
+          }
+          else if (event.key === "Home")
+          {
+            targetIndex = 0;
+          }
+          else if (event.key === "End")
+          {
+            targetIndex = elements.transactionsTabs.length - 1;
+          }
+          else
+          {
+            return;
+          }
+
+          event.preventDefault();
+          setActiveTransactionsTab(
+            elements.transactionsTabs[targetIndex]
+              .getAttribute("data-transactions-tab"),
+            true
+          );
+        });
+      });
+
+      transactionsTabsInitialized = true;
+      setActiveTransactionsTab(activeTransactionsTab, false);
+    }
+
     function filterTransactionDrilldown(transactions, drilldown)
     {
       if (!drilldown || drilldown.type === "all")
@@ -3664,25 +3915,25 @@
             {
               var amount = r.revenue || r.expense || 0;
               return `
-              <tr class="border-b">
-                  <td class="p-4">
+              <tr class="transactions-table-row border-b">
+                  <td class="px-4 py-3 text-sm whitespace-nowrap">
                     ${new Date(r.date).toLocaleDateString()}
                   </td>
 
-                  <td class="p-4">
-                    <span class="px-3 py-1 rounded-full text-xs
+                  <td class="px-4 py-3 text-sm">
+                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold
                       ${r.transactionType === "Sales"
                         ? "bg-green-100 text-green-700"
                         : "bg-red-100 text-red-700"}"> ${r.transactionType}
                     </span>
                   </td>
 
-                  <td class="p-4"> ${r.product || r.purchaseCategory || "-"} </td>
-                  <td class="p-4"> ${r.qty || "-"} </td>
-                  <td class="p-4 font-medium"> Rp ${amount.toLocaleString("id-ID")}</td>
+                  <td class="max-w-[280px] px-4 py-3 text-sm break-words"> ${r.product || r.purchaseCategory || "-"} </td>
+                  <td class="transactions-number px-4 py-3 text-sm"> ${r.qty || "-"} </td>
+                  <td class="transactions-number whitespace-nowrap px-4 py-3 text-sm font-semibold"> Rp ${amount.toLocaleString("id-ID")}</td>
                 </tr>`;
             }).join("")
-          : '<tr><td colspan="5" class="p-6 text-center text-slate-500">No recent transactions for the selected period.</td></tr>';
+          : '<tr><td colspan="5" class="p-8 text-center text-sm ui-theme-muted">No visible transactions in this bounded view for the selected period.</td></tr>';
 
       visibleTransactionRowCount = transactions.length;
       elements.exportCsvButton.disabled =
@@ -3691,16 +3942,7 @@
 
     function updateTransactionDrilldownPresentation(transactions)
     {
-      var elements = initializeStableDashboardElements();
-      var isActive = Boolean(activeTransactionDrilldown);
-
-      elements.transactionDrilldownSummary.classList.toggle("hidden", !isActive);
-      elements.transactionsDescription.innerText = isActive
-        ? "Filtered from the latest 10 transactions already loaded for the active period."
-        : "Latest business activities";
-      elements.transactionDrilldownText.innerText = isActive
-        ? activeTransactionDrilldown.label + " · " + transactions.length + " matching rows"
-        : "";
+      updateTransactionsViewPresentation(transactions);
     }
 
     function applyTransactionDrilldown(type, value, label)
@@ -3711,38 +3953,26 @@
         label: label
       };
 
-      var transactions = filterTransactionDrilldown(
-        latestDashboardTransactions,
-        activeTransactionDrilldown
-      );
-
-      renderTransactionRows(transactions);
-      updateTransactionDrilldownPresentation(transactions);
+      setActiveTransactionsTab("recent", false);
       showPage("transactions");
-      initializeStableDashboardElements().transactionsHeading.focus();
+      initializeStableDashboardElements().transactionsResultHeading.focus();
     }
 
     function clearTransactionDrilldown()
     {
       activeTransactionDrilldown = null;
-      var transactions = latestDashboardTransactions.slice();
-
-      renderTransactionRows(transactions);
-      updateTransactionDrilldownPresentation(transactions);
-      initializeStableDashboardElements().transactionsHeading.focus();
+      setActiveTransactionsTab("recent", false);
+      initializeStableDashboardElements().transactionsResultHeading.focus();
     }
 
     function renderTransactions(res)
     {
       latestDashboardTransactions =
         Array.isArray(res.recentTransactions)
-          ? res.recentTransactions.slice()
+          ? res.recentTransactions.slice(0, 10)
           : [];
 
-      var transactions = filterTransactionDrilldown(
-        latestDashboardTransactions,
-        activeTransactionDrilldown
-      );
+      var transactions = getVisibleTransactions();
 
       renderTransactionRows(transactions);
       updateTransactionDrilldownPresentation(transactions);
@@ -4007,6 +4237,7 @@ window.onload = function()
   initializeThemeFoundation();
   initializeResponsiveShell();
   initializeDashboardTabs();
+  initializeTransactionsTabs();
   updateCustomDateVisibility();
   loadData();
 };

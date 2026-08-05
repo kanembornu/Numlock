@@ -22,15 +22,15 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 **Post-release maintenance and authorized UI/UX 2.0 implementation**
 
-The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 009 redesigns only Intelligence and Planning without changing dashboard data, formulas, response fields, precedence, version metadata, other tabs, or deployment.
+The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 010 redesigns only the bounded Transactions destination without changing dashboard data, formulas, response fields, version metadata, or deployment.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 009 — Intelligence and Planning redesign and corrective follow-up — implemented and uploaded on 2026-08-05.** The follow-up confirms exactly one Overview-owned Business Priority using stable IDs, panel ownership, and renderer targets instead of obsolete source ordering. Revenue Trend now has finite 288px mobile and 300–440px desktop containment, canvas-only fill, and one direct resize per Performance activation with no application resize observer/listener. Runner membership remains 30; the exact 26-file corrective inventory was uploaded. Apps Script runtime and browser acceptance remain separate unverified evidence.
+**UI/UX 2.0 Package 010 — Transactions redesign — implemented and uploaded on 2026-08-05.** Recent, Sales, Expenses, and Purchases use one accessible tab framework and one shared bounded table. All views derive only from the copied maximum-ten-row response; CSV follows rendered active rows, drill-down opens Recent deterministically, and no backend request or response field was added. Runner membership is 31. The exact 26-file inventory was uploaded; live invocation was unavailable through the configured API executable, and deployment/browser acceptance remain separate unverified evidence.
 
 ## 6. Current test gate and evidence level
 
-`runAllBackendTests()` contains exactly **30 ordered entries** and remains fail-fast.
+`runAllBackendTests()` contains exactly **31 ordered entries** and remains fail-fast.
 
 | Evidence class | Current recorded evidence |
 | --- | --- |
@@ -46,6 +46,8 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 009 redesign
 | Current UI/UX 2.0 Intelligence/Planning upload | Package 009: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 Package 009 fix local/static | Business Priority semantic ownership and bounded Revenue Trend resize contracts pass locally; runner remains 30/30, query budget remains 71/two, and no resize observer/listener or recursive scheduling was added. |
 | Current UI/UX 2.0 Package 009 fix upload | Exact 26-file clasp inventory verified and corrective `clasp push --force` uploaded 26 files. This proves source synchronization only. |
+| Current UI/UX 2.0 Transactions local/static | Package 010: numbered and extracted frontend JavaScript parsed; six focused contracts passed; deterministic Tailwind builds matched; Transactions uses four tabs over at most ten copied rows with 71 ID queries, two document selectors, one deferred phase, no response mutation, and no tab-switch request. |
+| Current UI/UX 2.0 Transactions upload | Package 010: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. `clasp run` reported the new functions unavailable through the configured API executable, so upload does not establish live 31/31. |
 | Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
@@ -91,7 +93,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 30/30.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 31/31.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -132,7 +134,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Active runner membership is 30 and the latest Package 009 local 30/30 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Active runner membership is 31; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
@@ -147,7 +149,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 Hold release promotion and new feature implementation when any of these conditions is true:
 
-- the active local unified gate is not exactly 30/30;
+- the active local unified gate is not exactly 31/31;
 - the release candidate differs from the reviewed/uploaded inventory;
 - Git status contains unexplained or unreviewed changes;
 - Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
@@ -179,7 +181,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 Package 009 corrective follow-up, implemented and uploaded.** Semantic Business Priority ownership and finite Revenue Trend containment are corrected without changing data, intelligence rules, runner membership, or unrelated UI. Live Apps Script tests and browser regression checks remain pending evidence.
+**UI/UX 2.0 Package 010 Transactions redesign, implemented and uploaded.** Obtain live 31/31 and desktop/mobile browser acceptance without expanding the maximum-ten-row response boundary or deploying from this package.
 
 ## 19. Status-history log
 
