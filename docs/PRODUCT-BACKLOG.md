@@ -14,6 +14,10 @@ Sprint 5.12 is complete at verified commit `0e6dcdc`. Its print-ready filtered e
 
 Sprint 5.13 is complete. Package 001 CSV export and Package 002 formula-injection hardening passed live `testCsvExportContract()`, live `testClientRenderPerformanceContract()`, and live `runAllBackendTests()` 25/25. The accepted client-render contract preserves 72 ID queries, two selector queries, and no response mutation.
 
+Sprint 5.14 is complete at commit `fe6c424`, pushed to `origin/main`, with the Apps Script source upload current. Its bounded drill-down uses only the active response's maximum ten recent transactions, introduces no backend/API/persistence behavior, and leaves CSV export scoped to the visible filtered table. Focused drill-down and local unified 25/25 validation were reconfirmed during closure; live Apps Script and deployed-browser acceptance remain unverified.
+
+The remaining requirement-gated backlog is editable KPI targets, dashboard API projection or payload reduction, and any drill-down expansion beyond the existing recent-transaction projection. Exactly one next package is recommended: Sprint 5.15 Package 001, a documentation-only external-consumer inventory for dashboard API projection. It is independently releasable, changes no production behavior, and must establish consumer, compatibility, permission, and rollback evidence before payload changes are proposed.
+
 ## Priority rules
 
 - **P0:** a current control is misleading, a valid state can break the dashboard, or the user can be blocked.
@@ -230,7 +234,7 @@ Sprint 5.13 is complete. Package 001 CSV export and Package 002 formula-injectio
 
 ### P3-2 — Add KPI and chart drill-down
 
-**Status: Bounded frontend scope completed locally in Sprint 5.14 Package 001; expanded detail, authorization, pagination, Apps Script runtime, and browser acceptance remain separate.**
+**Status: Bounded frontend scope completed, committed, pushed, and uploaded in Sprint 5.14 Package 001; expanded detail, authorization, pagination, Apps Script runtime, and browser acceptance remain separate.**
 
 - **Problem:** KPI cards, charts, risks, and recommendations are summaries with no path to supporting transactions.
 - **User impact:** users cannot verify a conclusion or identify the rows/products/categories that require action.
@@ -286,7 +290,7 @@ The implemented package uses one accessible browser-print action and authored A4
 
 ### Sprint 5.14 Package 001 — bounded interactive KPI drill-down
 
-**Status: Complete locally; Apps Script runtime and deployed-browser acceptance remain unverified.**
+**Status: Complete at committed and pushed implementation `fe6c424`; Apps Script source is uploaded, while live runtime and deployed-browser acceptance remain unverified.**
 
 - **Objective:** connect existing KPI and chart summaries to supporting transaction views without expanding the public response or data-access surface.
 - **User value:** lets users move from a summary to the available recent Sales, Purchase, month, or expense-category evidence while retaining the active reporting period.
