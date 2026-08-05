@@ -29,6 +29,7 @@ function runAllBackendTests()
     { name: "testTransactionsVisualContract", run: testTransactionsVisualContract },
     { name: "testSettingsVisualContract", run: testSettingsVisualContract },
     { name: "testLogsVisualContract", run: testLogsVisualContract },
+    { name: "testUiFinalStabilizationContract", run: testUiFinalStabilizationContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },

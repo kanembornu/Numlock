@@ -4540,6 +4540,180 @@ function testLogsVisualContract()
   return summary;
 }
 
+function testUiFinalStabilizationContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var scenariosPassed = 0;
+
+  [
+    "var(--surface-1)", "var(--surface-2)", "var(--surface-3)",
+    "var(--text-primary)", "var(--text-secondary)", "var(--border-subtle)",
+    "var(--success)", "var(--warning)", "var(--critical)",
+    "var(--disabled-bg)", "var(--disabled-text)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "approved semantic token");
+  });
+  [
+    "button:disabled,", "select:disabled,", "input:disabled",
+    "background-color: var(--disabled-bg) !important;",
+    "color: var(--disabled-text) !important;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "semantic disabled state");
+  });
+  scenariosPassed++;
+
+  ["dashboard", "transactions", "settings", "logs"].forEach(function(pageId)
+  {
+    assertSourceContainsOnce(source, 'id="' + pageId + '"', "primary destination " + pageId);
+  });
+  ["dashboardTabList", "transactionsTabList", "mainContent", "dashboardSidebar"].forEach(function(id)
+  {
+    assertSourceContainsOnce(source, 'id="' + id + '"', "unique shell or tablist ID " + id);
+  });
+  assertSourceOccurrenceCount(source, 'role="tablist"', 2, "scoped tablists");
+  assertSourceOccurrenceCount(source, 'data-dashboard-tab="', 5, "Dashboard tabs");
+  assertSourceOccurrenceCount(source, 'data-transactions-tab="', 4, "Transactions tabs");
+  scenariosPassed++;
+
+  var idPattern = /\sid="([^"]+)"/g;
+  var seenIds = {};
+  var idMatch;
+  while ((idMatch = idPattern.exec(source)) !== null)
+  {
+    if (seenIds[idMatch[1]])
+    {
+      throw new Error("Duplicate static HTML ID: " + idMatch[1]);
+    }
+    seenIds[idMatch[1]] = true;
+  }
+  scenariosPassed++;
+
+  [
+    ".page { display: none; }",
+    "page.hidden = !isActivePage;",
+    "panel.hidden =",
+    "sidebar.inert = !isOpen && !isDesktop;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "hidden-content focus exclusion");
+  });
+  scenariosPassed++;
+
+  [
+    ':root[data-theme="dark"] .bg-indigo-100',
+    ':root[data-theme="dark"] .bg-amber-100',
+    ':root[data-theme="dark"] .bg-red-100',
+    ':root[data-theme="dark"] .bg-emerald-100,',
+    ':root[data-theme="dark"] .text-emerald-600,',
+    ':root[data-theme="dark"] .skeleton',
+    "var(--surface-3) 50%",
+    "@media print", "background: #ffffff !important;",
+    "color: #0f172a;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Light, Dark, and print theme parity");
+  });
+  scenariosPassed++;
+
+  [
+    "#actionRoadmapCard .text-xl { transition: color 160ms ease-out; }",
+    "#actionRoadmapCard .flex:hover .text-xl { color: var(--brand); }",
+    "@media (prefers-reduced-motion: reduce)",
+    "#mainContent,", "#sidebarCollapseIcon,",
+    ".ui-sidebar-item { transition: none; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded motion contract");
+  });
+  scenariosPassed++;
+
+  [
+    "min-width: 1024px", "max-width: 1023px",
+    "height: 100dvh", "overflow: hidden;",
+    "overflow-x-auto", "overflow-y: auto;",
+    "min-h-0", "max-w-full"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "responsive containment contract");
+  });
+  scenariosPassed++;
+
+  [
+    "synchronizeChartTheme", "getCurrentThemePalette",
+    "maintainAspectRatio: false", "destroyChartInstance"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded Chart.js lifecycle");
+  });
+  assertSourceExcludes(source, "ResizeObserver", "unbounded resize observer");
+  assertSourceExcludes(source, 'addEventListener("resize"', "unbounded resize listener");
+  scenariosPassed++;
+
+  [
+    'id="appearanceSection"', 'id="aboutSection"',
+    'id="sessionLogsListRegion"', "Session-local only.",
+    "not historical audit records"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "truthful Settings and Logs scope");
+  });
+  ["Search", "Notifications", "Customize widgets", "Welcome back"].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "forbidden SaaS decoration");
+  });
+  scenariosPassed++;
+
+  assertSourceExcludes(source, "function getIntelIcon(", "obsolete placeholder icon helper");
+  assertSourceExcludes(source, 'return "...svg...";', "obsolete placeholder SVG value");
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Final stabilization query budget exceeded");
+  }
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred render phase");
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "response mutation");
+  });
+  scenariosPassed++;
+
+  [
+    "dashboardTabsInitialized", "transactionsTabsInitialized",
+    "responsiveShellInitialized", "themeFoundationInitialized"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "listener initialization guard");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    destinations: 4,
+    tablists: 2,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    duplicateIds: 0
+  };
+
+  Logger.log(
+    "PASS: testUiFinalStabilizationContract | scenarios=" + summary.scenarios +
+    " | destinations=" + summary.destinations +
+    " | tablists=" + summary.tablists +
+    " | duplicateIds=" + summary.duplicateIds +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testChartPresentationContract()
 {
   var source =

@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Keep final UI stabilization semantic, bounded, and behavior-neutral
+
+UI/UX 2.0 Package 013 corrects only cross-cutting presentation contracts proven by the final audit. Disabled controls and dark status/skeleton states consume approved semantic tokens; Action Roadmap hover is token-driven and transitions color only; reduced-motion preference disables every coordinated shell transition plus shimmer; chart containment and lifecycle remain unchanged. Dead code may be removed only when repository search proves no caller and the code exposes no runtime contract, as with the obsolete placeholder-only `getIntelIcon()` helper. The final source contract must preserve four destinations, scoped Dashboard/Transactions tablists, hidden-content focus exclusion, the existing query/deferred budget, response immutability, and truthful Settings/Logs scope.
+
 ### Keep Logs memory-only, sanitized, bounded, and diagnostic
 
 UI/UX 2.0 Package 012 stores Logs only in the active page’s JavaScript memory. Each entry has exactly timestamp, Info/Warning/Error severity, one approved human-readable context, and a sanitized message. Redaction occurs before storage/rendering and removes URLs, emails, identifiers, filesystem paths, structured objects, control characters, markup, and excessive length. The list is newest-first, capped at 100 with oldest eviction, and suppresses identical events within five seconds. Only meaningful request/retry, render/chart, CSV, print, theme-storage, invalid navigation, and invalid drill-down outcomes are eligible. No server or browser storage, raw response, transaction row, fabricated history, export, pagination, refresh, or routine interaction logging is permitted.
