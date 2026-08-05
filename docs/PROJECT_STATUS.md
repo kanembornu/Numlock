@@ -20,13 +20,13 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Post-release maintenance**
+**Post-release maintenance and authorized UI/UX 2.0 discovery**
 
-Feature development is paused after v1.0 closeout. Current work is limited to maintenance and demand-driven enhancements; UI/UX 2.0 discovery requires separate authorization and remains outside the v1.0 baseline.
+Feature development remains paused after v1.0 closeout. UI/UX 2.0 Package 001 completed an authorized documentation-only information-architecture discovery without changing the v1.0 application, source, styling, data contracts, deployment, or release metadata.
 
 ## 5. Latest completed sprint/package
 
-**NUMLOCK v1.0 release closeout — complete on 2026-08-05.** Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed live `runAllBackendTests()` 25/25, was deployed as immutable version 185 at the unchanged stable production URL, and passed deployed-browser and production-health acceptance. Immutable version 184 remains the rollback target.
+**UI/UX 2.0 Package 001 — information architecture and navigation strategy — complete on 2026-08-05.** The documentation-only package maps all 35 current user-facing capabilities exactly once, compares three navigation models, selects Dashboard plus Transactions as the only immediate destinations, and defers Reports and Settings. No production source, Tailwind, mockup, clasp, deployment, release metadata, commit, or push changed. The preceding v1.0 release closeout evidence remains unchanged: candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed live 25/25 and production acceptance on immutable version 185, with version 184 retained for rollback.
 
 ## 6. Current test gate and evidence level
 
@@ -155,7 +155,7 @@ After v1.0 stabilization, NUMLOCK may evolve from a bounded dashboard into a gov
 
 ## 17. UI/UX 2.0 roadmap
 
-**Planning only — not implemented or authorized.** Directional themes are:
+**Discovery only — not implemented.** Package 001 records the evidence-based information architecture in [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md): Dashboard and Transactions are the only immediate destinations; Reports and Settings remain deferred; all existing analytics, intelligence, forecast, performance, and Data Quality capabilities remain sections, disclosures, or contextual actions. Directional themes are:
 
 1. Validate user roles, top decision journeys, device profiles, and measurable usability baselines.
 2. Prototype a clearer task-oriented information architecture without replacing the current accessible responsive shell.
@@ -167,7 +167,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 discovery and validation.** This is the next planned phase, remains outside the v1.0 feature baseline, and requires separate authorization before any research or implementation package begins.
+**UI/UX 2.0 mockup comparison planning.** Information-architecture discovery is complete. Mockups and any implementation remain separately authorized future packages outside the v1.0 feature baseline.
 
 ## 19. Status-history log
 
@@ -177,3 +177,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-04 | Stabilization expansion | Sprints 5.10–5.12 completed locally with evidence levels recorded separately. |
 | 2026-08-05 | Release Candidate | Repository preflight and upload prerequisites passed for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | 2026-08-05 | Feature Complete v1.0 | Live suite passed 25/25; immutable deployment version 185, unchanged stable URL, deployed-browser acceptance, and production health passed; version 184 retained for rollback. |
+| 2026-08-05 | UI/UX 2.0 discovery | Package 001 mapped all current capabilities, selected a two-destination Dashboard/Transactions architecture, and deferred Reports and Settings; documentation only, with no mockup or production change. |

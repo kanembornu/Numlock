@@ -177,3 +177,11 @@ Feature development is paused. Maintenance and demand-driven enhancements may pr
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.
 - Preserve the frozen numbered ownership model and Aggregate Engine production contract unless a separately approved change updates the governing documentation.
+
+## UI/UX 2.0 — discovery
+
+### Package 001 — information architecture and navigation strategy
+
+Complete as documentation-only discovery. [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md) inventories the complete v1.0 user-facing capability set, compares the required two-, three-, and four-destination models, and selects Dashboard plus Transactions as the authoritative immediate menu. Reports remains contextual through Dashboard print and Transactions CSV; Settings remains deferred because no editable configuration or approved persistence/permission contract exists. No mockup, production source, Tailwind, API, data, deployment, or release behavior changed.
+
+The next UI/UX 2.0 package may compare mockups against the Package 001 hierarchy and journeys, but requires separate authorization. It must not introduce placeholder destinations or expose blocked editable-target, expanded-transaction, or payload-projection capabilities.

@@ -4,6 +4,14 @@ This document owns durable engineering and product decisions. [Project Status](P
 
 ## Active decisions
 
+### Use two evidence-backed destinations for UI/UX 2.0
+
+UI/UX 2.0 begins with exactly two primary destinations: Dashboard and Transactions. Dashboard owns the reporting period, Executive Summary, KPIs, analytics, intelligence, Forecast, Performance, Data Quality, recommendations, decision support, risk/growth, product concentration, and Print Report. Transactions owns the bounded recent-transaction table, drill-down result state, clear action, and visible-row CSV export. Section labels and disclosures do not become primary navigation.
+
+Reports is deferred because browser print and visible-row CSV are contextual actions with different source scopes, not an independent report library or workflow. Settings is deferred because KPI targets are system-defined and non-editable and no approved persistence, validation, permission, migration, governance, or audit contract exists. Neither destination may enter navigation merely as a placeholder.
+
+Desktop and narrow layouts use the same destinations and semantic order. The first viewport retains Executive Summary before KPIs, with one Business Priority; secondary dashboard content follows through progressive disclosure and ordered sections. KPI/chart evidence actions continue to open only the already-loaded maximum-ten-row Transactions projection with focus transfer, bounded status, clear/reset, and visible-row export. The complete discovery baseline and journey traceability are owned by [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md).
+
 ### Bound drill-down to already-loaded recent transaction evidence
 
 KPI and chart drill-down is frontend-only and filters a copied view of the response's existing `recentTransactions` collection, which remains capped at ten rows and scoped by the authoritative dashboard date filter. Revenue and sales KPIs select Sales rows, Expense selects Purchase rows, Profit and margin retain both types, Revenue chart points select a represented month, and Expense chart points select a purchase category. Product Distribution opens its available Sales evidence without claiming Hot/Cold row classification because that field is not present in the transaction projection.
