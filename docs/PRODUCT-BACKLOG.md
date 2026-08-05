@@ -1,5 +1,7 @@
 # NUMLOCK Sprint 5.8 Product Backlog
 
+This document owns remaining work, readiness, blockers, dependencies, and acceptance needs. [Project Status](PROJECT_STATUS.md) owns the current executive summary; [Roadmap](ROADMAP.md) owns direction and sequencing. Historical implementation detail belongs in [CHANGELOG.md](CHANGELOG.md).
+
 ## Scope and evidence
 
 This backlog is the documentation outcome of Sprint 5.8 Package 001. It is grounded in the production contracts in `10.Config.js`, `70.Intelligence.Score.js`, `75.Intelligence.Diagnosis.js`, `80.Intelligence.Recommendation.js`, `85.Intelligence.Decision.js`, `90.Dashboard.Service.js`, the responsibility-split `92`–`98` test files, and `190.View.Index.html`, plus the governing repository documentation. It proposes product work only; no production source, frontend, deployment, or release metadata changed during the audit.
@@ -18,7 +20,7 @@ Sprint 5.14 is complete at commit `fe6c424`, pushed to `origin/main`, with the A
 
 Sprint 5.15 is complete as a documentation/discovery sprint; its 37-field inventory is committed at `e373b9a`. The six non-rendered, contract-tested fields are opt-in projection candidates only, and the default response must remain unchanged. The remaining feature backlog is editable KPI targets, dashboard API projection or payload reduction, and drill-down expansion beyond the existing recent-transaction projection. Editable targets remain blocked by persistence and governance requirements; API projection remains blocked by unknown external consumers, deployment access evidence, permission review, payload measurement, and an additive compatibility design; expanded drill-down remains blocked by authorization, pagination, and privacy requirements.
 
-Exactly one next package is implementation-ready: Sprint 5.16 Package 001, bounded response-contract completeness. Add `dateFilter` to the sparse test's 36-entry `requiredProperties` list and assert the complete 37-field default response without changing production source, response behavior, ordered runner membership, persistence, or authorization. This test-only hardening is independently releasable and requires focused sparse-response validation followed by the unchanged unified 25/25 gate.
+Sprint 5.16 Package 001 completes and uploads bounded response-contract completeness. The sparse oracle now includes `dateFilter`, requires exactly all 37 top-level fields, and structurally validates its five required members without changing production source, response behavior, existing additive metadata checks, targeted entry points, or ordered 25-entry runner. Focused local validation passed seven fixtures and the unified local gate passed 25/25; Apps Script runtime remains unverified. Editable targets, API projection, and expanded drill-down remain requirement-gated as recorded above.
 
 ## Priority rules
 

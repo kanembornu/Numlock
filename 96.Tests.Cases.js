@@ -344,6 +344,7 @@ function testSparseDatasetResilience()
     "actionRoadmap",
     "businessMaturity",
     "kpiAchievement",
+    "dateFilter",
     "reportingScope",
     "dataFreshness",
     "dataQuality",
@@ -374,6 +375,26 @@ function testSparseDatasetResilience()
       response,
       requiredProperties,
       fixture.name
+    );
+
+    if (Object.keys(response).length !== requiredProperties.length)
+    {
+      throw new Error(
+        "Sparse dataset response field count invalid for " +
+        fixture.name
+      );
+    }
+
+    assertRequiredProperties(
+      response.dateFilter,
+      [
+        "filter",
+        "startDate",
+        "endDate",
+        "label",
+        "rowCount"
+      ],
+      fixture.name + " dateFilter"
     );
 
     assertFiniteNumbers(

@@ -1,5 +1,7 @@
 # NUMLOCK Testing
 
+This document owns validation contracts, runner semantics, and evidence levels. [Project Status](PROJECT_STATUS.md) summarizes the latest recorded gate without replacing this contract; release sequencing belongs in [RELEASE.md](RELEASE.md).
+
 ## Evidence levels
 
 Report each level separately:
@@ -75,7 +77,7 @@ Backend test ownership is separated by responsibility:
 - `96.Tests.Cases.js` contains all twenty-five directly runnable `test*` functions; the ordered runner selects 24 of them plus `getDashboardData()` for its fixed 25-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
 - `98.Tests.Runner.js` contains only the ordered, fail-fast unified 25-entry suite.
 
-Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=36 | populatedOutputUnchanged=true`. It still returns the same summary object and rethrows all original failures unchanged.
+Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=37 | populatedOutputUnchanged=true`. The oracle requires exactly all 37 top-level response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`; existing additive metadata checks remain unchanged. It still returns the same summary object and rethrows all original failures unchanged.
 
 `testDashboardDateFilter()` uses fixed reference dates and project-timezone date keys. It covers missing/null/unknown normalization to `currentYear`; `today`; inclusive `last7days` within one month and across two months; month/year presets; custom single/multi-month and cross-year boundaries; invalid custom input; immutable filtering; ignored invalid row dates; parameterless equivalence; current partial-month Revenue Trend inclusion; ascending trend labels; finite values; and renderable empty or zero-revenue results. Its success log reports scenarios, Current Year rows, custom rows, and the resolved timezone.
 

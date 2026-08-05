@@ -1,5 +1,7 @@
 # NUMLOCK Roadmap
 
+This document owns project direction, sequencing, and milestone placement. [Project Status](PROJECT_STATUS.md) owns the current executive status; [Product Backlog](PRODUCT-BACKLOG.md) owns remaining work and blockers. Completed-change detail belongs in [CHANGELOG.md](CHANGELOG.md).
+
 ## Completed
 
 ### Sprint 5.7 Package 003 — release and version metadata
@@ -161,9 +163,9 @@ Complete at commit `fe6c424`, pushed to `origin/main`, with the Apps Script sour
 
 Complete as a documentation/discovery sprint. The inventory is committed at `e373b9a`. [`DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md) classifies the production frontend, test-only, documentation/example, and unknown/external consumers; inventories all 37 top-level response fields exactly once; and records ownership, permission, privacy, compatibility, projection, evidence, and rollback constraints. Thirty-one fields are consumed by the current view and six are opt-in projection candidates that remain contract-tested. Unknown external callers and deployment permission evidence cannot be resolved from Git, and permission review is incomplete, so API projection is not implementation-ready and the default full response must remain unchanged.
 
-## Recommended next — Sprint 5.16 Package 001
+## Sprint 5.16 Package 001 — complete sparse response contract
 
-Bounded response-contract completeness is the only implementation-ready package selected after reviewing the remaining backlog. Add `dateFilter` to the sparse test's 36-entry required-property list so the default 37-field response is asserted completely. Preserve production source, response behavior, ordered runner membership, persistence, and authorization. The package is independently releasable and requires the focused sparse-response contract plus the unchanged unified 25/25 gate.
+Complete and uploaded. The sparse required-property oracle now covers exactly all 37 top-level dashboard response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`. Existing additive metadata checks, production behavior, response shape, targeted test entry points, and the ordered 25-entry runner remain unchanged. Focused local validation passed seven fixtures and the unified local gate passed 25/25; Apps Script runtime, deployment, and browser acceptance remain unverified.
 
 ## Ongoing release obligations
 
