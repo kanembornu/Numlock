@@ -230,14 +230,16 @@ Sprint 5.13 is complete. Package 001 CSV export and Package 002 formula-injectio
 
 ### P3-2 — Add KPI and chart drill-down
 
+**Status: Bounded frontend scope completed locally in Sprint 5.14 Package 001; expanded detail, authorization, pagination, Apps Script runtime, and browser acceptance remain separate.**
+
 - **Problem:** KPI cards, charts, risks, and recommendations are summaries with no path to supporting transactions.
 - **User impact:** users cannot verify a conclusion or identify the rows/products/categories that require action.
-- **Proposed solution:** after defining permitted detail, add scoped drill-down panels that preserve the active period/filter and disclose the evidence behind a metric or recommendation.
+- **Implemented solution:** KPI and chart actions preserve the active period and filter the already-loaded maximum ten recent transaction rows. The Transactions view identifies this bound, announces the active drill-down and result count, and provides a keyboard-accessible clear action. No hidden detail, expanded history, backend/API call, persistence, or response change is introduced.
 - **Files likely affected:** `90.Dashboard.Service.js`, `95.Tests.js`, `190.View.Index.html`, architecture/testing documentation.
 - **Implementation complexity:** L
 - **Regression risk:** High
 - **Validation required:** scope/authorization tests, aggregation-to-detail reconciliation, large-result pagination, keyboard/modal behavior, privacy review.
-- **Dependency on other items:** P1-1, P1-3, and P1-4; detail fields and authorization are unavailable requirements.
+- **Dependency on other items:** P1-1, P1-3, and P1-4 are complete. Any expansion beyond the existing recent transaction projection remains requirement- and authorization-gated.
 
 ## Completed implementation package
 
@@ -279,6 +281,18 @@ The implemented package uses one accessible browser-print action and authored A4
 - **Implementation risk:** Low; the change is isolated to CSV cell serialization and its contract test, with no new data or authorization surface.
 - **Verified validation:** live `testCsvExportContract()` PASS, live `testClientRenderPerformanceContract()` PASS with the 72-ID/two-selector query budget and no response mutation preserved, and live `runAllBackendTests()` PASS 25/25.
 - **Scope:** bounded CSV serialization hardening and acceptance only; exclude new fields, expanded history, backend/API changes, spreadsheet access/export, permissions, persistence, drill-down, editable targets, layout changes, and deployment.
+
+## Completed implementation package
+
+### Sprint 5.14 Package 001 — bounded interactive KPI drill-down
+
+**Status: Complete locally; Apps Script runtime and deployed-browser acceptance remain unverified.**
+
+- **Objective:** connect existing KPI and chart summaries to supporting transaction views without expanding the public response or data-access surface.
+- **User value:** lets users move from a summary to the available recent Sales, Purchase, month, or expense-category evidence while retaining the active reporting period.
+- **Scope:** frontend filtering over a copied view of the existing maximum ten `recentTransactions`; no backend/API, spreadsheet access, persistence, permissions, hidden fields, expanded history, analytics, or response changes.
+- **Accessibility and responsive behavior:** labeled buttons provide keyboard equivalents for canvas interactions, focus moves to the Transactions heading, an accessible status announces filter/count, clear restores all loaded recent rows, and the existing horizontally scrollable table remains authoritative.
+- **Verified local validation:** focused four-scenario drill-down contract, client-render performance at 71 ID/two selector queries and one deferred phase, chart-presentation regression, extracted frontend syntax, and ordered `runAllBackendTests()` PASS 25/25.
 
 ## Explicitly not prioritized as defects
 

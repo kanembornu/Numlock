@@ -471,7 +471,10 @@
     <!-- CHART ROW -->
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
       <section class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="revenueChartTitle">
-        <h2 id="revenueChartTitle" class="font-semibold mb-2"> Revenue Trend </h2>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="revenueChartTitle" class="font-semibold"> Revenue Trend </h2>
+          <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
+        </div>
         <p id="revenueChartSummary" class="mb-4 text-sm text-slate-500"></p>
         <div id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="mainChart" aria-hidden="true"></canvas>
@@ -481,7 +484,10 @@
       </section>
 
       <section class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="hotColdChartTitle">
-        <h2 id="hotColdChartTitle" class="font-semibold mb-2"> Product Distribution </h2>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="hotColdChartTitle" class="font-semibold"> Product Distribution </h2>
+          <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Product distribution transactions')">View transactions</button>
+        </div>
         <p id="hotColdChartSummary" class="mb-4 text-sm text-slate-500"></p>
         <div id="hotColdWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="hotColdChart" aria-hidden="true"></canvas>
@@ -510,7 +516,10 @@
       </div>
 
       <section class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="expenseChartTitle">
-        <h2 id="expenseChartTitle" class="font-semibold mb-2"> Expense Breakdown </h2>
+        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="expenseChartTitle" class="font-semibold"> Expense Breakdown </h2>
+          <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('purchase', '', 'Expense transactions')">View transactions</button>
+        </div>
         <p id="expenseChartSummary" class="mb-4 text-sm text-slate-500"></p>
         <div id="expenseWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="expenseChart" aria-hidden="true"></canvas>
@@ -672,8 +681,15 @@
     <!-- TRANSACTIONS -->
     <div id="transactions" class="page" hidden>
       <div class="mb-8">
-        <h1 class="text-4xl font-bold"> Recent Transactions </h1>
-        <p class="text-slate-500 mt-2"> Latest business activities </p>
+        <h1 id="transactionsHeading" class="text-4xl font-bold" tabindex="-1"> Recent Transactions </h1>
+        <p id="transactionsDescription" class="text-slate-500 mt-2"> Latest business activities </p>
+      </div>
+
+      <div id="transactionDrilldownSummary" class="hidden mb-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-4" role="status" aria-live="polite" aria-atomic="true">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <p id="transactionDrilldownText" class="font-semibold text-slate-700"></p>
+          <button id="clearTransactionDrilldownButton" type="button" class="rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white" onclick="clearTransactionDrilldown()">Show all recent</button>
+        </div>
       </div>
 
       <div id="transactionsTableScroll" class="max-w-full overflow-x-auto rounded-3xl bg-white shadow-sm border border-slate-100" tabindex="0" aria-label="Recent transactions table, horizontally scrollable">
@@ -707,6 +723,8 @@
   let stableDashboardElements = null;
   let pendingDashboardRenderFrame = null;
   let visibleTransactionRowCount = 0;
+  let latestDashboardTransactions = [];
+  let activeTransactionDrilldown = null;
 
     function initializeStableDashboardElements()
     {
@@ -745,6 +763,16 @@
         stableDashboardElements.printReportButton.nextElementSibling;
       stableDashboardElements.printReportHeader =
         stableDashboardElements.dashboardStatus.previousElementSibling;
+      stableDashboardElements.transactionsPage =
+        stableDashboardElements.tableBody.parentElement.parentElement.parentElement;
+      stableDashboardElements.transactionsHeading =
+        stableDashboardElements.transactionsPage.firstElementChild.firstElementChild;
+      stableDashboardElements.transactionsDescription =
+        stableDashboardElements.transactionsHeading.nextElementSibling;
+      stableDashboardElements.transactionDrilldownSummary =
+        stableDashboardElements.transactionsPage.children[1];
+      stableDashboardElements.transactionDrilldownText =
+        stableDashboardElements.transactionDrilldownSummary.firstElementChild.firstElementChild;
 
       return stableDashboardElements;
     }
@@ -1720,10 +1748,23 @@
     //--------------------------------------------------
     // Render Business Overview
     //--------------------------------------------------
+    function renderDrilldownMetric(label, value, type, drilldownLabel, valueClass)
+    {
+      return `
+        <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-xl p-2 text-left"
+          onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
+          aria-label="View transactions for ${label}">
+          <span>${label}</span>
+          <strong class="${valueClass || ""}">${value}</strong>
+        </button>`;
+    }
+
     function renderBusinessOverview(res)
     {
 
-      document.getElementById("businessOverview").innerHTML =`
+      initializeStableDashboardElements().businessOverview.innerHTML =`
 
           <!-- Financial -->
 
@@ -1734,20 +1775,9 @@
             </div>
 
             <div class="space-y-4">
-                <div class="flex justify-between">
-                  <span> Revenue </span>
-                  <strong> Rp ${res.summary.revenue.toLocaleString("id-ID")} </strong>
-                </div>
-
-                <div class="flex justify-between">
-                  <span> Expense </span>
-                  <strong> Rp ${res.summary.expense.toLocaleString("id-ID")} </strong>
-                </div>
-
-                <div class="flex justify-between">
-                  <span>Profit</span>
-                  <strong class="${res.summary.profit >= 0? "text-emerald-600" : "text-red-600"}"> Rp ${res.summary.profit.toLocaleString("id-ID")} </strong>
-                </div>
+                ${renderDrilldownMetric("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions")}
+                ${renderDrilldownMetric("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions")}
+                ${renderDrilldownMetric("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600")}
             </div>
           </div>
 
@@ -1760,20 +1790,9 @@
             </div>
 
             <div class="space-y-4">
-                <div class="flex justify-between">
-                  <span> Units Sold </span>
-                  <strong> ${res.summary.unitsSold.toLocaleString("id-ID")} </strong>
-                </div>
-
-                <div class="flex justify-between">
-                  <span> Revenue / Cup </span>
-                  <strong> Rp ${res.insights.revenuePerCup.toLocaleString("id-ID")} </strong>
-                </div>
-
-                <div class="flex justify-between">
-                  <span>Profit Margin</span>
-                  <strong class="${Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600" }"> ${res.insights.profitMargin}% </strong>
-                </div>
+                ${renderDrilldownMetric("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions")}
+                ${renderDrilldownMetric("Revenue / Cup", "Rp " + res.insights.revenuePerCup.toLocaleString("id-ID"), "sales", "Revenue per cup transactions")}
+                ${renderDrilldownMetric("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600")}
             </div>
           </div>
 
@@ -1786,15 +1805,8 @@
             </div>
 
             <div class="space-y-4">
-                <div class="flex justify-between">
-                  <span>Best Seller</span>
-                  <strong> ${res.summary.bestSeller || "-"} </strong>
-                </div>
-
-                <div class="flex justify-between">
-                  <span> Top Revenue </span>
-                  <strong> ${res.summary.topRevenueProduct || "-"} </strong>
-                </div>
+                ${renderDrilldownMetric("Best Seller", res.summary.bestSeller || "-", "sales", "Best seller supporting transactions")}
+                ${renderDrilldownMetric("Top Revenue", res.summary.topRevenueProduct || "-", "sales", "Top revenue supporting transactions")}
             </div>
           </div>
 
@@ -2324,6 +2336,18 @@
             animation: shouldReduceMotion() ? false : undefined,
             responsive: true,
             maintainAspectRatio: false,
+            onClick: function(event, elements)
+            {
+              if (elements.length)
+              {
+                var month = labels[elements[0].index];
+                applyTransactionDrilldown(
+                  "month",
+                  month,
+                  "Revenue trend · " + formatChartMonthLabel(month)
+                );
+              }
+            },
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -2384,6 +2408,17 @@
             animation: shouldReduceMotion() ? false : undefined,
             responsive: true,
             maintainAspectRatio: false,
+            onClick: function(event, elements)
+            {
+              if (elements.length)
+              {
+                applyTransactionDrilldown(
+                  "sales",
+                  "",
+                  "Product distribution transactions"
+                );
+              }
+            },
             plugins: {
               tooltip: {
                 callbacks: {
@@ -2455,6 +2490,18 @@
             indexAxis: "y",
             responsive: true,
             maintainAspectRatio: false,
+            onClick: function(event, elements)
+            {
+              if (elements.length)
+              {
+                var category = expenseData[elements[0].index].category;
+                applyTransactionDrilldown(
+                  "expenseCategory",
+                  category,
+                  "Expense category · " + category
+                );
+              }
+            },
             layout: { padding: { right: 8 } },
             plugins: {
               legend: { display: false },
@@ -2820,16 +2867,47 @@
     //--------------------------------------------------
     // Render Transactions
     //--------------------------------------------------
-    function renderTransactions(res)
+    function filterTransactionDrilldown(transactions, drilldown)
     {
-      var recentTransactions =
-        Array.isArray(res.recentTransactions)
-          ? res.recentTransactions
-          : [];
+      if (!drilldown || drilldown.type === "all")
+      {
+        return transactions.slice();
+      }
 
-      initializeStableDashboardElements().tableBody.innerHTML =
-        recentTransactions.length
-          ? recentTransactions.map(function(r)
+      return transactions.filter(function(transaction)
+      {
+        if (drilldown.type === "sales")
+        {
+          return transaction.transactionType === "Sales";
+        }
+
+        if (drilldown.type === "purchase")
+        {
+          return transaction.transactionType === "Purchase";
+        }
+
+        if (drilldown.type === "month")
+        {
+          return String(transaction.date || "").slice(0, 7) === drilldown.value;
+        }
+
+        if (drilldown.type === "expenseCategory")
+        {
+          return transaction.transactionType === "Purchase" &&
+            transaction.purchaseCategory === drilldown.value;
+        }
+
+        return false;
+      });
+    }
+
+    function renderTransactionRows(transactions)
+    {
+      var elements = initializeStableDashboardElements();
+
+      elements.tableBody.innerHTML =
+        transactions.length
+          ? transactions.map(function(r)
             {
               var amount = r.revenue || r.expense || 0;
               return `
@@ -2853,9 +2931,68 @@
             }).join("")
           : '<tr><td colspan="5" class="p-6 text-center text-slate-500">No recent transactions for the selected period.</td></tr>';
 
-      visibleTransactionRowCount = recentTransactions.length;
-      initializeStableDashboardElements().exportCsvButton.disabled =
+      visibleTransactionRowCount = transactions.length;
+      elements.exportCsvButton.disabled =
         visibleTransactionRowCount === 0;
+    }
+
+    function updateTransactionDrilldownPresentation(transactions)
+    {
+      var elements = initializeStableDashboardElements();
+      var isActive = Boolean(activeTransactionDrilldown);
+
+      elements.transactionDrilldownSummary.classList.toggle("hidden", !isActive);
+      elements.transactionsDescription.innerText = isActive
+        ? "Filtered from the latest 10 transactions already loaded for the active period."
+        : "Latest business activities";
+      elements.transactionDrilldownText.innerText = isActive
+        ? activeTransactionDrilldown.label + " · " + transactions.length + " matching rows"
+        : "";
+    }
+
+    function applyTransactionDrilldown(type, value, label)
+    {
+      activeTransactionDrilldown = {
+        type: type,
+        value: value,
+        label: label
+      };
+
+      var transactions = filterTransactionDrilldown(
+        latestDashboardTransactions,
+        activeTransactionDrilldown
+      );
+
+      renderTransactionRows(transactions);
+      updateTransactionDrilldownPresentation(transactions);
+      showPage("transactions");
+      initializeStableDashboardElements().transactionsHeading.focus();
+    }
+
+    function clearTransactionDrilldown()
+    {
+      activeTransactionDrilldown = null;
+      var transactions = latestDashboardTransactions.slice();
+
+      renderTransactionRows(transactions);
+      updateTransactionDrilldownPresentation(transactions);
+      initializeStableDashboardElements().transactionsHeading.focus();
+    }
+
+    function renderTransactions(res)
+    {
+      latestDashboardTransactions =
+        Array.isArray(res.recentTransactions)
+          ? res.recentTransactions.slice()
+          : [];
+
+      var transactions = filterTransactionDrilldown(
+        latestDashboardTransactions,
+        activeTransactionDrilldown
+      );
+
+      renderTransactionRows(transactions);
+      updateTransactionDrilldownPresentation(transactions);
     }
 
     //--------------------------------------------------

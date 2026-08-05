@@ -149,6 +149,12 @@ Package 001's original closure gaps were spreadsheet-formula neutralization and 
 
 Complete. Before CSV quoting, the serializer inserts one apostrophe before a first non-whitespace `=`, `+`, `-`, or `@`. It preserves normal text, dates, currency display, the numeric-column `-` placeholder, valid negative numeric values such as `-12500`, and already-neutralized values without adding a second apostrophe. Eight behavioral cases raise `testCsvExportContract()` to 14 scenarios while the runner remains at 25 entries and the client-render contract remains exactly 72 ID queries, two selector queries, and no response mutation. The package adds no data, permission, backend/API, spreadsheet, history, persistence, or layout scope. Live `testCsvExportContract()` and `testClientRenderPerformanceContract()` passed, followed by live `runAllBackendTests()` PASS 25/25.
 
+## Sprint 5.14 — interactive KPI drill-down
+
+### Sprint 5.14 Package 001 — bounded recent-transaction evidence
+
+Completed locally. Existing KPI and chart summaries now open filtered transaction evidence from only the active response's maximum ten `recentTransactions`. Revenue/Sales, Expense/Purchase, combined Profit/Margin, Revenue-month, and Expense-category views retain source order and the authoritative reporting period; Product Distribution exposes only its available Sales evidence without inventing row-level Hot/Cold data. Accessible buttons, focus transfer, an announced filter/count summary, clear behavior, and the existing responsive table are preserved. The focused four-scenario contract is invoked within the existing chart-presentation runner entry, so the ordered gate remains 25 tests. Local `runAllBackendTests()` passed 25/25 with 71 ID queries, two selector queries, one deferred phase, and no response mutation. Upload, Apps Script runtime, deployment, and browser acceptance were not performed.
+
 ## Ongoing release obligations
 
 - Keep `10.Config.js` and `docs/CHANGELOG.md` synchronized for every future release.

@@ -2499,7 +2499,7 @@ function testCsvExportContract()
   scenariosPassed++;
 
   [
-    'visibleTransactionRowCount = recentTransactions.length;',
+    'visibleTransactionRowCount = transactions.length;',
     'visibleTransactionRowCount === 0;',
     'if (!visibleRows.length)'
   ].forEach(function(token)
@@ -2834,6 +2834,140 @@ function testClientRenderPerformanceContract()
   return summary;
 }
 
+function testInteractiveDrilldownContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  [
+    'id="transactionsHeading"',
+    'id="transactionDrilldownSummary"',
+    'id="transactionDrilldownText"',
+    'id="clearTransactionDrilldownButton"',
+    'aria-live="polite"',
+    'onclick="clearTransactionDrilldown()"',
+    '>View transactions</button>'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "drill-down accessible controls");
+  });
+  scenariosPassed++;
+
+  [
+    'renderDrilldownMetric("Revenue",',
+    'renderDrilldownMetric("Expense",',
+    'renderDrilldownMetric("Profit",',
+    'renderDrilldownMetric("Units Sold",',
+    '"month",',
+    '"expenseCategory",',
+    'showPage("transactions");',
+    'transactionsHeading.focus();'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "KPI and chart drill-down wiring");
+  });
+  scenariosPassed++;
+
+  var filterStart =
+    source.indexOf("function filterTransactionDrilldown(");
+  var filterEnd =
+    source.indexOf("function renderTransactionRows", filterStart);
+  var filterSource =
+    source.slice(filterStart, filterEnd).trim();
+  var filterTransactionDrilldown =
+    Function("return (" + filterSource + ");")();
+  var transactions = [
+    { date: "2025-03-12", transactionType: "Purchase", purchaseCategory: "Supplies" },
+    { date: "2025-03-11", transactionType: "Sales", product: "Latte" },
+    { date: "2025-02-10", transactionType: "Sales", product: "Espresso" },
+    { date: "2025-01-10", transactionType: "Purchase", purchaseCategory: "Rent" }
+  ];
+  var original = JSON.stringify(transactions);
+  var cases = [
+    { type: "all", value: "", expected: "Purchase,Sales,Sales,Purchase" },
+    { type: "sales", value: "", expected: "Sales,Sales" },
+    { type: "purchase", value: "", expected: "Purchase,Purchase" },
+    { type: "month", value: "2025-03", expected: "Purchase,Sales" },
+    { type: "expenseCategory", value: "Supplies", expected: "Purchase" },
+    { type: "expenseCategory", value: "Missing", expected: "" }
+  ];
+
+  cases.forEach(function(testCase)
+  {
+    var actual =
+      filterTransactionDrilldown(transactions, testCase)
+        .map(function(transaction)
+        {
+          return transaction.transactionType;
+        })
+        .join(",");
+
+    if (actual !== testCase.expected)
+    {
+      throw new Error(
+        "Drill-down filter mismatch for " + testCase.type +
+        ": expected=" + testCase.expected + ", actual=" + actual
+      );
+    }
+  });
+
+  if (JSON.stringify(transactions) !== original)
+  {
+    throw new Error("Drill-down filtering mutated response transactions");
+  }
+  scenariosPassed++;
+
+  [
+    "latestDashboardTransactions =",
+    "res.recentTransactions.slice()",
+    "Filtered from the latest 10 transactions already loaded for the active period.",
+    "latestDashboardTransactions.slice()"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded existing-response scope");
+  });
+
+  var applyStart =
+    source.indexOf("function applyTransactionDrilldown(");
+  var applyEnd =
+    source.indexOf("function clearTransactionDrilldown", applyStart);
+  var applySource = source.slice(applyStart, applyEnd);
+
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "spreadsheet",
+    "localStorage",
+    "sessionStorage",
+    "fetch("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(applySource, token, "frontend-only drill-down");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    boundedRows: 10,
+    responseMutation: false
+  };
+
+  Logger.log(
+    "PASS: testInteractiveDrilldownContract | scenarios=" +
+    summary.scenarios +
+    " | boundedRows=" +
+    summary.boundedRows +
+    " | responseMutation=" +
+    summary.responseMutation
+  );
+
+  return summary;
+}
+
 function testChartPresentationContract()
 {
   var source =
@@ -2843,6 +2977,8 @@ function testChartPresentationContract()
 
   var fixtures =
     createChartPresentationContractFixtures();
+  var drilldownContract =
+    testInteractiveDrilldownContract();
 
   fixtures.forEach(function(fixture)
   {
@@ -2879,7 +3015,8 @@ function testChartPresentationContract()
   var summary = {
     passed: true,
     scenarios: fixtures.length,
-    charts: ["revenue", "hotCold", "expense"]
+    charts: ["revenue", "hotCold", "expense"],
+    drilldownScenarios: drilldownContract.scenarios
   };
 
   Logger.log(

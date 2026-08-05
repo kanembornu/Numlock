@@ -2,6 +2,12 @@
 
 ## Active decisions
 
+### Bound drill-down to already-loaded recent transaction evidence
+
+KPI and chart drill-down is frontend-only and filters a copied view of the response's existing `recentTransactions` collection, which remains capped at ten rows and scoped by the authoritative dashboard date filter. Revenue and sales KPIs select Sales rows, Expense selects Purchase rows, Profit and margin retain both types, Revenue chart points select a represented month, and Expense chart points select a purchase category. Product Distribution opens its available Sales evidence without claiming Hot/Cold row classification because that field is not present in the transaction projection.
+
+The interaction preserves response fields, backend calls, spreadsheet reads, analytics, permissions, filter/retry state, and source ordering. It does not request expanded history, expose hidden fields, persist selection, or mutate the response. Accessible buttons provide keyboard equivalents for canvas interactions; the Transactions page receives focus, identifies the bounded ten-row evidence scope, announces the active filter and matching count, and provides a clear action.
+
 ### Keep filtered executive reporting browser-native and print-only
 
 The active dashboard DOM is the sole print-report source. One native, labeled Print Report button is enabled only after a successful dashboard render, copies the already-rendered active period into a print-only header, records the browser-generated date, retains the injected NUMLOCK version, and invokes `window.print()` exactly once. It performs no server call, analytics calculation, export transformation, persistence, or response-field access.
