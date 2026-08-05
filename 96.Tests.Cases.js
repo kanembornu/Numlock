@@ -2502,7 +2502,7 @@ function testDashboardTabFrameworkContract()
   [
     "#dashboardTabList { height: 48px; }",
     ".dashboard-tab-panel:not(#dashboardPanelOverview)",
-    "max-height: calc(100dvh - 152px);",
+    "height: calc(100dvh - 188px);",
     "#dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }",
     "@media (max-width: 1023px)",
     "#contentViewport { overflow: visible; }"
@@ -4316,6 +4316,230 @@ function testDataQualityDiagnostics()
     summary.scenarios +
     " | statuses=" +
     summary.statuses.join(",")
+  );
+
+  return summary;
+}
+
+function testPerformanceAnalyticsVisualContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  var ownership = {
+    performance: [
+      "businessPerformanceSection",
+      "revenueChartSection"
+    ],
+    analytics: [
+      "hotColdChartSection",
+      "expenseChartSection",
+      "topProductsSection",
+      "productConcentrationSection"
+    ]
+  };
+
+  Object.keys(ownership).forEach(function(panelName)
+  {
+    ownership[panelName].forEach(function(sectionId)
+    {
+      assertSourceContainsOnce(
+        source,
+        'staging.querySelector("#' + sectionId + '")',
+        panelName + " ownership / " + sectionId
+      );
+    });
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardPanelPerformance:not([hidden])",
+    "grid-template-columns: minmax(0, 5fr) minmax(0, 7fr)",
+    'id="businessPerformanceSection"',
+    'id="revenueChartSection"',
+    "Primary trend",
+    'id="mainChartWrapper"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Performance hero hierarchy");
+  });
+  scenariosPassed++;
+
+  [
+    'id="revenueIntelContainer"',
+    'id="expenseIntelContainer"',
+    'id="profitIntelContainer"',
+    'id="marginIntelContainer"',
+    'id="unitsIntelContainer"',
+    'label:"Revenue"',
+    'label:"Expense"',
+    'label:"Profit"',
+    'label:"Profit Margin"',
+    'label:"Units Sold"',
+    "res.summary.revenue.toLocaleString",
+    "res.summary.expense.toLocaleString",
+    "res.summary.profit.toLocaleString",
+    "res.insights.profitMargin",
+    "res.summary.unitsSold.toLocaleString"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact five-metric summary");
+  });
+
+  var performanceStart = source.indexOf('id="businessPerformanceSection"');
+  var performanceEnd = source.indexOf('</section>', performanceStart);
+  var performanceSource = source.slice(performanceStart, performanceEnd);
+  [
+    "overview-kpi-value",
+    "renderOverviewKpiCard(",
+    "sparkline"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      performanceSource,
+      token,
+      "non-duplicated Overview KPI presentation"
+    );
+  });
+  scenariosPassed++;
+
+  [
+    "function renderRevenueChart(revenueTrend)",
+    "function renderHotColdChart(hotColdSplit)",
+    "function renderExpenseChart(expenseBreakdown)",
+    "revenueChart = destroyChartInstance(revenueChart);",
+    "hotColdChart = destroyChartInstance(hotColdChart);",
+    "expenseChart = destroyChartInstance(expenseChart);",
+    "beginAtZero: true",
+    "min: 0",
+    'indexAxis: "y"',
+    'labels: ["Hot", "Cold"]',
+    "percentage.toFixed(1)",
+    "expenseBreakdown.slice()",
+    "labels.map(formatChartMonthLabel)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "three preserved chart contracts");
+  });
+  scenariosPassed++;
+
+  [
+    'id="topProductsSection"',
+    "topProducts .slice(0,5) .map(function(p,index)",
+    "p.qty",
+    'p.revenue.toLocaleString("id-ID")',
+    'id="revenueDependencyContainer"',
+    "res.revenueConcentration.product",
+    "res.revenueConcentration.contribution",
+    'id="paretoContainer"',
+    "res.paretoAnalysis.ratio",
+    "res.paretoAnalysis.criticalProducts",
+    "res.paretoAnalysis.totalProducts"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "product analytical evidence");
+  });
+  scenariosPassed++;
+
+  [
+    'id="revenueChartSummary"',
+    'id="hotColdChartSummary"',
+    'id="expenseChartSummary"',
+    'aria-labelledby="revenueChartTitle"',
+    'aria-labelledby="hotColdChartTitle"',
+    'aria-labelledby="expenseChartTitle"',
+    "shouldReduceMotion() ? false : undefined",
+    "pointHoverRadius: 7",
+    "usePointStyle: true",
+    "chart.options.plugins.legend.labels.color = palette.axis;",
+    "synchronizeChartTheme(false);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "accessible theme-aware chart treatment");
+  });
+  scenariosPassed++;
+
+  [
+    "height: calc(100dvh - 188px);",
+    "#dashboardPanelPerformance:not([hidden])",
+    "#dashboardPanelAnalytics:not([hidden])",
+    "overflow: hidden;",
+    "@media (max-width: 1023px)",
+    "#dashboardPanelAnalytics { height: auto; overflow: visible; }",
+    "min-width: 0"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "desktop and mobile containment");
+  });
+  scenariosPassed++;
+
+  var tabFunctionStart =
+    source.indexOf("function resizeVisibleDashboardCharts(tabName)");
+  var tabFunctionEnd =
+    source.indexOf("function setDesktopSidebarCollapsed", tabFunctionStart);
+  var tabFunctionSource =
+    source.slice(tabFunctionStart, tabFunctionEnd);
+
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "requestDashboardData("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      tabFunctionSource,
+      token,
+      "Performance/Analytics tab backend request"
+    );
+  });
+
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "visual response mutation");
+  });
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Performance/Analytics query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    performanceMetrics: 5,
+    charts: 3,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testPerformanceAnalyticsVisualContract | scenarios=" +
+    summary.scenarios +
+    " | performanceMetrics=" +
+    summary.performanceMetrics +
+    " | charts=" +
+    summary.charts +
+    " | backendRequests=" +
+    summary.backendRequests +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
   );
 
   return summary;

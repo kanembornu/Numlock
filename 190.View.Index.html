@@ -63,6 +63,8 @@
       .dashboard-tab-panel { min-width: 0; }
       .overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
+      .analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
+      .performance-metric-value { font-variant-numeric: tabular-nums; }
       #sidebarBackdrop { background: var(--overlay); }
       .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
       .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
@@ -84,11 +86,20 @@
         #dashboardSidebar { transform: translateX(0); }
         #mainContent { margin-left: 240px; height: 100vh; height: 100dvh; overflow: hidden; }
         #contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow: hidden; }
-        .dashboard-tab-panel:not(#dashboardPanelOverview) { max-height: calc(100dvh - 152px); overflow-y: auto; }
+        .dashboard-tab-panel:not(#dashboardPanelOverview) { height: calc(100dvh - 188px); overflow-y: auto; }
         #dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }
         #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
+        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 12px; overflow: hidden; }
+        #dashboardPanelPerformance #businessPerformanceSection,
+        #dashboardPanelPerformance #revenueChartSection { height: 100%; margin: 0; }
+        #dashboardPanelPerformance #mainChartWrapper { height: calc(100% - 76px); min-height: 300px; }
+        #dashboardPanelAnalytics:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
+        #dashboardPanelAnalytics > section,
+        #dashboardPanelAnalytics > div { min-height: 0; height: 100%; margin: 0; }
+        #dashboardPanelAnalytics #hotColdWrapper,
+        #dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 148px; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -101,6 +112,8 @@
       {
         #dashboardSidebar { width: min(320px, calc(100vw - 32px)); }
         #contentViewport { overflow: visible; }
+        #dashboardPanelPerformance,
+        #dashboardPanelAnalytics { height: auto; overflow: visible; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -678,14 +691,13 @@
       </section>
     </div>
 
-    <!-- CHART ROW -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
-      <section id="revenueChartSection" class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="revenueChartTitle">
+    <!-- PERFORMANCE HERO -->
+      <section id="revenueChartSection" class="analytics-surface min-w-0 rounded-2xl border p-4" role="region" aria-labelledby="revenueChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="revenueChartTitle" class="font-semibold"> Revenue Trend </h2>
-          <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
+          <div><p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Primary trend</p><h2 id="revenueChartTitle" class="mt-1 text-lg font-bold">Revenue Trend</h2></div>
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
         </div>
-        <p id="revenueChartSummary" class="mb-4 text-sm text-slate-500"></p>
+        <p id="revenueChartSummary" class="mb-2 text-xs text-slate-500"></p>
         <div id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="mainChart" aria-hidden="true"></canvas>
             <p id="revenueChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
@@ -693,27 +705,25 @@
         </div>
       </section>
 
-      <section id="hotColdChartSection" class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="hotColdChartTitle">
+      <section id="hotColdChartSection" class="analytics-surface min-w-0 rounded-2xl border p-3" role="region" aria-labelledby="hotColdChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="hotColdChartTitle" class="font-semibold"> Product Distribution </h2>
-          <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Product distribution transactions')">View transactions</button>
+          <h2 id="hotColdChartTitle" class="text-sm font-bold">Hot/Cold Split</h2>
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Product distribution transactions')">View transactions</button>
         </div>
-        <p id="hotColdChartSummary" class="mb-4 text-sm text-slate-500"></p>
+        <p id="hotColdChartSummary" class="mb-2 text-xs text-slate-500"></p>
         <div id="hotColdWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="hotColdChart" aria-hidden="true"></canvas>
             <p id="hotColdChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="hotColdSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
       </section>
-    </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-6">
-      <section id="topProductsSection" class="min-w-0 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" aria-labelledby="topProductsTitle">
-        <h2 id="topProductsTitle" class="font-semibold mb-4"> Top Products </h2>
+      <section id="topProductsSection" class="analytics-surface min-w-0 rounded-2xl border p-3" aria-labelledby="topProductsTitle">
+        <div class="mb-2 flex items-center justify-between gap-2"><h2 id="topProductsTitle" class="text-sm font-bold">Top Products</h2><span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Current ranking</span></div>
         <div id="topProductWrapper" class="relative">
           <div id="topProductsContainer"></div>
-          <div id="topProductSkeleton" class="hidden absolute inset-0 bg-white rounded-[32px] p-7">
-            <div class="space-y-5">
+          <div id="topProductSkeleton" class="hidden absolute inset-0 bg-white rounded-2xl p-3">
+            <div class="space-y-3">
             <div class="skeleton h-5 w-1/2"></div>
             <div class="skeleton h-4 w-full"></div>
             <div class="skeleton h-4 w-5/6"></div>
@@ -725,19 +735,18 @@
         </div>
       </section>
 
-      <section id="expenseChartSection" class="min-w-0 xl:col-span-2 bg-white rounded-[32px] p-5 sm:p-7 shadow-lg border border-slate-100" role="region" aria-labelledby="expenseChartTitle">
+      <section id="expenseChartSection" class="analytics-surface min-w-0 rounded-2xl border p-3" role="region" aria-labelledby="expenseChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="expenseChartTitle" class="font-semibold"> Expense Breakdown </h2>
-          <button type="button" class="rounded-xl border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700" onclick="applyTransactionDrilldown('purchase', '', 'Expense transactions')">View transactions</button>
+          <h2 id="expenseChartTitle" class="text-sm font-bold">Expense Breakdown</h2>
+          <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('purchase', '', 'Expense transactions')">View transactions</button>
         </div>
-        <p id="expenseChartSummary" class="mb-4 text-sm text-slate-500"></p>
+        <p id="expenseChartSummary" class="mb-2 text-xs text-slate-500"></p>
         <div id="expenseWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="expenseChart" aria-hidden="true"></canvas>
             <p id="expenseChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="expenseSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
       </section>
-    </div>
 
     <!-- ==================================================
         DASHBOARD INTELLIGENCE
@@ -766,23 +775,23 @@
       </section>
 
       <!-- BUSINESS INTELLIGENCE -->
-      <section id="businessPerformanceSection" class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 h-full flex flex-col">
+      <section id="businessPerformanceSection" class="analytics-surface min-w-0 rounded-2xl border p-4 h-full flex flex-col" aria-labelledby="businessPerformanceTitle">
 
-        <div class="mb-6">
+        <div class="mb-3">
           <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
             Performance Detail
           </p>
 
-          <h2 class="mt-2 text-[2rem] font-bold text-slate-900">
+          <h2 id="businessPerformanceTitle" class="mt-1 text-lg font-bold text-slate-900">
             Business Performance
           </h2>
 
-          <p class="mt-2 text-[15px] text-slate-500">
-            Revenue, expense, profit, and forecast facts
+          <p class="mt-1 text-xs text-slate-500">
+            Five current-period measures with factual context
           </p>
         </div>
 
-        <div class="grid min-w-0 grid-cols-1 gap-5 flex-1 auto-rows-fr sm:grid-cols-2">
+        <div class="min-w-0 flex-1 divide-y divide-slate-200" role="list" aria-label="Performance metrics">
 
           <div class="self-start" id="revenueIntelContainer"></div>
 
@@ -790,9 +799,13 @@
 
           <div class="self-start" id="profitIntelContainer"></div>
 
-          <div class="self-start" id="forecastContainer"></div>
+          <div class="self-start" id="marginIntelContainer"></div>
+
+          <div class="self-start" id="unitsIntelContainer"></div>
 
         </div>
+
+        <div id="forecastContainer" class="mt-3 rounded-xl bg-slate-50 px-3 py-2"></div>
 
         <div id="kpiTargetReference" class="mt-5 border-t border-slate-200 pt-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -873,14 +886,14 @@
     </div>
 
     <!-- PRODUCT PERFORMANCE -->
-    <div id="productConcentrationSection" class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
-      <div class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100">
-        <div class="text-sm uppercase tracking-wider text-slate-500 mb-2"> 🎯 Revenue Dependency </div>
+    <div id="productConcentrationSection" class="analytics-surface grid grid-cols-1 gap-2 rounded-2xl border p-3 sm:grid-cols-2">
+      <div class="ui-theme-inset rounded-xl border p-3">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Product Contribution / Revenue Dependency</div>
         <div id="revenueDependencyContainer"> </div>
       </div>
 
-      <div class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100">
-        <div class="text-sm uppercase tracking-wider text-slate-500 mb-2"> 📊 Pareto Analysis </div>
+      <div class="ui-theme-inset rounded-xl border p-3">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Revenue Concentration / Pareto Analysis</div>
         <div id="paretoContainer"> </div>
       </div>
     </div>
@@ -1509,6 +1522,8 @@
       {
         revenueChart.data.datasets[0].borderColor = palette.series[0];
         revenueChart.data.datasets[0].backgroundColor = palette.revenueFill;
+        revenueChart.data.datasets[0].pointBackgroundColor = palette.series[0];
+        revenueChart.data.datasets[0].pointBorderColor = palette.tooltipText;
       }
 
       if (hotColdChart)
@@ -1537,6 +1552,14 @@
             palette.tooltipBackground;
           chart.options.plugins.tooltip.titleColor = palette.tooltipText;
           chart.options.plugins.tooltip.bodyColor = palette.tooltipText;
+
+          if (
+            chart.options.plugins.legend &&
+            chart.options.plugins.legend.labels
+          )
+          {
+            chart.options.plugins.legend.labels.color = palette.axis;
+          }
 
           Object.keys(chart.options.scales || {})
             .forEach(function(axisKey)
@@ -2806,127 +2829,14 @@
 
     function renderIntelCard(config)
     {
-      const theme =
-      {
-        indigo:
-        {
-          bg:"bg-indigo-50",
-          border:"border-indigo-100",
-          badge:"bg-indigo-100",
-          value:"text-slate-900"
-        },
-
-        rose:
-        {
-          bg:"bg-rose-50",
-          border:"border-rose-100",
-          badge:"bg-rose-100",
-          value:"text-slate-900"
-        },
-
-        amber:
-        {
-          bg:"bg-amber-50",
-          border:"border-amber-100",
-          badge:"bg-amber-100",
-          value:"text-slate-900"
-        },
-
-        emerald:
-        {
-          bg:"bg-emerald-50",
-          border:"border-emerald-100",
-          badge:"bg-emerald-100",
-          value:"text-slate-900"
-        }
-
-      }[config.theme];
-
       return `
-
-    <div class="
-    ${theme.bg}
-    border
-    ${theme.border}
-    rounded-[28px]
-    p-6
-    h-full
-    flex
-    flex-col
-    justify-between">
-
-        <div>
-
-            <div class="flex items-start justify-between">
-
-                <div class="text-[11px]
-                            tracking-[0.25em]
-                            uppercase
-                            font-bold
-                            text-slate-500">
-
-                    ${config.label}
-
-                </div>
-
-                <div class="
-                ${theme.badge}
-                w-11
-                h-11
-                rounded-2xl
-                flex
-                items-center
-                justify-center">
-
-                    ${config.icon}
-
-                </div>
-
-            </div>
-
-            <div class="mt-8">
-
-                <div class="text-[18px]
-                            font-semibold
-                            text-slate-900">
-
-                    ${config.title}
-
-                </div>
-
-                <div class="
-                            mt-3
-                            text-[24px]
-                            leading-tight
-                            font-extrabold
-                            ${theme.value}">
-
-                    ${config.value}
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <div class="mt-8
-                    pt-5
-                    border-t
-                    border-slate-200">
-
-            <div class="text-[15px]
-                        text-slate-500
-                        leading-relaxed">
-
-                ${config.subtitle}
-
-            </div>
-
-        </div>
-
-    </div>
-
-    `;
+        <div class="flex min-h-[58px] items-center justify-between gap-3 py-2" role="listitem">
+          <div class="min-w-0">
+            <div class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">${config.label}</div>
+            <div class="mt-1 truncate text-xs text-slate-500">${config.subtitle}</div>
+          </div>
+          <div class="performance-metric-value shrink-0 text-right text-lg font-extrabold ${config.valueClass || "text-slate-900"}">${config.value}</div>
+        </div>`;
 
     }
     
@@ -3131,6 +3041,12 @@
               borderColor: chartPalette.series[0],
               backgroundColor: chartPalette.revenueFill,
               borderWidth: 3,
+              pointRadius: 3,
+              pointHoverRadius: 7,
+              pointHitRadius: 12,
+              pointBorderWidth: 2,
+              pointBackgroundColor: chartPalette.series[0],
+              pointBorderColor: chartPalette.tooltipText,
               fill: true,
               tension: 0.4,
               spanGaps: false
@@ -3158,6 +3074,8 @@
                 backgroundColor: chartPalette.tooltipBackground,
                 titleColor: chartPalette.tooltipText,
                 bodyColor: chartPalette.tooltipText,
+                displayColors: false,
+                padding: 12,
                 callbacks: {
                   label: function(context) { return "Revenue: " + formatChartCurrency(context.raw); }
                 }
@@ -3228,10 +3146,20 @@
               }
             },
             plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  color: chartPalette.axis,
+                  usePointStyle: true,
+                  pointStyle: "circle",
+                  padding: 16
+                }
+              },
               tooltip: {
                 backgroundColor: chartPalette.tooltipBackground,
                 titleColor: chartPalette.tooltipText,
                 bodyColor: chartPalette.tooltipText,
+                padding: 12,
                 callbacks: {
                   label: function(context)
                   {
@@ -3356,18 +3284,18 @@
     document.getElementById( "topProductsContainer" ).innerHTML = topProducts .slice(0,5) .map(function(p,index)
     {
       return `
-        <div class="flex justify-between items-center py-4 border-b border-slate-100">
+        <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
           <div>
-            <div class="font-semibold">
+            <div class="text-sm font-semibold">
               ${index === 0 ? "🥇" :
               index === 1 ? "🥈" :
               index === 2 ? "🥉" :
               "#" + (index + 1)}
               ${p.name}
             </div>
-            <div class="text-sm text-slate-500"> ${p.qty} cups sold </div>
+            <div class="text-xs text-slate-500"> ${p.qty} cups sold </div>
           </div>
-          <div class="font-bold"> Rp ${p.revenue.toLocaleString("id-ID")} </div>
+          <div class="performance-metric-value text-right text-sm font-bold"> Rp ${p.revenue.toLocaleString("id-ID")} </div>
         </div>
         `;
       }).join("");
@@ -3399,10 +3327,6 @@
 
           icon:heroIcon("revenue"),
 
-          title:"Revenue",
-
-          title:"Revenue",
-
           value:
           "Rp " +
           res.summary.revenue.toLocaleString("id-ID"),
@@ -3419,56 +3343,48 @@
         document.getElementById("expenseIntelContainer").innerHTML =
         renderIntelCard({
 
-          theme:"rose",
-
           label:"Expense",
-
-          icon:heroIcon("expense"),
-
-          title:
-          res.expenseIntelligence.highestExpense,
-
           value:
           "Rp " +
-          res.expenseIntelligence.highestAmount.toLocaleString("id-ID"),
+          res.summary.expense.toLocaleString("id-ID"),
 
           subtitle:
-          res.expenseIntelligence.expenseShare +
-          "% dari total biaya"
+          "Largest: " + res.expenseIntelligence.highestExpense + " · " +
+          res.expenseIntelligence.expenseShare + "% of total"
 
           });
 
-        document.getElementById("profitIntelContainer").innerHTML =
+        var profitMetricContainer =
+          document.getElementById("profitIntelContainer");
+
+        profitMetricContainer.innerHTML =
         renderIntelCard({
 
-          theme:
-          res.summary.profit>=0
-          ?
-          "emerald"
-          :
-          "amber",
-
           label:"Profit",
-
-          icon:heroIcon("profit"),
-
-          title:
-          res.summary.profit>=0
-          ?
-          "Net Profit"
-          :
-          "Net Loss",
-
           value:
           "Rp " +
-          Math.abs(res.summary.profit).toLocaleString("id-ID"),
+          res.summary.profit.toLocaleString("id-ID"),
 
           subtitle:
-          "Margin " +
-          res.insights.profitMargin +
-          "%"
+          res.summary.profit >= 0 ? "Net profit" : "Net loss",
+
+          valueClass: res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"
 
           });
+
+        profitMetricContainer.nextElementSibling.innerHTML =
+        renderIntelCard({
+          label:"Profit Margin",
+          value:res.insights.profitMargin + "%",
+          subtitle:"Current reporting period"
+        });
+
+        profitMetricContainer.nextElementSibling.nextElementSibling.innerHTML =
+        renderIntelCard({
+          label:"Units Sold",
+          value:res.summary.unitsSold.toLocaleString("id-ID"),
+          subtitle:"Sales units in scope"
+        });
       }
 
       if (res.forecast)
@@ -3479,28 +3395,14 @@
             : "text-red-600";
 
         document.getElementById("forecastContainer").innerHTML =
-        renderIntelCard({
-
-          theme:"indigo",
-
-          label:"Forecast",
-
-          icon:heroIcon("forecast"),
-
-          title:"Next Month",
-
-          value:
-          "Rp " +
-          res.forecast.nextMonthRevenue.toLocaleString("id-ID"),
-
-          subtitle:
-          (res.forecast.growthRate>=0 ? "▲ " : "▼ ")
-          +
-          Math.abs(res.forecast.growthRate)
-          +
-          "% forecast"
-
-          });
+        '<div class="flex items-center justify-between gap-3 text-xs">' +
+        '<span class="font-semibold text-slate-600">Next-month forecast</span>' +
+        '<span class="performance-metric-value font-bold text-slate-900">Rp ' +
+        res.forecast.nextMonthRevenue.toLocaleString("id-ID") +
+        ' · ' +
+        (res.forecast.growthRate >= 0 ? "▲ " : "▼ ") +
+        Math.abs(res.forecast.growthRate) +
+        '%</span></div>';
       }
     }
 
@@ -3637,10 +3539,10 @@
           }
 
       document.getElementById("revenueDependencyContainer").innerHTML = `
-      <div class="space-y-3">
-        <div class="text-3xl font-bold"> ${res.revenueConcentration.product} </div>
-        <div class="text-lg"> ${res.revenueConcentration.contribution}% of Revenue </div>
-        <div class="${riskColor} font-semibold"> Dependency Risk: ${res.revenueConcentration.risk}</div>
+      <div class="space-y-1">
+        <div class="truncate text-base font-bold"> ${res.revenueConcentration.product} </div>
+        <div class="performance-metric-value text-xl font-extrabold"> ${res.revenueConcentration.contribution}% of Revenue </div>
+        <div class="text-xs ${riskColor} font-semibold"> Dependency Risk: ${res.revenueConcentration.risk}</div>
       </div>
       `;
       }
@@ -3658,10 +3560,10 @@
         }
 
         document.getElementById("paretoContainer").innerHTML = `
-        <div class="space-y-3">
-        <div class="text-4xl font-bold"> ${res.paretoAnalysis.ratio}% </div>
-        <div> ${res.paretoAnalysis.criticalProducts} dari ${res.paretoAnalysis.totalProducts} produk menghasilkan 80% revenue </div>
-        <div class="${concentrationColor} font-semibold"> Revenue Concentration: ${res.paretoAnalysis.concentration} </div>
+        <div class="space-y-1">
+        <div class="performance-metric-value text-xl font-extrabold"> ${res.paretoAnalysis.ratio}% </div>
+        <div class="text-xs"> ${res.paretoAnalysis.criticalProducts} dari ${res.paretoAnalysis.totalProducts} produk menghasilkan 80% revenue </div>
+        <div class="text-xs ${concentrationColor} font-semibold"> Revenue Concentration: ${res.paretoAnalysis.concentration} </div>
         </div>
         `;
       }

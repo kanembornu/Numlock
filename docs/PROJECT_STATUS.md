@@ -22,15 +22,15 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 **Post-release maintenance and authorized UI/UX 2.0 implementation**
 
-The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 007 redesigns only the Dashboard Overview without changing dashboard data, formulas, response fields, version metadata, other tabs, or deployment.
+The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 008 redesigns only Performance and Analytics without changing dashboard data, formulas, response fields, version metadata, other tabs, or deployment.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 007 — Dashboard Overview redesign — implemented and uploaded on 2026-08-05.** Only Overview changed: its compact reporting toolbar, executive condition/attention/action surface, single score-free Business Priority, five drill-down KPI cards, four comparison metrics, and collapsed Data Quality disclosure fit the approved desktop height budget while mobile retains natural flow. Other Dashboard tabs, Transactions, backend contracts, formulas, version, and deployment are unchanged. Seven focused contracts and the ordered local suite pass 28/28; the exact 26-file clasp inventory was uploaded. Apps Script runtime and browser acceptance remain separate unverified evidence.
+**UI/UX 2.0 Package 008 — Performance and Analytics redesign — implemented and uploaded on 2026-08-05.** Performance now pairs five compact current-period measures and quiet existing forecast context with Revenue Trend as the hero chart. Analytics presents Hot/Cold, Expense, Top Products, contribution/dependency, concentration, and Pareto evidence in a bounded analytical grid. Source values/order, chart lifecycle, Overview, Intelligence, Planning, Transactions, formulas, response contracts, version, and deployment remain unchanged. Seven focused contracts and the ordered local suite pass 29/29; the exact 26-file clasp inventory was uploaded. Apps Script runtime and browser acceptance remain separate unverified evidence.
 
 ## 6. Current test gate and evidence level
 
-`runAllBackendTests()` contains exactly **28 ordered entries** and remains fail-fast.
+`runAllBackendTests()` contains exactly **29 ordered entries** and remains fail-fast.
 
 | Evidence class | Current recorded evidence |
 | --- | --- |
@@ -40,6 +40,8 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 007 redesign
 | Current UI/UX 2.0 tabs upload | Package 006: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 Overview local/static | Package 007: numbered and extracted frontend JavaScript parsed; seven focused contracts passed; ordered suite passed 28/28 with five KPI cards, zero added backend requests, 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
 | Current UI/UX 2.0 Overview upload | Package 007: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
+| Current UI/UX 2.0 Performance/Analytics local/static | Package 008: numbered and extracted frontend JavaScript parsed; seven focused contracts passed; ordered suite passed 29/29 with five performance metrics, three preserved charts, zero added backend requests, 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
+| Current UI/UX 2.0 Performance/Analytics upload | Package 008: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
@@ -85,7 +87,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 28/28.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 29/29.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -126,7 +128,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Active runner membership is 28 and the latest Package 007 local 28/28 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Active runner membership is 29 and the latest Package 008 local 29/29 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
@@ -141,7 +143,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 Hold release promotion and new feature implementation when any of these conditions is true:
 
-- the active local unified gate is not exactly 28/28;
+- the active local unified gate is not exactly 29/29;
 - the release candidate differs from the reviewed/uploaded inventory;
 - Git status contains unexplained or unreviewed changes;
 - Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
@@ -173,7 +175,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 Package 007 — Overview redesign, implemented and uploaded.** Overview now meets the approved executive hierarchy and bounded desktop composition without changing other panels. Live Apps Script tests and browser checks remain pending evidence.
+**UI/UX 2.0 Package 008 — Performance and Analytics redesign, implemented and uploaded.** Both panels now meet the approved chart/evidence hierarchy and bounded desktop composition without changing other panels or source data. Live Apps Script tests and browser checks remain pending evidence.
 
 ## 19. Status-history log
 
@@ -190,3 +192,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | UI/UX 2.0 implementation | Package 005 implemented and uploaded the 26-file shell/theme foundation with four destinations and raised the ordered local gate to 26/26; runtime, deployment, and browser acceptance remain unverified. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 006 migrated 14 existing Dashboard sections exactly once into five accessible panels, raised the ordered local gate to 27/27, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain unverified. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 007 redesigned only Overview, raised the ordered local gate to 28/28, retained the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
+| 2026-08-05 | UI/UX 2.0 implementation | Package 008 redesigned only Performance and Analytics, raised the ordered local gate to 29/29, retained chart source/order plus the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |

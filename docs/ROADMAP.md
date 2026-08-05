@@ -213,3 +213,7 @@ Implemented and uploaded. Overview, Performance, Analytics, Intelligence, and Pl
 Implemented and uploaded. Overview now uses a compact reporting toolbar, an executive condition/attention/action hierarchy, one score-free Business Priority, five truthful drill-down KPI cards, four compact period comparisons, and a collapsed Data Quality disclosure. Desktop uses the approved bounded first-viewport composition and mobile retains natural flow. Other Dashboard tabs, Transactions, backend contracts, formulas, charts, version, and deployment remain unchanged. The local gate passes 28/28 with the existing 71-ID/two-selector query budget, and the exact 26-file clasp inventory was uploaded. Live Apps Script tests and browser acceptance remain pending evidence.
 
 Transactions tabs remain deferred to their separately approved package.
+
+### Package 008 — Performance and Analytics redesign
+
+Implemented and uploaded. Performance uses five compact factual measures, preserved forecast context, and Revenue Trend as the dominant 7/5 chart surface. Analytics uses a bounded two-row evidence grid for Hot/Cold, Expense, Top Products, contribution/dependency, concentration, and Pareto. Chart data/order, formulas, requests, other tabs, version, and deployment remain unchanged. The local gate passes 29/29 with the existing 71-ID/two-selector query budget, and the exact 26-file clasp inventory was uploaded. Live Apps Script tests and browser acceptance remain pending evidence.

@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Separate performance instruments from analytical evidence
+
+UI/UX 2.0 Package 008 keeps Performance and Analytics as client-local views of the already-loaded response. Performance uses five compact current-period measures rather than repeating Overview KPI cards, retains the existing forecast only as quiet context, and gives Revenue Trend the dominant chart area. Analytics preserves the exact Hot/Cold totals, Expense category order, Top Products ranking, Revenue Dependency, contribution, concentration, and Pareto values in a two-row evidence grid. Chart rendering may refine points, legends, tooltips, containment, and theme colors, but it may not reorder or mutate sources, introduce comparison/target data, or make a tab request. Desktop owns bounded panel height; mobile returns to natural flow.
+
 ### Keep Overview executive-first and score-free
 
 UI/UX 2.0 Package 007 limits the first Dashboard panel to reporting controls and quiet metadata, one condition statement, one attention statement, one executable Business Priority, five exact KPI cards, four comparison metrics, and compact Data Quality. Business Priority renders its approved level, title, reason, next action, and evidence but never its internal score. KPI deltas reuse the existing period-comparison response, every KPI retains the existing bounded Transactions drill-down route, and switching or refreshing makes no new request beyond the established dashboard lifecycle. Desktop prevents page-level scrolling at the reference viewports; mobile flows naturally. No new visualization, metric, persistence, response field, or backend calculation is authorized by this composition.

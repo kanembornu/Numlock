@@ -24,6 +24,7 @@ function runAllBackendTests()
     { name: "testUiShellThemeContract", run: testUiShellThemeContract },
     { name: "testDashboardTabFrameworkContract", run: testDashboardTabFrameworkContract },
     { name: "testDashboardOverviewContract", run: testDashboardOverviewContract },
+    { name: "testPerformanceAnalyticsVisualContract", run: testPerformanceAnalyticsVisualContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },

@@ -76,8 +76,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains all twenty-eight directly runnable `test*` functions; the ordered runner selects 27 of them plus `getDashboardData()` for its fixed 28-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 28-entry suite.
+- `96.Tests.Cases.js` contains all twenty-nine directly runnable `test*` functions; the ordered runner selects 28 of them plus `getDashboardData()` for its fixed 29-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 29-entry suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=37 | populatedOutputUnchanged=true`. The oracle requires exactly all 37 top-level response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`; existing additive metadata checks remain unchanged. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -109,6 +109,8 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testDashboardOverviewContract()` reads the production HTML partial and validates the six reporting periods plus custom controls, Print and quiet metadata, executive condition/attention/action hierarchy, score-free Business Priority evidence, five exact KPI cards with preserved drill-down and comparison data, compact four-metric comparison, collapsed Data Quality disclosure, desktop/mobile overflow, light/dark/print parity, absence of Overview charts or requests, guarded state, response immutability, and the current query budget. It logs `PASS: testDashboardOverviewContract | scenarios=8 | kpiCards=5 | backendRequests=0 | idQueries=71 | selectorQueries=2`.
 
+`testPerformanceAnalyticsVisualContract()` reads the production HTML partial and validates exact Performance/Analytics region ownership, the Revenue Trend hero hierarchy, five factual performance measures without Overview-card duplication, all three chart source/lifecycle/formatting contracts, Top Products ranking, contribution/dependency/concentration/Pareto evidence, accessible summaries, reduced motion, chart theme synchronization, desktop/mobile containment, zero tab requests, response immutability, and the query budget. It logs `PASS: testPerformanceAnalyticsVisualContract | scenarios=8 | performanceMetrics=5 | charts=3 | backendRequests=0 | idQueries=71 | selectorQueries=2`.
+
 `testInteractiveDrilldownContract()` reads the production HTML partial and executes the pure transaction filter against literal Sales/Purchase/month/category cases. It verifies source order and response immutability, accessible controls and focus, the explicit maximum-ten-row disclosure, clear behavior, and frontend-only operation. It logs `PASS: testInteractiveDrilldownContract | scenarios=4 | boundedRows=10 | responseMutation=false`.
 
 `testChartPresentationContract()` reads the production HTML partial, invokes the interactive drill-down contract, and validates populated/empty contracts for all three charts, `MM/YYYY` and Rupiah/quantity formatting, zero baselines, no stale or duplicate instances, safe zero-total percentages, backend Expense ordering, long-label behavior, accessible titles/summaries, summary updates, and responsive containment. It logs `PASS: testChartPresentationContract | scenarios=16 | charts=revenue,hotCold,expense`.
@@ -121,7 +123,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `28/28` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `29/29` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -138,7 +140,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `28/28`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, centralized KPI targets, scoped-row state metadata, accessibility, executive presentation, print reporting, CSV export, client-render performance, responsive shell, UI shell/theme, Dashboard tabs, Dashboard Overview, chart presentation plus bounded drill-down, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `29/29`, with deterministic fixtures covering Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, Hot/Cold Split, full sparse-dataset dashboard resilience, the dashboard date filter, period comparison, Business Priority, centralized KPI targets, scoped-row state metadata, accessibility, executive presentation, print reporting, CSV export, client-render performance, responsive shell, UI shell/theme, Dashboard tabs, Dashboard Overview, Performance/Analytics visual composition, chart presentation plus bounded drill-down, and frontend-dependency contracts, reporting metadata, scoped data-quality diagnostics, and source invalid-date visibility. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 
