@@ -12,7 +12,7 @@ Sprint 5.11 is complete. Its bounded P2-5 frontend scope is committed at `46e42b
 
 Sprint 5.12 is complete at verified commit `0e6dcdc`. Its print-ready filtered executive report includes print metadata, an authored A4 portrait contract, and preserved accessibility, and the latest verified ordered gate is local 24/24. Upload, Apps Script runtime, deployment, and browser print acceptance remain unverified. Remaining backlog is editable KPI targets, API projection, CSV export beyond the completed print capability, and KPI/chart drill-down.
 
-Sprint 5.13 Package 001 is complete locally. Its frontend-only CSV action exports the current filter's already rendered recent-transaction rows and visible columns in displayed order through a UTF-8 browser Blob download. `testCsvExportContract()` raises the ordered gate to 25/25; backend/API responses, spreadsheet reads, history depth, hidden fields, GitHub Pages, and release metadata are unchanged. Upload, live Apps Script execution, and browser acceptance remain separate evidence until performed.
+Sprint 5.13 Package 001 is implemented, committed at `563a7e4`, and uploaded, but closure remains blocked. Its frontend-only CSV action exports the current filter's already rendered recent-transaction rows and visible columns in displayed order through a UTF-8 browser Blob download, with accessible empty-state behavior and the verified 72-ID/two-selector performance budget. Quote escaping is present, but leading `=`, `+`, `-`, and `@` spreadsheet-formula characters are neither neutralized nor covered by `testCsvExportContract()`. The runner contains 25 entries, but no post-fix unified 25/25 result is recorded; the latest fully verified gate remains Sprint 5.12's local 24/24.
 
 ## Priority rules
 
@@ -217,7 +217,7 @@ Sprint 5.13 Package 001 is complete locally. Its frontend-only CSV action export
 
 ### P3-1 — Add print/export views
 
-**Status: Print completed in Sprint 5.12 Package 001; visible-transactions CSV completed locally in Sprint 5.13 Package 001.**
+**Status: Print completed in Sprint 5.12 Package 001; visible-transactions CSV is implemented in Sprint 5.13 Package 001 but requires formula-injection hardening and a verified 25/25 gate before closure.**
 
 - **Problem:** there is no print stylesheet or export action for executive reporting.
 - **User impact:** users must copy or screenshot dashboard content for meetings and archives.
@@ -225,8 +225,8 @@ Sprint 5.13 Package 001 is complete locally. Its frontend-only CSV action export
 - **Files affected:** `190.View.Index.html` only for production behavior; no backend service or generated CSS change was required.
 - **Implementation complexity:** M
 - **Regression risk:** Medium
-- **Validation required:** print visual acceptance; CSV filename, UTF-8, escaping, visible row/column scope, displayed ordering, empty state, Blob download, keyboard access, and filter/date consistency.
-- **Dependency on other items:** P1-1 and P1-2; required format, fields, and access policy are currently uncertain.
+- **Validation required:** print visual acceptance; CSV filename, UTF-8, quote escaping, formula-injection neutralization, visible row/column scope, displayed ordering, empty state, Blob download, keyboard access, filter/date consistency, preserved 72/2 query budget, and unified 25/25.
+- **Dependency on other items:** No dependency for bounded hardening of the already approved visible-field export; expanded fields or history remain separately permission-gated.
 
 ### P3-2 — Add KPI and chart drill-down
 
@@ -269,16 +269,16 @@ The implemented package uses one accessible browser-print action and authored A4
 
 ## Recommended next implementation package
 
-### Sprint 5.13 Package 001 — Visible recent-transactions CSV export
+### Sprint 5.13 Package 002 — CSV formula-injection hardening and acceptance closure
 
 **Status: Recommended; bounded frontend-only scope is ready for implementation.**
 
-- **Objective:** download only the current filter's already visible recent-transaction rows and existing visible columns as CSV.
-- **User value:** provides a portable reconciliation and meeting artifact without manual copying and complements the completed executive print report.
-- **Dependency readiness:** Ready because the active filter, visible recent transactions, and their displayed fields already exist in the browser; no new data authorization is assumed.
-- **Implementation risk:** Low to Medium when limited to already disclosed browser data, with CSV escaping and spreadsheet-formula injection handled explicitly.
-- **Expected validation:** exact filter/row/column parity, commas/quotes/newlines and UTF-8 handling, formula-injection neutralization, deterministic filename metadata, keyboard-accessible action, empty-state behavior, no hidden-data disclosure, unchanged screen/print behavior, and the full unified gate.
-- **Scope:** bounded remainder of P3-1 only; exclude backend response changes, hidden spreadsheet fields, expanded transaction history, API projection, KPI/chart drill-down, editable targets, and persistence.
+- **Objective:** neutralize leading `=`, `+`, `-`, and `@` spreadsheet-formula characters in exported cells and close the missing acceptance evidence.
+- **User value:** makes the existing portable reconciliation artifact safe to open in spreadsheet software without changing which transactions or fields users receive.
+- **Dependency readiness:** Ready; the export path, active-filter ownership, visible DOM projection, filename, UTF-8 encoding, accessibility, and performance budget already exist.
+- **Implementation risk:** Low; the change is isolated to CSV cell serialization and its contract test, with no new data or authorization surface.
+- **Expected validation:** dangerous-prefix and ordinary-value fixtures, commas/quotes/newlines and UTF-8 preservation, exact visible row/column/order parity, accessible empty-state behavior, unchanged print behavior, 72-ID/two-selector performance budget, no response mutation, and unified 25/25.
+- **Scope:** bounded CSV serialization hardening and acceptance only; exclude new fields, expanded history, backend/API changes, spreadsheet access/export, permissions, persistence, drill-down, editable targets, layout changes, and deployment.
 
 ## Explicitly not prioritized as defects
 

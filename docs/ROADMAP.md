@@ -139,7 +139,13 @@ Completed locally. One accessible Print Report action invokes browser-native pri
 
 ### Sprint 5.13 Package 001 — visible recent-transactions CSV export
 
-Completed locally. One native Export CSV action beside Print Report exports the current filter's already rendered recent-transaction rows and visible columns in displayed order. It creates a UTF-8 CSV with a header row and deterministic `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` filename through browser Blob/object-URL APIs, and remains disabled without visible rows. `testCsvExportContract()` raises the ordered gate to 25/25. No backend response, spreadsheet read/export, hidden field, expanded history, API, drill-down, persistence, GitHub Pages, generated CSS, or release metadata changed. Upload, live Apps Script execution, and browser acceptance remain separate evidence until performed.
+Implemented, committed at `563a7e4`, and uploaded, but not closed. One native Export CSV action beside Print Report exports the current filter's already rendered recent-transaction rows and visible columns in displayed order. It creates a UTF-8 CSV with a header row and deterministic `NUMLOCK_Transactions_YYYYMMDD_HHmm.csv` filename through browser Blob/object-URL APIs, remains disabled without visible rows, and preserves the verified 72-ID/two-selector client-render budget without response mutation. No backend response, spreadsheet read/export, hidden field, expanded history, API, drill-down, persistence, GitHub Pages, generated CSS, or release metadata changed.
+
+Closure is blocked on two acceptance gaps: `escapeCsvCell()` quotes CSV values but does not neutralize leading `=`, `+`, `-`, or `@` spreadsheet-formula characters, and the 25-entry unified runner has no recorded post-fix 25/25 result. The latest fully verified unified gate remains Sprint 5.12's local 24/24.
+
+### Sprint 5.13 Package 002 — CSV formula-injection hardening and acceptance closure
+
+Recommended next. Neutralize spreadsheet-formula prefixes while preserving the current DOM-derived row/column scope, displayed ordering, UTF-8 output, accessibility, empty-state behavior, and 72/2 query budget; add explicit contract coverage for every dangerous prefix and safe ordinary values; then require the complete 25/25 unified gate. This frontend-only package is independently releasable, low complexity, and adds no data, permission, backend/API, spreadsheet, history, persistence, or layout scope.
 
 ## Ongoing release obligations
 
