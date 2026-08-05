@@ -22,15 +22,15 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 **Post-release maintenance and authorized UI/UX 2.0 implementation**
 
-The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 011 implements only bounded Appearance and About Settings without changing dashboard data, formulas, response fields, version metadata, or deployment.
+The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 012 implements only sanitized session-local Logs without changing dashboard data, formulas, response fields, version metadata, persistence, or deployment.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 011 — Settings — implemented and uploaded on 2026-08-06.** Appearance exposes exactly Light, Dark, and System through the existing browser-local preference contract. About reads application name, version, release label, and environment through template fields mapped directly from `PROJECT_CONFIG`. No business settings, identifiers, backend request, response field, or server persistence was added. Runner membership is 32; the local ordered suite passed 32/32 and the exact 26-file inventory was uploaded. Live runtime, deployment, and browser acceptance remain separate evidence.
+**UI/UX 2.0 Package 012 — sanitized session-local Logs — implemented and uploaded on 2026-08-06.** The browser-only diagnostic view uses exact four-field entries, three severities, nine bounded contexts, pure redaction, a 100-entry cap, newest-first ordering, five-second duplicate suppression, severity counts/filters, accessible clear behavior, and bounded desktop scrolling. No persistent history, server retrieval, raw payload, identifier, backend request, response change, or extra query was added. Runner membership is 33; the local ordered suite passed 33/33 and the exact 26-file inventory was uploaded. Live runtime, deployment, and browser acceptance remain separate evidence.
 
 ## 6. Current test gate and evidence level
 
-`runAllBackendTests()` contains exactly **32 ordered entries** and remains fail-fast.
+`runAllBackendTests()` contains exactly **33 ordered entries** and remains fail-fast.
 
 | Evidence class | Current recorded evidence |
 | --- | --- |
@@ -50,6 +50,8 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 011 implemen
 | Current UI/UX 2.0 Transactions upload | Package 010: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. `clasp run` reported the new functions unavailable through the configured API executable, so upload does not establish live 31/31. |
 | Current UI/UX 2.0 Settings local/static | Package 011: five focused contracts passed; deterministic Tailwind builds matched; Settings contains Appearance/About only, uses four config-derived About fields, makes zero backend requests, and preserves 71 ID queries, two document selectors, one deferred phase, and response immutability. |
 | Current UI/UX 2.0 Settings upload | Package 011: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
+| Current UI/UX 2.0 Logs local/static | Package 012: seven focused contracts and the ordered 33/33 suite passed; deterministic Tailwind builds matched; Logs uses memory-only sanitized entries with a 100-entry cap, fixed contexts/severities, filtering, counts, clear, accessible announcements, 71 ID queries, two document selectors, one deferred phase, zero Logs backend requests, and no response mutation. |
+| Current UI/UX 2.0 Logs upload | Package 012: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
@@ -95,7 +97,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 32/32.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 33/33.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -136,7 +138,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Active runner membership is 32; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Active runner membership is 33; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
@@ -151,7 +153,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 Hold release promotion and new feature implementation when any of these conditions is true:
 
-- the active local unified gate is not exactly 32/32;
+- the active local unified gate is not exactly 33/33;
 - the release candidate differs from the reviewed/uploaded inventory;
 - Git status contains unexplained or unreviewed changes;
 - Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
@@ -183,7 +185,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 Package 011 Settings, implemented and uploaded.** Obtain live 32/32 and desktop/mobile browser acceptance without adding business configuration, server persistence, identifiers, or deployment changes.
+**UI/UX 2.0 Package 012 Logs, implemented and uploaded.** Obtain live 33/33 and desktop/mobile browser acceptance without adding persistence, server retrieval, identifiers, exports, or deployment changes.
 
 ## 19. Status-history log
 

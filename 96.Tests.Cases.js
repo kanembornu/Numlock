@@ -3203,7 +3203,7 @@ function testPrintReportContract()
   var printFunctionStart =
     source.indexOf("function printDashboardReport()");
   var printFunctionEnd =
-    source.indexOf("function requestDashboardData", printFunctionStart);
+    source.indexOf("function sanitizeCsvCellValue", printFunctionStart);
   var printFunctionSource =
     source.slice(printFunctionStart, printFunctionEnd);
 
@@ -4263,6 +4263,275 @@ function testSettingsVisualContract()
     "PASS: testSettingsVisualContract | scenarios=" + summary.scenarios +
     " | sections=" + summary.sections +
     " | themes=" + summary.themes +
+    " | backendRequests=" + summary.backendRequests +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries
+  );
+
+  return summary;
+}
+
+function testLogsVisualContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var scenariosPassed = 0;
+  var logsRegion = getSourceRegion(
+    source,
+    'id="logs"',
+    "</main>",
+    "Logs destination"
+  );
+
+  assertSourceContainsOnce(source, 'id="logs"', "Logs destination ID");
+  [
+    'id="logsHeading"',
+    "Session diagnostics",
+    "Session-local only.",
+    "held in memory",
+    "not historical audit records",
+    "disappear when this page reloads or closes",
+    "Maximum 100 entries"
+  ].forEach(function(token)
+  {
+    assertSourceContains(logsRegion, token, "truthful session-local Logs scope");
+  });
+  scenariosPassed++;
+
+  var entryStart = source.indexOf("sessionClientLogs.unshift({");
+  var entryEnd = source.indexOf("});", entryStart);
+  var entrySource = source.slice(entryStart, entryEnd);
+
+  ["timestamp:", "severity:", "context:", "message:"].forEach(function(token)
+  {
+    assertSourceContainsOnce(entrySource, token, "public log entry field");
+  });
+  ["payload", "transaction", "sourceRow", "stack", "identifier"].forEach(function(token)
+  {
+    assertSourceExcludes(entrySource, token, "non-public log entry field");
+  });
+  scenariosPassed++;
+
+  var contextStart = source.indexOf("function getAllowedClientLogContext(");
+  var contextEnd = source.indexOf("function getFilteredSessionClientLogs", contextStart);
+  var contextFunction =
+    Function("return (" + source.slice(contextStart, contextEnd).trim() + ");")();
+  var allowedContexts = [
+    "Dashboard load", "Date filter", "Retry", "Chart rendering",
+    "CSV export", "Print report", "Theme", "Navigation", "Drill-down"
+  ];
+
+  allowedContexts.forEach(function(context)
+  {
+    if (contextFunction(context) !== context)
+    {
+      throw new Error("Allowed log context changed: " + context);
+    }
+  });
+  if (contextFunction("Raw payload") !== "Navigation")
+  {
+    throw new Error("Unknown log context did not use the bounded fallback");
+  }
+  ["Info: true", "Warning: true", "Error: true"].forEach(function(token)
+  {
+    assertSourceContains(source, token, "exact log severity value");
+  });
+  scenariosPassed++;
+
+  var sanitizerStart = source.indexOf("function sanitizeClientLogMessage(");
+  var sanitizerEnd = source.indexOf("function getAllowedClientLogContext", sanitizerStart);
+  var sanitizerSource = source.slice(sanitizerStart, sanitizerEnd).trim();
+  var sanitizeClientLogMessage =
+    Function("return (" + sanitizerSource + ");")();
+  var sensitiveCases = [
+    { value: "Open https://example.com/macros/s/abcdefghijklmnopqrstuvwxyz123456", secret: "https://" },
+    { value: "Contact owner@example.com", secret: "owner@example.com" },
+    { value: "script ID: abcdefghijklmnopqrstuvwxyz123456", secret: "abcdefghijklmnopqrstuvwxyz" },
+    { value: "Spreadsheet 123456789012345", secret: "123456789012345" },
+    { value: "Read /Users/person/private/project/file.js", secret: "/Users/" },
+    { value: "Read C:\\Users\\person\\secret.txt", secret: "C:\\Users" }
+  ];
+
+  sensitiveCases.forEach(function(testCase)
+  {
+    var sanitized = sanitizeClientLogMessage(testCase.value);
+
+    if (sanitized.indexOf(testCase.secret) !== -1 || sanitized.length > 240)
+    {
+      throw new Error("Sensitive log value was not safely bounded");
+    }
+  });
+  if (
+    sanitizeClientLogMessage({ payload: "secret" }) !==
+      "Structured event details were omitted." ||
+    sanitizeClientLogMessage('{"payload":"secret"}') !==
+      "Structured event details were omitted." ||
+    sanitizeClientLogMessage(new Array(400).join("x")).length > 240
+  )
+  {
+    throw new Error("Object or long-message sanitization failed");
+  }
+  [
+    "[redacted URL]", "[redacted email]", "[redacted identifier]",
+    "[redacted path]", ".slice(0, 240)",
+    'Structured event details were omitted.'
+  ].forEach(function(token)
+  {
+    assertSourceContains(sanitizerSource, token, "log sanitization contract");
+  });
+  scenariosPassed++;
+
+  var controllerStart = source.indexOf("function sanitizeClientLogMessage(");
+  var controllerEnd = source.indexOf("function showBusinessOverviewSkeleton", controllerStart);
+  var controllerSource = source.slice(controllerStart, controllerEnd);
+
+  [
+    "let sessionClientLogs = [];",
+    "sessionClientLogs.unshift({",
+    "sessionClientLogs.length > 100",
+    "sessionClientLogs.pop();",
+    "now - lastClientLogTimestamp < 5000",
+    "signature === lastClientLogSignature"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "memory limit, ordering, and deduplication");
+  });
+  ["localStorage", "sessionStorage", "google.script.run", "getDashboardData("].forEach(function(token)
+  {
+    assertSourceExcludes(controllerSource, token, "persistent or backend log storage");
+  });
+  scenariosPassed++;
+
+  [
+    'name="sessionLogSeverity" value="All"',
+    'name="sessionLogSeverity" value="Info"',
+    'name="sessionLogSeverity" value="Warning"',
+    'name="sessionLogSeverity" value="Error"',
+    "getFilteredSessionClientLogs()",
+    "entry.severity === activeClientLogSeverity",
+    'id="sessionLogsInfoCount"',
+    'id="sessionLogsWarningCount"',
+    'id="sessionLogsErrorCount"',
+    "No client events in this session.",
+    "No entries match the selected severity."
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Logs filtering, summary, and empty states");
+  });
+  scenariosPassed++;
+
+  [
+    'id="clearSessionLogsButton"',
+    'onclick="clearSessionClientLogs()"',
+    "sessionClientLogs = [];",
+    '"Session logs cleared."',
+    "elements.clearSessionLogsButton.disabled = sessionClientLogs.length === 0;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "clear-session behavior");
+  });
+  var clearStart = source.indexOf("function clearSessionClientLogs()");
+  var clearEnd = source.indexOf("function logClientEvent", clearStart);
+  var clearSource = source.slice(clearStart, clearEnd);
+  ["google.script.run", "getDashboardData(", "console.clear"].forEach(function(token)
+  {
+    assertSourceExcludes(clearSource, token, "clear-session external effect");
+  });
+  scenariosPassed++;
+
+  [
+    'role="status" aria-live="polite" aria-atomic="true"',
+    '"New Error log in " + safeContext + "."',
+    'aria-label="Log severity summary"',
+    '>Filter by severity</legend>',
+    'aria-label="Newest session client events first"',
+    'aria-label="Session log entries, scrollable"',
+    "entry.severity + \" · \" + entry.context",
+    "button:focus-visible",
+    "input:focus-visible"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Logs accessibility contract");
+  });
+  scenariosPassed++;
+
+  [
+    "ui-theme-surface", "ui-theme-inset", "ui-theme-primary",
+    "ui-theme-secondary", "ui-theme-muted",
+    '#logs.active { height: 100%; overflow: hidden; }',
+    '#logsWorkspace { height: calc(100dvh - 176px); min-height: 0; }',
+    '#sessionLogsListRegion { min-height: 0; overflow-y: auto; }',
+    '#logs.active,',
+    '#logsWorkspace { height: auto; overflow: visible; }',
+    "break-words"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Logs theme and responsive containment");
+  });
+  scenariosPassed++;
+
+  var navigationStart = source.indexOf("function showPage(pageId)");
+  var navigationEnd = source.indexOf("function getResolvedTheme", navigationStart);
+  var navigationSource = source.slice(navigationStart, navigationEnd);
+  ["getDashboardData(", "requestDashboardData(", "google.script.run"].forEach(function(token)
+  {
+    assertSourceExcludes(navigationSource, token, "Logs navigation backend request");
+  });
+  [
+    'logs: {',
+    'title: "Logs"',
+    'context: "Sanitized events from this browser session"',
+    "heading.focus();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(navigationSource, token, "Logs independent navigation");
+  });
+  scenariosPassed++;
+
+  [
+    'console.error(\n              "Dashboard render failed"',
+    'console.error(\n            "Dashboard request failed"',
+    'console.error(\n        "Chart.js unavailable',
+    'console.error("CSV export failed", error);',
+    'console.error("Print report failed", error);'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "preserved actionable console diagnostics");
+  });
+  assertSourceExcludes(source, "JSON.stringify(res", "raw response logging");
+  assertSourceExcludes(source, "console.log(res", "raw response console logging");
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Logs query budget exceeded");
+  }
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase preserved");
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "Logs response mutation");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    maxEntries: 100,
+    severities: 3,
+    contexts: allowedContexts.length,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    backendRequests: 0
+  };
+
+  Logger.log(
+    "PASS: testLogsVisualContract | scenarios=" + summary.scenarios +
+    " | maxEntries=" + summary.maxEntries +
+    " | severities=" + summary.severities +
+    " | contexts=" + summary.contexts +
     " | backendRequests=" + summary.backendRequests +
     " | idQueries=" + summary.idQueries +
     " | selectorQueries=" + summary.selectorQueries

@@ -28,6 +28,7 @@ function runAllBackendTests()
     { name: "testIntelligencePlanningVisualContract", run: testIntelligencePlanningVisualContract },
     { name: "testTransactionsVisualContract", run: testTransactionsVisualContract },
     { name: "testSettingsVisualContract", run: testSettingsVisualContract },
+    { name: "testLogsVisualContract", run: testLogsVisualContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },

@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Keep Logs memory-only, sanitized, bounded, and diagnostic
+
+UI/UX 2.0 Package 012 stores Logs only in the active page’s JavaScript memory. Each entry has exactly timestamp, Info/Warning/Error severity, one approved human-readable context, and a sanitized message. Redaction occurs before storage/rendering and removes URLs, emails, identifiers, filesystem paths, structured objects, control characters, markup, and excessive length. The list is newest-first, capped at 100 with oldest eviction, and suppresses identical events within five seconds. Only meaningful request/retry, render/chart, CSV, print, theme-storage, invalid navigation, and invalid drill-down outcomes are eligible. No server or browser storage, raw response, transaction row, fabricated history, export, pagination, refresh, or routine interaction logging is permitted.
+
 ### Keep Settings browser-local, read-only, and config-derived
 
 UI/UX 2.0 Package 011 limits Settings to Appearance and About. Appearance reuses the single validated `numlock.ui.theme` preference with exactly Light, Dark, and System; no theme choice may reset page, Dashboard/Transactions tab, filter, rendered response, or chart state, and no selection may call the backend. About receives application name, version, release label, and environment only through template fields mapped directly from `PROJECT_CONFIG`. It must not expose project, deployment, spreadsheet, repository, or account identifiers. Business configuration and server persistence remain outside Settings until separately governed requirements exist.

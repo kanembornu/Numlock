@@ -122,6 +122,9 @@
         #transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }
         #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
         #settings.active { height: 100%; overflow: hidden; }
+        #logs.active { height: 100%; overflow: hidden; }
+        #logsWorkspace { height: calc(100dvh - 176px); min-height: 0; }
+        #sessionLogsListRegion { min-height: 0; overflow-y: auto; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -148,6 +151,9 @@
         #transactionsTableScroll { height: auto; overflow: visible; }
         #transactionsTableScroll { overflow-x: auto; }
         #settings.active { height: auto; overflow: visible; }
+        #logs.active,
+        #logsWorkspace { height: auto; overflow: visible; }
+        #sessionLogsListRegion { overflow: visible; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -1052,14 +1058,42 @@
 
     <!-- LOGS -->
     <section id="logs" class="page" hidden aria-labelledby="logsHeading">
-      <div class="mb-6">
-        <h1 id="logsHeading" class="text-3xl font-bold text-slate-900" tabindex="-1">Logs</h1>
-        <p class="mt-2 text-sm text-slate-500">Sanitized client application events from this browser session.</p>
-      </div>
-      <div class="ui-theme-surface max-w-5xl rounded-2xl border p-5">
-        <p class="text-sm ui-theme-secondary">Logs include this browser session only and are cleared when the session ends or the page is reloaded.</p>
-        <p id="sessionLogsEmpty" class="mt-5 rounded-xl border border-dashed p-5 text-sm ui-theme-muted">No client events in this session.</p>
-        <ol id="sessionLogsList" class="mt-5 hidden space-y-3" aria-label="Session client events"></ol>
+      <header class="mb-4 min-w-0">
+        <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Session diagnostics</p>
+        <h1 id="logsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Logs</h1>
+        <p class="mt-1 max-w-3xl text-sm ui-theme-secondary">Sanitized application events generated during this browser page session.</p>
+      </header>
+
+      <div id="logsWorkspace" class="flex max-w-6xl flex-col gap-3">
+        <div class="ui-theme-inset flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3">
+          <p class="max-w-3xl text-sm ui-theme-secondary"><strong class="ui-theme-primary">Session-local only.</strong> Entries are held in memory, are not historical audit records, and disappear when this page reloads or closes.</p>
+          <span class="rounded-full border px-3 py-1 text-xs font-semibold ui-theme-muted">Maximum 100 entries</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2" aria-label="Log severity summary">
+          <div class="ui-theme-surface rounded-xl border p-3"><span class="block text-xs font-semibold ui-theme-muted">Info</span><strong id="sessionLogsInfoCount" class="mt-1 block text-xl ui-theme-primary">0</strong></div>
+          <div class="ui-theme-surface rounded-xl border p-3"><span class="block text-xs font-semibold ui-theme-muted">Warning</span><strong id="sessionLogsWarningCount" class="mt-1 block text-xl ui-theme-primary">0</strong></div>
+          <div class="ui-theme-surface rounded-xl border p-3"><span class="block text-xs font-semibold ui-theme-muted">Error</span><strong id="sessionLogsErrorCount" class="mt-1 block text-xl ui-theme-primary">0</strong></div>
+        </div>
+
+        <div class="ui-theme-surface flex flex-wrap items-end justify-between gap-3 rounded-xl border p-3">
+          <fieldset>
+            <legend class="text-xs font-semibold ui-theme-muted">Filter by severity</legend>
+            <div id="sessionLogsFilters" class="mt-2 flex flex-wrap gap-2">
+              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="All" checked onchange="setClientLogFilter(this.value)"><span>All</span></label>
+              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="Info" onchange="setClientLogFilter(this.value)"><span>Info</span></label>
+              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="Warning" onchange="setClientLogFilter(this.value)"><span>Warning</span></label>
+              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="Error" onchange="setClientLogFilter(this.value)"><span>Error</span></label>
+            </div>
+          </fieldset>
+          <button id="clearSessionLogsButton" type="button" class="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700" onclick="clearSessionClientLogs()" disabled>Clear session logs</button>
+        </div>
+
+        <p id="sessionLogsAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div id="sessionLogsListRegion" class="ui-theme-surface flex-1 rounded-2xl border p-3" tabindex="0" aria-label="Session log entries, scrollable">
+          <p id="sessionLogsEmpty" class="rounded-xl border border-dashed p-5 text-sm ui-theme-muted">No client events in this session.</p>
+          <ol id="sessionLogsList" class="hidden space-y-2" aria-label="Newest session client events first"></ol>
+        </div>
       </div>
     </section>
     </div>
@@ -1083,6 +1117,10 @@
   let activeTransactionDrilldown = null;
   let themeFoundationInitialized = false;
   let sessionClientLogs = [];
+  let activeClientLogSeverity = "All";
+  let lastClientLogSignature = "";
+  let lastClientLogTimestamp = 0;
+  let dashboardRetryInProgress = false;
   let dashboardTabsInitialized = false;
   let activeDashboardTab = "overview";
   let transactionsTabsInitialized = false;
@@ -1188,10 +1226,28 @@
         );
       stableDashboardElements.themeStatus =
         stableDashboardElements.settingsPage.querySelector('[role="status"]');
+      stableDashboardElements.sessionLogsWorkspace =
+        stableDashboardElements.logsPage.querySelector("#logsWorkspace");
+      stableDashboardElements.sessionLogsSummary =
+        stableDashboardElements.sessionLogsWorkspace.children[1];
+      stableDashboardElements.sessionLogsInfoCount =
+        stableDashboardElements.sessionLogsSummary.children[0].lastElementChild;
+      stableDashboardElements.sessionLogsWarningCount =
+        stableDashboardElements.sessionLogsSummary.children[1].lastElementChild;
+      stableDashboardElements.sessionLogsErrorCount =
+        stableDashboardElements.sessionLogsSummary.children[2].lastElementChild;
+      stableDashboardElements.sessionLogsToolbar =
+        stableDashboardElements.sessionLogsWorkspace.children[2];
+      stableDashboardElements.clearSessionLogsButton =
+        stableDashboardElements.sessionLogsToolbar.lastElementChild;
+      stableDashboardElements.sessionLogsAnnouncement =
+        stableDashboardElements.sessionLogsWorkspace.children[3];
+      stableDashboardElements.sessionLogsListRegion =
+        stableDashboardElements.sessionLogsWorkspace.children[4];
       stableDashboardElements.sessionLogsEmpty =
-        stableDashboardElements.logsPage.querySelector("p[id]");
+        stableDashboardElements.sessionLogsListRegion.firstElementChild;
       stableDashboardElements.sessionLogsList =
-        stableDashboardElements.logsPage.querySelector("ol");
+        stableDashboardElements.sessionLogsListRegion.lastElementChild;
       stableDashboardElements.dashboardHeaderRegion =
         stableDashboardElements.printReportHeader.previousElementSibling;
       stableDashboardElements.dashboardTabList =
@@ -1557,6 +1613,11 @@
 
       if (!activePage || !contract)
       {
+        logClientEvent(
+          "Warning",
+          "Navigation",
+          "The requested application destination is unavailable."
+        );
         return;
       }
 
@@ -1710,6 +1771,11 @@
         {
           elements.themeStatus.innerText =
             "Theme applied for this session; browser storage is unavailable.";
+          logClientEvent(
+            "Warning",
+            "Theme",
+            "Theme preference could not be saved in browser storage."
+          );
         }
       }
 
@@ -1783,28 +1849,146 @@
       applyThemePreference(initialPreference, false, false);
     }
 
+    function sanitizeClientLogMessage(value)
+    {
+      var text;
+
+      if (value && typeof value.message === "string")
+      {
+        text = value.message;
+      }
+      else if (typeof value === "string" || typeof value === "number")
+      {
+        text = String(value);
+      }
+      else if (value && typeof value === "object")
+      {
+        text = "Structured event details were omitted.";
+      }
+      else
+      {
+        text = "Application event details unavailable.";
+      }
+
+      if (/^\s*[\[{]/.test(text))
+      {
+        text = "Structured event details were omitted.";
+      }
+
+      text = text
+        .replace(/https?:\/\/[^\s]+/gi, "[redacted URL]")
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, "[redacted email]")
+        .replace(/\b(?:spreadsheet|script|deployment)\s*(?:id)?\s*[:=]?\s*[^\s,;]+/gi, "[redacted identifier]")
+        .replace(/\b[A-Za-z]:\\(?:[^\\\s]+\\)*[^\\\s]*/g, "[redacted path]")
+        .replace(/\/(?:Users|home|private|var|tmp)\/[^\s]+/g, "[redacted path]")
+        .replace(/\b[A-Za-z0-9_-]{25,}\b/g, "[redacted identifier]")
+        .replace(/\b\d{10,}\b/g, "[redacted identifier]")
+        .replace(/[\u0000-\u001F\u007F]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .slice(0, 240);
+
+      return text || "Application event details unavailable.";
+    }
+
+    function getAllowedClientLogContext(context)
+    {
+      var allowedContexts = {
+        "Dashboard load": true,
+        "Date filter": true,
+        "Retry": true,
+        "Chart rendering": true,
+        "CSV export": true,
+        "Print report": true,
+        "Theme": true,
+        "Navigation": true,
+        "Drill-down": true
+      };
+
+      return allowedContexts[context]
+        ? context
+        : "Navigation";
+    }
+
+    function getFilteredSessionClientLogs()
+    {
+      return sessionClientLogs.filter(function(entry)
+      {
+        return activeClientLogSeverity === "All" ||
+          entry.severity === activeClientLogSeverity;
+      });
+    }
+
     function renderSessionClientLogs()
     {
       var elements = initializeStableDashboardElements();
+      var filteredLogs = getFilteredSessionClientLogs();
+      var counts = {
+        Info: 0,
+        Warning: 0,
+        Error: 0
+      };
 
-      elements.sessionLogsEmpty.classList.toggle(
-        "hidden",
-        sessionClientLogs.length > 0
-      );
-      elements.sessionLogsList.classList.toggle(
-        "hidden",
-        sessionClientLogs.length === 0
-      );
-      elements.sessionLogsList.innerHTML = sessionClientLogs
+      sessionClientLogs.forEach(function(entry)
+      {
+        counts[entry.severity]++;
+      });
+
+      elements.sessionLogsInfoCount.innerText = String(counts.Info);
+      elements.sessionLogsWarningCount.innerText = String(counts.Warning);
+      elements.sessionLogsErrorCount.innerText = String(counts.Error);
+      elements.clearSessionLogsButton.disabled = sessionClientLogs.length === 0;
+      elements.sessionLogsEmpty.classList.toggle("hidden", filteredLogs.length > 0);
+      elements.sessionLogsEmpty.innerText = sessionClientLogs.length === 0
+        ? "No client events in this session."
+        : "No entries match the selected severity.";
+      elements.sessionLogsList.classList.toggle("hidden", filteredLogs.length === 0);
+      elements.sessionLogsList.innerHTML = filteredLogs
         .map(function(entry)
         {
+          var severityClass = entry.severity === "Error"
+            ? "text-red-600"
+            : entry.severity === "Warning"
+              ? "text-amber-600"
+              : "text-indigo-700";
+
           return '<li class="ui-theme-inset rounded-xl border p-4 text-sm">' +
             '<div class="flex flex-wrap items-center justify-between gap-2">' +
-            '<strong>' + entry.severity + " · " + entry.context + '</strong>' +
+            '<strong class="' + severityClass + '">' +
+            entry.severity + " · " + entry.context + '</strong>' +
             '<time class="ui-theme-muted">' + entry.timestamp + '</time>' +
-            '</div><p class="mt-2 ui-theme-secondary">' + entry.message + '</p></li>';
+            '</div><p class="mt-2 break-words ui-theme-secondary">' +
+            entry.message + '</p></li>';
         })
         .join("");
+    }
+
+    function setClientLogFilter(severity)
+    {
+      var allowedFilters = {
+        All: true,
+        Info: true,
+        Warning: true,
+        Error: true
+      };
+
+      activeClientLogSeverity = allowedFilters[severity]
+        ? severity
+        : "All";
+      renderSessionClientLogs();
+    }
+
+    function clearSessionClientLogs()
+    {
+      sessionClientLogs = [];
+      lastClientLogSignature = "";
+      lastClientLogTimestamp = 0;
+      renderSessionClientLogs();
+      initializeStableDashboardElements().sessionLogsAnnouncement.innerText =
+        "Session logs cleared.";
     }
 
     function logClientEvent(severity, context, message)
@@ -1817,21 +2001,40 @@
       var safeSeverity = allowedSeverity[severity]
         ? severity
         : "Info";
-      var safeContext = String(context || "Application")
-        .replace(/[^A-Za-z0-9 -]/g, "")
-        .slice(0, 40);
-      var safeMessage = String(message || "Application event")
-        .replace(/[<>]/g, "")
-        .slice(0, 160);
+      var safeContext = getAllowedClientLogContext(context);
+      var safeMessage = sanitizeClientLogMessage(message);
+      var signature = safeSeverity + "|" + safeContext + "|" + safeMessage;
+      var now = Date.now();
 
-      sessionClientLogs.push({
-        timestamp: new Date().toLocaleTimeString("id-ID"),
+      if (
+        signature === lastClientLogSignature &&
+        now - lastClientLogTimestamp < 5000
+      )
+      {
+        return;
+      }
+
+      lastClientLogSignature = signature;
+      lastClientLogTimestamp = now;
+      sessionClientLogs.unshift({
+        timestamp: new Date(now).toLocaleTimeString("id-ID"),
         severity: safeSeverity,
         context: safeContext,
         message: safeMessage
       });
-      sessionClientLogs = sessionClientLogs.slice(-50);
+
+      if (sessionClientLogs.length > 100)
+      {
+        sessionClientLogs.pop();
+      }
+
       renderSessionClientLogs();
+
+      if (safeSeverity === "Error")
+      {
+        initializeStableDashboardElements().sessionLogsAnnouncement.innerText =
+          "New Error log in " + safeContext + ".";
+      }
     }
 
     //--------------------------------------------------
@@ -2459,32 +2662,46 @@
 
       logClientEvent(
         "Info",
-        "Dashboard",
+        "Retry",
         "Retrying the last dashboard request."
       );
+      dashboardRetryInProgress = true;
       requestDashboardData(lastDashboardRequest);
     }
 
     function printDashboardReport()
     {
-      var elements = initializeStableDashboardElements();
-      var printMetadata =
-        elements.printReportHeader.getElementsByTagName("span");
-      var activePeriod =
-        elements.filter.parentElement
-          .querySelector("#dateFilterLabel")
-          .innerText;
+      try
+      {
+        var elements = initializeStableDashboardElements();
+        var printMetadata =
+          elements.printReportHeader.getElementsByTagName("span");
+        var activePeriod =
+          elements.filter.parentElement
+            .querySelector("#dateFilterLabel")
+            .innerText;
 
-      printMetadata[0].innerText =
-        activePeriod || "Not available";
+        printMetadata[0].innerText =
+          activePeriod || "Not available";
 
-      printMetadata[1].innerText =
-        new Date().toLocaleString("en-GB", {
-          dateStyle: "long",
-          timeStyle: "short"
-        });
+        printMetadata[1].innerText =
+          new Date().toLocaleString("en-GB", {
+            dateStyle: "long",
+            timeStyle: "short"
+          });
 
-      window.print();
+        window.print();
+        logClientEvent(
+          "Info",
+          "Print report",
+          "Print report dialog opened."
+        );
+      }
+      catch (error)
+      {
+        console.error("Print report failed", error);
+        logClientEvent("Error", "Print report", error);
+      }
     }
 
     function sanitizeCsvCellValue(value, isNumericColumn)
@@ -2542,6 +2759,8 @@
 
     function exportVisibleTransactionsToCsv()
     {
+      try
+      {
       var tableBody = initializeStableDashboardElements().tableBody;
       var table = tableBody.parentElement;
       var headers = Array.from(table.tHead.rows[0].cells);
@@ -2566,6 +2785,11 @@
 
       if (!visibleRows.length)
       {
+        logClientEvent(
+          "Warning",
+          "CSV export",
+          "CSV export was unavailable because no rows were visible."
+        );
         return;
       }
 
@@ -2603,6 +2827,17 @@
       downloadLink.click();
       downloadLink.remove();
       URL.revokeObjectURL(downloadUrl);
+      logClientEvent(
+        "Info",
+        "CSV export",
+        "Visible transaction rows were exported successfully."
+      );
+      }
+      catch (error)
+      {
+        console.error("CSV export failed", error);
+        logClientEvent("Error", "CSV export", error);
+      }
     }
 
     function requestDashboardData(request)
@@ -2659,11 +2894,14 @@
             );
             logClientEvent(
               "Info",
-              "Dashboard",
-              isEmpty
-                ? "Dashboard loaded with no rows for the active period."
-                : "Dashboard loaded successfully."
+              dashboardRetryInProgress ? "Retry" : "Dashboard load",
+              dashboardRetryInProgress
+                ? "Dashboard retry completed successfully."
+                : isEmpty
+                  ? "Dashboard loaded with no rows for the active period."
+                  : "Dashboard loaded successfully."
             );
+            dashboardRetryInProgress = false;
           }
           catch (error)
           {
@@ -2678,9 +2916,12 @@
             );
             logClientEvent(
               "Error",
-              "Dashboard",
-              "Dashboard rendering failed."
+              dashboardRetryInProgress ? "Retry" : "Dashboard load",
+              dashboardRetryInProgress
+                ? "Dashboard retry rendering failed."
+                : "Dashboard rendering failed."
             );
+            dashboardRetryInProgress = false;
           }
         })
         .withFailureHandler(function(err)
@@ -2704,9 +2945,12 @@
           );
           logClientEvent(
             "Error",
-            "Dashboard",
-            "Dashboard request failed."
+            dashboardRetryInProgress ? "Retry" : "Dashboard load",
+            dashboardRetryInProgress
+              ? "Dashboard retry request failed."
+              : "Dashboard request failed."
           );
+          dashboardRetryInProgress = false;
         })
         .getDashboardData(
           lastDashboardRequest.filter,
@@ -3038,6 +3282,11 @@
       chartUnavailableDiagnosticLogged = true;
       console.error(
         "Chart.js unavailable; chart rendering was skipped."
+      );
+      logClientEvent(
+        "Warning",
+        "Chart rendering",
+        "Chart.js was unavailable, so chart rendering was skipped."
       );
     }
 
@@ -3967,6 +4216,24 @@
 
     function applyTransactionDrilldown(type, value, label)
     {
+      var allowedTypes = {
+        all: true,
+        sales: true,
+        purchase: true,
+        month: true,
+        expenseCategory: true
+      };
+
+      if (!allowedTypes[type])
+      {
+        logClientEvent(
+          "Warning",
+          "Drill-down",
+          "The requested transaction drill-down is unavailable."
+        );
+        return;
+      }
+
       activeTransactionDrilldown = {
         type: type,
         value: value,
@@ -4022,6 +4289,11 @@
             console.error(
               "Dashboard deferred render failed",
               error
+            );
+            logClientEvent(
+              "Error",
+              "Dashboard load",
+              "Deferred dashboard rendering failed."
             );
 
             setDashboardState(
