@@ -121,6 +121,7 @@
         #transactionsEvidenceRegion { min-height: 0; flex: 1 1 auto; }
         #transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }
         #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
+        #settings.active { height: 100%; overflow: hidden; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -146,6 +147,7 @@
         #transactionsEvidenceRegion,
         #transactionsTableScroll { height: auto; overflow: visible; }
         #transactionsTableScroll { overflow-x: auto; }
+        #settings.active { height: auto; overflow: visible; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -990,42 +992,60 @@
 
     <!-- SETTINGS -->
     <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
-      <div class="mb-6">
-        <h1 id="settingsHeading" class="text-3xl font-bold text-slate-900" tabindex="-1">Settings</h1>
-        <p class="mt-2 text-sm text-slate-500">Appearance and authoritative application information.</p>
-      </div>
+      <header class="mb-5 min-w-0">
+        <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Application preferences</p>
+        <h1 id="settingsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Settings</h1>
+        <p class="mt-1 max-w-2xl text-sm ui-theme-secondary">Choose this browser’s appearance and review authoritative application details.</p>
+      </header>
 
-      <div class="grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2">
-        <section class="ui-theme-surface rounded-2xl border p-5" aria-labelledby="appearanceHeading">
-          <h2 id="appearanceHeading" class="text-xl font-bold">Appearance</h2>
-          <p class="mt-2 text-sm ui-theme-secondary">Choose how NUMLOCK appears in this browser.</p>
-          <fieldset class="mt-5 space-y-3">
-            <legend class="sr-only">Theme</legend>
-            <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3">
-              <input type="radio" name="themePreference" value="light">
-              <span><strong>Light</strong><span class="block text-xs ui-theme-muted">Use the light NUMLOCK theme.</span></span>
-            </label>
-            <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3">
-              <input type="radio" name="themePreference" value="dark">
-              <span><strong>Dark</strong><span class="block text-xs ui-theme-muted">Use deep navy and slate surfaces.</span></span>
-            </label>
-            <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border px-4 py-3">
-              <input type="radio" name="themePreference" value="system">
-              <span><strong>System</strong><span class="block text-xs ui-theme-muted">Follow this device’s color preference.</span></span>
-            </label>
+      <div id="settingsSections" class="grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-12">
+        <section id="appearanceSection" class="ui-theme-surface rounded-2xl border p-5 lg:col-span-7" aria-labelledby="appearanceHeading">
+          <div>
+            <h2 id="appearanceHeading" class="text-xl font-bold ui-theme-primary">Appearance</h2>
+            <p class="mt-1 text-sm ui-theme-secondary">Your choice applies immediately and is stored only in this browser.</p>
+          </div>
+          <fieldset class="mt-5">
+            <legend class="text-sm font-semibold ui-theme-primary">Theme preference</legend>
+            <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label class="ui-theme-inset flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+                <input type="radio" name="themePreference" value="light" class="mt-1 h-4 w-4 accent-indigo-600">
+                <span><strong class="ui-theme-primary">Light</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use the light NUMLOCK theme.</span></span>
+              </label>
+              <label class="ui-theme-inset flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+                <input type="radio" name="themePreference" value="dark" class="mt-1 h-4 w-4 accent-indigo-600">
+                <span><strong class="ui-theme-primary">Dark</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use deep navy and slate surfaces.</span></span>
+              </label>
+              <label class="ui-theme-inset flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+                <input type="radio" name="themePreference" value="system" class="mt-1 h-4 w-4 accent-indigo-600">
+                <span><strong class="ui-theme-primary">System</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Follow this device’s color preference.</span></span>
+              </label>
+            </div>
           </fieldset>
-          <p id="themeStatus" class="mt-4 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
+          <p id="themeStatus" class="mt-4 min-h-5 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
         </section>
 
-        <section class="ui-theme-surface rounded-2xl border p-5" aria-labelledby="aboutHeading">
-          <h2 id="aboutHeading" class="text-xl font-bold">About</h2>
-          <dl class="mt-5 grid grid-cols-[auto_1fr] gap-x-5 gap-y-3 text-sm">
-            <dt class="ui-theme-muted">Version</dt>
-            <dd class="font-semibold"><?= version ?></dd>
-            <dt class="ui-theme-muted">Environment</dt>
-            <dd class="font-semibold"><?= environment ?></dd>
+        <section id="aboutSection" class="ui-theme-surface rounded-2xl border p-5 lg:col-span-5" aria-labelledby="aboutHeading">
+          <h2 id="aboutHeading" class="text-xl font-bold ui-theme-primary">About</h2>
+          <p class="mt-1 text-sm ui-theme-secondary">Read-only details from the application configuration.</p>
+          <dl class="mt-5 divide-y" aria-label="Application metadata">
+            <div class="flex items-baseline justify-between gap-5 py-3 first:pt-0">
+              <dt class="text-sm ui-theme-muted">Application</dt>
+              <dd id="aboutApplicationName" data-metadata-source="template.appName" class="text-right text-sm font-semibold ui-theme-primary"><?= appName ?></dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-5 py-3">
+              <dt class="text-sm ui-theme-muted">Version</dt>
+              <dd id="aboutVersion" data-metadata-source="template.version" class="text-right text-sm font-semibold ui-theme-primary"><?= version ?></dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-5 py-3">
+              <dt class="text-sm ui-theme-muted">Release</dt>
+              <dd id="aboutReleaseLabel" data-metadata-source="template.releaseLabel" class="text-right text-sm font-semibold ui-theme-primary"><?= releaseLabel ?></dd>
+            </div>
+            <div class="flex items-baseline justify-between gap-5 py-3 last:pb-0">
+              <dt class="text-sm ui-theme-muted">Environment</dt>
+              <dd id="aboutEnvironment" data-metadata-source="template.environment" class="text-right text-sm font-semibold ui-theme-primary"><?= environment ?></dd>
+            </div>
           </dl>
-          <p class="mt-5 text-xs ui-theme-muted">Business configuration remains system-defined and is not editable here.</p>
+          <p class="mt-5 border-t pt-4 text-xs leading-relaxed ui-theme-muted">Business rules and targets remain system-defined and are not editable here.</p>
         </section>
       </div>
     </section>

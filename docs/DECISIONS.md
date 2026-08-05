@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Keep Settings browser-local, read-only, and config-derived
+
+UI/UX 2.0 Package 011 limits Settings to Appearance and About. Appearance reuses the single validated `numlock.ui.theme` preference with exactly Light, Dark, and System; no theme choice may reset page, Dashboard/Transactions tab, filter, rendered response, or chart state, and no selection may call the backend. About receives application name, version, release label, and environment only through template fields mapped directly from `PROJECT_CONFIG`. It must not expose project, deployment, spreadsheet, repository, or account identifiers. Business configuration and server persistence remain outside Settings until separately governed requirements exist.
+
 ### Validate tab ownership semantically and bound responsive canvases independently
 
 Tabbed Dashboard contracts use stable render-target IDs and `sectionOwnership` membership rather than incidental raw-source comment boundaries. Business Priority therefore has exactly one `businessPriorityRegion`, is contained by the Overview-owned `executiveSummarySection`, is absent from Intelligence/Planning ownership, and renders through one target set. Responsive Chart.js canvases must fill a finite wrapper whose height does not depend on canvas content: Revenue Trend is 288px below desktop and clamps from 300px to 440px on desktop. Tab reveal may call `resize()` once on each existing visible chart but must not schedule, observe, recreate, or attach resize listeners.

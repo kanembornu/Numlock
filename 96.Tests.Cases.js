@@ -4012,6 +4012,265 @@ function testTransactionsVisualContract()
   return summary;
 }
 
+function testSettingsVisualContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var doGetSource = String(doGet);
+  var scenariosPassed = 0;
+  var settingsRegion = getSourceRegion(
+    source,
+    'id="settings"',
+    'id="logs"',
+    "Settings destination"
+  );
+
+  assertSourceContainsOnce(source, 'id="settings"', "Settings destination ID");
+  assertSourceContainsOnce(settingsRegion, 'id="settingsSections"', "Settings section group");
+  [
+    'id="appearanceSection"',
+    'aria-labelledby="appearanceHeading"',
+    'id="appearanceHeading"',
+    '>Appearance</h2>',
+    'id="aboutSection"',
+    'aria-labelledby="aboutHeading"',
+    'id="aboutHeading"',
+    '>About</h2>'
+  ].forEach(function(token)
+  {
+    assertSourceContains(settingsRegion, token, "Appearance and About ownership");
+  });
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(
+    settingsRegion,
+    'name="themePreference"',
+    3,
+    "theme preference radio controls"
+  );
+  [
+    '<fieldset class="mt-5">',
+    '<legend class="text-sm font-semibold ui-theme-primary">Theme preference</legend>',
+    'type="radio" name="themePreference" value="light"',
+    'type="radio" name="themePreference" value="dark"',
+    'type="radio" name="themePreference" value="system"',
+    '>Light</strong>',
+    '>Dark</strong>',
+    '>System</strong>',
+    "has-[:checked]:border-indigo-500",
+    "input:focus-visible"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "accessible exclusive theme selection");
+  });
+  scenariosPassed++;
+
+  [
+    'var storageKey = "numlock.ui.theme";',
+    "window.localStorage.getItem(storageKey)",
+    'document.documentElement.getAttribute(\n          "data-theme-preference"',
+    "control.checked = control.value === safePreference;",
+    'document.documentElement.setAttribute(\n        "data-theme",\n        resolvedTheme',
+    'window.localStorage.setItem(\n            "numlock.ui.theme",\n            safePreference'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "stored preference and effective theme semantics");
+  });
+  scenariosPassed++;
+
+  [
+    'var preference = "system";',
+    'preference === "system"',
+    '"(prefers-color-scheme: dark)"',
+    'systemThemeQuery.addEventListener("change"',
+    'applyThemePreference("system", false, false);'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "System media-query behavior");
+  });
+  scenariosPassed++;
+
+  var themeStart = source.indexOf("function synchronizeChartTheme(forceLight)");
+  var themeEnd = source.indexOf("function renderSessionClientLogs", themeStart);
+  var themeSource = source.slice(themeStart, themeEnd);
+
+  [
+    "synchronizeChartTheme();",
+    'chart.update("none");',
+    "elements.themeControls.forEach(function(control)",
+    'control.addEventListener("change"',
+    "applyThemePreference(control.value, true, true);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(themeSource, token, "immediate theme and chart synchronization");
+  });
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "requestDashboardData(",
+    "activeDashboardTab =",
+    "activeTransactionsTab =",
+    "filter.value =",
+    "showPage("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(themeSource, token, "theme state or request reset");
+  });
+  scenariosPassed++;
+
+  [
+    'window.addEventListener("beforeprint"',
+    "synchronizeChartTheme(true);",
+    "@media print",
+    "background: #ffffff !important;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print-light preservation");
+  });
+  scenariosPassed++;
+
+  [
+    "template.appName = PROJECT_CONFIG.APP_NAME;",
+    "template.version = PROJECT_CONFIG.VERSION;",
+    "template.releaseLabel = PROJECT_CONFIG.RELEASE_LABEL;",
+    "template.environment = PROJECT_CONFIG.ENVIRONMENT;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(doGetSource, token, "authoritative About metadata mapping");
+  });
+  var aboutMetadataTargets = [
+    {
+      id: "aboutApplicationName",
+      source: "template.appName"
+    },
+    {
+      id: "aboutVersion",
+      source: "template.version"
+    },
+    {
+      id: "aboutReleaseLabel",
+      source: "template.releaseLabel"
+    },
+    {
+      id: "aboutEnvironment",
+      source: "template.environment"
+    }
+  ];
+
+  aboutMetadataTargets.forEach(function(target)
+  {
+    assertSourceContainsOnce(
+      settingsRegion,
+      'id="' + target.id + '"',
+      "About metadata render target " + target.id
+    );
+    assertSourceContainsOnce(
+      settingsRegion,
+      'data-metadata-source="' + target.source + '"',
+      "About metadata provenance " + target.source
+    );
+  });
+  scenariosPassed++;
+
+  [
+    "scriptId", "deploymentId", "spreadsheetId", "repositoryPath",
+    "accountIdentity", "profile", "notifications", "integrations",
+    "permissions", "upgrade", "avatar", "search"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(settingsRegion, token, "sensitive or unsupported Settings content");
+  });
+  ["<select", "<textarea", 'type="checkbox"'].forEach(function(token)
+  {
+    assertSourceExcludes(settingsRegion, token, "unsupported editable Settings control");
+  });
+  scenariosPassed++;
+
+  [
+    "ui-theme-surface", "ui-theme-inset", "ui-theme-primary",
+    "ui-theme-secondary", "ui-theme-muted",
+    '#settings.active { height: 100%; overflow: hidden; }',
+    '#settings.active { height: auto; overflow: visible; }',
+    "grid-cols-1", "sm:grid-cols-3", "lg:grid-cols-12"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Settings theme and responsive containment");
+  });
+  scenariosPassed++;
+
+  var navigationStart = source.indexOf("function showPage(pageId)");
+  var navigationEnd = source.indexOf("function getResolvedTheme", navigationStart);
+  var navigationSource = source.slice(navigationStart, navigationEnd);
+
+  ["google.script.run", "getDashboardData(", "requestDashboardData("].forEach(function(token)
+  {
+    assertSourceExcludes(navigationSource, token, "Settings navigation backend request");
+  });
+  [
+    'settings: {',
+    'title: "Settings"',
+    'context: "Appearance and application information"',
+    "heading.focus();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(navigationSource, token, "Settings navigation and focus");
+  });
+  scenariosPassed++;
+
+  var onloadStart = source.indexOf("window.onload = function()");
+  var onloadSource = source.slice(onloadStart);
+
+  if (
+    onloadSource.indexOf("initializeThemeFoundation();") === -1 ||
+    onloadSource.indexOf("loadData();") === -1 ||
+    onloadSource.indexOf("initializeThemeFoundation();") >
+      onloadSource.indexOf("loadData();")
+  )
+  {
+    throw new Error("Settings theme must initialize before Dashboard data loading");
+  }
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Settings query budget exceeded");
+  }
+  assertSourceContainsOnce(
+    source,
+    "window.requestAnimationFrame(function()",
+    "single deferred phase preserved"
+  );
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "Settings response mutation");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    sections: 2,
+    themes: 3,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    backendRequests: 0
+  };
+
+  Logger.log(
+    "PASS: testSettingsVisualContract | scenarios=" + summary.scenarios +
+    " | sections=" + summary.sections +
+    " | themes=" + summary.themes +
+    " | backendRequests=" + summary.backendRequests +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testChartPresentationContract()
 {
   var source =
