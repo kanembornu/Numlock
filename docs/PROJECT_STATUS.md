@@ -22,11 +22,11 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 **Post-release maintenance and authorized UI/UX 2.0 discovery**
 
-Feature development remains paused after v1.0 closeout. UI/UX 2.0 Packages 001–002 completed authorized documentation-only information-architecture and low-fidelity-wireframe discovery without changing the v1.0 application, source, styling, data contracts, deployment, or release metadata.
+Feature development remains paused after v1.0 closeout. UI/UX 2.0 Packages 001–003 completed authorized documentation-only information architecture, low-fidelity wireframes, and visual-direction discovery without changing the v1.0 application, source, styling, data contracts, deployment, or release metadata.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 002 — low-fidelity wireframes — complete on 2026-08-05.** The documentation-only package defines Dashboard and Transactions at desktop and mobile widths, explicitly maps every block to the current 35-capability v1.0 inventory, compares Executive-first and Analytical-first Dashboard layouts, and recommends Executive-first for later high-fidelity mockups. Loading, empty, error, exact-request Retry, bounded drill-down, Print, CSV, responsive, and accessibility behavior remain explicit. UI/UX 2.0 stays in discovery; no production source, Tailwind, high-fidelity mockup, clasp, deployment, release metadata, commit, or push changed. The preceding v1.0 release closeout evidence remains unchanged.
+**UI/UX 2.0 Package 003 — visual direction system — complete on 2026-08-05.** The documentation-only package defines four implementation-feasible directions for the Executive-first wireframes, scores them through a seven-criterion weighted matrix, selects Executive Minimal as primary and Modern Financial as alternate, and permits one bounded hybrid candidate. Preliminary tokens cover both shortlisted directions. UI/UX 2.0 stays in discovery; no production source, Tailwind, production HTML, high-fidelity mockup, clasp, deployment, release metadata, commit, or push changed. The preceding v1.0 release closeout evidence remains unchanged.
 
 ## 6. Current test gate and evidence level
 
@@ -155,7 +155,7 @@ After v1.0 stabilization, NUMLOCK may evolve from a bounded dashboard into a gov
 
 ## 17. UI/UX 2.0 roadmap
 
-**Discovery only — not implemented.** Package 001 records the evidence-based [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md), and Package 002 records the implementation-neutral [UI/UX 2.0 Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md). Dashboard and Transactions remain the only immediate destinations; Reports and Settings remain deferred; all existing analytics, intelligence, forecast, performance, and Data Quality capabilities remain sections, disclosures, or contextual actions. Directional themes are:
+**Discovery only — not implemented.** Package 001 records the evidence-based [UI/UX 2.0 Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md), Package 002 records the implementation-neutral [UI/UX 2.0 Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md), and Package 003 records the [UI/UX 2.0 Visual Direction System](UIUX-2.0-VISUAL-DIRECTIONS.md). Dashboard and Transactions remain the only immediate destinations; Reports and Settings remain deferred; all existing analytics, intelligence, forecast, performance, and Data Quality capabilities remain sections, disclosures, or contextual actions. Directional themes are:
 
 1. Validate user roles, top decision journeys, device profiles, and measurable usability baselines.
 2. Prototype a clearer task-oriented information architecture without replacing the current accessible responsive shell.
@@ -167,7 +167,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 high-fidelity mockup planning.** Information architecture and low-fidelity wireframes are complete as discovery. The Executive-first direction is recommended for a separately authorized high-fidelity package; no high-fidelity mockup or implementation is currently authorized.
+**UI/UX 2.0 high-fidelity mockup comparison.** Information architecture, low-fidelity wireframes, and visual-direction discovery are complete. A separately authorized package may compare Executive Minimal, Modern Financial, and the bounded Executive Minimal/Modern Financial hybrid across the same four screens and states; no high-fidelity mockup or implementation is currently authorized.
 
 ## 19. Status-history log
 
@@ -179,3 +179,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | Feature Complete v1.0 | Live suite passed 25/25; immutable deployment version 185, unchanged stable URL, deployed-browser acceptance, and production health passed; version 184 retained for rollback. |
 | 2026-08-05 | UI/UX 2.0 discovery | Package 001 mapped all current capabilities, selected a two-destination Dashboard/Transactions architecture, and deferred Reports and Settings; documentation only, with no mockup or production change. |
 | 2026-08-05 | UI/UX 2.0 discovery | Package 002 defined four low-fidelity desktop/mobile wireframes, compared two Dashboard variants, and recommended Executive-first for later high-fidelity work; documentation only, with no production or Tailwind change. |
+| 2026-08-05 | UI/UX 2.0 discovery | Package 003 compared four visual directions, selected Executive Minimal and Modern Financial for later high-fidelity comparison, and defined preliminary shortlisted tokens; documentation only, with no production or Tailwind change. |

@@ -4,6 +4,12 @@ This document owns durable engineering and product decisions. [Project Status](P
 
 ## Active decisions
 
+### Shortlist Executive Minimal and Modern Financial
+
+UI/UX 2.0 Package 003 selects Executive Minimal as the primary visual direction and Modern Financial as the alternate after an explicit weighted comparison of executive clarity, daily usability, mobile usability, accessibility, implementation feasibility, maintainability, and visual distinctiveness. Executive Minimal best preserves decision-first calm, mobile readability, and low implementation risk. Modern Financial provides the strongest distinct comparison through precise numeric, chart, card, and table treatment without changing feature scope.
+
+A controlled hybrid is justified only as Executive Minimal structure, whitespace, surface restraint, and status discipline combined with Modern Financial numeric alignment, table precision, and chart-axis clarity. Analytical Workspace density and Operational Cockpit alert saturation are not included. This decision authorizes later high-fidelity comparison only when separately requested; it does not authorize production or Tailwind changes. The scoring, direction definitions, preliminary tokens, and mockup scope are owned by [UI/UX 2.0 Visual Direction System](UIUX-2.0-VISUAL-DIRECTIONS.md).
+
 ### Advance the Executive-first low-fidelity direction
 
 UI/UX 2.0 Package 002 compares two implementation-neutral Dashboard arrangements and selects Executive-first for later high-fidelity mockups. Performance, attention status, one authoritative Business Priority, and period comparison remain ahead of Key Metrics and secondary analytics. The Analytical-first alternative uses existing capabilities but is not advanced because it delays the synthesized conclusion and next action, particularly across multiple narrow-screen viewports.
