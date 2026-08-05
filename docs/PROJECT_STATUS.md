@@ -8,9 +8,9 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## 2. Current status
 
-**Feature Complete Candidate**
+**Release Candidate**
 
-The currently approved bounded product scope is implemented, but final `Feature Complete v1.0` status is not supported yet. The current Apps Script runtime, deployment, and deployed-browser release gates have not all been rerun against the latest uploaded source.
+The documented bounded v1.0 feature baseline is implemented and locally stabilized. Final `Feature Complete v1.0` status is not supported yet because the exact current candidate has not passed Apps Script live, immutable-deployment, deployed-browser, and production verification in one release sequence.
 
 ## 3. Current version
 
@@ -78,7 +78,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - Current Sprint 5.16 Apps Script runtime and deployed-browser acceptance are unverified.
-- [RELEASE.md](RELEASE.md) contains historical `10/10` runner references and legacy classifications that no longer describe the current 25-entry gate; release execution must use the current runner and reconcile that document before a release.
+- Historical milestone sections retain their original runner totals; the active release workflow and current gate now require exactly 25/25.
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
@@ -99,10 +99,30 @@ Historical evidence remains in its owning document; this file summarizes current
 
 ## 13. Release-readiness checklist
 
-- [x] Current phase and candidate status are recorded without claiming final release acceptance.
+The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` means the criterion is supported at the stated evidence level; it does not imply a later evidence level.
+
+| Release criterion | Status | Highest current evidence | Closeout requirement |
+| --- | --- | --- | --- |
+| Production architecture | PASS | Repository/static | Preserve the numbered Apps Script architecture and one Aggregate Engine build. |
+| Analytics and intelligence | PASS | Local test; earlier production evidence exists for the 2026-08-03 baseline | Reconfirm the current 25-entry suite live. |
+| Dashboard functionality | PASS | Local test | Reconfirm the current candidate in the deployed browser. |
+| Responsive behavior | UNVERIFIED | Repository/static and local contract | Pass desktop and representative narrow-width browser acceptance. |
+| Accessibility | UNVERIFIED | Repository/static and local contract | Complete keyboard, focus, reduced-motion, automated scan, and screen-reader spot checks in the deployed browser. |
+| Performance | UNVERIFIED | Local deterministic query/deferred-render contract | Capture representative deployed-browser behavior and confirm no stale work or response mutation. |
+| Print and CSV export | UNVERIFIED | CSV has Apps Script live contract evidence; print and both browser paths have local/static evidence | Verify print/PDF and CSV download against the deployed candidate. |
+| Drill-down | UNVERIFIED | Repository/static and local four-scenario contract | Verify keyboard/canvas actions, bounded results, clear/reset, and focus transfer in the deployed browser. |
+| Response-contract coverage | PASS | Local 25/25; sparse seven-fixture exact 37-field contract | Reconfirm 25/25 in Apps Script against the current candidate. |
+| Documentation | PASS | Repository/static | Keep the release record synchronized through final validation and Git completion. |
+| Rollback readiness | BLOCKED | Documented procedure only | Record the current known-good immutable Apps Script version and intended production deployment before promotion. |
+| Dependency pinning | PASS | Repository/static and local contract | Confirm exact dependency requests and no Tailwind CDN request in deployed-browser Network inspection. |
+| Known technical debt | PASS | Repository/documentation | Keep the three gated expansions deferred; accept only the documented Apps Script iframe warning. |
+
+The mandatory blockers are only the missing release evidence for the exact candidate: clean baseline review, current local 25/25 preflight, authorized inventory/upload, current Apps Script live 25/25, recorded rollback version and intended deployment, immutable deployment update, deployed-browser acceptance, and production identity/health confirmation. Editable targets, payload projection, and expanded drill-down are optional future work and are not v1.0 blockers.
+
+- [x] Current phase and Release Candidate status are recorded without claiming final release acceptance.
 - [x] Current runner membership is 25 and the latest local 25/25 result is recorded.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
-- [ ] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
+- [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [ ] Start release operations from a clean, reviewed Git worktree.
 - [ ] Run the current 25-entry unified gate locally against the exact release candidate.
 - [ ] Review clasp inventory and upload only with explicit authorization.
@@ -149,10 +169,12 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 **v1.0 stabilization evidence closure.** Reconcile the release document with the current 25-entry gate, establish a clean release-candidate boundary, then obtain current Apps Script runtime and deployed-browser evidence through the operator-controlled release process. No new feature package is selected.
 
+After final v1.0 closeout, the next planned phase is **UI/UX 2.0 discovery and validation**. It remains outside the v1.0 feature baseline and requires separately approved packages.
+
 ## 19. Status-history log
 
 | Date | Status | Evidence summary |
 | --- | --- | --- |
 | 2026-08-03 | Production 1.0.0 | Release history records production 1.0.0 and earlier deployment/browser acceptance. |
 | 2026-08-04 | Stabilization expansion | Sprints 5.10–5.12 completed locally with evidence levels recorded separately. |
-| 2026-08-05 | Feature Complete Candidate | Sprints 5.13–5.16 closed the bounded export, drill-down, discovery, and response-contract work; Sprint 5.16 is committed and pushed at `0114ca4`, and the current runner is 25 entries, with current runtime/deployment/browser evidence still incomplete. |
+| 2026-08-05 | Release Candidate | Sprints 5.13–5.16 closed the bounded export, drill-down, discovery, and response-contract work; the current runner is 25 entries and latest verified local result is 25/25, while exact-candidate Apps Script live, deployment, deployed-browser, rollback-reference, and production evidence remain mandatory closeout blockers. |

@@ -18,7 +18,7 @@ Every release updates `10.Config.js` and `docs/CHANGELOG.md` together. Update RE
 2. Run `npm ci`.
 3. Run `npm run build:tailwind` when frontend classes or styling changed, and review the generated `189.View.Tailwind.html` diff.
 4. Parse every numbered production JavaScript file and run applicable static checks.
-5. Run `runAllBackendTests()` locally with the documented Apps Script-compatible mocks; require `10/10` PASS.
+5. Run `runAllBackendTests()` locally with the documented Apps Script-compatible mocks; require `25/25` PASS.
 6. Review the complete diff and confirm release metadata and changelog agree.
 
 ### 2. Apps Script upload
@@ -30,7 +30,7 @@ Every release updates `10.Config.js` and `docs/CHANGELOG.md` together. Update RE
 ### 3. Live validation
 
 1. In the Apps Script editor, run `runAllBackendTests()` against the intended NUMLOCK project.
-2. Require the final `10/10` PASS marker.
+2. Require the final `25/25` PASS marker.
 3. If it fails, use the named targeted test function only to diagnose that failure. Stop on mismatches; do not deploy speculative fixes.
 
 ### 4. Deployment
@@ -72,10 +72,10 @@ Production rollback means editing the existing production deployment to point ba
 - [ ] `npm ci` passed.
 - [ ] Tailwind was rebuilt and reviewed when frontend classes or styling changed.
 - [ ] Production JavaScript syntax/static checks passed.
-- [ ] Local `runAllBackendTests()` passed `10/10`.
+- [ ] Local `runAllBackendTests()` passed `25/25`.
 - [ ] `clasp status` showed the exact reviewed production inventory.
 - [ ] Authorized `clasp push --force` completed.
-- [ ] Apps Script `runAllBackendTests()` passed `10/10`.
+- [ ] Apps Script `runAllBackendTests()` passed `25/25`.
 - [ ] The existing production deployment was updated to a new immutable version.
 - [ ] The stable web-app URL was retained.
 - [ ] Desktop and narrow-width browser acceptance passed.
@@ -85,12 +85,32 @@ Production rollback means editing the existing production deployment to point ba
 - [ ] Commit and push occurred only with explicit authorization.
 - [ ] The prior immutable Apps Script version was recorded for rollback.
 
+## v1.0 release-candidate closeout
+
+The 2026-08-05 audit classifies the repository as **Release Candidate**. The bounded v1.0 feature baseline is complete, but final `Feature Complete v1.0` promotion requires one uninterrupted evidence chain for the exact candidate:
+
+1. Start from a clean, reviewed Git boundary; record the candidate commit and confirm `10.Config.js` and this changelog agree.
+2. Run dependency installation, applicable Tailwind generation checks, production JavaScript parsing, focused contracts, Markdown links, `git diff --check`, and local `runAllBackendTests()`; require 25/25.
+3. With explicit authorization, review `clasp status`, confirm the exact inventory, and upload that candidate. Upload alone proves no runtime behavior.
+4. In the intended Apps Script project, run `runAllBackendTests()` and require 25/25. Stop if the source identity or result differs.
+5. Before changing production, record the intended existing deployment and its current known-good immutable Apps Script version as the rollback target.
+6. With explicit authorization, create a new immutable Apps Script version and update that existing deployment while retaining its stable URL.
+7. Hard-refresh the deployed URL and pass desktop and narrow-width acceptance for dashboard states, filters, charts, accessibility, performance behavior, Print Report, CSV export, bounded drill-down, Console, and Network.
+8. Confirm the served version/build, deployment identity, current response contract, and production health match the candidate; record each evidence level separately.
+9. Only after all prior gates pass, explicitly stage the approved release files, review the cached diff, commit, create annotated tag `v1.0.0`, and push only with separate authorization.
+
+Any failed or missing step holds promotion. Resume at the first incomplete step only after the candidate identity remains unchanged or all earlier affected gates are rerun. Roll back production by repointing the same deployment to the recorded known-good immutable version.
+
+The final v1.0 baseline should be the single reviewed commit that contains the complete bounded implementation, synchronized `1.0.0` production metadata and changelog, passing 25-entry runner, and final evidence record. Permission-, privacy-, governance-, consumer-, persistence-, pagination-, and payload-measurement-gated expansions are not part of this baseline.
+
+After release, allow patch releases only for backward-compatible defect, security, dependency, documentation, or operational fixes. Require a minor release for additive approved capability and a major release for incompatible contracts. Preserve the full default dashboard response, retain rollback versions, keep release evidence by level, and route new feature work to UI/UX 2.0 or a separately approved backlog package.
+
 ## Legacy migration audit
 
 ### Reachability result
 
 - Production path: `getDashboardData()` calls `buildAnalyticsCache()`, which calls `buildAggregate()` once and derives summary, revenue trend, expense breakdown, top products, profit trend, and Hot/Cold split through aggregate adapters. It does not call a legacy builder, migration validator, or test entry point.
-- Test path: `runAllBackendTests()` reaches nine test entries: `testAggregate()`, deterministic Summary, Revenue Trend, Expense Breakdown, Top Products, Profit Trend, and Hot/Cold Split fixtures, `testSparseDatasetResilience()`, and `testDashboardDateFilter()`, plus the production `getDashboardData()` check. The unified suite contains exactly ten ordered checks, uses deterministic fixtures only, and no legacy migration oracle remains.
+- Test path: `runAllBackendTests()` reaches the production `getDashboardData()` check plus 24 named deterministic contract entries. The unified suite contains exactly 25 ordered checks, remains fail-fast, and contains no legacy migration oracle.
 - Unreachable functions: none.
 - Retired functions: all six legacy oracle chains were removed after their deterministic replacements passed live.
 - Replacement coverage status: complete. Aggregate Engine is the sole production analytics source, source migration is complete, and Sprint 5.7 Package 005 is complete.
@@ -105,7 +125,7 @@ Each declared production-source function appears exactly once below.
 | Active regression support | `createSummaryFixtures`, `createRevenueTrendFixtures`, `createExpenseBreakdownFixtures`, `createTopProductsFixtures`, `createProfitTrendFixtures`, `createHotColdFixtures`, `createSparseDatasetFixtures`, `createDashboardDateFilterFixtures`, `assertFiniteNumbers`, `assertRequiredProperties`, `assertThrowsMessage`, `validateAggregate` |
 | Legacy migration oracle | None |
 | Migration validator | None |
-| Test entry point | `testAggregate`, `testSummaryFixtures`, `testRevenueTrendFixtures`, `testExpenseBreakdownFixtures`, `testTopProductsFixtures`, `testProfitTrendFixtures`, `testHotColdFixtures`, `testSparseDatasetResilience`, `testDashboardDateFilter`, `runAllBackendTests` |
+| Test entry point | `runAllBackendTests` plus the 24 named contract entries currently listed in `98.Tests.Runner.js` |
 | Dead/unreferenced function | None |
 
 `validateAggregate` is classified as an active regression diagnostic rather than a migration validator because it logs comparisons but does not assert or throw on mismatches.
