@@ -65,6 +65,8 @@
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
       .analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
       .performance-metric-value { font-variant-numeric: tabular-nums; }
+      #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }
+      #mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }
       #sidebarBackdrop { background: var(--overlay); }
       .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
       .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
@@ -93,13 +95,23 @@
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
         #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 12px; overflow: hidden; }
         #dashboardPanelPerformance #businessPerformanceSection,
-        #dashboardPanelPerformance #revenueChartSection { height: 100%; margin: 0; }
-        #dashboardPanelPerformance #mainChartWrapper { height: calc(100% - 76px); min-height: 300px; }
+        #dashboardPanelPerformance #revenueChartSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
+        #dashboardPanelPerformance #mainChartWrapper { height: clamp(300px, calc(100dvh - 330px), 440px); min-height: 300px; max-height: 440px; }
         #dashboardPanelAnalytics:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #dashboardPanelAnalytics > section,
         #dashboardPanelAnalytics > div { min-height: 0; height: 100%; margin: 0; }
         #dashboardPanelAnalytics #hotColdWrapper,
         #dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 148px; }
+        #dashboardPanelIntelligence:not([hidden]) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; overflow: hidden; }
+        #dashboardPanelIntelligence > section,
+        #dashboardPanelIntelligence > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
+        #dashboardPanelIntelligence #diagnosisContainer,
+        #dashboardPanelIntelligence #recommendationContainer { min-height: 0; overflow-y: auto; }
+        #dashboardPanelIntelligence #riskOpportunitySection { display: flex; flex-direction: column; gap: 8px; }
+        #dashboardPanelIntelligence #riskOpportunitySection > div { min-height: 0; flex: 1 1 0; }
+        #dashboardPanelPlanning:not([hidden]) { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
+        #dashboardPanelPlanning #executiveCenter { min-height: 0; flex: 1 1 auto; height: auto; margin: 0; overflow: hidden; }
+        #dashboardPanelPlanning > #kpiTargetReference { flex: 0 0 auto; margin: 0; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-1); }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 72px; }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -114,6 +126,11 @@
         #contentViewport { overflow: visible; }
         #dashboardPanelPerformance,
         #dashboardPanelAnalytics { height: auto; overflow: visible; }
+        #dashboardPanelIntelligence,
+        #dashboardPanelPlanning { height: auto; overflow: visible; }
+        #dashboardPanelIntelligence #diagnosisContainer,
+        #dashboardPanelIntelligence #recommendationContainer { overflow: visible; }
+        #dashboardPanelPlanning #executiveCenter { overflow: visible; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -754,23 +771,24 @@
     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
 
       <!-- EXECUTIVE SUMMARY -->
-      <section id="diagnosisSection" class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 flex flex-col">
+      <section id="diagnosisSection" class="analytics-surface min-w-0 rounded-2xl border p-3 flex flex-col" aria-labelledby="diagnosisHeading">
 
-        <div class="mb-5">
+        <div class="mb-2">
           <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
             Attention Required
           </p>
 
-          <h2 class="mt-2 text-[2rem] font-bold text-slate-900">
+          <h2 id="diagnosisHeading" class="mt-1 text-base font-bold text-slate-900">
             Business Signals
           </h2>
 
-          <p class="mt-2 text-[15px] text-slate-500">
-            Distinct signals that may require a response
+          <p class="mt-1 text-xs text-slate-500">
+            Current diagnosis and executive alert
           </p>
         </div>
 
-        <div id="diagnosisContainer" class="space-y-4 flex-1"></div>
+        <div id="diagnosisContainer" class="space-y-2 flex-1"></div>
+        <div id="intelligenceMetricContext" class="mt-2 grid grid-cols-2 gap-2 border-t border-slate-200 pt-2"></div>
 
       </section>
 
@@ -829,60 +847,64 @@
       </section>
 
       <!-- ACTION CENTER -->
-      <section id="recommendationsSection" class="min-w-0 bg-white rounded-[32px] p-6 sm:p-8 shadow-lg border border-slate-100 flex flex-col">
+      <section id="recommendationsSection" class="analytics-surface min-w-0 rounded-2xl border p-3 flex flex-col" aria-labelledby="recommendationsHeading">
 
-        <div class="mb-6">
+        <div class="mb-2">
           <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
             Action Center
           </p>
 
-          <h2 class="mt-2 text-[2rem] font-bold text-slate-900">
+          <h2 id="recommendationsHeading" class="mt-1 text-base font-bold text-slate-900">
             Recommended Actions
           </h2>
 
-          <p class="mt-2 text-[15px] text-slate-500">
+          <p class="mt-1 text-xs text-slate-500">
             Prioritized business improvements
           </p>
         </div>
 
-        <div id="recommendationContainer" class="mt-2"></div>
+        <div id="recommendationContainer" class="mt-1 flex-1" role="list" aria-label="Prioritized recommendations"></div>
 
       </section>
 
     </div>
 
     <!-- DECISION SUPPORT -->
-    <div id="executiveCenter" class="min-w-0 bg-white rounded-[32px] shadow-lg border border-slate-100 p-6 sm:p-8 mb-8">
-      <div class="flex items-center justify-between mb-6">
+    <div id="executiveCenter" class="analytics-surface min-w-0 rounded-2xl border p-3">
+      <div class="mb-2 flex items-center justify-between">
         <div>
-          <div class="text-sm text-slate-500 uppercase"> Decision Support </div>
-          <h2 class="text-3xl font-bold mt-1"> Planning Detail </h2>
+          <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Decision Support</div>
+          <h2 class="mt-1 text-base font-bold">Planning Detail</h2>
         </div>
       </div>
 
-    <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
-      <div id="businessFocusCard" class="rounded-2xl border p-6"> Loading Business Focus... </div>
-      <div id="kpiAchievementCard" class="rounded-2xl border p-6"> Loading KPI Achievement... </div>
-      <div id="businessMaturityCard" class="rounded-2xl border p-6"> Loading Business Maturity... </div>
+    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2">
+      <div id="businessFocusCard" class="rounded-xl border">Loading Business Focus...</div>
+      <div id="priorityActionCard" class="rounded-xl border">Loading Priority Action...</div>
     </div>
-      <div id="actionRoadmapCard" class="mt-6 rounded-2xl border p-6"> Loading Action Roadmap... </div>
+      <div id="actionRoadmapCard" class="mt-2 rounded-xl border p-3">Loading Action Roadmap...</div>
+    <div class="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
+      <div id="kpiAchievementCard" class="rounded-xl border">Loading KPI Achievement...</div>
+      <div id="businessMaturityCard" class="rounded-xl border">Loading Business Maturity...</div>
+    </div>
     </div>
 
     <!-- RISK AND GROWTH -->
-    <div id="riskOpportunitySection" class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-6">
-      <div class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100">
-        <div class="text-sm uppercase tracking-wider text-slate-500 mb-2"> Risk Status </div>
-        <div id="riskLevel" class="text-3xl font-bold">Loading...</div>
-        <div id="riskCount" class="text-slate-500 mt-2">...</div>
-        <div id="riskList" class=" mt-5 space-y-2"></div>
+    <div id="riskOpportunitySection" class="analytics-surface rounded-2xl border p-3">
+      <div class="ui-theme-inset rounded-xl border p-3">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Risk Status</div>
+        <div id="riskLevel" class="text-xl font-bold">Loading...</div>
+        <div id="riskCount" class="mt-1 text-xs text-slate-500">...</div>
+        <div id="riskList" class="mt-2 space-y-1 text-xs"></div>
       </div>
 
-      <div class="bg-white rounded-[32px] p-8 shadow-lg border border-slate-100">
-        <div class="text-sm uppercase tracking-wider text-slate-500 mb-2"> Growth Opportunity </div>
-        <div id="growthScore" class="text-4xl font-bold">...</div>
-        <div id="growthStatus" class="mt-2 text-slate-500">...</div>
-        <div id="growthMessage" class="mt-4 text-slate-700">...</div>
+      <div class="ui-theme-inset rounded-xl border p-3">
+        <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Growth Opportunity</div>
+        <div id="growthScore" class="text-xl font-bold">...</div>
+        <div id="growthStatus" class="mt-1 text-xs font-semibold text-slate-500">...</div>
+        <div id="growthMessage" class="mt-2 text-xs leading-snug text-slate-700">...</div>
       </div>
+      <div id="intelligenceDirectionContext" class="ui-theme-inset rounded-xl border p-3"></div>
     </div>
 
     <!-- PRODUCT PERFORMANCE -->
@@ -1211,8 +1233,8 @@
           staging.querySelector("#riskOpportunitySection")
         ],
         planning: [
-          staging.querySelector("#kpiTargetReference"),
-          staging.querySelector("#executiveCenter")
+          staging.querySelector("#executiveCenter"),
+          staging.querySelector("#kpiTargetReference")
         ]
       };
 
@@ -2789,40 +2811,12 @@
         };
 
       return `
-      <div class="${config.bg} border ${config.border} rounded-[24px] p-5">
-
-          <div class="flex items-start gap-4">
-
-              <div class="w-11 h-11 rounded-full ${config.iconBg} flex items-center justify-center text-white shrink-0">
-
-                  ${config.icon}
-
-              </div>
-
-              <div class="flex-1">
-
-                  <span class="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold tracking-wide ${config.badge}">
-
-                      ${config.label}
-
-                  </span>
-
-                  <h4 class="mt-2 text-lg font-bold text-slate-900">
-
-                      ${item.title}
-
-                  </h4>
-
-                  <p class="mt-2 text-sm leading-6 text-slate-600">
-
-                      ${item.description}
-
-                  </p>
-
-              </div>
-
-          </div>
-
+      <div class="${config.bg} border ${config.border} rounded-xl p-3" role="listitem">
+        <div class="flex items-start justify-between gap-2">
+          <h4 class="text-sm font-bold text-slate-900">${item.title || "Business condition"}</h4>
+          <span class="inline-flex shrink-0 items-center rounded-full px-2 py-1 text-[10px] font-bold ${config.badge}">${config.icon} ${config.label}</span>
+        </div>
+        <p class="mt-1 text-xs leading-snug text-slate-600">${item.description || item.message || "No additional detail."}</p>
       </div>
       `;
     }
@@ -2873,33 +2867,33 @@
 
         return `
 
-        <div class="relative flex gap-4 pb-8">
+        <div class="relative flex gap-3 border-b border-slate-200 py-3" role="listitem">
 
             ${
             index < items.length - 1
             ?
-            `<div class="absolute left-[14px] top-8 bottom-0 w-px bg-slate-200"></div>`
+            `<div class="absolute left-[13px] top-9 bottom-0 w-px bg-slate-300"></div>`
             :
             ""
             }
 
             <div class="relative z-10">
 
-                <div class="w-7 h-7 rounded-full ${config.dot} border-4 border-white shadow"></div>
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${config.dot} text-[10px] font-bold text-white">${index + 1}</div>
 
             </div>
 
             <div class="flex-1">
 
-                <div class="flex items-center justify-between">
+                <div class="flex items-center justify-between gap-2">
 
-                    <h4 class="font-semibold text-slate-800">
+                    <h4 class="text-sm font-semibold text-slate-800">
 
-                        Action ${index+1}
+                        Recommendation ${index+1}
 
                     </h4>
 
-                    <span class="px-3 py-1 rounded-full text-xs font-bold ${config.badge}">
+                    <span class="shrink-0 rounded-full px-2 py-1 text-[10px] font-bold ${config.badge}">
 
                         ${config.label}
 
@@ -2907,7 +2901,7 @@
 
                 </div>
 
-                <p class="mt-2 text-[15px] leading-7 text-slate-600">
+                <p class="mt-1 text-xs leading-snug text-slate-600">
 
                     ${item.message}
 
@@ -3311,12 +3305,41 @@
           ? res.diagnosis
           : [];
 
-      if (diagnosis.length)
+      if (
+        res.summary &&
+        res.revenueIntelligence &&
+        res.profitIntelligence
+      )
       {
-        document.getElementById("diagnosisContainer").innerHTML =
-        diagnosis
-        .map(renderDiagnosisCard)
-        .join("");
+        var diagnosisContainer =
+          document.getElementById("diagnosisContainer");
+        var alert = res.executiveAlert;
+        var alertMarkup = alert
+          ? '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3" aria-label="Executive Alert">' +
+            '<div class="flex items-center justify-between gap-2">' +
+            '<strong class="text-sm">Executive Alert</strong>' +
+            '<span class="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-bold">' +
+            alert.level + '</span></div>' +
+            '<div class="mt-1 text-sm font-bold">' + alert.title + '</div>' +
+            '<p class="mt-1 text-xs leading-snug text-slate-600">' + alert.message + '</p></div>'
+          : '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">No executive alert for the active period.</div>';
+
+        diagnosisContainer.innerHTML =
+          alertMarkup +
+          diagnosis.map(renderDiagnosisCard).join("");
+
+        diagnosisContainer.nextElementSibling.innerHTML =
+          '<div class="ui-theme-inset rounded-xl border p-2">' +
+          '<div class="text-[10px] font-bold uppercase text-slate-500">Revenue Intelligence</div>' +
+          '<div class="mt-1 text-sm font-bold">' + res.revenueIntelligence.direction +
+          ' · ' + res.revenueIntelligence.growthRate + '%</div>' +
+          '<div class="mt-1 text-[10px] text-slate-500">' + res.revenueIntelligence.momentum + '</div></div>' +
+          '<div class="ui-theme-inset rounded-xl border p-2">' +
+          '<div class="text-[10px] font-bold uppercase text-slate-500">Profit Intelligence</div>' +
+          '<div class="mt-1 text-sm font-bold">' + res.profitIntelligence.direction +
+          ' · ' + res.profitIntelligence.changeRate + '%</div>' +
+          '<div class="mt-1 text-[10px] text-slate-500">' + res.profitIntelligence.status +
+          ' · Rp ' + res.summary.profit.toLocaleString("id-ID") + '</div></div>';
 
         document.getElementById("revenueIntelContainer").innerHTML =
         renderIntelCard({
@@ -3475,13 +3498,13 @@
           riskColor = "text-red-600";
         }
 
-        document.getElementById("riskLevel").className = "text-3xl font-bold " + riskColor;
+        document.getElementById("riskLevel").className = "text-xl font-bold " + riskColor;
         document.getElementById("riskList").innerHTML =
           res.riskEngine.risks
             .map(function(item)
             {
               return `
-              <div class="bg-slate-50 border border-slate-200 rounded-xl p-3">
+              <div class="bg-slate-50 border border-slate-200 rounded-lg p-2">
                 ⚠ ${item}
               </div>`;
             })
@@ -3509,7 +3532,9 @@
             message = "Fokus pada pemulihan revenue dan profit margin sebelum melakukan ekspansi.";
           }
 
-        document.getElementById("growthMessage").innerText = message;
+        var growthMessageElement =
+          document.getElementById("growthMessage");
+        growthMessageElement.innerText = message;
 
         var color = "text-red-600";
 
@@ -3522,7 +3547,16 @@
           color = "text-amber-600";
           }
 
-        document.getElementById("growthScore").className = "text-4xl font-bold " + color;
+        document.getElementById("growthScore").className = "text-xl font-bold " + color;
+
+        growthMessageElement.parentElement.nextElementSibling.innerHTML =
+          '<div class="grid grid-cols-2 gap-2">' +
+          '<div><div class="text-[10px] font-bold uppercase text-slate-500">Revenue Intelligence</div>' +
+          '<div class="mt-1 text-xs font-semibold">' + res.revenueIntelligence.direction +
+          ' · ' + res.revenueIntelligence.growthRate + '%</div></div>' +
+          '<div><div class="text-[10px] font-bold uppercase text-slate-500">Profit Intelligence</div>' +
+          '<div class="mt-1 text-xs font-semibold">' + res.profitIntelligence.direction +
+          ' · ' + res.profitIntelligence.status + '</div></div></div>';
       }
 
       if (res.revenueConcentration)
@@ -3833,19 +3867,26 @@
               focusColor = "bg-amber-50 border-amber-200";
             }
 
-        document.getElementById( "businessFocusCard" ).innerHTML = `
-        <div class="${focusColor} rounded-2xl p-5 border h-full">
-          <div class="text-xs uppercase text-slate-500"> Business Focus </div>
-          <div class="text-2xl font-bold mt-3"> 🎯 ${res.businessFocus.focus} </div>
-            <div class="mt-2">
-              Priority : <strong>${res.businessFocus.priority}</strong>
-            </div>
-          <div class="mt-4 text-slate-600"> ${res.businessFocus.reason} </div>
-            <div class="mt-4 text-sm text-slate-500">
-              Expected Impact : <strong>${res.businessFocus.expectedImpact}</strong>
-            </div>
+        var businessFocusCard =
+          document.getElementById( "businessFocusCard" );
+        businessFocusCard.innerHTML = `
+        <div class="${focusColor} rounded-xl p-3 border h-full">
+          <div class="flex items-center justify-between gap-2"><div class="text-[10px] font-bold uppercase text-slate-500">Business Focus</div><strong class="text-[10px]">${res.businessFocus.priority} Priority</strong></div>
+          <div class="mt-1 text-base font-bold">${res.businessFocus.focus}</div>
+          <div class="mt-1 text-xs text-slate-600">${res.businessFocus.reason}</div>
+          <div class="mt-2 text-[10px] text-slate-500">Expected Impact: <strong>${res.businessFocus.expectedImpact}</strong></div>
         </div>
         `;
+
+        if (res.priorityAction)
+        {
+          businessFocusCard.nextElementSibling.innerHTML = `
+          <div class="ui-theme-inset h-full rounded-xl border p-3">
+            <div class="flex items-center justify-between gap-2"><div class="text-[10px] font-bold uppercase text-slate-500">Priority Action</div><strong class="text-[10px]">${res.priorityAction.impact} Impact</strong></div>
+            <div class="mt-1 text-base font-bold">${res.priorityAction.title}</div>
+            <div class="mt-1 text-xs leading-snug text-slate-600">${res.priorityAction.message}</div>
+          </div>`;
+        }
       }
 
       //--------------------------------------------------
@@ -3856,13 +3897,11 @@
         function progressBar(value, color)
         {
           return `
-            <div class="mt-2">
-              <div class="flex justify-between text-sm mb-1">
-                <span>${value}%</span>
-              </div>
-              <div class="w-full bg-slate-200 rounded-full h-2">
+            <div class="mt-1">
+              <div class="mb-1 flex justify-between text-[10px]"><span>${value}%</span></div>
+              <div class="h-1.5 w-full rounded-full bg-slate-200" role="progressbar" aria-valuenow="${value}" aria-valuemin="0" aria-valuemax="100">
               <div
-                class="${color} h-2 rounded-full"
+                class="${color} h-1.5 rounded-full"
                 style="width:${value}%">
               </div>
               </div>
@@ -3871,17 +3910,18 @@
         }
 
         document.getElementById( "kpiAchievementCard" ).innerHTML = `
-        <div class="rounded-2xl border p-5 h-full">
-          <div class="text-xs uppercase text-slate-500"> KPI Achievement </div>
-          <div class="mt-5">
-            <div class="font-semibold"> Revenue </div>
+        <div class="ui-theme-inset rounded-xl border p-3 h-full">
+          <div class="text-[10px] font-bold uppercase text-slate-500">KPI Achievement</div>
+          <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+            <div class="text-xs font-semibold">Revenue
             ${progressBar( res.kpiAchievement.revenue.achievement, "bg-indigo-500" )}
-            <div class="font-semibold mt-5"> Profit </div>
+            </div><div class="text-xs font-semibold">Profit
             ${progressBar( res.kpiAchievement.profit.achievement, "bg-emerald-500" )}
-            <div class="font-semibold mt-5"> Units Sold </div>
+            </div><div class="text-xs font-semibold">Units Sold
             ${progressBar( res.kpiAchievement.units.achievement, "bg-amber-500" )}
-            <div class="font-semibold mt-5"> Profit Margin </div>
+            </div><div class="text-xs font-semibold">Profit Margin
             ${progressBar( res.kpiAchievement.margin.achievement, "bg-rose-500" )}
+            </div>
           </div>
         </div>
         `;
@@ -3903,12 +3943,12 @@
             }
 
         document.getElementById( "businessMaturityCard" ).innerHTML = `
-        <div class="rounded-2xl border p-6 h-full">
-          <div class="text-xs uppercase text-slate-500"> Business Maturity </div>
-          <div class="mt-4">
-            <div class="text-5xl font-bold ${maturityColor}"> ${res.businessMaturity.score} </div>
-            <div class="text-2xl font-semibold mt-3"> ${res.businessMaturity.level} </div>
-            <div class="mt-4 text-slate-600"> ${res.businessMaturity.description} </div>
+        <div class="ui-theme-inset rounded-xl border p-3 h-full">
+          <div class="text-[10px] font-bold uppercase text-slate-500">Business Maturity</div>
+          <div class="mt-2 flex items-start gap-3">
+            <div class="text-2xl font-bold ${maturityColor}">${res.businessMaturity.score}</div>
+            <div><div class="text-sm font-semibold">${res.businessMaturity.level}</div>
+            <div class="mt-1 text-xs leading-snug text-slate-600">${res.businessMaturity.description}</div></div>
           </div>
         </div>
         `;
@@ -3925,30 +3965,30 @@
         document.getElementById( "actionRoadmapCard" ).innerHTML = `
 
         <div>
-            <div class="flex flex-wrap items-center justify-between gap-3 mb-8">
+            <div class="mb-2 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <div class="text-xs uppercase tracking-wider text-slate-500"> 30 Day Action Roadmap </div>
-              <div class="text-2xl font-bold mt-1"> Execution Timeline </div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500">30 Day Action Roadmap</div>
+              <div class="mt-1 text-sm font-bold">Execution Timeline</div>
             </div>
-              <div class="text-sm text-slate-400"> 4 Weeks </div>
+              <div class="text-[10px] text-slate-400">4 Weeks</div>
             </div>
-          <div>
+          <div class="grid grid-cols-1 gap-2 lg:grid-cols-4">
 
           ${
 
           res.actionRoadmap.map(function(item,index)
           {
             return `
-              <div class="flex gap-6">
-                <div class="flex flex-col items-center">
-                  <div class=" w-10 h-10 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center"> ${item.week} </div>
-                  ${ index < res.actionRoadmap.length-1 ? ` <div class="w-px flex-1 bg-slate-300 my-2"> </div>` : "" }
+              <div class="relative flex gap-3 rounded-lg bg-slate-50 p-2 lg:block">
+                <div class="flex flex-col items-center lg:mb-2 lg:flex-row">
+                  <div class="z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">${item.week}</div>
+                  ${ index < res.actionRoadmap.length-1 ? `<div class="my-1 w-px flex-1 bg-slate-300 lg:my-0 lg:h-px lg:w-auto"></div>` : "" }
                 </div>
 
-                <div class="pb-8">
-                  <div class="text-sm uppercase text-slate-400"> Week ${item.week} </div>
-                  <div class="text-xl font-semibold mt-1"> ${item.title} </div>
-                  <div class="text-slate-600 mt-2 leading-relaxed"> ${item.action} </div>
+                <div>
+                  <div class="text-[10px] uppercase text-slate-400">Week ${item.week}</div>
+                  <div class="mt-1 text-xs font-semibold">${item.title}</div>
+                  <div class="mt-1 text-[11px] leading-snug text-slate-600">${item.action}</div>
                 </div>
               </div>
               `;

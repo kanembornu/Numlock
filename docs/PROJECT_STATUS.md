@@ -22,15 +22,15 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 **Post-release maintenance and authorized UI/UX 2.0 implementation**
 
-The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 008 redesigns only Performance and Analytics without changing dashboard data, formulas, response fields, version metadata, other tabs, or deployment.
+The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 009 redesigns only Intelligence and Planning without changing dashboard data, formulas, response fields, precedence, version metadata, other tabs, or deployment.
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 008 — Performance and Analytics redesign — implemented and uploaded on 2026-08-05.** Performance now pairs five compact current-period measures and quiet existing forecast context with Revenue Trend as the hero chart. Analytics presents Hot/Cold, Expense, Top Products, contribution/dependency, concentration, and Pareto evidence in a bounded analytical grid. Source values/order, chart lifecycle, Overview, Intelligence, Planning, Transactions, formulas, response contracts, version, and deployment remain unchanged. Seven focused contracts and the ordered local suite pass 29/29; the exact 26-file clasp inventory was uploaded. Apps Script runtime and browser acceptance remain separate unverified evidence.
+**UI/UX 2.0 Package 009 — Intelligence and Planning redesign and corrective follow-up — implemented and uploaded on 2026-08-05.** The follow-up confirms exactly one Overview-owned Business Priority using stable IDs, panel ownership, and renderer targets instead of obsolete source ordering. Revenue Trend now has finite 288px mobile and 300–440px desktop containment, canvas-only fill, and one direct resize per Performance activation with no application resize observer/listener. Runner membership remains 30; the exact 26-file corrective inventory was uploaded. Apps Script runtime and browser acceptance remain separate unverified evidence.
 
 ## 6. Current test gate and evidence level
 
-`runAllBackendTests()` contains exactly **29 ordered entries** and remains fail-fast.
+`runAllBackendTests()` contains exactly **30 ordered entries** and remains fail-fast.
 
 | Evidence class | Current recorded evidence |
 | --- | --- |
@@ -42,6 +42,10 @@ The bounded v1.0 feature baseline remains frozen. UI/UX 2.0 Package 008 redesign
 | Current UI/UX 2.0 Overview upload | Package 007: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 Performance/Analytics local/static | Package 008: numbered and extracted frontend JavaScript parsed; seven focused contracts passed; ordered suite passed 29/29 with five performance metrics, three preserved charts, zero added backend requests, 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
 | Current UI/UX 2.0 Performance/Analytics upload | Package 008: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
+| Current UI/UX 2.0 Intelligence/Planning local/static | Package 009: numbered and extracted frontend JavaScript parsed; six focused contracts passed; ordered suite passed 30/30 with preserved recommendation/roadmap order, non-editable targets, zero added backend requests, 71 ID queries, two document selectors, one deferred phase, and no response mutation. |
+| Current UI/UX 2.0 Intelligence/Planning upload | Package 009: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
+| Current UI/UX 2.0 Package 009 fix local/static | Business Priority semantic ownership and bounded Revenue Trend resize contracts pass locally; runner remains 30/30, query budget remains 71/two, and no resize observer/listener or recursive scheduling was added. |
+| Current UI/UX 2.0 Package 009 fix upload | Exact 26-file clasp inventory verified and corrective `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 upload | Package 005: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Upload | Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` completed with `Script is already up to date.` for candidate `658f4ab1011633e86634f14ce838a514c5205df0`. |
 | Apps Script runtime | Candidate `658f4ab1011633e86634f14ce838a514c5205df0`: live `runAllBackendTests()` PASS 25/25. |
@@ -87,7 +91,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 29/29.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 30/30.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -128,7 +132,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Active runner membership is 29 and the latest Package 008 local 29/29 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Active runner membership is 30 and the latest Package 009 local 30/30 result is recorded; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Remaining backlog is classified as zero ready and three blocked scopes.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
@@ -143,7 +147,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 Hold release promotion and new feature implementation when any of these conditions is true:
 
-- the active local unified gate is not exactly 29/29;
+- the active local unified gate is not exactly 30/30;
 - the release candidate differs from the reviewed/uploaded inventory;
 - Git status contains unexplained or unreviewed changes;
 - Apps Script runtime, deployment, or browser evidence required by the release checklist is missing or failing;
@@ -175,7 +179,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 18. Next milestone
 
-**UI/UX 2.0 Package 008 — Performance and Analytics redesign, implemented and uploaded.** Both panels now meet the approved chart/evidence hierarchy and bounded desktop composition without changing other panels or source data. Live Apps Script tests and browser checks remain pending evidence.
+**UI/UX 2.0 Package 009 corrective follow-up, implemented and uploaded.** Semantic Business Priority ownership and finite Revenue Trend containment are corrected without changing data, intelligence rules, runner membership, or unrelated UI. Live Apps Script tests and browser regression checks remain pending evidence.
 
 ## 19. Status-history log
 
@@ -193,3 +197,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | UI/UX 2.0 implementation | Package 006 migrated 14 existing Dashboard sections exactly once into five accessible panels, raised the ordered local gate to 27/27, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain unverified. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 007 redesigned only Overview, raised the ordered local gate to 28/28, retained the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
 | 2026-08-05 | UI/UX 2.0 implementation | Package 008 redesigned only Performance and Analytics, raised the ordered local gate to 29/29, retained chart source/order plus the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
+| 2026-08-05 | UI/UX 2.0 implementation | Package 009 redesigned only Intelligence and Planning, raised the ordered local gate to 30/30, retained intelligence output/order plus the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |

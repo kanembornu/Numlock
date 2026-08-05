@@ -1,5 +1,13 @@
 # Engineering Decisions
 
+### Validate tab ownership semantically and bound responsive canvases independently
+
+Tabbed Dashboard contracts use stable render-target IDs and `sectionOwnership` membership rather than incidental raw-source comment boundaries. Business Priority therefore has exactly one `businessPriorityRegion`, is contained by the Overview-owned `executiveSummarySection`, is absent from Intelligence/Planning ownership, and renders through one target set. Responsive Chart.js canvases must fill a finite wrapper whose height does not depend on canvas content: Revenue Trend is 288px below desktop and clamps from 300px to 440px on desktop. Tab reveal may call `resize()` once on each existing visible chart but must not schedule, observe, recreate, or attach resize listeners.
+
+### Keep intelligence analytical and planning action-oriented
+
+UI/UX 2.0 Package 009 retains the existing Intelligence and Planning response objects and changes only their browser composition. Intelligence groups Executive Alert with diagnosis, preserves recommendation iteration order, keeps risk and opportunity textual as well as semantic-color distinct, and presents existing Revenue/Profit direction and status without new trends or comparisons. Planning uses Business Focus plus the existing `priorityAction` title, impact, and message without its score; this is distinct from Overview Business Priority. Roadmap order and final connector termination remain response-driven. KPI Achievement and Business Maturity remain supporting status, while Target Reference stays closed, System-defined, and non-editable. Tabs remain client-local and make no request.
+
 ### Separate performance instruments from analytical evidence
 
 UI/UX 2.0 Package 008 keeps Performance and Analytics as client-local views of the already-loaded response. Performance uses five compact current-period measures rather than repeating Overview KPI cards, retains the existing forecast only as quiet context, and gives Revenue Trend the dominant chart area. Analytics preserves the exact Hot/Cold totals, Expense category order, Top Products ranking, Revenue Dependency, contribution, concentration, and Pareto values in a two-row evidence grid. Chart rendering may refine points, legends, tooltips, containment, and theme colors, but it may not reorder or mutate sources, introduce comparison/target data, or make a tab request. Desktop owns bounded panel height; mobile returns to natural flow.

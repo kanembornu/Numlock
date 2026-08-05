@@ -1489,31 +1489,70 @@ function testBusinessPriorityContract()
   });
   scenariosPassed++;
 
-  var firstViewportStart =
-    source.indexOf(
-      'id="executiveSummarySection"'
-    );
+  assertSourceContainsOnce(
+    source,
+    'id="businessPriorityRegion"',
+    "authoritative Overview Business Priority render target"
+  );
 
-  var firstViewportEnd =
-    source.indexOf(
-      "<!-- BUSINESS OVERVIEW -->"
-    );
+  var overviewOwnershipStart = source.indexOf("overview: [");
+  var overviewOwnershipEnd = source.indexOf("]", overviewOwnershipStart);
+  var overviewOwnershipSource = source.slice(
+    overviewOwnershipStart,
+    overviewOwnershipEnd
+  );
+  var intelligenceOwnershipStart = source.indexOf("intelligence: [");
+  var intelligenceOwnershipEnd = source.indexOf("]", intelligenceOwnershipStart);
+  var intelligenceOwnershipSource = source.slice(
+    intelligenceOwnershipStart,
+    intelligenceOwnershipEnd
+  );
+  var planningOwnershipStart = source.indexOf("planning: [");
+  var planningOwnershipEnd = source.indexOf("]", planningOwnershipStart);
+  var planningOwnershipSource = source.slice(
+    planningOwnershipStart,
+    planningOwnershipEnd
+  );
 
-  var firstViewport =
-    source.slice(
-      firstViewportStart,
-      firstViewportEnd
-    );
+  assertSourceContains(
+    overviewOwnershipSource,
+    'staging.querySelector("#executiveSummarySection")',
+    "Overview Business Priority owner"
+  );
 
-  if (
-    firstViewport.split('id="businessPriorityRegion"').length - 1 !== 1 ||
-    firstViewport.indexOf("priorityAction") !== -1
-  )
+  [intelligenceOwnershipSource, planningOwnershipSource]
+    .forEach(function(panelOwnershipSource)
+    {
+      assertSourceExcludes(
+        panelOwnershipSource,
+        "businessPriorityRegion",
+        "non-Overview Business Priority ownership"
+      );
+    });
+
+  var priorityRendererStart =
+    source.indexOf("function renderExecutiveSummary(res)");
+  var priorityRendererEnd =
+    source.indexOf("function renderExecutiveCenter(res)", priorityRendererStart);
+  var priorityRendererSource = source.slice(
+    priorityRendererStart,
+    priorityRendererEnd
+  );
+
+  [
+    'document.getElementById("businessPriorityLevel")',
+    'document.getElementById("priorityTitle")',
+    'document.getElementById("priorityReason")',
+    'document.getElementById("priorityMessage")',
+    'document.getElementById("priorityMeta")'
+  ].forEach(function(token)
   {
-    throw new Error(
-      "First viewport must contain one authoritative Business Priority"
+    assertSourceContainsOnce(
+      priorityRendererSource,
+      token,
+      "authoritative Business Priority renderer"
     );
-  }
+  });
   scenariosPassed++;
 
   createAccessibilityContractFixtures()
@@ -2933,7 +2972,7 @@ function testExecutivePresentationContract()
   [
     "grid grid-cols-1 gap-3 lg:grid-cols-12",
     "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5",
-    "grid grid-cols-1 xl:grid-cols-2 gap-5"
+    "grid grid-cols-1 gap-2 lg:grid-cols-2"
   ].forEach(function(token)
   {
     assertSourceContains(
@@ -4476,12 +4515,136 @@ function testPerformanceAnalyticsVisualContract()
   });
   scenariosPassed++;
 
+  [
+    "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }",
+    "#mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }",
+    "#dashboardPanelPerformance #revenueChartSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }",
+    "#dashboardPanelPerformance #mainChartWrapper { height: clamp(300px, calc(100dvh - 330px), 440px); min-height: 300px; max-height: 440px; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded Revenue Trend height");
+  });
+
+  assertSourceExcludes(
+    source,
+    "#dashboardPanelPerformance #mainChartWrapper { height: calc(100% - 76px)",
+    "content-derived Revenue Trend height"
+  );
+
+  function resolveRevenueChartHeight(viewportWidth, viewportHeight)
+  {
+    if (viewportWidth < 1024)
+    {
+      return 288;
+    }
+
+    return Math.max(
+      300,
+      Math.min(viewportHeight - 330, 440)
+    );
+  }
+
+  [
+    { width: 375, height: 667, expected: 288 },
+    { width: 1280, height: 768, expected: 438 },
+    { width: 1440, height: 900, expected: 440 }
+  ].forEach(function(viewport)
+  {
+    var firstActivation = resolveRevenueChartHeight(
+      viewport.width,
+      viewport.height
+    );
+    var repeatedActivation = resolveRevenueChartHeight(
+      viewport.width,
+      viewport.height
+    );
+
+    if (
+      firstActivation !== viewport.expected ||
+      repeatedActivation !== firstActivation
+    )
+    {
+      throw new Error(
+        "Revenue Trend height is not stable at " +
+        viewport.width +
+        "x" +
+        viewport.height
+      );
+    }
+  });
+  scenariosPassed++;
+
   var tabFunctionStart =
     source.indexOf("function resizeVisibleDashboardCharts(tabName)");
   var tabFunctionEnd =
     source.indexOf("function setDesktopSidebarCollapsed", tabFunctionStart);
   var tabFunctionSource =
     source.slice(tabFunctionStart, tabFunctionEnd);
+
+  assertSourceContainsOnce(
+    tabFunctionSource,
+    "chart.resize();",
+    "one chart resize operation per revealed chart"
+  );
+
+  [
+    "requestAnimationFrame",
+    "ResizeObserver",
+    "setTimeout",
+    'addEventListener("resize"',
+    "new Chart(",
+    "destroyChartInstance("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      tabFunctionSource,
+      token,
+      "recursive tab-reveal chart resize"
+    );
+  });
+
+  [
+    "new ResizeObserver(",
+    'window.addEventListener("resize"',
+    'document.addEventListener("resize"'
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      source,
+      token,
+      "duplicate application resize observer/listener"
+    );
+  });
+
+  var themeSyncStart =
+    source.indexOf("function synchronizeChartTheme(forceLight)");
+  var themeSyncEnd =
+    source.indexOf("function applyThemePreference", themeSyncStart);
+  var themeSyncSource = source.slice(themeSyncStart, themeSyncEnd);
+
+  [
+    "chart.resize(",
+    "requestAnimationFrame",
+    "setTimeout",
+    "ResizeObserver"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      themeSyncSource,
+      token,
+      "theme-triggered recursive chart growth"
+    );
+  });
+
+  [
+    "function synchronizeChartTheme(forceLight)",
+    'chart.update("none");',
+    "function renderRevenueChart(revenueTrend)",
+    "revenueChart = destroyChartInstance(revenueChart);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "preserved chart lifecycle owner");
+  });
 
   [
     "google.script.run",
@@ -4534,6 +4697,265 @@ function testPerformanceAnalyticsVisualContract()
     summary.performanceMetrics +
     " | charts=" +
     summary.charts +
+    " | backendRequests=" +
+    summary.backendRequests +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
+function testIntelligencePlanningVisualContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+
+  var ownership = {
+    intelligence: [
+      "diagnosisSection",
+      "recommendationsSection",
+      "riskOpportunitySection"
+    ],
+    planning: [
+      "executiveCenter",
+      "kpiTargetReference"
+    ]
+  };
+
+  Object.keys(ownership).forEach(function(panelName)
+  {
+    ownership[panelName].forEach(function(sectionId)
+    {
+      assertSourceContainsOnce(
+        source,
+        'staging.querySelector("#' + sectionId + '")',
+        panelName + " ownership / " + sectionId
+      );
+    });
+  });
+
+  var planningOwnershipStart = source.indexOf("planning: [");
+  var planningOwnershipEnd = source.indexOf("]", planningOwnershipStart);
+  var planningOwnershipSource = source.slice(
+    planningOwnershipStart,
+    planningOwnershipEnd
+  );
+
+  if (
+    planningOwnershipSource.indexOf('staging.querySelector("#executiveCenter")') >
+    planningOwnershipSource.indexOf('staging.querySelector("#kpiTargetReference")')
+  )
+  {
+    throw new Error("Planning Target Reference must remain last");
+  }
+  scenariosPassed++;
+
+  [
+    'id="diagnosisSection"',
+    'aria-labelledby="diagnosisHeading"',
+    "Current diagnosis and executive alert",
+    "Executive Alert",
+    "alert.level",
+    "alert.title",
+    "alert.message",
+    "diagnosis.map(renderDiagnosisCard)",
+    "item.description || item.message"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "diagnosis and alert hierarchy");
+  });
+  scenariosPassed++;
+
+  [
+    'id="recommendationsSection"',
+    'role="list"',
+    'role="listitem"',
+    "recommendations",
+    ".slice(0,6)",
+    ".map(renderTimelineItem)",
+    "Recommendation ${index+1}",
+    "item.message",
+    "item.priority"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "ordered recommendations");
+  });
+  scenariosPassed++;
+
+  [
+    'id="riskOpportunitySection"',
+    "Risk Status",
+    'id="riskLevel"',
+    'id="riskCount"',
+    'id="riskList"',
+    "Growth Opportunity",
+    'id="growthScore"',
+    'id="growthStatus"',
+    'id="growthMessage"',
+    "active risks detected"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "risk and opportunity semantics");
+  });
+  scenariosPassed++;
+
+  [
+    'id="intelligenceMetricContext"',
+    'id="intelligenceDirectionContext"',
+    "Revenue Intelligence",
+    "Profit Intelligence",
+    "res.revenueIntelligence.direction",
+    "res.revenueIntelligence.growthRate",
+    "res.revenueIntelligence.momentum",
+    "res.profitIntelligence.direction",
+    "res.profitIntelligence.changeRate",
+    "res.profitIntelligence.status",
+    'res.summary.profit.toLocaleString("id-ID")'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Revenue and Profit Intelligence");
+  });
+  scenariosPassed++;
+
+  [
+    'id="businessFocusCard"',
+    'id="priorityActionCard"',
+    "Business Focus",
+    "Priority Action",
+    "res.businessFocus.focus",
+    "res.businessFocus.priority",
+    "res.businessFocus.reason",
+    "res.businessFocus.expectedImpact",
+    "res.priorityAction.title",
+    "res.priorityAction.impact",
+    "res.priorityAction.message"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Planning decision hierarchy");
+  });
+
+  var planningMarkupStart = source.indexOf('id="executiveCenter"');
+  var planningMarkupEnd = source.indexOf('id="riskOpportunitySection"', planningMarkupStart);
+  var planningMarkupSource = source.slice(planningMarkupStart, planningMarkupEnd);
+  [
+    "businessPriorityRegion",
+    "priority.evidence",
+    "priorityAction.score",
+    "contenteditable",
+    'type="checkbox"'
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      planningMarkupSource,
+      token,
+      "Planning non-editable and non-duplicated priority"
+    );
+  });
+  scenariosPassed++;
+
+  [
+    'id="actionRoadmapCard"',
+    "res.actionRoadmap.map(function(item,index)",
+    "index < res.actionRoadmap.length-1",
+    "Week ${item.week}",
+    "${item.title}",
+    "${item.action}",
+    'id="kpiAchievementCard"',
+    'role="progressbar"',
+    'id="businessMaturityCard"',
+    "res.businessMaturity.score",
+    "res.businessMaturity.level",
+    "res.businessMaturity.description",
+    'id="kpiTargetReference"',
+    "System-defined targets",
+    'aria-expanded="false"',
+    'aria-controls="kpiTargetDetails"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "roadmap and supporting planning status");
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardPanelIntelligence:not([hidden])",
+    "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    "#dashboardPanelPlanning:not([hidden])",
+    "height: calc(100dvh - 188px);",
+    "overflow: hidden;",
+    "@media (max-width: 1023px)",
+    "#dashboardPanelPlanning { height: auto; overflow: visible; }",
+    "analytics-surface",
+    "ui-theme-inset",
+    ':root[data-theme="dark"] .bg-white'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "theme and viewport containment");
+  });
+  scenariosPassed++;
+
+  var tabFunctionStart =
+    source.indexOf("function resizeVisibleDashboardCharts(tabName)");
+  var tabFunctionEnd =
+    source.indexOf("function setDesktopSidebarCollapsed", tabFunctionStart);
+  var tabFunctionSource = source.slice(tabFunctionStart, tabFunctionEnd);
+
+  [
+    "google.script.run",
+    "getDashboardData(",
+    "requestDashboardData("
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      tabFunctionSource,
+      token,
+      "Intelligence/Planning tab backend request"
+    );
+  });
+
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "Intelligence/Planning response mutation");
+  });
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Intelligence/Planning query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    recommendationOrderPreserved: true,
+    editableTargets: false,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testIntelligencePlanningVisualContract | scenarios=" +
+    summary.scenarios +
+    " | recommendationOrderPreserved=" +
+    summary.recommendationOrderPreserved +
+    " | editableTargets=" +
+    summary.editableTargets +
     " | backendRequests=" +
     summary.backendRequests +
     " | idQueries=" +

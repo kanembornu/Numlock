@@ -217,3 +217,9 @@ Transactions tabs remain deferred to their separately approved package.
 ### Package 008 — Performance and Analytics redesign
 
 Implemented and uploaded. Performance uses five compact factual measures, preserved forecast context, and Revenue Trend as the dominant 7/5 chart surface. Analytics uses a bounded two-row evidence grid for Hot/Cold, Expense, Top Products, contribution/dependency, concentration, and Pareto. Chart data/order, formulas, requests, other tabs, version, and deployment remain unchanged. The local gate passes 29/29 with the existing 71-ID/two-selector query budget, and the exact 26-file clasp inventory was uploaded. Live Apps Script tests and browser acceptance remain pending evidence.
+
+### Package 009 — Intelligence and Planning redesign
+
+Implemented and uploaded. Intelligence uses a bounded diagnosis/alert, recommendations, and risk/opportunity workspace with compact Revenue/Profit evidence. Planning leads with Business Focus and Priority Action, then the ordered roadmap, KPI Achievement, Business Maturity, and closed Target Reference. Intelligence outputs, precedence, ordering, targets, requests, other tabs, version, and deployment remain unchanged. The local gate passes 30/30 with the existing 71-ID/two-selector query budget, and the exact 26-file clasp inventory was uploaded. Live Apps Script tests and browser acceptance remain pending evidence.
+
+Corrective follow-up implemented and uploaded: Business Priority validation now follows semantic Overview ownership, and Revenue Trend has a finite mobile/desktop wrapper plus one non-scheduled existing-instance resize per activation. The 30-entry gate and data contracts remain unchanged; live runtime and browser regression acceptance remain pending.
