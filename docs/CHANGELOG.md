@@ -6,6 +6,8 @@ This document owns completed changes and release history. [Project Status](PROJE
 
 ## Unreleased
 
+- Completed UI/UX 2.0 Package 014 by adding `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` as concise project-local skills with non-overlapping visual-fidelity, behavior-preserving cleanup, and cross-feature acceptance ownership. Updated the 19-skill inventory, routing guidance, and recommended combinations. No existing skill, production source, Tailwind, test runner, clasp inventory, deployment, commit, or push changed.
+
 - Corrected the premature UI/UX 2.0 closure after an evidence audit. Packages 005–013 retain their technical, live 34/34, and functional-browser evidence, but no screenshot-based approved-reference comparison proves visual fidelity and the runtime exposes four rather than nine approved destinations. Reopened active UI/UX development, added granular project history and gap audit, planned three missing skills without creating them, and defined Packages 014–022 plus a separate visual-acceptance contract. No production source, Tailwind, clasp, deployment, commit, or push changed.
 
 - Closed UI/UX 2.0 after Packages 004–013. The final local and Apps Script live unified suite passed 34/34, browser acceptance passed, and stabilization commit `7fbd2a3` is pushed with `main`, `origin/main`, and `HEAD` aligned. Version remains `1.0.0`; no production source, deployment, or release metadata changed in this documentation closure. With zero implementation-ready backlog items, NUMLOCK enters project hold with maintenance-only intake and measurable resume criteria.

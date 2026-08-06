@@ -4,6 +4,8 @@
 
 ## Inventory and ownership
 
+**Total: 19 project-local skills.**
+
 | Skill | Primary ownership |
 | --- | --- |
 | `$numlock-development` | General implementation scope, repository safeguards, and behavior preservation. |
@@ -22,6 +24,9 @@
 | `$numlock-accessibility` | Semantics, ARIA, keyboard, focus, live regions, reduced motion, tables, and charts. |
 | `$numlock-git` | Scoped review, explicit staging, commit boundaries, branches, remotes, and push safety. |
 | `$numlock-clasp` | Protected script identity, clasp inventory, upload authorization, and evidence boundary. |
+| `$numlock-ui` | Approved-reference fidelity, visual composition, theme parity, and screenshot acceptance. |
+| `$numlock-refactor` | Evidence-based, behavior-preserving code and CSS restructuring. |
+| `$numlock-regression` | Cross-feature acceptance matrices and exact evidence classification. |
 
 ## Skill-selection matrix
 
@@ -43,6 +48,9 @@
 | Release work | `$numlock-release` | Validation, documentation, Git, clasp |
 | Git completion | `$numlock-git` | Validation, documentation or release |
 | Clasp inventory or upload | `$numlock-clasp` | Validation, development or release |
+| Visual reconstruction or fidelity review | `$numlock-ui` | Development, frontend, accessibility, testing, validation, regression |
+| Behavior-preserving cleanup | `$numlock-refactor` | Development, domain owner, testing, validation, regression |
+| Full cross-feature acceptance | `$numlock-regression` | Testing, validation, feature owners, clasp when upload is authorized |
 
 ## Recommended combinations
 
@@ -70,6 +78,18 @@
 
 `$numlock-development`, `$numlock-performance`, `$numlock-testing`, `$numlock-validation`, `$numlock-documentation`, `$numlock-clasp`
 
+### Visual reconstruction
+
+`$numlock-development`, `$numlock-frontend`, `$numlock-ui`, `$numlock-accessibility`, `$numlock-testing`, `$numlock-validation`, `$numlock-regression`, `$numlock-documentation`, `$numlock-clasp`
+
+### Refactor
+
+`$numlock-development`, `$numlock-refactor`, `$numlock-testing`, `$numlock-validation`, `$numlock-regression`, `$numlock-documentation`, `$numlock-clasp`
+
+### Regression-only
+
+`$numlock-regression`, `$numlock-testing`, `$numlock-validation`, `$numlock-clasp`
+
 ### Documentation-only
 
 `$numlock-documentation`, `$numlock-validation`, `$numlock-git`
@@ -93,6 +113,9 @@
 | Chart rendering | `$numlock-chart` |
 | Performance budgets and races | `$numlock-performance` |
 | Current executive project status | `$numlock-documentation` via `docs/PROJECT_STATUS.md` |
+| Visual reconstruction and reference fidelity | `$numlock-ui` |
+| Behavior-preserving structural cleanup | `$numlock-refactor` |
+| Full cross-feature acceptance | `$numlock-regression` |
 
 Reference the owning skill instead of repeating its generic rules in another skill.
 

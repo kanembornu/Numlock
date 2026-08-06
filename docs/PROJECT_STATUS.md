@@ -26,7 +26,7 @@ The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 is incomplet
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 gap audit — ACTIVE on 2026-08-06.** Packages 005–013 are technically complete within their recorded contracts, including live 34/34 and functional browser acceptance, but visual completion is reopened. [Project History](PROJECT-HISTORY.md) preserves granular evidence; Packages 014–022 now own skills, high-fidelity specification, nine-destination navigation, visual reconstruction, theme parity, regression, and screenshot-based acceptance.
+**UI/UX 2.0 Package 014 — COMPLETE on 2026-08-06.** The project-local `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` skills now establish distinct visual-fidelity, behavior-preserving cleanup, and cross-feature acceptance ownership. No production source, Tailwind, test runner, clasp inventory, or runtime behavior changed.
 
 ## 6. Current test gate and evidence level
 
@@ -194,7 +194,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 19. Next milestone
 
-**UI/UX 2.0 Package 014 — skill creation.** Create the three planned skills in the approved order through a separate authorized task, then proceed through Packages 015–022.
+**UI/UX 2.0 Package 015 — high-fidelity implementation specification.** Translate the approved visual references into annotated layouts, tokens, typography, density, component decisions, and screenshot criteria at all four required viewports before production reconstruction.
 
 ## 20. Status-history log
 
