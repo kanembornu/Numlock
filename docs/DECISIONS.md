@@ -1,5 +1,13 @@
 # Engineering Decisions
 
+### Own every screen, chart, and print color in the compiled semantic-token layer
+
+UI/UX 2.0 Package 020 establishes `assets/tailwind.input.css` as the single authored owner for Light, Dark, state, skeleton, tooltip, Chart.js, and print-light colors. Production HTML may consume semantic custom properties and generated utility adapters but may not define raw color literals. Chart renderers and theme synchronization read the same computed palette, while print explicitly reads the print-light palette and restores the active screen palette afterward. `data-theme-preference` remains the stored choice and `data-effective-theme` records the resolved visual state. The System media listener exists only while System is selected. This decision changes token ownership and listener lifecycle only; geometry, component composition, data, responses, chart instances, and product behavior remain unchanged.
+
+### Use one restrained secondary-destination system without broadening product scope
+
+UI/UX 2.0 Package 019 applies the Package 018 editorial hierarchy to Transactions, Settings, and Logs while preserving their distinct ownership. Transactions is table-dominant and keeps its four bounded projections, one visible-row CSV path, and one contextual toolbar; Settings remains exactly Appearance plus read-only template-derived About metadata in a 7/5 split; Logs remains browser-memory-only with a divided severity summary, filter toolbar, and internally scrolling event list. Shared surfaces stop at depth two and use accent only for focus, selection, and meaningful status. No history, pagination, persistence, server refresh, unsupported setting, response field, request, or future-module behavior is added.
+
 ### Reconstruct the Dashboard around evidence hierarchy, not additional features
 
 UI/UX 2.0 Package 018 keeps all five existing Dashboard tabs and recomposes only their visual hierarchy. Overview is a compact executive plane followed by exactly five KPIs and supporting comparison/data-quality evidence; Performance uses a 4/8 split with Revenue Trend as the single hero; Analytics separates two primary charts from two secondary evidence regions; Intelligence uses a 4/5/3 signal/performance/action allocation; and Planning places focus/support beside the continuous roadmap and system-defined Target Reference. Nested decorative cards are flattened where they do not establish ownership. This is a composition decision only: formulas, response fields, request paths, ordering semantics, feature ownership, and editable/persistence scope do not change.

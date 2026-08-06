@@ -44,6 +44,10 @@
           "data-theme",
           resolvedTheme
         );
+        document.documentElement.setAttribute(
+          "data-effective-theme",
+          resolvedTheme
+        );
       })();
     </script>
     <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>
@@ -97,10 +101,23 @@
       .hf-section-heading { color: var(--text-primary); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 24px; }
       .hf-executive-plane { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; }
       .hf-executive-fact { min-width: 0; padding: 12px 16px; }
-      .hf-executive-fact + .hf-executive-fact { border-left: 1px solid var(--border-subtle); }
+      .hf-executive-fact + .hf-executive-fact { border-left: 1px solid var(--divider); }
       .hf-priority-action { background: var(--selected); border-left: 3px solid var(--brand); }
       .hf-kpi-card { min-height: 96px; border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: none; }
-      .hf-evidence-group > * + * { border-left: 1px solid var(--border-subtle); }
+      .hf-evidence-group > * + * { border-left: 1px solid var(--divider); }
+      .hf-secondary-surface { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: none; }
+      .hf-transactions-toolbar { min-height: 52px; }
+      #transactionsTableScroll thead { background: var(--surface-2); }
+      #transactionsTableScroll th { height: 36px; padding-top: 0; padding-bottom: 0; font-size: 12px; font-weight: 600; line-height: 18px; text-transform: none; letter-spacing: 0; }
+      #transactionsTableScroll td { height: 40px; padding-top: 0; padding-bottom: 0; font-size: 13px; line-height: 18px; }
+      .hf-settings-grid { width: 100%; max-width: 960px; }
+      .hf-setting-choice { min-height: 88px; }
+      .hf-about-row { min-height: 36px; }
+      .hf-log-severity-strip > * + * { border-left: 1px solid var(--divider); }
+      .hf-log-entry { border-left: 2px solid var(--border-subtle); padding: 8px 12px; }
+      .hf-log-entry[data-severity="Info"] { border-left-color: var(--brand); }
+      .hf-log-entry[data-severity="Warning"] { border-left-color: var(--warning); }
+      .hf-log-entry[data-severity="Error"] { border-left-color: var(--critical); }
 
       @media (min-width: 1024px)
       {
@@ -155,6 +172,7 @@
         #transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }
         #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
         #settings.active { height: 100%; overflow: hidden; }
+        #settingsSections { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; }
         #logs.active { height: 100%; overflow: hidden; }
         #logsWorkspace { height: 100%; min-height: 0; }
         #sessionLogsListRegion { min-height: 0; overflow-y: auto; }
@@ -180,6 +198,7 @@
         .hf-kpi-card { min-height: 96px; padding: 12px; }
         #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 6px; }
+        .hf-setting-choice { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
       }
 
       @media (max-width: 1023px)
@@ -207,6 +226,8 @@
         #logs.active,
         #logsWorkspace { height: auto; overflow: visible; }
         #sessionLogsListRegion { overflow: visible; }
+        #transactionsTableScroll td { height: 44px; }
+        .hf-log-severity-strip > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-executive-fact + .hf-executive-fact { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-evidence-group > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
       }
@@ -295,15 +316,10 @@
       ========================================== */
       .skeleton
       {
-        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background: linear-gradient(90deg, var(--skeleton-start) 25%, var(--skeleton-middle) 50%, var(--skeleton-start) 75%);
         background-size: 400% 100%;
         animation: shimmer 1.4s infinite;
         border-radius:12px;
-      }
-
-      :root[data-theme="dark"] .skeleton
-      {
-        background-image: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
       }
 
       @keyframes shimmer
@@ -332,6 +348,20 @@
 
       @media print
       {
+        :root
+        {
+          --canvas: var(--print-canvas);
+          --surface-1: var(--print-canvas);
+          --surface-2: var(--print-canvas);
+          --surface-3: var(--print-canvas);
+          --border-subtle: var(--print-border);
+          --border-strong: var(--print-border);
+          --divider: var(--print-border);
+          --text-primary: var(--print-text);
+          --text-secondary: var(--print-text);
+          --text-muted: var(--print-text);
+        }
+
         :root[data-theme="dark"] .bg-white,
         :root[data-theme="dark"] .bg-slate-50,
         :root[data-theme="dark"] .bg-slate-100,
@@ -339,9 +369,9 @@
         :root[data-theme="dark"] .ui-theme-surface,
         :root[data-theme="dark"] .ui-theme-inset
         {
-          background: #ffffff !important;
-          color: #0f172a !important;
-          border-color: #cbd5e1 !important;
+          background: var(--print-canvas) !important;
+          color: var(--print-text) !important;
+          border-color: var(--print-border) !important;
         }
 
         html,
@@ -350,8 +380,8 @@
           width: 100%;
           max-width: 100%;
           overflow: visible !important;
-          background: #ffffff !important;
-          color: #0f172a;
+          background: var(--print-canvas) !important;
+          color: var(--print-text);
         }
 
         body *
@@ -409,7 +439,7 @@
           display: block !important;
           margin: 0 0 8mm;
           padding-bottom: 5mm;
-          border-bottom: 1px solid #cbd5e1;
+          border-bottom: 1px solid var(--print-border);
         }
 
         #printReportHeader h1
@@ -430,8 +460,8 @@
           display: flex !important;
           margin: 0 0 6mm !important;
           padding: 3mm;
-          border: 1px solid #cbd5e1;
-          background: #ffffff !important;
+          border: 1px solid var(--print-border);
+          background: var(--print-canvas) !important;
         }
 
         .grid
@@ -483,7 +513,7 @@
         #expenseChartSummary
         {
           display: block !important;
-          color: #334155 !important;
+          color: var(--print-text) !important;
           font-size: 9pt;
         }
 
@@ -1060,32 +1090,31 @@
       <div id="transactionsPanelGroup">
         <section id="transactionsPanelRecent" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabRecent" data-transactions-panel="recent">
           <div id="transactionsEvidenceRegion" class="flex min-h-0 flex-1 flex-col" aria-labelledby="transactionsResultHeading">
-            <div class="ui-theme-surface mb-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3">
+            <div id="transactionsToolbar" class="hf-transactions-toolbar hf-secondary-surface mb-3 flex flex-wrap items-center justify-between gap-3 px-3 py-2">
               <div class="min-w-0">
                 <h2 id="transactionsResultHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Visible recent transactions</h2>
                 <p id="transactionsScopeText" class="mt-1 text-xs ui-theme-muted">Up to 10 rows already loaded for the active period.</p>
               </div>
-              <button id="exportCsvButton" type="button" onclick="exportVisibleTransactionsToCsv()" class="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700" aria-label="Export visible transactions to CSV" disabled>Export CSV</button>
-            </div>
-
-            <div id="transactionDrilldownSummary" class="hidden mb-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-3" role="status" aria-live="polite" aria-atomic="true">
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <p id="transactionDrilldownText" class="font-semibold text-slate-700"></p>
-                <button id="clearTransactionDrilldownButton" type="button" class="min-h-11 rounded-xl bg-indigo-600 px-4 py-2 font-semibold text-white" onclick="clearTransactionDrilldown()">Show all recent</button>
+              <div class="flex flex-wrap items-center justify-end gap-2">
+                <div id="transactionDrilldownSummary" class="hidden flex items-center gap-2 border-l border-indigo-200 pl-3" role="status" aria-live="polite" aria-atomic="true">
+                  <p id="transactionDrilldownText" class="text-xs font-semibold text-slate-700"></p>
+                  <button id="clearTransactionDrilldownButton" type="button" class="min-h-10 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-sm font-semibold text-indigo-700" onclick="clearTransactionDrilldown()">Show all recent</button>
+                </div>
+                <button id="exportCsvButton" type="button" onclick="exportVisibleTransactionsToCsv()" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" aria-label="Export visible transactions to CSV" disabled>Export CSV</button>
               </div>
             </div>
 
             <p id="transactionsStateAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-            <div id="transactionsTableScroll" class="ui-theme-surface max-w-full overflow-x-auto rounded-2xl border" tabindex="0" aria-label="Visible transactions table, horizontally scrollable">
-              <table class="w-full min-w-[720px]">
+            <div id="transactionsTableScroll" class="hf-secondary-surface max-w-full overflow-x-auto" tabindex="0" aria-label="Visible transactions table, horizontally scrollable">
+              <table class="w-full min-w-[680px]">
                 <caption class="sr-only">Visible bounded transactions for the selected Transactions tab</caption>
-                <thead class="bg-slate-50 border-b">
+                <thead class="border-b">
                   <tr>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Date</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Type</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-bold uppercase tracking-wider">Item</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider">Qty</th>
-                    <th scope="col" class="px-4 py-3 text-right text-xs font-bold uppercase tracking-wider">Amount</th>
+                    <th scope="col" class="px-4 text-left">Date</th>
+                    <th scope="col" class="px-4 text-left">Type</th>
+                    <th scope="col" class="px-4 text-left">Item</th>
+                    <th scope="col" class="px-4 text-right">Qty</th>
+                    <th scope="col" class="px-4 text-right">Amount</th>
                   </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
@@ -1107,24 +1136,24 @@
         <p class="mt-1 max-w-2xl text-sm ui-theme-secondary">Choose this browser’s appearance and review authoritative application details.</p>
       </header>
 
-      <div id="settingsSections" class="grid max-w-6xl grid-cols-1 gap-5 lg:grid-cols-12">
-        <section id="appearanceSection" class="ui-theme-surface rounded-2xl border p-5 lg:col-span-7" aria-labelledby="appearanceHeading">
+      <div id="settingsSections" class="hf-settings-grid grid grid-cols-1 gap-4">
+        <section id="appearanceSection" class="hf-secondary-surface p-4" aria-labelledby="appearanceHeading">
           <div>
-            <h2 id="appearanceHeading" class="text-xl font-bold ui-theme-primary">Appearance</h2>
+            <h2 id="appearanceHeading" class="hf-section-heading">Appearance</h2>
             <p class="mt-1 text-sm ui-theme-secondary">Your choice applies immediately and is stored only in this browser.</p>
           </div>
-          <fieldset class="mt-5">
+          <fieldset class="mt-4">
             <legend class="text-sm font-semibold ui-theme-primary">Theme preference</legend>
-            <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <label class="ui-theme-inset flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
                 <input type="radio" name="themePreference" value="light" class="mt-1 h-4 w-4 accent-indigo-600">
                 <span><strong class="ui-theme-primary">Light</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use the light NUMLOCK theme.</span></span>
               </label>
-              <label class="ui-theme-inset flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
                 <input type="radio" name="themePreference" value="dark" class="mt-1 h-4 w-4 accent-indigo-600">
                 <span><strong class="ui-theme-primary">Dark</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use deep navy and slate surfaces.</span></span>
               </label>
-              <label class="ui-theme-inset flex min-h-24 cursor-pointer items-start gap-3 rounded-xl border p-4 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
                 <input type="radio" name="themePreference" value="system" class="mt-1 h-4 w-4 accent-indigo-600">
                 <span><strong class="ui-theme-primary">System</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Follow this device’s color preference.</span></span>
               </label>
@@ -1133,28 +1162,28 @@
           <p id="themeStatus" class="mt-4 min-h-5 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
         </section>
 
-        <section id="aboutSection" class="ui-theme-surface rounded-2xl border p-5 lg:col-span-5" aria-labelledby="aboutHeading">
-          <h2 id="aboutHeading" class="text-xl font-bold ui-theme-primary">About</h2>
+        <section id="aboutSection" class="hf-secondary-surface p-4" aria-labelledby="aboutHeading">
+          <h2 id="aboutHeading" class="hf-section-heading">About</h2>
           <p class="mt-1 text-sm ui-theme-secondary">Read-only details from the application configuration.</p>
-          <dl class="mt-5 divide-y" aria-label="Application metadata">
-            <div class="flex items-baseline justify-between gap-5 py-3 first:pt-0">
+          <dl class="mt-4 divide-y" aria-label="Application metadata">
+            <div class="hf-about-row flex items-center justify-between gap-5">
               <dt class="text-sm ui-theme-muted">Application</dt>
               <dd id="aboutApplicationName" data-metadata-source="template.appName" class="text-right text-sm font-semibold ui-theme-primary"><?= appName ?></dd>
             </div>
-            <div class="flex items-baseline justify-between gap-5 py-3">
+            <div class="hf-about-row flex items-center justify-between gap-5">
               <dt class="text-sm ui-theme-muted">Version</dt>
               <dd id="aboutVersion" data-metadata-source="template.version" class="text-right text-sm font-semibold ui-theme-primary"><?= version ?></dd>
             </div>
-            <div class="flex items-baseline justify-between gap-5 py-3">
+            <div class="hf-about-row flex items-center justify-between gap-5">
               <dt class="text-sm ui-theme-muted">Release</dt>
               <dd id="aboutReleaseLabel" data-metadata-source="template.releaseLabel" class="text-right text-sm font-semibold ui-theme-primary"><?= releaseLabel ?></dd>
             </div>
-            <div class="flex items-baseline justify-between gap-5 py-3 last:pb-0">
+            <div class="hf-about-row flex items-center justify-between gap-5">
               <dt class="text-sm ui-theme-muted">Environment</dt>
               <dd id="aboutEnvironment" data-metadata-source="template.environment" class="text-right text-sm font-semibold ui-theme-primary"><?= environment ?></dd>
             </div>
           </dl>
-          <p class="mt-5 border-t pt-4 text-xs leading-relaxed ui-theme-muted">Business rules and targets remain system-defined and are not editable here.</p>
+          <p class="mt-4 border-t pt-3 text-xs leading-relaxed ui-theme-muted">Business rules and targets remain system-defined and are not editable here.</p>
         </section>
       </div>
     </section>
@@ -1167,35 +1196,36 @@
         <p class="mt-1 max-w-3xl text-sm ui-theme-secondary">Sanitized application events generated during this browser page session.</p>
       </header>
 
-      <div id="logsWorkspace" class="flex max-w-6xl flex-col gap-3">
-        <div class="ui-theme-inset flex flex-wrap items-start justify-between gap-3 rounded-xl border px-4 py-3">
+      <div id="logsWorkspace" class="flex flex-col gap-3">
+        <div id="sessionLogsScopeNotice" class="flex flex-wrap items-start justify-between gap-3 border-b px-1 pb-3">
           <p class="max-w-3xl text-sm ui-theme-secondary"><strong class="ui-theme-primary">Session-local only.</strong> Entries are held in memory, are not historical audit records, and disappear when this page reloads or closes.</p>
           <span class="rounded-full border px-3 py-1 text-xs font-semibold ui-theme-muted">Maximum 100 entries</span>
         </div>
 
-        <div class="grid grid-cols-3 gap-2" aria-label="Log severity summary">
-          <div class="ui-theme-surface rounded-xl border p-3"><span class="block text-xs font-semibold ui-theme-muted">Info</span><strong id="sessionLogsInfoCount" class="mt-1 block text-xl ui-theme-primary">0</strong></div>
-          <div class="ui-theme-surface rounded-xl border p-3"><span class="block text-xs font-semibold ui-theme-muted">Warning</span><strong id="sessionLogsWarningCount" class="mt-1 block text-xl ui-theme-primary">0</strong></div>
-          <div class="ui-theme-surface rounded-xl border p-3"><span class="block text-xs font-semibold ui-theme-muted">Error</span><strong id="sessionLogsErrorCount" class="mt-1 block text-xl ui-theme-primary">0</strong></div>
+        <div id="sessionLogsSeveritySummary" class="hf-log-severity-strip hf-secondary-surface grid grid-cols-1 sm:grid-cols-3" aria-label="Log severity summary">
+          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Info</span><strong id="sessionLogsInfoCount" class="text-lg ui-theme-primary">0</strong></div>
+          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Warning</span><strong id="sessionLogsWarningCount" class="text-lg ui-theme-primary">0</strong></div>
+          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Error</span><strong id="sessionLogsErrorCount" class="text-lg ui-theme-primary">0</strong></div>
         </div>
 
-        <div class="ui-theme-surface flex flex-wrap items-end justify-between gap-3 rounded-xl border p-3">
-          <fieldset>
-            <legend class="text-xs font-semibold ui-theme-muted">Filter by severity</legend>
-            <div id="sessionLogsFilters" class="mt-2 flex flex-wrap gap-2">
-              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="All" checked onchange="setClientLogFilter(this.value)"><span>All</span></label>
-              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="Info" onchange="setClientLogFilter(this.value)"><span>Info</span></label>
-              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="Warning" onchange="setClientLogFilter(this.value)"><span>Warning</span></label>
-              <label class="ui-theme-inset flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500"><input type="radio" name="sessionLogSeverity" value="Error" onchange="setClientLogFilter(this.value)"><span>Error</span></label>
+        <div id="sessionLogsToolbar" class="hf-secondary-surface flex min-h-10 flex-wrap items-center justify-between gap-3 px-3 py-1">
+          <fieldset class="flex flex-wrap items-center gap-3">
+            <legend class="sr-only">Filter by severity</legend>
+            <span aria-hidden="true" class="hf-section-label">Severity</span>
+            <div id="sessionLogsFilters" class="flex flex-wrap gap-1">
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="All" checked onchange="setClientLogFilter(this.value)"><span>All</span></label>
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Info" onchange="setClientLogFilter(this.value)"><span>Info</span></label>
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Warning" onchange="setClientLogFilter(this.value)"><span>Warning</span></label>
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Error" onchange="setClientLogFilter(this.value)"><span>Error</span></label>
             </div>
           </fieldset>
-          <button id="clearSessionLogsButton" type="button" class="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700" onclick="clearSessionClientLogs()" disabled>Clear session logs</button>
+          <button id="clearSessionLogsButton" type="button" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" onclick="clearSessionClientLogs()" disabled>Clear session logs</button>
         </div>
 
         <p id="sessionLogsAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-        <div id="sessionLogsListRegion" class="ui-theme-surface flex-1 rounded-2xl border p-3" tabindex="0" aria-label="Session log entries, scrollable">
-          <p id="sessionLogsEmpty" class="rounded-xl border border-dashed p-5 text-sm ui-theme-muted">No client events in this session.</p>
-          <ol id="sessionLogsList" class="hidden space-y-2" aria-label="Newest session client events first"></ol>
+        <div id="sessionLogsListRegion" class="hf-secondary-surface flex-1 p-3" tabindex="0" aria-label="Session log entries, scrollable">
+          <p id="sessionLogsEmpty" class="p-5 text-sm ui-theme-muted">No client events in this session.</p>
+          <ol id="sessionLogsList" class="hidden divide-y" aria-label="Newest session client events first"></ol>
         </div>
       </div>
     </section>
@@ -1219,6 +1249,8 @@
   let latestDashboardTransactions = [];
   let activeTransactionDrilldown = null;
   let themeFoundationInitialized = false;
+  let systemThemeQuery = null;
+  let systemThemeListenerAttached = false;
   let sessionClientLogs = [];
   let activeClientLogSeverity = "All";
   let lastClientLogSignature = "";
@@ -1771,27 +1803,66 @@
 
     function getCurrentThemePalette(forceLight)
     {
-      var isDark =
-        !forceLight &&
-        document.documentElement.getAttribute("data-theme") === "dark";
+      var styles = window.getComputedStyle(document.documentElement);
+      var prefix = forceLight ? "--print-" : "--";
 
-      return isDark
-        ? {
-            series: ["#818CF8", "#38BDF8", "#34D399", "#FBBF24"],
-            grid: "#243750",
-            axis: "#CBD5E1",
-            tooltipBackground: "#F8FAFC",
-            tooltipText: "#0F172A",
-            revenueFill: "rgba(129, 140, 248, 0.18)"
-          }
-        : {
-            series: ["#4F46E5", "#0284C7", "#059669", "#D97706"],
-            grid: "#E2E8F0",
-            axis: "#64748B",
-            tooltipBackground: "#0F172A",
-            tooltipText: "#F8FAFC",
-            revenueFill: "rgba(79, 70, 229, 0.10)"
-          };
+      function readToken(name)
+      {
+        return styles.getPropertyValue(prefix + name).trim();
+      }
+
+      return {
+        series: [
+          readToken("chart-series-1"),
+          readToken("chart-series-2"),
+          readToken("chart-series-3"),
+          readToken("chart-series-4")
+        ],
+        grid: readToken("chart-grid"),
+        axis: readToken("chart-axis"),
+        tooltipBackground: readToken("tooltip-bg"),
+        tooltipText: readToken("tooltip-text"),
+        revenueFill: readToken("chart-revenue-fill")
+      };
+    }
+
+    function handleSystemThemeChange()
+    {
+      if (
+        document.documentElement.getAttribute(
+          "data-theme-preference"
+        ) === "system"
+      )
+      {
+        applyThemePreference("system", false, false);
+      }
+    }
+
+    function synchronizeSystemThemeListener(preference)
+    {
+      if (!systemThemeQuery)
+      {
+        systemThemeQuery = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        );
+      }
+
+      if (preference === "system" && !systemThemeListenerAttached)
+      {
+        systemThemeQuery.addEventListener(
+          "change",
+          handleSystemThemeChange
+        );
+        systemThemeListenerAttached = true;
+      }
+      else if (preference !== "system" && systemThemeListenerAttached)
+      {
+        systemThemeQuery.removeEventListener(
+          "change",
+          handleSystemThemeChange
+        );
+        systemThemeListenerAttached = false;
+      }
     }
 
     function synchronizeChartTheme(forceLight)
@@ -1880,6 +1951,11 @@
         "data-theme",
         resolvedTheme
       );
+      document.documentElement.setAttribute(
+        "data-effective-theme",
+        resolvedTheme
+      );
+      synchronizeSystemThemeListener(safePreference);
 
       if (persist)
       {
@@ -1932,7 +2008,7 @@
         document.documentElement.getAttribute(
           "data-theme-preference"
         ) || "system";
-      var systemThemeQuery = window.matchMedia(
+      systemThemeQuery = window.matchMedia(
         "(prefers-color-scheme: dark)"
       );
 
@@ -1945,18 +2021,6 @@
             applyThemePreference(control.value, true, true);
           }
         });
-      });
-
-      systemThemeQuery.addEventListener("change", function()
-      {
-        if (
-          document.documentElement.getAttribute(
-            "data-theme-preference"
-          ) === "system"
-        )
-        {
-          applyThemePreference("system", false, false);
-        }
       });
 
       window.addEventListener("beforeprint", function()
@@ -2078,12 +2142,13 @@
               ? "text-amber-600"
               : "text-indigo-700";
 
-          return '<li class="ui-theme-inset rounded-xl border p-4 text-sm">' +
+          return '<li class="hf-log-entry text-sm" data-severity="' +
+            entry.severity + '">' +
             '<div class="flex flex-wrap items-center justify-between gap-2">' +
             '<strong class="' + severityClass + '">' +
             entry.severity + " · " + entry.context + '</strong>' +
-            '<time class="ui-theme-muted">' + entry.timestamp + '</time>' +
-            '</div><p class="mt-2 break-words ui-theme-secondary">' +
+            '<time class="text-xs ui-theme-muted">' + entry.timestamp + '</time>' +
+            '</div><p class="mt-1 break-words text-[13px] leading-[19px] ui-theme-secondary">' +
             entry.message + '</p></li>';
         })
         .join("");
@@ -4197,21 +4262,21 @@
               var amount = r.revenue || r.expense || 0;
               return `
               <tr class="transactions-table-row border-b">
-                  <td class="px-4 py-3 text-sm whitespace-nowrap">
+                  <td class="px-4 whitespace-nowrap">
                     ${new Date(r.date).toLocaleDateString()}
                   </td>
 
-                  <td class="px-4 py-3 text-sm">
-                    <span class="inline-flex rounded-full px-2.5 py-1 text-xs font-semibold
+                  <td class="px-4">
+                    <span class="inline-flex text-xs font-semibold
                       ${r.transactionType === "Sales"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-700"}"> ${r.transactionType}
+                        ? "text-green-700"
+                        : "text-red-700"}"> ${r.transactionType}
                     </span>
                   </td>
 
-                  <td class="max-w-[280px] px-4 py-3 text-sm break-words"> ${r.product || r.purchaseCategory || "-"} </td>
-                  <td class="transactions-number px-4 py-3 text-sm"> ${r.qty || "-"} </td>
-                  <td class="transactions-number whitespace-nowrap px-4 py-3 text-sm font-semibold"> Rp ${amount.toLocaleString("id-ID")}</td>
+                  <td class="max-w-[280px] px-4 break-words"> ${r.product || r.purchaseCategory || "-"} </td>
+                  <td class="transactions-number px-4"> ${r.qty || "-"} </td>
+                  <td class="transactions-number whitespace-nowrap px-4 font-semibold"> Rp ${amount.toLocaleString("id-ID")}</td>
                 </tr>`;
             }).join("")
           : '<tr><td colspan="5" class="p-8 text-center text-sm ui-theme-muted">No visible transactions in this bounded view for the selected period.</td></tr>';

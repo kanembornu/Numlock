@@ -2052,6 +2052,208 @@ function testResponsiveShellContract()
   return summary;
 }
 
+function testThemeParityTokenContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var tokenSource = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
+  var scenariosPassed = 0;
+  var pairedTokens = [
+    "canvas", "sidebar", "sidebar-hover", "surface-1", "surface-2", "surface-3",
+    "border-subtle", "border-strong", "divider", "text-primary", "text-secondary",
+    "text-muted", "text-on-dark", "brand", "brand-hover", "brand-soft", "active",
+    "selected", "hover", "focus", "disabled-bg", "disabled-text", "success",
+    "success-soft", "info", "info-soft", "warning", "warning-soft", "critical",
+    "critical-soft", "stale", "stale-soft", "unavailable", "skeleton-start",
+    "skeleton-middle", "overlay", "tooltip-bg", "tooltip-text", "chart-grid",
+    "chart-axis", "chart-series-1", "chart-series-2", "chart-series-3",
+    "chart-series-4", "chart-revenue-fill"
+  ];
+
+  pairedTokens.forEach(function(token)
+  {
+    assertSourceOccurrenceCount(tokenSource, "--" + token + ":", 2, "Light/Dark semantic token " + token);
+  });
+  scenariosPassed++;
+
+  [
+    "print-canvas", "print-text", "print-border", "print-chart-grid",
+    "print-chart-axis", "print-chart-series-1", "print-chart-series-2",
+    "print-chart-series-3", "print-chart-series-4", "print-chart-revenue-fill",
+    "print-tooltip-bg", "print-tooltip-text"
+  ].forEach(function(token)
+  {
+    assertSourceContains(tokenSource, "--" + token + ":", "authoritative print-light token " + token);
+  });
+  scenariosPassed++;
+
+  assertSourceExcludes(tokenSource, "--canvas:#000", "pure-black canvas");
+  assertSourceExcludes(tokenSource, "--surface-1:#000", "pure-black primary surface");
+  scenariosPassed++;
+
+  [
+    'data-theme-preference', 'data-effective-theme',
+    'document.documentElement.setAttribute(\n        "data-theme",\n        resolvedTheme',
+    'document.documentElement.setAttribute(\n        "data-effective-theme",\n        resolvedTheme'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "preference and effective-theme ownership");
+  });
+  scenariosPassed++;
+
+  [
+    "function synchronizeSystemThemeListener(preference)",
+    "systemThemeListenerAttached", "systemThemeQuery.addEventListener(",
+    "systemThemeQuery.removeEventListener(", "handleSystemThemeChange"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "System listener lifecycle");
+  });
+  assertSourceOccurrenceCount(source, "systemThemeQuery.addEventListener(", 1, "one System listener attachment path");
+  assertSourceOccurrenceCount(source, "systemThemeQuery.removeEventListener(", 1, "one System listener removal path");
+  scenariosPassed++;
+
+  [
+    "allowedThemes[preference]", ': "system";',
+    "function applyStoredThemeBeforeRender()", "initializeThemeFoundation();",
+    "applyThemePreference(initialPreference, false, false);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "invalid fallback and pre-render resolution");
+  });
+  scenariosPassed++;
+
+  var paletteSource = getSourceRegion(
+    source,
+    "function getCurrentThemePalette(forceLight)",
+    "function handleSystemThemeChange",
+    "centralized chart palette"
+  );
+  [
+    "window.getComputedStyle(document.documentElement)",
+    'var prefix = forceLight ? "--print-" : "--";',
+    'readToken("chart-series-1")', 'readToken("chart-grid")',
+    'readToken("chart-axis")', 'readToken("tooltip-bg")'
+  ].forEach(function(token)
+  {
+    assertSourceContains(paletteSource, token, "theme-derived Chart.js palette");
+  });
+  if (/#[0-9a-f]{3,8}|rgba?\(/i.test(paletteSource))
+  {
+    throw new Error("Chart palette retains hardcoded production colors");
+  }
+  scenariosPassed++;
+
+  var syncSource = getSourceRegion(
+    source,
+    "function synchronizeChartTheme(forceLight)",
+    "function applyThemePreference",
+    "chart instance theme synchronization"
+  );
+  ["revenueChart", "hotColdChart", "expenseChart", 'chart.update("none");'].forEach(function(token)
+  {
+    assertSourceContains(syncSource, token, "existing chart instance update");
+  });
+  ["new Chart(", "destroyChartInstance("].forEach(function(token)
+  {
+    assertSourceExcludes(syncSource, token, "chart recreation during theme switch");
+  });
+  scenariosPassed++;
+
+  [
+    "#mainChartWrapper { height: 288px;", "maintainAspectRatio: false",
+    "@media (prefers-reduced-motion: reduce)", "revenueChartSummary",
+    "hotColdChartSummary", "expenseChartSummary"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "finite accessible chart parity");
+  });
+  scenariosPassed++;
+
+  [
+    "--canvas: var(--print-canvas);", "--text-primary: var(--print-text);",
+    "--border-subtle: var(--print-border);", "synchronizeChartTheme(true);",
+    "synchronizeChartTheme(false);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "print-light isolation and restoration");
+  });
+  scenariosPassed++;
+
+  [
+    'id="dashboard"', 'id="transactions"', 'id="settings"', 'id="logs"',
+    'data-sidebar-collapsed="false"', 'aria-current="page"',
+    'aria-disabled="true"', 'id="dashboardStatus"', 'id="transactionDrilldownSummary"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "component and visual-acceptance hook parity");
+  });
+  scenariosPassed++;
+
+  [
+    "button:focus-visible", "outline: 3px solid var(--focus)",
+    "opacity: 1", "Current", "Stale", "No Data", "Good", "Attention",
+    "Critical", "unavailable until module migration is approved"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "accessible non-color state parity");
+  });
+  scenariosPassed++;
+
+  if (/#[0-9a-f]{3,8}|rgba?\(|hsla?\(/i.test(source))
+  {
+    throw new Error("Production HTML retains a hardcoded color outside semantic tokens");
+  }
+  scenariosPassed++;
+
+  var themeSource = getSourceRegion(
+    source,
+    "function getResolvedTheme(preference)",
+    "function sanitizeClientLogMessage",
+    "theme controller"
+  );
+  ["google.script.run", "getDashboardData(", "requestDashboardData(", "new Chart(", "destroyChartInstance("].forEach(function(token)
+  {
+    assertSourceExcludes(themeSource, token, "theme-induced request or recreation");
+  });
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "theme response mutation");
+  });
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Theme parity query budget exceeded");
+  }
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase");
+  assertSourceExcludes(source, "ResizeObserver", "theme parity ResizeObserver");
+  assertSourceExcludes(source, 'addEventListener("resize"', "theme parity resize listener");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    pairedTokens: pairedTokens.length,
+    chartInstancesRecreated: false,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testThemeParityTokenContract | scenarios=" + summary.scenarios +
+    " | pairedTokens=" + summary.pairedTokens +
+    " | chartInstancesRecreated=" + summary.chartInstancesRecreated +
+    " | backendRequests=" + summary.backendRequests +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testUiShellThemeContract()
 {
   var source =
@@ -2181,8 +2383,8 @@ function testUiShellThemeContract()
     "@media print",
     'synchronizeChartTheme(true);',
     'window.addEventListener("beforeprint"',
-    "background: #ffffff !important;",
-    "color: #0f172a;"
+    "background: var(--print-canvas) !important;",
+    "color: var(--print-text);"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "print-light theme");
@@ -2768,7 +2970,7 @@ function testFullShellVisualContract()
     'background: var(--surface-1)',
     'background: var(--canvas)',
     '@media print',
-    'background: #ffffff !important;',
+    'background: var(--print-canvas) !important;',
     '#topUtilityBar,'
   ].forEach(function(token)
   {
@@ -3284,7 +3486,7 @@ function testDashboardOverviewContract()
     "#contentViewport { overflow: visible; padding: 12px; }",
     "overview-surface",
     ':root[data-theme="dark"] .bg-white',
-    "background: #ffffff !important;"
+    "background: var(--print-canvas) !important;"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "viewport and theme parity");
@@ -3696,7 +3898,7 @@ function testPrintReportContract()
     "@page",
     "size: A4 portrait;",
     "@media print",
-    "background: #ffffff !important;"
+    "background: var(--print-canvas) !important;"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "A4 print layout");
@@ -4340,6 +4542,206 @@ function testInteractiveDrilldownContract()
   return summary;
 }
 
+function testSecondaryDestinationsHighFidelityContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var scenariosPassed = 0;
+  var transactionsRegion = getSourceRegion(source, 'id="transactions"', 'id="settings"', "high-fidelity Transactions");
+  var settingsRegion = getSourceRegion(source, 'id="settings"', 'id="logs"', "high-fidelity Settings");
+  var logsRegion = getSourceRegion(source, 'id="logs"', "</main>", "high-fidelity Logs");
+
+  [transactionsRegion, settingsRegion, logsRegion].forEach(function(region, index)
+  {
+    if (!region.length)
+    {
+      throw new Error("Secondary destination region extraction failed: " + index);
+    }
+  });
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(transactionsRegion, 'data-transactions-tab="', 4, "four Transactions tabs");
+  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 5, "five visible table columns");
+  [">Date</th>", ">Type</th>", ">Item</th>", ">Qty</th>", ">Amount</th>"].forEach(function(token)
+  {
+    assertSourceContains(transactionsRegion, token, "authoritative Transactions column");
+  });
+  scenariosPassed++;
+
+  [
+    'id="transactionsToolbar"', "hf-transactions-toolbar",
+    'id="transactionsResultHeading"', 'id="transactionsScopeText"',
+    'id="transactionDrilldownSummary"', 'id="exportCsvButton"',
+    'id="transactionsTableScroll"', "hf-secondary-surface"
+  ].forEach(function(token)
+  {
+    assertSourceContains(transactionsRegion, token, "table-dominant Transactions composition");
+  });
+  scenariosPassed++;
+
+  [
+    "res.recentTransactions.slice(0, 10)",
+    "latest 10 transactions already loaded",
+    "separate purchase history is unavailable",
+    "var visibleRows = Array.from(tableBody.rows)",
+    "sanitizeCsvCellValue(value, isNumericColumn)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded visible Transactions evidence");
+  });
+  scenariosPassed++;
+
+  [
+    'setActiveTransactionsTab("recent", false);',
+    "transactionsResultHeading.focus();",
+    "activeTransactionDrilldown = null;",
+    'onclick="clearTransactionDrilldown()"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "drill-down focus and reset");
+  });
+  scenariosPassed++;
+
+  [
+    "#transactionsTableScroll th { height: 36px;",
+    "#transactionsTableScroll td { height: 40px;",
+    "#transactionsTableScroll td { height: 44px;",
+    "font-variant-numeric: tabular-nums",
+    "min-w-[680px]",
+    "overflow: auto"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Transactions density and containment");
+  });
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(settingsRegion, 'name="themePreference"', 3, "three theme choices");
+  [
+    'id="settingsSections"', "hf-settings-grid", 'id="appearanceSection"',
+    'id="aboutSection"', "hf-setting-choice", "hf-about-row",
+    "max-width: 960px", "minmax(0, 7fr) minmax(0, 5fr)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact Appearance and About composition");
+  });
+  scenariosPassed++;
+
+  [
+    'data-metadata-source="template.appName"',
+    'data-metadata-source="template.version"',
+    'data-metadata-source="template.releaseLabel"',
+    'data-metadata-source="template.environment"'
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(settingsRegion, token, "About metadata provenance");
+  });
+  scenariosPassed++;
+
+  ["profile", "notifications", "integrations", "type=\"checkbox\"", "<textarea", "<select"].forEach(function(token)
+  {
+    assertSourceExcludes(settingsRegion, token, "unsupported Settings control");
+  });
+  scenariosPassed++;
+
+  [
+    'id="sessionLogsScopeNotice"', 'id="sessionLogsSeveritySummary"',
+    'id="sessionLogsToolbar"', 'id="sessionLogsListRegion"',
+    "hf-log-severity-strip", "hf-log-entry", "data-severity=",
+    "Session-local only.", "Maximum 100 entries"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "session Logs hierarchy");
+  });
+  scenariosPassed++;
+
+  [
+    "sessionClientLogs.unshift({", "sessionClientLogs.length > 100",
+    "now - lastClientLogTimestamp < 5000", ".slice(0, 240)",
+    "timestamp:", "severity:", "context:", "message:"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded sanitized Logs behavior");
+  });
+  scenariosPassed++;
+
+  ["Search logs", "Export logs", "Pagination", "Server refresh", "audit history"].forEach(function(token)
+  {
+    assertSourceExcludes(logsRegion, token, "unsupported Logs feature");
+  });
+  scenariosPassed++;
+
+  [
+    "hf-secondary-surface", "border-radius: 12px", "box-shadow: none",
+    ":root[data-theme=\"dark\"]", "@media print",
+    "#settings.active { height: 100%; overflow: hidden; }",
+    "#sessionLogsListRegion { min-height: 0; overflow-y: auto; }",
+    "@media (max-width: 1023px)", "overflow-x: auto"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "shared visual and responsive parity");
+  });
+  scenariosPassed++;
+
+  [
+    'role="tablist"', 'role="tabpanel"', '<fieldset class="mt-4">',
+    'role="status" aria-live="polite" aria-atomic="true"',
+    'scope="col"', 'aria-label="Log severity summary"',
+    "button:focus-visible", "input:focus-visible",
+    "@media (prefers-reduced-motion: reduce)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "secondary-destination accessibility");
+  });
+  scenariosPassed++;
+
+  var navigationSource = getSourceRegion(
+    source,
+    "function showPage(pageId)",
+    "function getResolvedTheme",
+    "secondary destination navigation"
+  );
+  ["google.script.run", "getDashboardData(", "requestDashboardData("].forEach(function(token)
+  {
+    assertSourceExcludes(navigationSource, token, "secondary navigation backend request");
+  });
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "secondary destination response mutation");
+  });
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Secondary destination query budget exceeded");
+  }
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase");
+  assertSourceExcludes(source, "ResizeObserver", "secondary destination ResizeObserver");
+  assertSourceExcludes(source, 'addEventListener("resize"', "secondary destination resize listener");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    destinations: 3,
+    transactionTabs: 4,
+    columns: 5,
+    maxRows: 10,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testSecondaryDestinationsHighFidelityContract | scenarios=" + summary.scenarios +
+    " | destinations=" + summary.destinations + " | transactionTabs=" + summary.transactionTabs +
+    " | columns=" + summary.columns + " | maxRows=" + summary.maxRows +
+    " | backendRequests=" + summary.backendRequests + " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testTransactionsVisualContract()
 {
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
@@ -4457,7 +4859,7 @@ function testTransactionsVisualContract()
   [
     '>Date</th>', '>Type</th>', '>Item</th>', '>Qty</th>', '>Amount</th>',
     'class="transactions-table-row border-b"', 'class="transactions-number',
-    'id="transactionsTableScroll"', 'overflow-x-auto', 'min-w-[720px]'
+    'id="transactionsTableScroll"', 'overflow-x-auto', 'min-w-[680px]'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "five-column compact table");
@@ -4583,7 +4985,7 @@ function testSettingsVisualContract()
     "theme preference radio controls"
   );
   [
-    '<fieldset class="mt-5">',
+    '<fieldset class="mt-4">',
     '<legend class="text-sm font-semibold ui-theme-primary">Theme preference</legend>',
     'type="radio" name="themePreference" value="light"',
     'type="radio" name="themePreference" value="dark"',
@@ -4616,7 +5018,8 @@ function testSettingsVisualContract()
     'var preference = "system";',
     'preference === "system"',
     '"(prefers-color-scheme: dark)"',
-    'systemThemeQuery.addEventListener("change"',
+    'systemThemeQuery.addEventListener(',
+    'systemThemeQuery.removeEventListener(',
     'applyThemePreference("system", false, false);'
   ].forEach(function(token)
   {
@@ -4656,7 +5059,7 @@ function testSettingsVisualContract()
     'window.addEventListener("beforeprint"',
     "synchronizeChartTheme(true);",
     "@media print",
-    "background: #ffffff !important;"
+    "background: var(--print-canvas) !important;"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "print-light preservation");
@@ -5081,7 +5484,7 @@ function testUiFinalStabilizationContract()
   var scenariosPassed = 0;
 
   [
-    "var(--surface-1)", "var(--surface-2)", "var(--surface-3)",
+    "var(--surface-1)", "var(--surface-2)", "var(--divider)",
     "var(--text-primary)", "var(--text-secondary)", "var(--border-subtle)",
     "var(--success)", "var(--warning)", "var(--critical)",
     "var(--disabled-bg)", "var(--disabled-text)"
@@ -5142,10 +5545,10 @@ function testUiFinalStabilizationContract()
     ':root[data-theme="dark"] .bg-red-100',
     ':root[data-theme="dark"] .bg-emerald-100,',
     ':root[data-theme="dark"] .text-emerald-600,',
-    ':root[data-theme="dark"] .skeleton',
-    "var(--surface-3) 50%",
-    "@media print", "background: #ffffff !important;",
-    "color: #0f172a;"
+    "var(--skeleton-start) 25%",
+    "var(--skeleton-middle) 50%",
+    "@media print", "background: var(--print-canvas) !important;",
+    "color: var(--print-text);"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "Light, Dark, and print theme parity");
