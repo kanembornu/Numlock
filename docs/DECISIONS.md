@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Reconstruct the Dashboard around evidence hierarchy, not additional features
+
+UI/UX 2.0 Package 018 keeps all five existing Dashboard tabs and recomposes only their visual hierarchy. Overview is a compact executive plane followed by exactly five KPIs and supporting comparison/data-quality evidence; Performance uses a 4/8 split with Revenue Trend as the single hero; Analytics separates two primary charts from two secondary evidence regions; Intelligence uses a 4/5/3 signal/performance/action allocation; and Planning places focus/support beside the continuous roadmap and system-defined Target Reference. Nested decorative cards are flattened where they do not establish ownership. This is a composition decision only: formulas, response fields, request paths, ordering semantics, feature ownership, and editable/persistence scope do not change.
+
 ### Lock UI/UX 2.0 reconstruction to the high-fidelity specification
 
 UI/UX 2.0 Package 015 makes the [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) authoritative for Packages 016–022. Reference 2 controls visual composition and reference 1 supports expanded/collapsed sidebar clarity. The specification requires a one-viewport desktop shell, `232/64px` navigation rail (`216/64px` at compact desktop), `52/48px` utility row, `40px` content tabs, compact KPI geometry, chart-led layouts, low-noise monochrome surfaces, editorial typography, and exact light/dark tokens.

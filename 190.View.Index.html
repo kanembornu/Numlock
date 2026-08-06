@@ -93,6 +93,14 @@
       .ui-theme-primary { color: var(--text-primary) !important; }
       .ui-theme-secondary { color: var(--text-secondary) !important; }
       .ui-theme-muted { color: var(--text-muted) !important; }
+      .hf-section-label { color: var(--text-muted); font-size: 12px; font-weight: 600; line-height: 16px; }
+      .hf-section-heading { color: var(--text-primary); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 24px; }
+      .hf-executive-plane { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; }
+      .hf-executive-fact { min-width: 0; padding: 12px 16px; }
+      .hf-executive-fact + .hf-executive-fact { border-left: 1px solid var(--border-subtle); }
+      .hf-priority-action { background: var(--selected); border-left: 3px solid var(--brand); }
+      .hf-kpi-card { min-height: 96px; border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: none; }
+      .hf-evidence-group > * + * { border-left: 1px solid var(--border-subtle); }
 
       @media (min-width: 1024px)
       {
@@ -117,7 +125,7 @@
         #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
-        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 12px; overflow: hidden; }
+        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 12px; overflow: hidden; }
         #dashboardPanelPerformance #businessPerformanceSection,
         #dashboardPanelPerformance #revenueChartSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
         #dashboardPanelPerformance #mainChartWrapper { height: clamp(300px, calc(100dvh - 330px), 440px); min-height: 300px; max-height: 440px; }
@@ -125,17 +133,20 @@
         #dashboardPanelAnalytics > section,
         #dashboardPanelAnalytics > div { min-height: 0; height: 100%; margin: 0; }
         #dashboardPanelAnalytics #hotColdWrapper,
-        #dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 148px; }
-        #dashboardPanelIntelligence:not([hidden]) { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; overflow: hidden; }
+        #dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 180px; }
+        #dashboardPanelIntelligence:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); gap: 12px; overflow: hidden; }
         #dashboardPanelIntelligence > section,
         #dashboardPanelIntelligence > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
         #dashboardPanelIntelligence #diagnosisContainer,
         #dashboardPanelIntelligence #recommendationContainer { min-height: 0; overflow-y: auto; }
         #dashboardPanelIntelligence #riskOpportunitySection { display: flex; flex-direction: column; gap: 8px; }
         #dashboardPanelIntelligence #riskOpportunitySection > div { min-height: 0; flex: 1 1 0; }
-        #dashboardPanelPlanning:not([hidden]) { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
-        #dashboardPanelPlanning #executiveCenter { min-height: 0; flex: 1 1 auto; height: auto; margin: 0; overflow: hidden; }
-        #dashboardPanelPlanning > #kpiTargetReference { flex: 0 0 auto; margin: 0; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-1); }
+        #dashboardPanelPlanning:not([hidden]) { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; overflow: hidden; }
+        #dashboardPanelPlanning #executiveCenter { display: grid; min-height: 0; height: auto; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; margin: 0; overflow: hidden; }
+        #planningFocusRow { grid-column: 1; grid-row: 1; }
+        #actionRoadmapCard { grid-column: 2; grid-row: 1 / span 2; min-height: 0; margin: 0; overflow-y: auto; }
+        #planningSupportRow { grid-column: 1; grid-row: 2; }
+        #dashboardPanelPlanning > #kpiTargetReference { margin: 0; padding: 8px 12px; border-top: 1px solid var(--border-subtle); background: var(--surface-1); }
         #transactions.active { display: grid; height: 100%; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #transactionsTabList { margin: 0; }
         #transactionsPanelGroup { min-height: 0; height: auto; }
@@ -163,6 +174,14 @@
         #topUtilityBar { height: 48px; min-height: 48px; }
       }
 
+      @media (min-width: 1024px) and (max-height: 800px)
+      {
+        .hf-executive-fact { padding: 8px 12px; }
+        .hf-kpi-card { min-height: 96px; padding: 12px; }
+        #dashboardPanelOverview #executiveSummarySection,
+        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 6px; }
+      }
+
       @media (max-width: 1023px)
       {
         #dashboardSidebar { width: min(320px, calc(100vw - 32px)); box-shadow: var(--shadow-2); }
@@ -176,6 +195,8 @@
         #dashboardPanelIntelligence #diagnosisContainer,
         #dashboardPanelIntelligence #recommendationContainer { overflow: visible; }
         #dashboardPanelPlanning #executiveCenter { overflow: visible; }
+        #dashboardPanelPlanning #executiveCenter { display: block; }
+        #actionRoadmapCard { overflow: visible; }
         #transactions.active,
         #transactionsPanelGroup,
         .transactions-tab-panel:not([hidden]),
@@ -186,6 +207,8 @@
         #logs.active,
         #logsWorkspace { height: auto; overflow: visible; }
         #sessionLogsListRegion { overflow: visible; }
+        .hf-executive-fact + .hf-executive-fact { border-top: 1px solid var(--border-subtle); border-left: 0; }
+        .hf-evidence-group > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -756,26 +779,20 @@
 
       <div id="dashboardSectionStaging" hidden>
     <!-- EXECUTIVE SUMMARY -->
-    <section id="executiveSummarySection" class="overview-surface min-w-0 rounded-2xl border p-4 mb-3" aria-labelledby="executiveSummaryTitle">
-      <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-        <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">At a Glance</p>
-        <h2 id="executiveSummaryTitle" class="mt-1 text-lg font-bold text-slate-900">Executive Summary</h2>
-        </div>
-        <p class="text-xs text-slate-500">Condition, attention, and the next action</p>
-      </div>
+    <section id="executiveSummarySection" class="hf-executive-plane min-w-0 mb-3" aria-labelledby="executiveSummaryTitle">
+      <h2 id="executiveSummaryTitle" class="sr-only">Executive Summary</h2>
 
-      <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
-        <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-3 lg:col-span-3">
-          <div class="text-[11px] font-bold uppercase tracking-wider text-indigo-700">Business condition</div>
+      <div class="grid grid-cols-1 lg:grid-cols-12">
+        <div class="hf-executive-fact lg:col-span-3">
+          <div class="hf-section-label">Business condition</div>
           <div id="executiveSummary" class="mt-2 text-sm font-semibold leading-snug text-slate-900">Loading...</div>
         </div>
 
-        <div id="executiveAlertCard" class="rounded-xl border p-3 lg:col-span-3">Loading attention status...</div>
+        <div id="executiveAlertCard" class="hf-executive-fact lg:col-span-3">Loading attention status...</div>
 
-        <section id="businessPriorityRegion" class="rounded-xl border border-amber-200 bg-amber-50 p-3 lg:col-span-6" aria-labelledby="businessPriorityHeading">
+        <section id="businessPriorityRegion" class="hf-executive-fact hf-priority-action lg:col-span-6" aria-labelledby="businessPriorityHeading">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <h3 id="businessPriorityHeading" class="text-xs font-bold uppercase tracking-wider text-amber-700">Business Priority</h3>
+            <h3 id="businessPriorityHeading" class="hf-section-label">Business Priority</h3>
             <span id="businessPriorityLevel" class="rounded-full px-3 py-1 text-xs font-bold">Loading</span>
           </div>
           <div id="priorityTitle" class="mt-2 text-base font-bold text-slate-900">Loading...</div>
@@ -792,7 +809,7 @@
         <h2 id="keyMetricsTitle" class="text-base font-bold text-slate-900">Key Metrics</h2>
         <p class="text-xs text-slate-500">Select a card to view supporting transactions</p>
       </div>
-      <div id="businessOverview" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5"></div>
+      <div id="businessOverview" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"></div>
     </section>
 
     <div id="overviewContextRow" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
@@ -814,9 +831,9 @@
     </div>
 
     <!-- PERFORMANCE HERO -->
-      <section id="revenueChartSection" class="analytics-surface min-w-0 rounded-2xl border p-4" role="region" aria-labelledby="revenueChartTitle">
+      <section id="revenueChartSection" class="analytics-surface min-w-0 rounded-xl border p-4" role="region" aria-labelledby="revenueChartTitle" data-composition-role="hero-chart">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div><p class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">Primary trend</p><h2 id="revenueChartTitle" class="mt-1 text-lg font-bold">Revenue Trend</h2></div>
+          <div><p class="hf-section-label">Primary trend</p><h2 id="revenueChartTitle" class="hf-section-heading mt-1">Revenue Trend</h2></div>
           <button type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
         </div>
         <p id="revenueChartSummary" class="mb-2 text-xs text-slate-500"></p>
@@ -827,7 +844,7 @@
         </div>
       </section>
 
-      <section id="hotColdChartSection" class="analytics-surface min-w-0 rounded-2xl border p-3" role="region" aria-labelledby="hotColdChartTitle">
+      <section id="hotColdChartSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="hotColdChartTitle" data-composition-tier="primary">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="hotColdChartTitle" class="text-sm font-bold">Hot/Cold Split</h2>
           <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Product distribution transactions')">View transactions</button>
@@ -840,7 +857,7 @@
         </div>
       </section>
 
-      <section id="topProductsSection" class="analytics-surface min-w-0 rounded-2xl border p-3" aria-labelledby="topProductsTitle">
+      <section id="topProductsSection" class="analytics-surface min-w-0 rounded-xl border p-3" aria-labelledby="topProductsTitle" data-composition-tier="secondary">
         <div class="mb-2 flex items-center justify-between gap-2"><h2 id="topProductsTitle" class="text-sm font-bold">Top Products</h2><span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Current ranking</span></div>
         <div id="topProductWrapper" class="relative">
           <div id="topProductsContainer"></div>
@@ -857,7 +874,7 @@
         </div>
       </section>
 
-      <section id="expenseChartSection" class="analytics-surface min-w-0 rounded-2xl border p-3" role="region" aria-labelledby="expenseChartTitle">
+      <section id="expenseChartSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="expenseChartTitle" data-composition-tier="primary">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="expenseChartTitle" class="text-sm font-bold">Expense Breakdown</h2>
           <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('purchase', '', 'Expense transactions')">View transactions</button>
@@ -873,15 +890,13 @@
     <!-- ==================================================
         DASHBOARD INTELLIGENCE
     ================================================== -->
-    <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-8">
+    <div class="contents">
 
       <!-- EXECUTIVE SUMMARY -->
-      <section id="diagnosisSection" class="analytics-surface min-w-0 rounded-2xl border p-3 flex flex-col" aria-labelledby="diagnosisHeading">
+      <section id="diagnosisSection" class="analytics-surface min-w-0 rounded-xl border p-3 flex flex-col" aria-labelledby="diagnosisHeading">
 
         <div class="mb-2">
-          <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
-            Attention Required
-          </p>
+          <p class="hf-section-label">Attention required</p>
 
           <h2 id="diagnosisHeading" class="mt-1 text-base font-bold text-slate-900">
             Business Signals
@@ -898,12 +913,10 @@
       </section>
 
       <!-- BUSINESS INTELLIGENCE -->
-      <section id="businessPerformanceSection" class="analytics-surface min-w-0 rounded-2xl border p-4 h-full flex flex-col" aria-labelledby="businessPerformanceTitle">
+      <section id="businessPerformanceSection" class="analytics-surface min-w-0 rounded-xl border p-4 h-full flex flex-col" aria-labelledby="businessPerformanceTitle">
 
         <div class="mb-3">
-          <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
-            Performance Detail
-          </p>
+          <p class="hf-section-label">Performance detail</p>
 
           <h2 id="businessPerformanceTitle" class="mt-1 text-lg font-bold text-slate-900">
             Business Performance
@@ -928,7 +941,7 @@
 
         </div>
 
-        <div id="forecastContainer" class="mt-3 rounded-xl bg-slate-50 px-3 py-2"></div>
+        <div id="forecastContainer" class="mt-3 border-t border-slate-200 px-1 pt-3"></div>
 
         <div id="kpiTargetReference" class="mt-5 border-t border-slate-200 pt-5">
           <div class="flex flex-wrap items-center justify-between gap-3">
@@ -952,12 +965,10 @@
       </section>
 
       <!-- ACTION CENTER -->
-      <section id="recommendationsSection" class="analytics-surface min-w-0 rounded-2xl border p-3 flex flex-col" aria-labelledby="recommendationsHeading">
+      <section id="recommendationsSection" class="analytics-surface min-w-0 rounded-xl border p-3 flex flex-col" aria-labelledby="recommendationsHeading">
 
         <div class="mb-2">
-          <p class="text-[11px] font-bold tracking-[0.22em] uppercase text-slate-400">
-            Action Center
-          </p>
+          <p class="hf-section-label">Action center</p>
 
           <h2 id="recommendationsHeading" class="mt-1 text-base font-bold text-slate-900">
             Recommended Actions
@@ -975,51 +986,51 @@
     </div>
 
     <!-- DECISION SUPPORT -->
-    <div id="executiveCenter" class="analytics-surface min-w-0 rounded-2xl border p-3">
-      <div class="mb-2 flex items-center justify-between">
+    <div id="executiveCenter" class="analytics-surface min-w-0 rounded-xl border p-3">
+      <div class="sr-only">
         <div>
           <div class="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">Decision Support</div>
           <h2 class="mt-1 text-base font-bold">Planning Detail</h2>
         </div>
       </div>
 
-    <div class="grid grid-cols-1 gap-2 lg:grid-cols-2">
-      <div id="businessFocusCard" class="rounded-xl border">Loading Business Focus...</div>
-      <div id="priorityActionCard" class="rounded-xl border">Loading Priority Action...</div>
+    <div id="planningFocusRow" class="grid grid-cols-1 gap-2">
+      <div id="businessFocusCard">Loading Business Focus...</div>
+      <div id="priorityActionCard" class="border-t border-slate-200 pt-2">Loading Priority Action...</div>
     </div>
-      <div id="actionRoadmapCard" class="mt-2 rounded-xl border p-3">Loading Action Roadmap...</div>
-    <div class="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
-      <div id="kpiAchievementCard" class="rounded-xl border">Loading KPI Achievement...</div>
-      <div id="businessMaturityCard" class="rounded-xl border">Loading Business Maturity...</div>
+      <div id="actionRoadmapCard" class="border-l border-slate-200 p-3">Loading Action Roadmap...</div>
+    <div id="planningSupportRow" class="grid grid-cols-1 gap-2">
+      <div id="kpiAchievementCard">Loading KPI Achievement...</div>
+      <div id="businessMaturityCard" class="border-t border-slate-200 pt-2">Loading Business Maturity...</div>
     </div>
     </div>
 
     <!-- RISK AND GROWTH -->
-    <div id="riskOpportunitySection" class="analytics-surface rounded-2xl border p-3">
-      <div class="ui-theme-inset rounded-xl border p-3">
+    <div id="riskOpportunitySection" class="analytics-surface rounded-xl border p-3">
+      <div class="pb-3">
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Risk Status</div>
         <div id="riskLevel" class="text-xl font-bold">Loading...</div>
         <div id="riskCount" class="mt-1 text-xs text-slate-500">...</div>
         <div id="riskList" class="mt-2 space-y-1 text-xs"></div>
       </div>
 
-      <div class="ui-theme-inset rounded-xl border p-3">
+      <div class="border-t border-slate-200 py-3">
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Growth Opportunity</div>
         <div id="growthScore" class="text-xl font-bold">...</div>
         <div id="growthStatus" class="mt-1 text-xs font-semibold text-slate-500">...</div>
         <div id="growthMessage" class="mt-2 text-xs leading-snug text-slate-700">...</div>
       </div>
-      <div id="intelligenceDirectionContext" class="ui-theme-inset rounded-xl border p-3"></div>
+      <div id="intelligenceDirectionContext" class="border-t border-slate-200 pt-3"></div>
     </div>
 
     <!-- PRODUCT PERFORMANCE -->
-    <div id="productConcentrationSection" class="analytics-surface grid grid-cols-1 gap-2 rounded-2xl border p-3 sm:grid-cols-2">
-      <div class="ui-theme-inset rounded-xl border p-3">
+    <div id="productConcentrationSection" class="analytics-surface hf-evidence-group grid grid-cols-1 rounded-xl border p-3 sm:grid-cols-2" data-composition-tier="secondary">
+      <div class="p-3">
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Product Contribution / Revenue Dependency</div>
         <div id="revenueDependencyContainer"> </div>
       </div>
 
-      <div class="ui-theme-inset rounded-xl border p-3">
+      <div class="p-3">
         <div class="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-2">Revenue Concentration / Pareto Analysis</div>
         <div id="paretoContainer"> </div>
       </div>
@@ -3079,11 +3090,11 @@
       return `
         <button
           type="button"
-          class="overview-surface min-h-[112px] w-full rounded-2xl border p-4 text-left"
+          class="hf-kpi-card overview-surface w-full p-4 text-left"
           onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
           aria-label="View transactions for ${label}">
-          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-500">${label}</span>
-          <strong class="overview-kpi-value mt-2 block truncate text-xl ${valueClass || "text-slate-900"}">${value}</strong>
+          <span class="hf-section-label">${label}</span>
+          <strong class="overview-kpi-value mt-2 block truncate text-2xl font-bold ${valueClass || "text-slate-900"}">${value}</strong>
           <span class="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
             <span>${delta}</span><span class="font-semibold">${status}</span>
           </span>
@@ -3114,113 +3125,33 @@
     //--------------------------------------------------
     // Render Charts
     //--------------------------------------------------
-    function heroIcon(type)
-    {
-        const icons =
-        {
-            revenue:`
-    <svg xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke-width="2"
-    stroke="currentColor"
-    class="w-5 h-5 text-indigo-600">
-
-    <path stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M3 17l6-6 4 4 7-7"/>
-
-    </svg>`,
-
-            expense:`
-    <svg xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke-width="2"
-    stroke="currentColor"
-    class="w-5 h-5 text-rose-600">
-
-    <path stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M2.25 8.25h19.5v7.5H2.25z"/>
-
-    </svg>`,
-
-            profit:`
-    <svg xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke-width="2"
-    stroke="currentColor"
-    class="w-5 h-5 text-amber-600">
-
-    <path stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M3 3v18h18"/>
-
-    <path stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M7 14l4-4 3 3 5-7"/>
-
-    </svg>`,
-
-            forecast:`
-    <svg xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke-width="2"
-    stroke="currentColor"
-    class="w-5 h-5 text-indigo-600">
-
-    <path stroke-linecap="round"
-    stroke-linejoin="round"
-    d="M4.5 19.5L9 12l3 3 7.5-10.5"/>
-
-    </svg>`
-        };
-
-        return icons[type];
-    }
-
     function renderDiagnosisCard(item)
     {
       const config =
         item.level==="warning"
         ?
         {
-        bg:"bg-red-50",
-        border:"border-red-100",
         badge:"bg-red-100 text-red-700",
-        iconBg:"bg-red-500",
-        icon:"💰",
         label:"Critical"
         }
         :
         item.level==="attention"
         ?
         {
-        bg:"bg-amber-50",
-        border:"border-amber-100",
         badge:"bg-amber-100 text-amber-700",
-        iconBg:"bg-amber-500",
-        icon:"⚠️",
         label:"Attention"
         }
         :
         {
-        bg:"bg-emerald-50",
-        border:"border-emerald-100",
         badge:"bg-emerald-100 text-emerald-700",
-        iconBg:"bg-emerald-500",
-        icon:"🏆",
         label:"Opportunity"
         };
 
       return `
-      <div class="${config.bg} border ${config.border} rounded-xl p-3" role="listitem">
+      <div class="border-b border-slate-200 py-3 last:border-b-0" role="listitem">
         <div class="flex items-start justify-between gap-2">
           <h4 class="text-sm font-bold text-slate-900">${item.title || "Business condition"}</h4>
-          <span class="inline-flex shrink-0 items-center rounded-full px-2 py-1 text-[10px] font-bold ${config.badge}">${config.icon} ${config.label}</span>
+          <span class="inline-flex shrink-0 items-center rounded-full px-2 py-1 text-[10px] font-bold ${config.badge}">${config.label}</span>
         </div>
         <p class="mt-1 text-xs leading-snug text-slate-600">${item.description || item.message || "No additional detail."}</p>
       </div>
@@ -3692,10 +3623,7 @@
         <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
           <div>
             <div class="text-sm font-semibold">
-              ${index === 0 ? "🥇" :
-              index === 1 ? "🥈" :
-              index === 2 ? "🥉" :
-              "#" + (index + 1)}
+              #${index + 1}
               ${p.name}
             </div>
             <div class="text-xs text-slate-500"> ${p.qty} cups sold </div>
@@ -3726,27 +3654,27 @@
           document.getElementById("diagnosisContainer");
         var alert = res.executiveAlert;
         var alertMarkup = alert
-          ? '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3" aria-label="Executive Alert">' +
+          ? '<div class="border-b border-slate-200 pb-3" aria-label="Executive Alert">' +
             '<div class="flex items-center justify-between gap-2">' +
             '<strong class="text-sm">Executive Alert</strong>' +
             '<span class="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-bold">' +
             alert.level + '</span></div>' +
             '<div class="mt-1 text-sm font-bold">' + alert.title + '</div>' +
             '<p class="mt-1 text-xs leading-snug text-slate-600">' + alert.message + '</p></div>'
-          : '<div class="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">No executive alert for the active period.</div>';
+          : '<div class="border-b border-slate-200 pb-3 text-xs text-slate-600">No executive alert for the active period.</div>';
 
         diagnosisContainer.innerHTML =
           alertMarkup +
           diagnosis.map(renderDiagnosisCard).join("");
 
         diagnosisContainer.nextElementSibling.innerHTML =
-          '<div class="ui-theme-inset rounded-xl border p-2">' +
-          '<div class="text-[10px] font-bold uppercase text-slate-500">Revenue Intelligence</div>' +
+          '<div class="pr-2">' +
+          '<div class="hf-section-label">Revenue Intelligence</div>' +
           '<div class="mt-1 text-sm font-bold">' + res.revenueIntelligence.direction +
           ' · ' + res.revenueIntelligence.growthRate + '%</div>' +
           '<div class="mt-1 text-[10px] text-slate-500">' + res.revenueIntelligence.momentum + '</div></div>' +
-          '<div class="ui-theme-inset rounded-xl border p-2">' +
-          '<div class="text-[10px] font-bold uppercase text-slate-500">Profit Intelligence</div>' +
+          '<div class="border-l border-slate-200 pl-2">' +
+          '<div class="hf-section-label">Profit Intelligence</div>' +
           '<div class="mt-1 text-sm font-bold">' + res.profitIntelligence.direction +
           ' · ' + res.profitIntelligence.changeRate + '%</div>' +
           '<div class="mt-1 text-[10px] text-slate-500">' + res.profitIntelligence.status +
@@ -3755,11 +3683,7 @@
         document.getElementById("revenueIntelContainer").innerHTML =
         renderIntelCard({
 
-          theme:"indigo",
-
           label:"Revenue",
-
-          icon:heroIcon("revenue"),
 
           value:
           "Rp " +
@@ -4433,30 +4357,12 @@
 
       if (res.executiveAlert)
       {
-        var alertColor = "bg-emerald-50 border-emerald-200";
-        var alertIcon = "🟢";
-
-        if ( res.executiveAlert.level === "Warning" )
-          {
-            alertColor = "bg-amber-50 border-amber-200";
-            alertIcon = "🟡";
-          }
-
-        if ( res.executiveAlert.level === "Critical" )
-          {
-            alertColor = "bg-red-50 border-red-200";
-            alertIcon = "🔴";
-          }
-
         document.getElementById("executiveAlertCard").className =
-          alertColor + " rounded-xl border p-3 lg:col-span-3";
+          "hf-executive-fact lg:col-span-3";
         document.getElementById( "executiveAlertCard" ).innerHTML = `
         <div class="h-full">
-          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-600"> Attention Status </div>
-          <div class="mt-2 text-base font-bold">
-            ${alertIcon}
-            ${res.executiveAlert.title}
-          </div>
+          <div class="hf-section-label">Attention status · ${res.executiveAlert.level}</div>
+          <div class="mt-2 text-base font-bold">${res.executiveAlert.title}</div>
           <div class="mt-2 text-xs leading-snug text-slate-600"> ${res.executiveAlert.message} </div>
         </div>
         `;
@@ -4467,21 +4373,11 @@
       //--------------------------------------------------
       if (res.businessFocus)
       {
-        var focusColor = "bg-indigo-50 border-indigo-200"
-        if ( res.businessFocus.priority === "Critical" )
-          {
-            focusColor = "bg-red-50 border-red-200";
-          }
-            else if ( res.businessFocus.priority === "High" )
-            {
-              focusColor = "bg-amber-50 border-amber-200";
-            }
-
         var businessFocusCard =
           document.getElementById( "businessFocusCard" );
         businessFocusCard.innerHTML = `
-        <div class="${focusColor} rounded-xl p-3 border h-full">
-          <div class="flex items-center justify-between gap-2"><div class="text-[10px] font-bold uppercase text-slate-500">Business Focus</div><strong class="text-[10px]">${res.businessFocus.priority} Priority</strong></div>
+        <div class="h-full py-1">
+          <div class="flex items-center justify-between gap-2"><div class="hf-section-label">Business Focus</div><strong class="text-[10px]">${res.businessFocus.priority} Priority</strong></div>
           <div class="mt-1 text-base font-bold">${res.businessFocus.focus}</div>
           <div class="mt-1 text-xs text-slate-600">${res.businessFocus.reason}</div>
           <div class="mt-2 text-[10px] text-slate-500">Expected Impact: <strong>${res.businessFocus.expectedImpact}</strong></div>
@@ -4491,8 +4387,8 @@
         if (res.priorityAction)
         {
           businessFocusCard.nextElementSibling.innerHTML = `
-          <div class="ui-theme-inset h-full rounded-xl border p-3">
-            <div class="flex items-center justify-between gap-2"><div class="text-[10px] font-bold uppercase text-slate-500">Priority Action</div><strong class="text-[10px]">${res.priorityAction.impact} Impact</strong></div>
+          <div class="h-full py-1">
+            <div class="flex items-center justify-between gap-2"><div class="hf-section-label">Priority Action</div><strong class="text-[10px]">${res.priorityAction.impact} Impact</strong></div>
             <div class="mt-1 text-base font-bold">${res.priorityAction.title}</div>
             <div class="mt-1 text-xs leading-snug text-slate-600">${res.priorityAction.message}</div>
           </div>`;
@@ -4520,8 +4416,8 @@
         }
 
         document.getElementById( "kpiAchievementCard" ).innerHTML = `
-        <div class="ui-theme-inset rounded-xl border p-3 h-full">
-          <div class="text-[10px] font-bold uppercase text-slate-500">KPI Achievement</div>
+        <div class="h-full py-1">
+          <div class="hf-section-label">KPI Achievement</div>
           <div class="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
             <div class="text-xs font-semibold">Revenue
             ${progressBar( res.kpiAchievement.revenue.achievement, "bg-indigo-500" )}
@@ -4553,8 +4449,8 @@
             }
 
         document.getElementById( "businessMaturityCard" ).innerHTML = `
-        <div class="ui-theme-inset rounded-xl border p-3 h-full">
-          <div class="text-[10px] font-bold uppercase text-slate-500">Business Maturity</div>
+        <div class="h-full py-1">
+          <div class="hf-section-label">Business Maturity</div>
           <div class="mt-2 flex items-start gap-3">
             <div class="text-2xl font-bold ${maturityColor}">${res.businessMaturity.score}</div>
             <div><div class="text-sm font-semibold">${res.businessMaturity.level}</div>
@@ -4582,17 +4478,17 @@
             </div>
               <div class="text-[10px] text-slate-400">4 Weeks</div>
             </div>
-          <div class="grid grid-cols-1 gap-2 lg:grid-cols-4">
+          <div class="space-y-0">
 
           ${
 
           res.actionRoadmap.map(function(item,index)
           {
             return `
-              <div class="relative flex gap-3 rounded-lg bg-slate-50 p-2 lg:block">
-                <div class="flex flex-col items-center lg:mb-2 lg:flex-row">
+              <div class="relative flex gap-3 border-b border-slate-200 py-3 last:border-b-0">
+                <div class="flex flex-col items-center">
                   <div class="z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">${item.week}</div>
-                  ${ index < res.actionRoadmap.length-1 ? `<div class="my-1 w-px flex-1 bg-slate-300 lg:my-0 lg:h-px lg:w-auto"></div>` : "" }
+                  ${ index < res.actionRoadmap.length-1 ? `<div class="my-1 w-px flex-1 bg-slate-300"></div>` : "" }
                 </div>
 
                 <div>

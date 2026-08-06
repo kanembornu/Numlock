@@ -26,6 +26,7 @@ function runAllBackendTests()
     { name: "testFullShellVisualContract", run: testFullShellVisualContract },
     { name: "testDashboardTabFrameworkContract", run: testDashboardTabFrameworkContract },
     { name: "testDashboardOverviewContract", run: testDashboardOverviewContract },
+    { name: "testDashboardHighFidelityCompositionContract", run: testDashboardHighFidelityCompositionContract },
     { name: "testPerformanceAnalyticsVisualContract", run: testPerformanceAnalyticsVisualContract },
     { name: "testIntelligencePlanningVisualContract", run: testIntelligencePlanningVisualContract },
     { name: "testTransactionsVisualContract", run: testTransactionsVisualContract },

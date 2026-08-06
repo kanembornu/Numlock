@@ -26,11 +26,11 @@ The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 remains inco
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 017 — COMPLETE locally on 2026-08-06.** One 52/48px utility row now owns visible page identity, existing Dashboard controls, active period, freshness, and version. Desktop content is viewport-bound beneath 40px Dashboard/Transactions tab rails; mobile retains natural flow and the accessible drawer. Existing render targets, states, features, response contracts, and the truthful nine-destination architecture remain unchanged.
+**UI/UX 2.0 Package 018 — COMPLETE locally on 2026-08-06.** All five Dashboard tabs now use the approved compact evidence hierarchy: executive Overview, 4/8 Performance with Revenue Trend as hero, two-tier Analytics, 4/5/3 Intelligence, and action-oriented Planning. Existing formulas, response fields, requests, chart lifecycle, feature ownership, responsive behavior, and the Package 017 shell remain unchanged.
 
 ## 6. Current test gate and evidence level
 
-`runAllBackendTests()` contains exactly **36 ordered entries** and remains fail-fast.
+`runAllBackendTests()` contains exactly **37 ordered entries** and remains fail-fast.
 
 | Evidence class | Current recorded evidence |
 | --- | --- |
@@ -57,6 +57,7 @@ The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 remains inco
 | Current UI/UX 2.0 navigation local/static | Package 016: six focused contracts and the ordered local 35/35 suite passed; numbered and extracted frontend JavaScript parsed; deterministic Tailwind builds matched; the contract reports nine destinations, four active, five unavailable, zero navigation backend requests, 71 ID queries, and two document selectors. |
 | Current UI/UX 2.0 navigation upload | Package 016: exact 26-file clasp inventory verified and `clasp push --force` uploaded 26 files. This proves source synchronization only. |
 | Current UI/UX 2.0 shell local/static | Package 017: eight focused contracts and the ordered local 36/36 suite passed. The full-shell contract reports one authoritative utility row, nine destinations, four active, five unavailable, zero shell-navigation backend requests, 71 ID queries, and two document selectors. Screenshot-based visual fidelity remains unverified. |
+| Current UI/UX 2.0 Dashboard local/static | Package 018: ten focused contracts and the ordered local 37/37 suite passed. The composition contract reports five tabs, five compact Overview KPIs, three preserved charts, zero tab-switch backend requests, 71 ID queries, and two document selectors. Screenshot-based visual fidelity remains unverified. |
 | Current UI/UX 2.0 Apps Script runtime | Final `runAllBackendTests()` PASS 34/34. |
 | Current UI/UX 2.0 browser | PASS at 320px, 375px, 768px, 1280×768, and 1440×900 across responsive containment, accessibility, Light/Dark/System, navigation, charts, tables, print, CSV, drill-down, Settings, and Logs. |
 | Current UI/UX 2.0 Git completion | Final stabilization committed as `7fbd2a3` and pushed; `main`, `origin/main`, and `HEAD` align. |
@@ -107,7 +108,7 @@ Five additional concepts are future major capabilities rather than defects or re
 ## 11. Technical debt
 
 - The Apps Script iframe sandbox warning remains accepted platform output, not an application defect.
-- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 36/36.
+- Historical milestone sections retain their original runner totals; the active development gate now requires exactly 37/37.
 - Editable targets, payload projection, and expanded drill-down must not be implemented until their blocked prerequisites are resolved.
 
 ## 12. Documentation status
@@ -148,9 +149,9 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 **Mandatory v1.0 blockers: none.** Editable targets, payload projection, and expanded drill-down remain optional future work and are not v1.0 blockers.
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
-- [x] Active runner membership is 36; the production v1.0 runtime evidence remains historical 25/25.
+- [x] Active runner membership is 37; the production v1.0 runtime evidence remains historical 25/25.
 - [x] Final former-scope UI/UX 2.0 Apps Script live evidence is 34/34 and functional browser acceptance is complete; visual fidelity remains unverified.
-- [x] Three data/API expansion scopes remain blocked; six UI/UX completion packages remain active.
+- [x] Three data/API expansion scopes remain blocked; four UI/UX completion packages remain active.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
 - [x] Run the then-current 25-entry unified gate locally against the exact v1.0 release candidate.
@@ -162,11 +163,11 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 ## 14. Active-development boundary
 
-Continue UI/UX 2.0 development only within Packages 018–022 while all of these conditions remain true:
+Continue UI/UX 2.0 development only within Packages 019–022 while all of these conditions remain true:
 
 - the feature/backend baseline remains stable and unchanged unless separately authorized;
 - version `1.0.0` continues to satisfy the documented bounded product need;
-- the mandatory 36-entry gate remains green at the latest accepted boundary;
+- the mandatory 37-entry gate remains green at the latest accepted boundary;
 - documentation, Git, production baseline, and rollback records remain consistent; and
 - blocked data/API concepts remain outside the UI/UX package scope.
 
@@ -197,7 +198,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 19. Next milestone
 
-**UI/UX 2.0 Package 018 — Dashboard reconstruction.** Recompose the existing Overview, Performance, Analytics, Intelligence, and Planning content within the Package 017 shell without changing formulas, response fields, requests, or feature ownership.
+**UI/UX 2.0 Package 019 — Transactions reconstruction.** Recompose the existing bounded Recent, Sales, Expenses, and Purchases evidence workspace within the approved shell without adding history, pagination, persistence, response fields, or requests.
 
 ## 20. Status-history log
 
@@ -221,3 +222,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-06 | UI/UX 2.0 closure correction | The prior closure remains historical but is superseded as current status: functional evidence remains valid, visual parity and nine-destination navigation remain incomplete, and active UI/UX development resumes. |
 | 2026-08-06 | UI/UX 2.0 Package 014 | Added the three project-local UI, refactor, and regression skills without changing production behavior. |
 | 2026-08-06 | UI/UX 2.0 Package 015 | Locked the high-fidelity implementation specification and separate screenshot-scoring contract; documentation only. |
+| 2026-08-06 | UI/UX 2.0 Package 018 | Reconstructed all five Dashboard tabs, added the high-fidelity composition contract, and raised the ordered local gate to 37/37 without changing backend or feature behavior. |

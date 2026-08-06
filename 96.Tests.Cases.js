@@ -3216,7 +3216,7 @@ function testDashboardOverviewContract()
     'id="executiveSummarySection"',
     "Business condition",
     'id="executiveAlertCard"',
-    "Attention Status",
+    "Attention status",
     'id="businessPriorityRegion"',
     'id="businessPriorityLevel"',
     'id="priorityTitle"',
@@ -3540,9 +3540,9 @@ function testExecutivePresentationContract()
   });
 
   [
-    "grid grid-cols-1 gap-3 lg:grid-cols-12",
-    "grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5",
-    "grid grid-cols-1 gap-2 lg:grid-cols-2"
+    "grid grid-cols-1 lg:grid-cols-12",
+    "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5",
+    'id="planningFocusRow" class="grid grid-cols-1 gap-2"'
   ].forEach(function(token)
   {
     assertSourceContains(
@@ -5839,6 +5839,291 @@ function testDataQualityDiagnostics()
   return summary;
 }
 
+function testDashboardHighFidelityCompositionContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var scenariosPassed = 0;
+  var tabs = [
+    "overview",
+    "performance",
+    "analytics",
+    "intelligence",
+    "planning"
+  ];
+
+  tabs.forEach(function(tab)
+  {
+    assertSourceContainsOnce(
+      source,
+      'data-dashboard-tab="' + tab + '"',
+      "high-fidelity Dashboard tab " + tab
+    );
+    assertSourceContainsOnce(
+      source,
+      'data-dashboard-panel="' + tab + '"',
+      "high-fidelity Dashboard panel " + tab
+    );
+  });
+  scenariosPassed++;
+
+  var overviewOrder = [
+    "executiveSummarySection",
+    "keyMetricsSection",
+    "overviewContextRow"
+  ];
+  overviewOrder.forEach(function(id, index)
+  {
+    assertSourceContainsOnce(source, 'id="' + id + '"', "Overview region " + id);
+    if (
+      index > 0 &&
+      source.indexOf('id="' + overviewOrder[index - 1] + '"') >
+        source.indexOf('id="' + id + '"')
+    )
+    {
+      throw new Error("Dashboard Overview high-fidelity order changed");
+    }
+  });
+  [
+    "hf-executive-plane",
+    "hf-executive-fact",
+    "hf-priority-action",
+    "hf-kpi-card",
+    "lg:grid-cols-5",
+    "grid-cols-2 gap-2 sm:grid-cols-4"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact Overview composition");
+  });
+  scenariosPassed++;
+
+  assertSourceContainsOnce(source, 'id="businessPriorityRegion"', "authoritative Business Priority");
+  assertSourceOccurrenceCount(source, 'renderOverviewKpiCard("', 5, "five Overview KPI render calls");
+  assertSourceContains(source, "applyTransactionDrilldown('", "KPI evidence drill-down");
+  scenariosPassed++;
+
+  [
+    "grid-template-columns: minmax(0, 4fr) minmax(0, 8fr)",
+    'data-composition-role="hero-chart"',
+    'id="businessPerformanceSection"',
+    'id="revenueChartSection"',
+    'id="revenueIntelContainer"',
+    'id="expenseIntelContainer"',
+    'id="profitIntelContainer"',
+    'id="marginIntelContainer"',
+    'id="unitsIntelContainer"',
+    'id="forecastContainer"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Revenue Trend hero composition");
+  });
+  assertSourceContainsOnce(source, 'data-composition-role="hero-chart"', "one dominant hero chart");
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(source, 'data-composition-tier="primary"', 2, "Analytics primary visuals");
+  assertSourceOccurrenceCount(source, 'data-composition-tier="secondary"', 2, "Analytics secondary evidence regions");
+  [
+    'id="hotColdChartSection"',
+    'id="expenseChartSection"',
+    'id="topProductsSection"',
+    'id="productConcentrationSection"',
+    "hf-evidence-group"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "two-tier Analytics composition");
+  });
+  scenariosPassed++;
+
+  [
+    "grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr)",
+    'id="diagnosisSection"',
+    'id="recommendationsSection"',
+    'id="riskOpportunitySection"',
+    'id="intelligenceMetricContext"',
+    "Revenue Intelligence",
+    "Profit Intelligence"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "executive Intelligence composition");
+  });
+  scenariosPassed++;
+
+  [
+    ".slice(0,6)",
+    ".map(renderTimelineItem)",
+    "Recommendation ${index+1}",
+    "item.priority",
+    "item.message"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "recommendation ordering preservation");
+  });
+  scenariosPassed++;
+
+  [
+    'id="planningFocusRow"',
+    'id="businessFocusCard"',
+    'id="priorityActionCard"',
+    'id="actionRoadmapCard"',
+    'id="planningSupportRow"',
+    'id="kpiAchievementCard"',
+    'id="businessMaturityCard"',
+    "grid-template-columns: minmax(0, 4fr) minmax(0, 8fr)",
+    "#actionRoadmapCard { grid-column: 2; grid-row: 1 / span 2;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "action-oriented Planning composition");
+  });
+  scenariosPassed++;
+
+  [
+    "res.actionRoadmap.map(function(item,index)",
+    "index < res.actionRoadmap.length-1",
+    'id="kpiTargetReference"',
+    'aria-expanded="false"',
+    'aria-controls="kpiTargetDetails"',
+    "System-defined targets"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "roadmap and Target Reference preservation");
+  });
+  ["contenteditable", 'type="checkbox"', "drag", "reorder"]
+    .forEach(function(token)
+    {
+      assertSourceExcludes(source, token, "Planning task-management behavior");
+    });
+  scenariosPassed++;
+
+  [
+    "hf-executive-plane",
+    ".overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }",
+    ".analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }",
+    '<div class="pr-2">',
+    '<div class="border-l border-slate-200 pl-2">'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "reduced surface nesting");
+  });
+  scenariosPassed++;
+
+  [
+    "sparkline",
+    "decorative metric",
+    "generic metric icon",
+    "drag handle",
+    "task checkbox",
+    "dashboard widget"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "forbidden Dashboard decoration");
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
+    ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
+    "#dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 180px; }",
+    "#actionRoadmapCard { grid-column: 2; grid-row: 1 / span 2; min-height: 0; margin: 0; overflow-y: auto; }",
+    "@media (min-width: 1024px) and (max-height: 800px)",
+    "@media (max-width: 1023px)",
+    "#dashboardPanelPlanning #executiveCenter { display: block; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "desktop and mobile containment");
+  });
+  scenariosPassed++;
+
+  [
+    ':root[data-theme="dark"]',
+    "background: var(--surface-1)",
+    "border-color: var(--border-subtle)",
+    "@media print",
+    "display: block !important;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "theme and print geometry parity");
+  });
+  scenariosPassed++;
+
+  [
+    "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }",
+    "height: clamp(300px, calc(100dvh - 330px), 440px)",
+    "revenueChart = destroyChartInstance(revenueChart);",
+    "hotColdChart = destroyChartInstance(hotColdChart);",
+    "expenseChart = destroyChartInstance(expenseChart);",
+    "chart.resize();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "finite chart lifecycle");
+  });
+  scenariosPassed++;
+
+  var tabFunctionSource = getSourceRegion(
+    source,
+    "function resizeVisibleDashboardCharts(tabName)",
+    "function setDesktopSidebarCollapsed",
+    "Dashboard composition tab behavior"
+  );
+  ["google.script.run", "getDashboardData(", "requestDashboardData("]
+    .forEach(function(token)
+    {
+      assertSourceExcludes(tabFunctionSource, token, "Dashboard tab backend request");
+    });
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "Dashboard response mutation");
+  });
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Dashboard high-fidelity query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+  assertSourceContains(source, "window.requestAnimationFrame(function()", "single deferred phase");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    tabs: tabs.length,
+    kpis: 5,
+    charts: 3,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testDashboardHighFidelityCompositionContract | scenarios=" +
+    summary.scenarios +
+    " | tabs=" +
+    summary.tabs +
+    " | kpis=" +
+    summary.kpis +
+    " | charts=" +
+    summary.charts +
+    " | backendRequests=" +
+    summary.backendRequests +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
 function testPerformanceAnalyticsVisualContract()
 {
   var source =
@@ -6363,7 +6648,7 @@ function testIntelligencePlanningVisualContract()
 
   [
     "#dashboardPanelIntelligence:not([hidden])",
-    "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    "grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr)",
     "#dashboardPanelPlanning:not([hidden])",
     ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
     "overflow: hidden;",

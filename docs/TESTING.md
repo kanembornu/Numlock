@@ -39,6 +39,7 @@ These functions are read-only with respect to spreadsheet data and are safe to r
 - `testUiShellThemeContract()` — 17 static scenarios covering 232px/64px standard and 216px/64px compact desktop sidebar states, the 64px utility bar, nine truthful destination representations, restrained SaaS-decoration exclusions, Light/Dark/System selection, validated browser-local persistence, System fallback, pre-render theme application, exact dark tokens, print-light and Chart.js synchronization, mobile drawer/focus preservation, active-destination compatibility, single listener initialization, and the 72-ID/two-selector query ceiling.
 - `testNineDestinationNavigationContract()` — 10 static scenario groups covering exactly nine represented destinations, four active pages, five non-activatable migration-gated items, exact labels and Financial modules disclosure ownership, absence of future pages/content/routes, expanded/collapsed/mobile parity, focus and hidden-content safety, theme parity, zero navigation backend requests, listener preservation, response immutability, and the query budget.
 - `testFullShellVisualContract()` — 12 static scenario groups covering one authoritative utility row, single visible page identity, 52/48px utility and 40px tab geometry, desktop viewport binding, mobile drawer/flow preservation, nine-destination integrity, tab placement, bounded shell surfaces, forbidden SaaS-feature exclusion, Light/Dark/print parity, hidden-focus safety, zero shell-navigation requests, listener uniqueness, response immutability, one deferred phase, and the query budget.
+- `testDashboardHighFidelityCompositionContract()` — 15 static scenario groups covering five exact Dashboard tabs, compact Overview hierarchy and five KPIs, the 4/8 Revenue Trend hero composition, two primary/two secondary Analytics regions, 4/5/3 Intelligence, action-oriented Planning, roadmap/Target Reference preservation, reduced surface nesting and decoration, desktop/mobile containment, theme/print parity, chart lifecycle, zero tab requests, response immutability, one deferred phase, and the 72-ID/two-selector ceiling.
 - `testDashboardTabFrameworkContract()` — 14 static scenarios covering the exact Overview/Performance/Analytics/Intelligence/Planning set, default Overview, 14 uniquely owned existing sections, tab/panel ARIA relationships, Left/Right/Home/End behavior, hidden-panel focus exclusion, selected-tab preservation, zero tab-switch backend requests, guarded listeners, cross-tab print visibility, chart resize/lifecycle preservation, responsive one-viewport rules, Dashboard state compatibility, and the 72-ID/two-selector query ceiling.
 - `testTransactionsVisualContract()` — 11 deterministic/static scenarios covering four exact tabs, default Recent, ARIA/keyboard/hidden-panel behavior, immutable displayed-order filtering, maximum-ten-row scope, exact Sales/Purchase evidence, truthful Purchases limitation, one five-column table, drill-down focus/reset, active rendered-row CSV, theme/responsive states, zero tab-switch requests, one deferred phase, and the 72-ID/two-selector ceiling.
 - `testSettingsVisualContract()` — 12 deterministic/static scenarios covering exactly one Settings destination, Appearance/About ownership, three labelled native radios, stored-preference/effective-theme separation, System media-query following, immediate chart synchronization, state preservation, print-light behavior, direct `PROJECT_CONFIG` About mappings, sensitive/unsupported-content exclusion, theme/responsive containment, zero Settings requests, one deferred phase, and the 72-ID/two-selector ceiling.
@@ -82,8 +83,8 @@ Backend test ownership is separated by responsibility:
 - `92.Tests.Fixtures.js` constructs deterministic datasets and expected outputs.
 - `94.Tests.Assertions.js` contains reusable test assertions.
 - `95.Tests.Validators.js` checks analytics invariants and owns no runnable entry point.
-- `96.Tests.Cases.js` contains 36 directly runnable `test*` functions; the ordered runner selects 35 of them plus `getDashboardData()` for its fixed 36-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
-- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 36-entry suite.
+- `96.Tests.Cases.js` contains 37 directly runnable `test*` functions; the ordered runner selects 36 of them plus `getDashboardData()` for its fixed 37-entry gate, while `testInteractiveDrilldownContract()` is covered through `testChartPresentationContract()`.
+- `98.Tests.Runner.js` contains only the ordered, fail-fast unified 37-entry suite.
 
 Apps Script execution does not automatically display a function's returned object. On success, `testSparseDatasetResilience()` therefore emits exactly one explicit summary log: `PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=37 | populatedOutputUnchanged=true`. The oracle requires exactly all 37 top-level response fields and structurally requires `dateFilter.filter`, `startDate`, `endDate`, `label`, and `rowCount`; existing additive metadata checks remain unchanged. It still returns the same summary object and rethrows all original failures unchanged.
 
@@ -135,7 +136,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `36/36` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `37/37` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -152,7 +153,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `36/36`, adding the full-shell visual contract to the prior deterministic feature, response, accessibility, UI, performance, navigation, and data-quality coverage. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `37/37`, adding the high-fidelity Dashboard composition contract to the prior deterministic feature, response, accessibility, UI, performance, navigation, shell, and data-quality coverage. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 
