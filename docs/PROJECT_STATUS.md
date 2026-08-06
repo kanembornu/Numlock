@@ -20,13 +20,13 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Project hold — maintenance only**
+**Active development — UI/UX 2.0 completion**
 
-The bounded v1.0 feature baseline and UI/UX 2.0 are complete. No implementation-ready feature backlog remains. Only explicitly authorized maintenance may proceed until measurable resume criteria are satisfied.
+The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 is incomplete: functional acceptance does not prove fidelity to the approved visual direction, and five approved future-module navigation destinations are absent. Active development continues through the ordered packages in the [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md).
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 closure — COMPLETE on 2026-08-06.** Packages 004–013 cover the approved component contract, shell and Light/Dark/System themes, Dashboard tabs and all five tab presentations, Transactions, Settings, Logs, and final stabilization. Commit `7fbd2a3` contains the final stabilization and is pushed with local `main`, `origin/main`, and `HEAD` aligned. The final local and Apps Script live gate passed 34/34, browser acceptance passed, version remains `1.0.0`, and the established production baseline and rollback process remain unchanged.
+**UI/UX 2.0 gap audit — ACTIVE on 2026-08-06.** Packages 005–013 are technically complete within their recorded contracts, including live 34/34 and functional browser acceptance, but visual completion is reopened. [Project History](PROJECT-HISTORY.md) preserves granular evidence; Packages 014–022 now own skills, high-fidelity specification, nine-destination navigation, visual reconstruction, theme parity, regression, and screenshot-based acceptance.
 
 ## 6. Current test gate and evidence level
 
@@ -89,7 +89,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 
 ## 9. Implementation-ready backlog
 
-**Count: 0.** The bounded v1.0 and UI/UX 2.0 scopes satisfy their documented needs. New feature implementation requires satisfaction of a blocked scope's prerequisites or approval of a future major capability.
+**Count: 9 ordered UI/UX completion packages (014–022).** These are presentation/navigation work over the stable feature/backend baseline. The three data/API expansion scopes remain blocked.
 
 ## 10. Blocked backlog
 
@@ -146,8 +146,8 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
 - [x] Active runner membership is 34; the production v1.0 runtime evidence remains historical 25/25.
-- [x] Final UI/UX 2.0 Apps Script live evidence is 34/34 and browser acceptance is complete.
-- [x] Remaining backlog is classified as zero ready and three blocked scopes.
+- [x] Final former-scope UI/UX 2.0 Apps Script live evidence is 34/34 and functional browser acceptance is complete; visual fidelity remains unverified.
+- [x] Three data/API expansion scopes remain blocked; nine UI/UX completion packages are active.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
 - [x] Run the then-current 25-entry unified gate locally against the exact v1.0 release candidate.
@@ -157,19 +157,19 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 - [x] Pass desktop and narrow-width browser acceptance, including Console and Network review.
 - [x] Confirm `1.0.0 — Production`, deployment version 185, production health, and rollback version 184 agree.
 
-## 14. Hold criteria
+## 14. Active-development boundary
 
-Keep the project on hold while all of these conditions remain true:
+Continue UI/UX 2.0 development only within Packages 014–022 while all of these conditions remain true:
 
-- implementation-ready feature backlog remains zero;
+- the feature/backend baseline remains stable and unchanged unless separately authorized;
 - version `1.0.0` continues to satisfy the documented bounded product need;
 - the mandatory 34-entry gate remains green at the latest accepted boundary;
 - documentation, Git, production baseline, and rollback records remain consistent; and
-- remaining feature concepts require new product decisions, governance, permissions, privacy boundaries, or major data migration.
+- blocked data/API concepts remain outside the UI/UX package scope.
 
-## 15. Resume criteria
+## 15. Blocked-feature resume criteria
 
-Resume active development only when at least one item has an approved owner, user need, bounded requirements, data and permission model, privacy/governance decisions, compatibility strategy, acceptance tests, migration plan when applicable, and rollback boundary.
+Resume a blocked feature only when it has an approved owner, user need, bounded requirements, data and permission model, privacy/governance decisions, compatibility strategy, acceptance tests, migration plan when applicable, and rollback boundary.
 
 Resume a blocked feature only when every dependency listed for that scope in [PRODUCT-BACKLOG.md](PRODUCT-BACKLOG.md) has an evidence-backed decision, acceptance contract, privacy/permission boundary, rollback approach, and independently releasable validation plan.
 
@@ -188,13 +188,13 @@ After v1.0 stabilization, NUMLOCK may evolve from a bounded dashboard into a gov
 
 ## 18. UI/UX 2.0 closure
 
-**COMPLETE.** The [Information Architecture](UIUX-2.0-INFORMATION-ARCHITECTURE.md), [Low-Fidelity Wireframes](UIUX-2.0-WIREFRAMES.md), [Visual Direction System](UIUX-2.0-VISUAL-DIRECTIONS.md), and [Component Library and Theme Contract](UIUX-2.0-COMPONENT-LIBRARY.md) govern the implemented Packages 005–013. The accepted application includes the four approved destinations, shell, Light/Dark/System themes, Dashboard tabs and redesigned content, Transactions tabs, Appearance/About Settings, session-local sanitized Logs, responsive/accessibility contracts, bounded performance, and final stabilization.
+**INCOMPLETE.** The discovery and component documents remain historical authorities, but Packages 005–013 established technical/functional completion only. The [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md) now owns the nine-destination architecture and separate visual-fidelity gate.
 
 UI/UX 2.0 must not imply editable targets, broader transaction access, API projection, or new persistence until the corresponding backlog blockers are resolved.
 
 ## 19. Next milestone
 
-**None scheduled — project hold.** The next active-development milestone must satisfy the resume criteria and receive separate authorization.
+**UI/UX 2.0 Package 014 — skill creation.** Create the three planned skills in the approved order through a separate authorized task, then proceed through Packages 015–022.
 
 ## 20. Status-history log
 
@@ -215,3 +215,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-05 | UI/UX 2.0 implementation | Package 009 redesigned only Intelligence and Planning, raised the ordered local gate to 30/30, retained intelligence output/order plus the 71-ID/two-selector query budget, and uploaded the exact 26-file inventory; runtime, deployment, and browser acceptance remain pending. |
 | 2026-08-06 | UI/UX 2.0 completion | Packages 010–013 completed Transactions, Settings, Logs, and final stabilization; the runner reached 34 entries. |
 | 2026-08-06 | UI/UX 2.0 complete / Project hold | Packages 004–013 complete; final local/live suite passed 34/34, browser acceptance passed, final stabilization commit `7fbd2a3` was pushed, and the project entered hold with maintenance-only intake. |
+| 2026-08-06 | UI/UX 2.0 closure correction | The prior closure remains historical but is superseded as current status: functional evidence remains valid, visual parity and nine-destination navigation remain incomplete, and active UI/UX development resumes. |

@@ -1,5 +1,13 @@
 # Engineering Decisions
 
+### Reopen UI/UX 2.0 and separate functional from visual acceptance
+
+The project-hold decision below remains historical but is superseded for current planning. Local/static contracts, Apps Script live 34/34, and functional browser acceptance prove behavior within the former scope; they do not prove fidelity to the approved visual reference. UI/UX 2.0 stays active until Packages 014–022 close the documented gaps with side-by-side screenshots at 1440×900, 1280×768, 768px, and 375px.
+
+Primary navigation now accounts for Dashboard, Transactions, Settings, Logs, Products, Capital & Equity, Assets, Depreciation, and Financial Statements. The five migration-gated modules must be visible but explicitly unavailable, grouped accessibly, and must not open empty or fabricated pages. This supersedes the earlier omit-until-usable rule while preserving its no-placeholder-content intent.
+
+The planned `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` skills must be created in that order in a separate task. Their boundaries are defined in the [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md).
+
 ### Enter project hold after UI/UX 2.0 closure
 
 UI/UX 2.0 is complete after Packages 004–013, final local/live 34/34, browser acceptance, and pushed stabilization commit `7fbd2a3`. With zero implementation-ready feature items and the documented product need satisfied at version `1.0.0`, NUMLOCK enters project hold rather than continuing speculative development. PATCH maintenance remains allowed for bounded defects, security, dependencies, accessibility, documentation, operations, monitoring, and behavior-preserving performance work. MINOR work requires an approved backward-compatible capability and full acceptance/rollback contract. A MAJOR version is required for incompatible response, schema, workflow, permission, deployment, or data-ownership changes, or for the migrated Products, Capital & Equity, Assets, Depreciation, or Financial Statements capabilities when their new data architecture and migration contracts are approved.

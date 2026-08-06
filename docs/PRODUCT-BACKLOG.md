@@ -4,13 +4,13 @@ This document owns remaining work, readiness, blockers, dependencies, and accept
 
 ## Current closure classification
 
-UI/UX 2.0 is complete and the project is on hold. This classification supersedes stale readiness wording inside historical item narratives without rewriting their history.
+The v1.0 feature/backend baseline is stable, but UI/UX 2.0 is reopened for the ordered visual and navigation work in the [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md). Historical item narratives remain historical.
 
 | Classification | Count | Items | Resume boundary |
 | --- | ---: | --- | --- |
-| Implementation-ready | 0 | None | No active feature package is authorized. |
+| Active UI/UX completion | 9 packages | Packages 014–022: skills, specification, navigation, reconstruction, parity, refactor, regression/visual acceptance | Preserve the stable backend and authorize each package separately. |
 | Blocked by requirements, governance, privacy, or permissions | 3 | Editable KPI targets; API projection/payload reduction; expanded transaction history/drill-down | Resolve every documented persistence, governance, consumer, permission, privacy, pagination, measurement, compatibility, and rollback prerequisite. |
-| Future major capability | 5 | Migrated Products module; Capital & Equity; Assets; Depreciation; Financial Statements | Approve a new product/data architecture, migration plan, calculation ownership, permissions, acceptance suite, semantic-version boundary, and rollback plan. |
+| Future major capability | 5 | Migrated Products module; Capital & Equity; Assets; Depreciation; Financial Statements | Sidebar entries may be unavailable; usable pages require approved architecture, migration, calculations, permissions, acceptance, versioning, and rollback. |
 | Maintenance-only | Demand-driven | Defect, security, dependency, accessibility, documentation, operational, monitoring, or behavior-preserving performance work | Require a reproducible need, bounded scope, preserved contracts, validation, and release evidence appropriate to risk. |
 
 The blocked and future-major items are not current defects. Their supporting data, permissions, governance, or migration contracts do not yet exist.
