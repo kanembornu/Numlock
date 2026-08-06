@@ -20,13 +20,15 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Active development — UI/UX 2.0 completion**
+**UI/UX 2.0 Closure Candidate**
 
-The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 remains incomplete because functional acceptance does not prove approved-reference visual fidelity. The approved nine destinations are now truthfully represented, with five future modules visibly migration-gated and unavailable.
+The bounded v1.0 feature/backend baseline remains stable. Packages 014–021 are implemented and no implementation-ready UI package remains. Package 022 is not COMPLETE: current Apps Script live 41/41, exact-candidate upload/deployment, deployed-browser functional acceptance, the required 80-capture screenshot matrix, production health, and a candidate-specific rollback record remain outstanding.
 
 ## 5. Latest completed sprint/package
 
 **UI/UX 2.0 Package 021 — COMPLETE locally on 2026-08-06.** Source-search evidence removed only two zero-reference authored selectors, one behavior-free Transactions wrapper, two obsolete comments, and one brittle raw-template assertion. Existing ownership, geometry, behavior, data boundaries, accessibility, performance, response contracts, and Packages 017–020 composition remain unchanged.
+
+**UI/UX 2.0 Package 022 — CLOSURE CANDIDATE locally on 2026-08-06.** The directly runnable closure contract raises the ordered gate to 41 entries and preserves nine-destination, accessibility, theme/chart, performance, and exact-response contracts while explicitly refusing a static visual PASS. Completion remains blocked by the current live, upload/deployment, browser, screenshot, production-health, and rollback evidence listed above.
 
 ## 6. Current test gate and evidence level
 
@@ -61,6 +63,7 @@ The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 remains inco
 | Current UI/UX 2.0 secondary destinations local/static | Package 019: ten focused contracts and the ordered local 38/38 suite passed. The composition contract reports three destinations, four transaction tabs, five visible columns, maximum ten rows, zero navigation backend requests, 71 ID queries, and two document selectors. Screenshot-based visual fidelity remains unverified. |
 | Current UI/UX 2.0 theme parity local/static | Package 020: 12 focused contracts and the ordered local 39/39 suite passed. The parity contract reports 45 paired Light/Dark tokens, zero chart recreation, zero theme backend requests, 71 ID queries, and two document selectors. Browser contrast and screenshot fidelity remain unverified. |
 | Current UI/UX 2.0 bounded refactor local/static | Package 021: 13 focused contracts and the ordered local 40/40 suite passed. The refactor contract reports five removed symbols, zero tab/navigation requests, 71 ID queries, two selectors, one deferred phase, and no response mutation. Browser regression and screenshot fidelity remain unverified. |
+| Current UI/UX 2.0 closure local/static | Package 022: 15 focused contracts pass; the closure contract records 16 viewport/state combinations and exactly 18 criteria without claiming visual PASS. The ordered runner is 41 entries; live and deployed evidence remain unverified. |
 | Current UI/UX 2.0 Apps Script runtime | Final `runAllBackendTests()` PASS 34/34. |
 | Current UI/UX 2.0 browser | PASS at 320px, 375px, 768px, 1280×768, and 1440×900 across responsive containment, accessibility, Light/Dark/System, navigation, charts, tables, print, CSV, drill-down, Settings, and Logs. |
 | Current UI/UX 2.0 Git completion | Final stabilization committed as `7fbd2a3` and pushed; `main`, `origin/main`, and `HEAD` align. |
@@ -195,7 +198,7 @@ After v1.0 stabilization, NUMLOCK may evolve from a bounded dashboard into a gov
 
 ## 18. UI/UX 2.0 closure
 
-**INCOMPLETE.** The discovery and component documents remain historical authorities, but Packages 005–013 established technical/functional completion only. The [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md) now owns the nine-destination architecture and separate visual-fidelity gate.
+**CLOSURE CANDIDATE.** Packages 014–021 are implemented and the local Package 022 contract is present. COMPLETE requires current local 41/41, Apps Script live 41/41, exact upload/deployment identity, functional browser PASS, all required screenshots at 18/18, production-health PASS, and the retained prior immutable rollback version. Missing later evidence cannot be inferred from static checks.
 
 UI/UX 2.0 must not imply editable targets, broader transaction access, API projection, or new persistence until the corresponding backlog blockers are resolved.
 

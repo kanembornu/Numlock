@@ -1,5 +1,9 @@
 # NUMLOCK Changelog
 
+## 2026-08-06 — UI/UX 2.0 Package 022 closure candidate
+
+- Added `testUiUx2ClosureContract()` and raised the ordered runner to 41 entries. The contract encodes Packages 014–021, nine destinations, the high-fidelity authority, separate functional/visual evidence, 16 viewport/theme/state combinations, exactly 18 visual criteria, theme/chart/print, accessibility, performance, exact 37-field response, rollback fields, and zero implementation-ready UI backlog. Static coverage explicitly records `visualPassClaimed=false`; live, deployed-browser, screenshot, production-health, and candidate rollback evidence remain required before COMPLETE.
+
 This document records verified engineering milestones. Semantic versioning begins at `1.0.0`; future releases must update this changelog and `10.Config.js` together.
 
 This document owns completed changes and release history. [Project Status](PROJECT_STATUS.md) owns the current executive state; [Roadmap](ROADMAP.md) and [Product Backlog](PRODUCT-BACKLOG.md) own future direction and remaining work.

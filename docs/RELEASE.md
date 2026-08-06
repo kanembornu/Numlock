@@ -2,6 +2,10 @@
 
 This document owns the authoritative release process. NUMLOCK `1.0.0` is the current production release. Release actions are operator-controlled: no repository task automates Git commits, Apps Script versions, or deployments.
 
+## UI/UX 2.0 Package 022 candidate boundary
+
+Package 022 remains a Closure Candidate until the exact candidate passes local 41/41 and Apps Script live 41/41, the reviewed 26-file source is uploaded, the existing production deployment alone is updated to one new immutable version without changing its stable URL, functional browser acceptance passes, all 80 required screenshots score 18/18, production health passes, and the previous immutable version is recorded as rollback. Version metadata remains `1.0.0`; static or upload evidence cannot substitute for any later gate.
+
 ## Semantic versioning
 
 - **PATCH**: fixes and refactors that do not change public behavior.

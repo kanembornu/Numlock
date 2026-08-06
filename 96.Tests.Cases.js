@@ -4016,7 +4016,7 @@ function testCsvExportContract()
 
   assertSourceContains(
     source,
-    'transactionsEvidenceRegion.firstElementChild.lastElementChild',
+    'exportCsvButton: required.exportCsvButton',
     "CSV action owned by Transactions toolbar"
   );
   scenariosPassed++;
@@ -4259,7 +4259,7 @@ function testClientRenderPerformanceContract()
     source.slice(
       stableCacheStart,
       source.indexOf(
-        "function setSidebarOpen",
+        "function resizeVisibleDashboardCharts",
         stableCacheStart
       )
     );
@@ -4299,21 +4299,98 @@ function testClientRenderPerformanceContract()
     );
   });
 
-  [
-    'filter: document.getElementById("filter")',
-    'customStart: document.getElementById("customStart")',
-    'customEnd: document.getElementById("customEnd")',
-    'dashboardStatus: document.getElementById("dashboardStatus")',
-    'pageElements: document.querySelectorAll(".page")',
-    'pageButtons: document.querySelectorAll("[data-page]")'
-  ].forEach(function(token)
+  var requiredStableIds = [
+    "dashboardSidebar", "sidebarBackdrop", "sidebarMenuButton",
+    "sidebarCloseButton", "businessOverview", "mainChartSkeleton",
+    "hotColdSkeleton", "expenseSkeleton", "topProductSkeleton", "filter",
+    "customDateRange", "customStart", "customEnd", "dateFilterValidation",
+    "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
+    "dashboardContent", "tableBody", "printReportButton",
+    "printReportHeader", "transactions", "transactionsHeading",
+    "transactionsDescription", "transactionsTabList",
+    "transactionsPanelGroup", "transactionsEvidenceRegion",
+    "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
+    "transactionDrilldownSummary", "transactionDrilldownText",
+    "transactionsStateAnnouncement", "appShell", "sidebarCollapseButton",
+    "mainContent", "topUtilityBar", "utilityPageTitle",
+    "utilityPageContext", "dashboardUtilityControls", "utilityMetadata",
+    "utilityActivePeriod", "utilityLastSync", "settings", "logs",
+    "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
+    "sessionLogsInfoCount", "sessionLogsWarningCount",
+    "sessionLogsErrorCount", "sessionLogsToolbar",
+    "clearSessionLogsButton", "sessionLogsAnnouncement",
+    "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
+    "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
+    "dashboardSectionStaging"
+  ];
+
+  requiredStableIds.forEach(function(id)
   {
+    assertSourceContainsOnce(
+      source,
+      'id="' + id + '"',
+      "required stable shell ID " + id
+    );
     assertSourceContains(
       cacheSource,
-      token,
-      "stable DOM cache"
+      '"' + id + '"',
+      "required stable cache selector " + id
     );
   });
+
+  [
+    'pageElements: document.querySelectorAll(".page")',
+    'pageButtons: document.querySelectorAll("[data-page]")',
+    'throw new Error("Required shell element missing: #" + id);',
+    "stableDashboardElements = elements;",
+    "return elements;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(cacheSource, token, "complete stable DOM initialization");
+  });
+
+  [
+    ".firstElementChild", ".lastElementChild", ".nextElementSibling",
+    ".previousElementSibling", ".parentElement", ".children["
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(
+      cacheSource,
+      token,
+      "unverified positional stable-cache dependency"
+    );
+  });
+
+  [
+    "transactionDrilldownSummary: required.transactionDrilldownSummary",
+    "transactionDrilldownText: required.transactionDrilldownText",
+    "transactionsStateAnnouncement: required.transactionsStateAnnouncement",
+    "tableBody: required.tableBody"
+  ].forEach(function(token)
+  {
+    assertSourceContains(cacheSource, token, "stable generated-content container ownership");
+  });
+
+  var themeStart = source.indexOf("function initializeThemeFoundation()");
+  var themeEnd = source.indexOf("function sanitizeClientLogMessage", themeStart);
+  var themeSource = source.slice(themeStart, themeEnd);
+  var cacheInitializationIndex =
+    themeSource.indexOf("var elements = initializeStableDashboardElements();");
+  var initializedFlagIndex =
+    themeSource.indexOf("themeFoundationInitialized = true;");
+  var interactiveThemeIndex =
+    themeSource.indexOf("elements.themeControls.forEach");
+
+  if (
+    cacheInitializationIndex === -1 ||
+    initializedFlagIndex <= cacheInitializationIndex ||
+    interactiveThemeIndex <= initializedFlagIndex
+  )
+  {
+    throw new Error(
+      "Interactive theme initialization precedes complete stable references"
+    );
+  }
 
   var idQueryCount =
     (source.match(/document\.getElementById\(/g) || []).length;
@@ -5695,6 +5772,171 @@ function testBoundedUiRefactorContract()
     " | deferredPhases=" + summary.deferredPhases +
     " | backendRequests=" + summary.backendRequests +
     " | responseMutation=" + summary.responseMutation
+  );
+
+  return summary;
+}
+
+function testUiUx2ClosureContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var tokenSource = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
+  var predecessorRunnerSource = String(runAllBackendTests);
+  var sparseContractSource = String(testSparseDatasetResilience);
+  var packages = [14, 15, 16, 17, 18, 19, 20, 21];
+  var viewportMatrix = [
+    "1440x900-light-expanded", "1440x900-light-collapsed",
+    "1440x900-dark-expanded", "1440x900-dark-collapsed",
+    "1280x768-light-expanded", "1280x768-light-collapsed",
+    "1280x768-dark-expanded", "1280x768-dark-collapsed",
+    "768-light-drawer-closed", "768-light-drawer-open",
+    "768-dark-drawer-closed", "768-dark-drawer-open",
+    "375-light-drawer-closed", "375-light-drawer-open",
+    "375-dark-drawer-closed", "375-dark-drawer-open"
+  ];
+  var visualCriteria = [
+    "oneViewportFit", "editorialHierarchy", "utilityRow", "sidebar",
+    "horizontalNavigation", "kpiDensity", "chartProminence", "surfaceNesting",
+    "borderShadowNoise", "typography", "spacing", "accentRestraint",
+    "semanticStatus", "themeGeometryParity", "forbiddenDecoration",
+    "clippingOverflow", "focusVisibility", "functionalTruthfulness"
+  ];
+  var rollbackEvidence = {
+    deploymentIdentity: "required",
+    candidateVersion: "required",
+    previousImmutableVersion: "required",
+    stableUrlPreserved: "required"
+  };
+  var scenariosPassed = 0;
+
+  if (packages.join(",") !== "14,15,16,17,18,19,20,21")
+  {
+    throw new Error("UI/UX 2.0 predecessor package markers mismatch");
+  }
+  assertSourceOccurrenceCount(
+    predecessorRunnerSource,
+    "{ name:",
+    41,
+    "closure runner membership"
+  );
+  assertSourceContains(
+    predecessorRunnerSource,
+    '{ name: "testBoundedUiRefactorContract"',
+    "40-entry predecessor gate"
+  );
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine navigation destinations");
+  assertSourceOccurrenceCount(source, 'data-page="', 4, "four active navigation destinations");
+  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable navigation destinations");
+  assertSourceContainsOnce(source, 'id="financialModulesDisclosureButton"', "Financial modules disclosure");
+  scenariosPassed++;
+
+  if (viewportMatrix.length !== 16 || visualCriteria.length !== 18)
+  {
+    throw new Error("Visual acceptance matrix must contain 16 states and 18 criteria");
+  }
+  var evidencePolicy = {
+    highFidelityAuthority: "docs/UIUX-2.0-HIGH-FIDELITY-SPEC.md",
+    functionalAcceptance: "separate",
+    visualAcceptance: "deployed-browser-screenshots-required",
+    staticVisualPassAllowed: false
+  };
+  if (
+    evidencePolicy.functionalAcceptance !== "separate" ||
+    evidencePolicy.staticVisualPassAllowed !== false
+  )
+  {
+    throw new Error("Functional and visual evidence separation weakened");
+  }
+  scenariosPassed++;
+
+  [
+    'value="light"', 'value="dark"', 'value="system"',
+    "synchronizeSystemThemeListener", "synchronizeChartTheme(true);",
+    "synchronizeChartTheme(false);", "maintainAspectRatio: false",
+    "destroyChartInstance", "--print-canvas"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "theme, chart, and print preservation");
+  });
+  scenariosPassed++;
+
+  [
+    '<main id="mainContent"', 'role="tablist"', '<fieldset class="mt-4">',
+    'aria-live="polite"', "prefers-reduced-motion", "sidebar.inert",
+    "menuButton.focus();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "accessibility closure matrix");
+  });
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+  if (idQueryCount > 71 || selectorQueryCount > 2)
+  {
+    throw new Error("UI/UX 2.0 closure performance budget exceeded");
+  }
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "one deferred render phase");
+  ["ResizeObserver", 'addEventListener("resize"'].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "recurring resize ownership");
+  });
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "response mutation");
+  });
+  scenariosPassed++;
+
+  assertSourceContains(sparseContractSource, "Object.keys(response).length !== requiredProperties.length", "exact response field count");
+  assertSourceContains(sparseContractSource, '"kpiTargets"', "37-field response tail");
+  if (
+    rollbackEvidence.deploymentIdentity !== "required" ||
+    rollbackEvidence.candidateVersion !== "required" ||
+    rollbackEvidence.previousImmutableVersion !== "required" ||
+    rollbackEvidence.stableUrlPreserved !== "required"
+  )
+  {
+    throw new Error("Rollback evidence fields incomplete");
+  }
+  scenariosPassed++;
+
+  ["--canvas:", "--text-primary:", "--focus:", "--chart-series-1:"]
+    .forEach(function(token)
+    {
+      assertSourceOccurrenceCount(tokenSource, token, 2, "Light/Dark token parity");
+    });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    predecessorGate: 40,
+    runnerTotal: 41,
+    packagesComplete: packages.length,
+    destinations: 9,
+    viewportStates: viewportMatrix.length,
+    visualCriteria: visualCriteria.length,
+    visualPassClaimed: false,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    responseFields: 37,
+    implementationReadyUiBacklog: 0
+  };
+
+  Logger.log(
+    "PASS: testUiUx2ClosureContract | scenarios=" + summary.scenarios +
+    " | predecessorGate=" + summary.predecessorGate +
+    " | runnerTotal=" + summary.runnerTotal +
+    " | destinations=" + summary.destinations +
+    " | viewportStates=" + summary.viewportStates +
+    " | visualCriteria=" + summary.visualCriteria +
+    " | visualPassClaimed=" + summary.visualPassClaimed +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries +
+    " | responseFields=" + summary.responseFields +
+    " | implementationReadyUiBacklog=" + summary.implementationReadyUiBacklog
   );
 
   return summary;

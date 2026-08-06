@@ -10,8 +10,8 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## Current state
 
-- The v1.0 feature/backend baseline remains stable, while UI/UX 2.0 is active and visually incomplete. Former Packages 005–013 retain functional evidence but do not establish approved-reference fidelity.
-- UI/UX 2.0 Package 021 removes only proven reconstruction debt: two zero-reference authored selectors, one single-caller Transactions pass-through helper, two obsolete comments, and one brittle raw-template assertion. Shared render, metadata, listener, chart, geometry, and behavior ownership remain unchanged.
+- The v1.0 feature/backend baseline remains stable. UI/UX 2.0 Package 022 is a Closure Candidate: Packages 014–021 are implemented and the ordered local gate is 41 entries, but current Apps Script live, deployed-browser functional, required screenshot, deployment, and production-health evidence remain outstanding.
+- Functional acceptance and visual-fidelity acceptance remain separate. Static contracts cannot establish an `18/18` screenshot result for any required viewport/theme/state capture.
 - Sprint 5.5 Dashboard Intelligence: complete.
 - Sprint 5.6 backend refactor: complete.
 - Aggregate migrations validated live: summary, revenue trend, expense breakdown, products, profit trend, and Hot/Cold split.
@@ -20,7 +20,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - Semantic versioning begins at 1.0.0; `10.Config.js` is the authoritative release metadata source.
 - Version 1.0.0 is currently in production; `docs/RELEASE.md` owns the release workflow.
 - Tailwind 3.4.17 is compiled locally into the clasp-tracked HTML partial.
-- `runAllBackendTests()` is the unified local/live backend gate and requires 40/40 PASS, including the bounded UI refactor contract plus all prior UI, feature, response, accessibility, chart, theme, and performance contracts.
+- `runAllBackendTests()` is the unified local/live backend gate and requires 41/41 PASS, including `testUiUx2ClosureContract()` plus all prior UI, feature, response, accessibility, chart, theme, performance, and refactor contracts.
 - Final validation completed: clasp upload, all backend test entry points, a new deployment version, and deployed-dashboard rendering passed without application runtime errors.
 - Sprint 5.8 Package 001 product audit is complete. `docs/PRODUCT-BACKLOG.md` is the prioritized evidence inventory; `docs/ROADMAP.md` schedules only Packages 002–004.
 - Sprint 5.8 Package 002 empty/sparse-data resilience and Package 003 date filtering are deployed. Populated response output remains snapshot-protected.
@@ -51,7 +51,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - NUMLOCK is **Feature Complete v1.0** as of 2026-08-05. Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed the local preflight, Apps Script live `runAllBackendTests()` 25/25, immutable deployment version 185, deployed-browser acceptance, and production-health acceptance at the unchanged stable URL. Version metadata remains `1.0.0 — Production`, and immutable version 184 remains the rollback target.
 - The feature/backend v1.0 baseline remains stable. UI/UX 2.0 is reopened: Packages 005–013 are technically complete but do not prove approved-reference visual fidelity; Package 016 now supplies the previously absent truthful future-module representations.
 - UI/UX 2.0 Package 014 is complete: `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` now own visual fidelity, behavior-preserving restructuring, and cross-feature acceptance respectively. The project-local inventory contains 19 skills.
-- Package 021 is complete locally: the runner is 40 entries, the query budget remains 71 ID queries and two selectors, and functional/static evidence does not establish screenshot-based visual fidelity. Apps Script runtime and deployed-browser acceptance remain unverified for this package.
+- Package 022 is a Closure Candidate: the 41-entry local gate and static matrix pass while the current exact-candidate upload, live 41/41, deployment, functional browser, 80-capture visual matrix, production health, and updated rollback record remain required before COMPLETE.
 - Editable KPI targets, additive payload projection, and expanded drill-down remain blocked and are not authorized by the UI/UX reopening.
 - Release candidate `658f4ab1011633e86634f14ce838a514c5205df0` began from a clean `main`/`origin/main` boundary and passed the 2026-08-05 repository preflight: dependency install, production/frontend syntax, manifest parse, Markdown links, eight focused release contracts, local unified 25/25, runner count, and Git checks. Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` reported the script already up to date.
 - The existing stable production deployment now serves immutable version 185. Deployed-browser and production-health acceptance passed; immutable version 184 remains the known-good rollback target. No release evidence commit, annotated tag, or Git push has occurred.

@@ -739,7 +739,7 @@
         </div>
       </div>
 
-      <div class="hidden min-w-0 items-center gap-4 text-xs ui-theme-muted sm:flex" aria-label="Dashboard metadata">
+      <div id="utilityMetadata" class="hidden min-w-0 items-center gap-4 text-xs ui-theme-muted sm:flex" aria-label="Dashboard metadata">
         <span><span class="sr-only">Current period: </span><span id="utilityActivePeriod">Current Year</span></span>
         <span><span class="sr-only">Last sync: </span><span id="utilityLastSync">Waiting for data</span></span>
         <span id="utilityVersion" data-metadata-source="template.version">v<?= version ?></span>
@@ -1268,141 +1268,123 @@
         return stableDashboardElements;
       }
 
-      stableDashboardElements = {
-        sidebar: document.getElementById("dashboardSidebar"),
-        sidebarBackdrop: document.getElementById("sidebarBackdrop"),
-        sidebarMenuButton: document.getElementById("sidebarMenuButton"),
-        sidebarCloseButton: document.getElementById("sidebarCloseButton"),
+      var requiredIds = [
+        "dashboardSidebar", "sidebarBackdrop", "sidebarMenuButton",
+        "sidebarCloseButton", "businessOverview", "mainChartSkeleton",
+        "hotColdSkeleton", "expenseSkeleton", "topProductSkeleton", "filter",
+        "customDateRange", "customStart", "customEnd", "dateFilterValidation",
+        "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
+        "dashboardContent", "tableBody", "printReportButton",
+        "printReportHeader", "transactions", "transactionsHeading",
+        "transactionsDescription", "transactionsTabList",
+        "transactionsPanelGroup", "transactionsEvidenceRegion",
+        "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
+        "transactionDrilldownSummary", "transactionDrilldownText",
+        "transactionsStateAnnouncement", "appShell", "sidebarCollapseButton",
+        "mainContent", "topUtilityBar", "utilityPageTitle",
+        "utilityPageContext", "dashboardUtilityControls", "utilityMetadata",
+        "utilityActivePeriod", "utilityLastSync", "settings", "logs",
+        "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
+        "sessionLogsInfoCount", "sessionLogsWarningCount",
+        "sessionLogsErrorCount", "sessionLogsToolbar",
+        "clearSessionLogsButton", "sessionLogsAnnouncement",
+        "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
+        "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
+        "dashboardSectionStaging"
+      ];
+      var required = {};
+
+      requiredIds.forEach(function(id)
+      {
+        var element = document.getElementById(id);
+
+        if (!element)
+        {
+          throw new Error("Required shell element missing: #" + id);
+        }
+
+        required[id] = element;
+      });
+
+      var elements = {
+        sidebar: required.dashboardSidebar,
+        sidebarBackdrop: required.sidebarBackdrop,
+        sidebarMenuButton: required.sidebarMenuButton,
+        sidebarCloseButton: required.sidebarCloseButton,
         pageElements: document.querySelectorAll(".page"),
         pageButtons: document.querySelectorAll("[data-page]"),
-        businessOverview: document.getElementById("businessOverview"),
-        mainChartSkeleton: document.getElementById("mainChartSkeleton"),
-        hotColdSkeleton: document.getElementById("hotColdSkeleton"),
-        expenseSkeleton: document.getElementById("expenseSkeleton"),
-        topProductSkeleton: document.getElementById("topProductSkeleton"),
-        filter: document.getElementById("filter"),
-        customDateRange: document.getElementById("customDateRange"),
-        customStart: document.getElementById("customStart"),
-        customEnd: document.getElementById("customEnd"),
-        dateFilterValidation: document.getElementById("dateFilterValidation"),
-        dashboardStatus: document.getElementById("dashboardStatus"),
-        dashboardStatusText: document.getElementById("dashboardStatusText"),
-        dashboardRetryButton: document.getElementById("dashboardRetryButton"),
-        dashboardContent: document.getElementById("dashboardContent"),
-        tableBody: document.getElementById("tableBody")
+        businessOverview: required.businessOverview,
+        mainChartSkeleton: required.mainChartSkeleton,
+        hotColdSkeleton: required.hotColdSkeleton,
+        expenseSkeleton: required.expenseSkeleton,
+        topProductSkeleton: required.topProductSkeleton,
+        filter: required.filter,
+        customDateRange: required.customDateRange,
+        customStart: required.customStart,
+        customEnd: required.customEnd,
+        dateFilterValidation: required.dateFilterValidation,
+        dashboardStatus: required.dashboardStatus,
+        dashboardStatusText: required.dashboardStatusText,
+        dashboardRetryButton: required.dashboardRetryButton,
+        dashboardContent: required.dashboardContent,
+        tableBody: required.tableBody,
+        printReportButton: required.printReportButton,
+        printReportHeader: required.printReportHeader,
+        transactionsPage: required.transactions,
+        transactionsHeading: required.transactionsHeading,
+        transactionsDescription: required.transactionsDescription,
+        transactionsTabList: required.transactionsTabList,
+        transactionsPanelGroup: required.transactionsPanelGroup,
+        transactionsEvidenceRegion: required.transactionsEvidenceRegion,
+        exportCsvButton: required.exportCsvButton,
+        transactionsResultHeading: required.transactionsResultHeading,
+        transactionsScopeText: required.transactionsScopeText,
+        transactionDrilldownSummary: required.transactionDrilldownSummary,
+        transactionDrilldownText: required.transactionDrilldownText,
+        transactionsStateAnnouncement: required.transactionsStateAnnouncement,
+        appShell: required.appShell,
+        sidebarCollapseButton: required.sidebarCollapseButton,
+        mainContent: required.mainContent,
+        topUtilityBar: required.topUtilityBar,
+        utilityPageTitle: required.utilityPageTitle,
+        utilityPageContext: required.utilityPageContext,
+        dashboardUtilityControls: required.dashboardUtilityControls,
+        utilityMetadata: required.utilityMetadata,
+        utilityActivePeriod: required.utilityActivePeriod,
+        utilityLastSync: required.utilityLastSync,
+        settingsPage: required.settings,
+        logsPage: required.logs,
+        themeStatus: required.themeStatus,
+        sessionLogsWorkspace: required.logsWorkspace,
+        sessionLogsSummary: required.sessionLogsSeveritySummary,
+        sessionLogsInfoCount: required.sessionLogsInfoCount,
+        sessionLogsWarningCount: required.sessionLogsWarningCount,
+        sessionLogsErrorCount: required.sessionLogsErrorCount,
+        sessionLogsToolbar: required.sessionLogsToolbar,
+        clearSessionLogsButton: required.clearSessionLogsButton,
+        sessionLogsAnnouncement: required.sessionLogsAnnouncement,
+        sessionLogsListRegion: required.sessionLogsListRegion,
+        sessionLogsEmpty: required.sessionLogsEmpty,
+        sessionLogsList: required.sessionLogsList,
+        dashboardHeaderRegion: required.dashboardHeaderRegion,
+        dashboardTabList: required.dashboardTabList,
+        dashboardTabPanels: required.dashboardTabPanels,
+        dashboardSectionStaging: required.dashboardSectionStaging
       };
 
-      stableDashboardElements.printReportButton =
-        stableDashboardElements.filter.nextElementSibling;
-      stableDashboardElements.printReportHeader =
-        stableDashboardElements.dashboardStatus.previousElementSibling;
-      stableDashboardElements.transactionsPage =
-        Array.prototype.find.call(
-          stableDashboardElements.pageElements,
-          function(page) { return page.id === "transactions"; }
-        );
-      stableDashboardElements.transactionsHeading =
-        stableDashboardElements.transactionsPage.firstElementChild.firstElementChild.children[1];
-      stableDashboardElements.transactionsDescription =
-        stableDashboardElements.transactionsHeading.nextElementSibling;
-      stableDashboardElements.transactionsTabList =
-        stableDashboardElements.transactionsPage.children[1];
-      stableDashboardElements.transactionsPanelGroup =
-        stableDashboardElements.transactionsTabList.nextElementSibling;
-      stableDashboardElements.transactionsTabs =
-        stableDashboardElements.transactionsTabList.querySelectorAll('[role="tab"]');
-      stableDashboardElements.transactionsPanels =
-        stableDashboardElements.transactionsPanelGroup.querySelectorAll('[role="tabpanel"]');
-      stableDashboardElements.transactionsEvidenceRegion =
-        stableDashboardElements.transactionsPanels[0].firstElementChild;
-      stableDashboardElements.exportCsvButton =
-        stableDashboardElements.transactionsEvidenceRegion.firstElementChild.lastElementChild;
-      stableDashboardElements.transactionsResultHeading =
-        stableDashboardElements.transactionsEvidenceRegion.firstElementChild.firstElementChild.firstElementChild;
-      stableDashboardElements.transactionsScopeText =
-        stableDashboardElements.transactionsResultHeading.nextElementSibling;
-      stableDashboardElements.transactionDrilldownSummary =
-        stableDashboardElements.transactionsEvidenceRegion.children[1];
-      stableDashboardElements.transactionDrilldownText =
-        stableDashboardElements.transactionDrilldownSummary.firstElementChild.firstElementChild;
-      stableDashboardElements.transactionsStateAnnouncement =
-        stableDashboardElements.transactionDrilldownSummary.nextElementSibling;
-      stableDashboardElements.appShell =
-        stableDashboardElements.sidebar.parentElement;
-      stableDashboardElements.sidebarCollapseButton =
-        stableDashboardElements.sidebar.lastElementChild.firstElementChild;
-      stableDashboardElements.mainContent =
-        stableDashboardElements.sidebar.nextElementSibling;
-      stableDashboardElements.topUtilityBar =
-        stableDashboardElements.mainContent.firstElementChild;
-      stableDashboardElements.utilityPageTitle =
-        stableDashboardElements.topUtilityBar.firstElementChild.lastElementChild.firstElementChild;
-      stableDashboardElements.utilityPageContext =
-        stableDashboardElements.utilityPageTitle.nextElementSibling;
-      stableDashboardElements.dashboardUtilityControls =
-        stableDashboardElements.topUtilityBar.children[1];
-      stableDashboardElements.utilityMetadata =
-        stableDashboardElements.topUtilityBar.lastElementChild;
-      stableDashboardElements.utilityActivePeriod =
-        stableDashboardElements.utilityMetadata.children[0].lastElementChild;
-      stableDashboardElements.utilityLastSync =
-        stableDashboardElements.utilityMetadata.children[1].lastElementChild;
-      stableDashboardElements.settingsPage =
-        Array.prototype.find.call(
-          stableDashboardElements.pageElements,
-          function(page) { return page.id === "settings"; }
-        );
-      stableDashboardElements.logsPage =
-        Array.prototype.find.call(
-          stableDashboardElements.pageElements,
-          function(page) { return page.id === "logs"; }
-        );
-      stableDashboardElements.themeControls =
-        stableDashboardElements.settingsPage.querySelectorAll(
-          'input[name="themePreference"]'
-        );
-      stableDashboardElements.themeStatus =
-        stableDashboardElements.settingsPage.querySelector('[role="status"]');
-      stableDashboardElements.sessionLogsWorkspace =
-        stableDashboardElements.logsPage.querySelector("#logsWorkspace");
-      stableDashboardElements.sessionLogsSummary =
-        stableDashboardElements.sessionLogsWorkspace.children[1];
-      stableDashboardElements.sessionLogsInfoCount =
-        stableDashboardElements.sessionLogsSummary.children[0].lastElementChild;
-      stableDashboardElements.sessionLogsWarningCount =
-        stableDashboardElements.sessionLogsSummary.children[1].lastElementChild;
-      stableDashboardElements.sessionLogsErrorCount =
-        stableDashboardElements.sessionLogsSummary.children[2].lastElementChild;
-      stableDashboardElements.sessionLogsToolbar =
-        stableDashboardElements.sessionLogsWorkspace.children[2];
-      stableDashboardElements.clearSessionLogsButton =
-        stableDashboardElements.sessionLogsToolbar.lastElementChild;
-      stableDashboardElements.sessionLogsAnnouncement =
-        stableDashboardElements.sessionLogsWorkspace.children[3];
-      stableDashboardElements.sessionLogsListRegion =
-        stableDashboardElements.sessionLogsWorkspace.children[4];
-      stableDashboardElements.sessionLogsEmpty =
-        stableDashboardElements.sessionLogsListRegion.firstElementChild;
-      stableDashboardElements.sessionLogsList =
-        stableDashboardElements.sessionLogsListRegion.lastElementChild;
-      stableDashboardElements.dashboardHeaderRegion =
-        stableDashboardElements.printReportHeader.previousElementSibling;
-      stableDashboardElements.dashboardTabList =
-        stableDashboardElements.dashboardContent.firstElementChild;
-      stableDashboardElements.dashboardTabPanels =
-        stableDashboardElements.dashboardTabList.nextElementSibling;
-      stableDashboardElements.dashboardSectionStaging =
-        stableDashboardElements.dashboardTabPanels.nextElementSibling;
-      stableDashboardElements.dashboardTabs =
-        stableDashboardElements.dashboardTabList.querySelectorAll(
-          '[role="tab"]'
-        );
-      stableDashboardElements.dashboardPanels =
-        stableDashboardElements.dashboardTabPanels.querySelectorAll(
-          '[role="tabpanel"]'
-        );
+      elements.themeControls =
+        elements.settingsPage.querySelectorAll('input[name="themePreference"]');
+      elements.transactionsTabs =
+        elements.transactionsTabList.querySelectorAll('[role="tab"]');
+      elements.transactionsPanels =
+        elements.transactionsPanelGroup.querySelectorAll('[role="tabpanel"]');
+      elements.dashboardTabs =
+        elements.dashboardTabList.querySelectorAll('[role="tab"]');
+      elements.dashboardPanels =
+        elements.dashboardTabPanels.querySelectorAll('[role="tabpanel"]');
 
-      return stableDashboardElements;
+      stableDashboardElements = elements;
+      return elements;
     }
 
     function resizeVisibleDashboardCharts(tabName)
@@ -2001,9 +1983,8 @@
         return;
       }
 
-      themeFoundationInitialized = true;
-
       var elements = initializeStableDashboardElements();
+      themeFoundationInitialized = true;
       var initialPreference =
         document.documentElement.getAttribute(
           "data-theme-preference"

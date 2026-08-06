@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Keep UI/UX 2.0 closure evidence non-substitutable
+
+Package 022 separates local/static contracts, Apps Script live execution, upload/deployment identity, functional browser acceptance, screenshot-based visual fidelity, production health, and rollback identity. The 41st runner entry may verify the required matrix and forbid unsupported claims, but it cannot turn static source inspection into visual PASS. UI/UX 2.0 becomes COMPLETE only when every current-candidate evidence class passes; otherwise it remains a Closure Candidate or BLOCKED.
+
 ### Require zero-reference or call-equivalence evidence for UI reconstruction cleanup
 
 UI/UX 2.0 Package 021 permits removal only when repository-wide search proves zero ownership or a wrapper has exact call equivalence and no independent side effect. Under that rule, `.ui-surface`, `.ui-muted`, `updateTransactionDrilldownPresentation()`, and two obsolete phase comments were removable; low-reference entry points, handlers, renderers, formatters, metadata targets, theme owners, and chart helpers remain because they retain live ownership. Test cleanup follows the same rule: raw template-scriptlet inspection is replaced by stable scoped ID and provenance assertions without weakening metadata exclusion. The rollback boundary is limited to authored CSS, frontend source, and contract tests; visual geometry, public behavior, formulas, data, responses, and APIs do not change.
