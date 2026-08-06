@@ -20,9 +20,9 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**UI/UX 2.0 Closure Candidate**
+**UI/UX 2.1 Visual Reconstruction**
 
-The bounded v1.0 feature/backend baseline remains stable. Packages 014–021 are implemented and no implementation-ready UI package remains. Package 022 is not COMPLETE: current Apps Script live 41/41, exact-candidate upload/deployment, deployed-browser functional acceptance, the required 80-capture screenshot matrix, production health, and a candidate-specific rollback record remain outstanding.
+The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 retains its technical evidence but did not close its screenshot-fidelity gate. UI/UX 2.1 now proceeds one screenshot-driven surface at a time, beginning with the implementation-ready [Dashboard Overview Blueprint](UIUX-2.1-OVERVIEW-BLUEPRINT.md).
 
 ## 5. Latest completed sprint/package
 
@@ -30,9 +30,11 @@ The bounded v1.0 feature/backend baseline remains stable. Packages 014–021 are
 
 **UI/UX 2.0 Package 022 — CLOSURE CANDIDATE locally on 2026-08-06.** The directly runnable closure contract raises the ordered gate to 41 entries and preserves nine-destination, accessibility, theme/chart, performance, and exact-response contracts while explicitly refusing a static visual PASS. Completion remains blocked by the current live, upload/deployment, browser, screenshot, production-health, and rollback evidence listed above.
 
+**UI/UX 2.1 Package 023 — COMPLETE as documentation/workflow scope on 2026-08-06.** Added the compact NUMLOCK Development System, current-state workspace, repeatable playbooks, minimal templates, Overview visual checklist, and screenshot-driven Overview blueprint. No production source, Tailwind, test, clasp, deployment, or Git action changed.
+
 ## 6. Current test gate and evidence level
 
-`runAllBackendTests()` contains exactly **40 ordered entries** and remains fail-fast.
+`runAllBackendTests()` contains exactly **41 ordered entries** and remains fail-fast.
 
 | Evidence class | Current recorded evidence |
 | --- | --- |

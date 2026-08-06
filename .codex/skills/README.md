@@ -2,6 +2,8 @@
 
 `AGENTS.md` remains the highest-priority repository contract. Skills compress recurring rules; task-specific instructions still control scope and behavior. Use only skills materially relevant to the task: more skills are not automatically better, and unrelated skills waste context and may create conflicting ownership.
 
+Start recurring work at [`../NDS.md`](../NDS.md), load [`../workspace/CURRENT.md`](../workspace/CURRENT.md), then select one relevant [playbook](../playbooks/). Use [package](../templates/package.md) or [bug-fix](../templates/bug-fix.md) templates instead of repeating generic safeguards.
+
 ## Inventory and ownership
 
 **Total: 19 project-local skills.**
@@ -119,39 +121,9 @@
 
 Reference the owning skill instead of repeating its generic rules in another skill.
 
-## Compact prompt templates
+## Compact prompts
 
-### Implementation
-
-```text
-Use:
-- $<relevant-skills>
-
-CURRENT TASK — <title>
-
-Objective:
-<unique objective>
-
-Special requirements:
-- <unique behavior only>
-
-Acceptance:
-- <unique checks only>
-```
-
-### Documentation audit
-
-```text
-Use:
-- $numlock-documentation
-- $numlock-validation
-- $numlock-git
-
-CURRENT TASK — <title>
-
-Objective:
-<documentation-specific objective>
-```
+Use the [package template](../templates/package.md) or [bug-fix template](../templates/bug-fix.md). Put current facts in `workspace/`, repeatable procedure in `playbooks/`, visual-only criteria in `checklists/`, and durable product truth in `docs/`.
 
 ## Discovery and safe updates
 

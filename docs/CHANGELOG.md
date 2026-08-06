@@ -1,5 +1,9 @@
 # NUMLOCK Changelog
 
+## 2026-08-06 — UI/UX 2.1 Package 023
+
+- Established the compact NUMLOCK Development System with current-state workspace notes, repeatable playbooks, minimal package/bug templates, and a visual-only Overview checklist. Added the screenshot-driven Dashboard Overview blueprint and moved current phase ownership to UI/UX 2.1 Visual Reconstruction. No production source, Tailwind, test, clasp, deployment, commit, or push changed.
+
 ## 2026-08-06 — UI/UX 2.0 Package 022 closure candidate
 
 - Added `testUiUx2ClosureContract()` and raised the ordered runner to 41 entries. The contract encodes Packages 014–021, nine destinations, the high-fidelity authority, separate functional/visual evidence, 16 viewport/theme/state combinations, exactly 18 visual criteria, theme/chart/print, accessibility, performance, exact 37-field response, rollback fields, and zero implementation-ready UI backlog. Static coverage explicitly records `visualPassClaimed=false`; live, deployed-browser, screenshot, production-health, and candidate rollback evidence remain required before COMPLETE.

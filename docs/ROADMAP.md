@@ -281,3 +281,9 @@ Implemented locally. Source-search evidence removed exactly two zero-reference a
 ### Package 022 — functional and visual regression closure
 
 Closure Candidate locally. The directly runnable closure contract raises the ordered runner to 41 entries and preserves the full functional, navigation, accessibility, theme/chart, performance, and 37-field response boundaries. No implementation-ready UI package remains. Final closure still requires current live 41/41, exact-candidate upload and immutable deployment, functional browser acceptance, all 80 required screen captures at 18/18, production health, and a recorded prior immutable rollback version; static checks do not satisfy visual acceptance.
+
+## UI/UX 2.1 — Visual Reconstruction
+
+### Package 023 — workflow and Overview blueprint
+
+Complete as documentation/workflow scope. The compact [NUMLOCK Development System](../.codex/NDS.md) replaces repeated generic prompt context with current-state pointers, playbooks, templates, and visual checklists. The [Dashboard Overview Blueprint](UIUX-2.1-OVERVIEW-BLUEPRINT.md) defines the first screenshot-driven reconstruction slice, exact responsive hierarchy, preserved render targets, and approval gate. The next package may implement Overview only after capturing its matched production baseline.
