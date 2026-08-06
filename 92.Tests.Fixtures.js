@@ -932,7 +932,7 @@ function createResponsiveShellContractFixtures()
     { name: "active navigation", tokens: ['button.setAttribute("aria-current", "page");'] },
     { name: "table scroll wrapper", tokens: ['id="transactionsTableScroll"', 'overflow-x-auto'] },
     { name: "narrow content width", tokens: ['<main id="mainContent" class="ml-0 min-w-0 w-full flex-1'] },
-    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 240px;', 'lg:translate-x-0', '#mainContent { margin-left: 240px;'] },
+    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 232px;', '#dashboardSidebar { width: 216px;', '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;', 'lg:translate-x-0', '#mainContent { margin-left: 232px;'] },
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
   ];
 }
@@ -944,7 +944,7 @@ function createAccessibilityContractFixtures()
     { name: "viewport metadata", tokens: ['<meta name="viewport" content="width=device-width, initial-scale=1.0">'] },
     { name: "document title", tokens: ['<title>NUMLOCK Coffee Shop Analytics</title>'] },
     { name: "primary main landmark", tokens: ['<main id="mainContent"'], uniqueToken: '<main id="mainContent"' },
-    { name: "labelled navigation", tokens: ['<nav class="flex-1 space-y-2 p-3" aria-label="Primary">'] },
+    { name: "labelled navigation", tokens: ['<nav class="flex-1 overflow-y-auto p-3" aria-label="Primary navigation">'] },
     { name: "logical chart headings", tokens: ['<h2 id="revenueChartTitle"', '<h2 id="hotColdChartTitle"', '<h2 id="expenseChartTitle"'] },
     { name: "filter selector label", tokens: ['<label for="filter" class="sr-only">Reporting period</label>'] },
     { name: "custom date labels", tokens: ['<label for="customStart" class="sr-only">Custom start date</label>', '<label for="customEnd" class="sr-only">Custom end date</label>'] },

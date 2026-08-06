@@ -244,7 +244,7 @@ Implemented and uploaded. The final bounded audit completes approved semantic di
 
 Packages 004–013 retain their recorded technical and functional evidence. The final Apps Script live suite passed 34/34, functional browser acceptance passed, and stabilization commit `7fbd2a3` was pushed. Those facts do not establish screenshot-based fidelity to the approved visual references. Package 013 is no longer treated as the final UI/UX package.
 
-Active UI/UX development continues through Packages 016–022. The [Gap Audit](UIUX-2.0-GAP-AUDIT.md) records the reopening and the [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) now governs implementation. Products and financial modules remain migration-gated: sidebar entries may be visible and explicitly unavailable, but no empty pages or fabricated content may be created. Editable KPI targets, API projection, and expanded transaction history/drill-down remain blocked.
+Active UI/UX development continues through Packages 017–022. The [Gap Audit](UIUX-2.0-GAP-AUDIT.md) records the reopening and the [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) governs implementation. Products and financial modules remain migration-gated: Package 016 makes their sidebar entries visible and explicitly unavailable, but no empty pages or fabricated content may be created. Editable KPI targets, API projection, and expanded transaction history/drill-down remain blocked.
 
 ### Package 014 — UI, refactor, and regression skills
 
@@ -253,3 +253,7 @@ Complete as project-workflow scope. Three concise project-local skills now separ
 ### Package 015 — high-fidelity implementation specification
 
 Complete as documentation-only design authority. The [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) translates the approved references into exact `1440×900`, `1280×768`, `768px`, and `375px` composition; nine-destination navigation truthfulness; Dashboard/Transactions/Settings/Logs layouts; component geometry; editorial typography; exact light/dark tokens; state presentation; and an `18/18` per-capture screenshot gate. It excludes irrelevant SaaS decoration and preserves the stable feature/backend, response, data, accessibility, and regression boundaries. Package 016 is next; no production source, Tailwind, test, clasp, deployment, commit, or push changed.
+
+### Package 016 — nine-destination sidebar architecture
+
+Implemented and uploaded. The sidebar now represents exactly nine destinations while retaining Dashboard, Transactions, Settings, and Logs as the only active pages. Products, Capital & Equity, Assets, Depreciation, and Financial Statements are quiet, text-labelled, non-focusable, migration-gated items under one accessible Financial modules disclosure; no route, page, panel, skeleton, sample data, response field, or backend call was added. Desktop widths are 232/64px at 1440 and 216/64px at 1280, with equivalent mobile-drawer truthfulness. Six focused contracts and the ordered local 35/35 suite passed, deterministic Tailwind builds matched, and the exact 26-file clasp inventory was uploaded. Runtime, deployment, and deployed-browser acceptance remain unverified.

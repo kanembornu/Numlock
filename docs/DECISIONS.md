@@ -66,6 +66,10 @@ This document owns durable engineering and product decisions. [Project Status](P
 
 ## Active decisions
 
+### Represent future financial modules truthfully without activating them
+
+UI/UX 2.0 Package 016 establishes exactly nine sidebar representations while preserving only Dashboard, Transactions, Settings, and Logs as navigation targets. Products, Capital & Equity, Assets, Depreciation, and Financial Statements remain migration-gated, unavailable, non-focusable, and non-activatable under one accessible Financial modules disclosure. This makes approved future information architecture visible without implying completed data models, permissions, formulas, routes, pages, or sample content. Expanded, collapsed, and mobile states communicate the same status in text or accessible naming, while the existing page controller and backend request path remain unchanged.
+
 ### Shortlist Executive Minimal and Modern Financial
 
 UI/UX 2.0 Package 003 selects Executive Minimal as the primary visual direction and Modern Financial as the alternate after an explicit weighted comparison of executive clarity, daily usability, mobile usability, accessibility, implementation feasibility, maintainability, and visual distinctiveness. Executive Minimal best preserves decision-first calm, mobile readability, and low implementation risk. Modern Financial provides the strongest distinct comparison through precise numeric, chart, card, and table treatment without changing feature scope.

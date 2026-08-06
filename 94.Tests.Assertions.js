@@ -139,16 +139,31 @@ function getSourceRegion(source, startToken, endToken, scenarioName)
     );
   }
 
-  var endIndex = source.indexOf(endToken, startIndex + startToken.length);
+  var firstEndIndex = source.indexOf(endToken);
 
-  if (endIndex === -1)
+  if (firstEndIndex === -1)
   {
     throw new Error(
       "Source contract missing " +
       scenarioName +
-      " end boundary after " +
+      " end boundary: " +
+      endToken
+    );
+  }
+
+  var endIndex = source.indexOf(
+    endToken,
+    startIndex + startToken.length
+  );
+
+  if (endIndex === -1)
+  {
+    throw new Error(
+      "Source contract invalid " +
+      scenarioName +
+      " boundary order: start=" +
       startToken +
-      ": " +
+      ", end=" +
       endToken
     );
   }

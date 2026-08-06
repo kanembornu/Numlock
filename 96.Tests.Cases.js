@@ -2067,8 +2067,9 @@ function testUiShellThemeContract()
   [
     'id="appShell"',
     'data-sidebar-collapsed="false"',
-    '#dashboardSidebar { width: 240px;',
-    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 72px;',
+    '#dashboardSidebar { width: 232px;',
+    '#dashboardSidebar { width: 216px;',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
     'id="sidebarCollapseButton"',
     'function setDesktopSidebarCollapsed(isCollapsed)'
   ].forEach(function(token)
@@ -2100,17 +2101,20 @@ function testUiShellThemeContract()
     });
   scenariosPassed++;
 
-  [
-    "Products",
-    "Capital & Equity",
-    "Assets",
-    "Depreciation",
-    "Financial Statements"
-  ].forEach(function(label)
-  {
-    assertSourceExcludes(source, 'data-page="' + label, "future module");
-    assertSourceExcludes(source, ">" + label + "</", "future module label");
-  });
+  ["products", "capital-equity", "assets", "depreciation", "financial-statements"]
+    .forEach(function(destination)
+    {
+      assertSourceContainsOnce(
+        source,
+        'data-navigation-destination="' + destination + '"',
+        "future module representation"
+      );
+      assertSourceExcludes(
+        source,
+        'data-page="' + destination + '"',
+        "future module route"
+      );
+    });
   scenariosPassed++;
 
   [
@@ -2294,7 +2298,7 @@ function testUiShellThemeContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    destinations: 4,
+    destinations: 9,
     themes: 3,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount
@@ -2307,6 +2311,284 @@ function testUiShellThemeContract()
     summary.destinations +
     " | themes=" +
     summary.themes +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
+function testNineDestinationNavigationContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var navigationSource = getSourceRegion(
+    source,
+    'id="dashboardSidebar"',
+    'id="mainContent"',
+    "nine-destination sidebar"
+  );
+  var disclosureSource = getSourceRegion(
+    source,
+    'id="financialModulesDisclosureButton"',
+    'id="financialModulesGroup"',
+    "Financial modules disclosure"
+  );
+  var toggleSource = getSourceRegion(
+    source,
+    "function toggleFinancialModulesDisclosure(button)",
+    "function setDesktopSidebarCollapsed(isCollapsed)",
+    "Financial modules disclosure behavior"
+  );
+  var activeDestinations = [
+    "dashboard",
+    "transactions",
+    "settings",
+    "logs"
+  ];
+  var unavailableDestinations = [
+    { id: "products", label: "Products" },
+    { id: "capital-equity", label: "Capital &amp; Equity" },
+    { id: "assets", label: "Assets" },
+    { id: "depreciation", label: "Depreciation" },
+    { id: "financial-statements", label: "Financial Statements" }
+  ];
+  var scenariosPassed = 0;
+
+  assertSourceContainsOnce(
+    source,
+    'aria-label="Primary navigation"',
+    "primary navigation region"
+  );
+  assertSourceContainsOnce(
+    source,
+    'id="dashboardSidebar"',
+    "sidebar start boundary"
+  );
+  assertSourceContainsOnce(
+    source,
+    'id="mainContent"',
+    "main-content end boundary"
+  );
+  assertSourceContains(
+    navigationSource,
+    'aria-label="Primary navigation"',
+    "stable-ID sidebar extraction"
+  );
+
+  assertSourceOccurrenceCount(
+    navigationSource,
+    'data-navigation-destination="',
+    9,
+    "represented destination count"
+  );
+  assertSourceOccurrenceCount(
+    navigationSource,
+    'data-page="',
+    4,
+    "active route count"
+  );
+  scenariosPassed++;
+
+  activeDestinations.forEach(function(destination)
+  {
+    assertSourceContainsOnce(
+      navigationSource,
+      'data-page="' + destination + '"',
+      "active destination " + destination
+    );
+    assertSourceContainsOnce(
+      navigationSource,
+      'data-navigation-destination="' + destination + '"',
+      "represented active destination " + destination
+    );
+  });
+  scenariosPassed++;
+
+  unavailableDestinations.forEach(function(destination)
+  {
+    assertSourceContainsOnce(
+      navigationSource,
+      'data-navigation-destination="' + destination.id + '"',
+      "unavailable destination " + destination.id
+    );
+    assertSourceContains(
+      navigationSource,
+      ">" + destination.label + "</span>",
+      "unavailable destination label " + destination.id
+    );
+    assertSourceExcludes(
+      navigationSource,
+      'data-page="' + destination.id + '"',
+      "future route " + destination.id
+    );
+    assertSourceExcludes(
+      source,
+      'id="' + destination.id + '" class="page',
+      "future page " + destination.id
+    );
+  });
+  assertSourceOccurrenceCount(
+    navigationSource,
+    'aria-disabled="true"',
+    5,
+    "unavailable semantics"
+  );
+  scenariosPassed++;
+
+  [
+    'id="financialModulesDisclosureButton"',
+    'aria-expanded="true"',
+    'aria-controls="financialModulesGroup"',
+    'aria-label="Financial modules, expanded"',
+    'id="financialModulesGroup"',
+    'aria-label="Unavailable financial modules"',
+    "Unavailable · migration required",
+    "unavailable until module migration is approved"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      navigationSource,
+      token,
+      "Financial modules grouping and status"
+    );
+  });
+  assertSourceContainsOnce(
+    navigationSource,
+    'id="financialModulesDisclosureButton"',
+    "one Financial modules disclosure"
+  );
+  scenariosPassed++;
+
+  [
+    'button.setAttribute("aria-expanded", String(nextExpanded));',
+    '"Financial modules, " + (nextExpanded ? "expanded" : "collapsed")',
+    "group.hidden = !nextExpanded;",
+    'disclosureIcon.classList.toggle("fa-chevron-up", nextExpanded);',
+    'disclosureIcon.classList.toggle("fa-chevron-down", !nextExpanded);'
+  ].forEach(function(token)
+  {
+    assertSourceContains(toggleSource, token, "disclosure state behavior");
+  });
+  assertSourceExcludes(toggleSource, "google.script.run", "disclosure backend request");
+  assertSourceExcludes(toggleSource, ".addEventListener(", "duplicate disclosure listener");
+  scenariosPassed++;
+
+  [
+    '#dashboardSidebar { width: 232px;',
+    '#dashboardSidebar { width: 216px;',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
+    '#appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 64px;',
+    '@media (max-width: 1023px)',
+    '#dashboardSidebar { width: min(320px, calc(100vw - 32px)); }',
+    '.sidebar-expanded-content { display: none; }',
+    'title="Products — unavailable until module migration is approved"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "expanded collapsed mobile parity");
+  });
+  scenariosPassed++;
+
+  [
+    'aria-current="page"',
+    'heading.focus();',
+    'setSidebarOpen(false, true);',
+    'sidebar.inert = !isOpen && !isDesktop;',
+    'page.hidden = !isActivePage;',
+    'group.hidden = !nextExpanded;',
+    '@media (prefers-reduced-motion: reduce)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "focus hidden and motion compatibility");
+  });
+  scenariosPassed++;
+
+  [
+    'href="#"',
+    'id="products" class="page',
+    'id="capital-equity" class="page',
+    'id="assets" class="page',
+    'id="depreciation" class="page',
+    'id="financial-statements" class="page',
+    "Sample product",
+    "Sample asset",
+    "Coming soon page"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "no fake route or fabricated content");
+  });
+  scenariosPassed++;
+
+  [
+    '.ui-sidebar-item[aria-current="page"]',
+    "background:var(--selected)",
+    "box-shadow:inset 3px 0 0 var(--brand)",
+    ".ui-future-module",
+    "color:var(--disabled-text)"
+  ].forEach(function(token)
+  {
+    var normalizedSource = source.replace(/\s+/g, "");
+    var normalizedToken = token.replace(/\s+/g, "");
+    assertSourceContains(normalizedSource, normalizedToken, "Light Dark navigation parity");
+  });
+  scenariosPassed++;
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Nine-destination query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+  assertSourceContainsOnce(
+    source,
+    "function toggleFinancialModulesDisclosure(button)",
+    "single disclosure function"
+  );
+  assertSourceContainsOnce(
+    source,
+    "function initializeResponsiveShell()",
+    "single responsive initializer"
+  );
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "response mutation");
+  });
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    destinations: 9,
+    active: 4,
+    unavailable: 5,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testNineDestinationNavigationContract | scenarios=" +
+    summary.scenarios +
+    " | destinations=" +
+    summary.destinations +
+    " | active=" +
+    summary.active +
+    " | unavailable=" +
+    summary.unavailable +
+    " | backendRequests=" +
+    summary.backendRequests +
     " | idQueries=" +
     summary.idQueries +
     " | selectorQueries=" +
@@ -4695,7 +4977,7 @@ function testUiFinalStabilizationContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    destinations: 4,
+    destinations: 9,
     tablists: 2,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount,

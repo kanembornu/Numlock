@@ -101,7 +101,8 @@
   }
 
   .ui-sidebar-item[aria-current="page"] {
-    background: var(--brand);
-    color: var(--text-on-dark);
+    background: var(--selected);
+    color: var(--text-primary);
+    box-shadow: inset 3px 0 0 var(--brand);
   }
 }
