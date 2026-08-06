@@ -66,6 +66,10 @@ This document owns durable engineering and product decisions. [Project Status](P
 
 ## Active decisions
 
+### Give the utility row sole visible shell-header ownership
+
+UI/UX 2.0 Package 017 makes one 52px standard-desktop and 48px compact-desktop utility row the sole visible owner of destination identity, concise context, existing Dashboard period/Print controls, active period, freshness, and version. Destination-local `h1` elements remain as focusable screen-reader targets for navigation, but no longer create a second visible header band. Dashboard and Transactions tab rails are fixed at 40px immediately above active content. This decision changes shell composition only: page render targets, feature state, requests, responses, and mobile drawer behavior remain owned by their existing controllers.
+
 ### Represent future financial modules truthfully without activating them
 
 UI/UX 2.0 Package 016 establishes exactly nine sidebar representations while preserving only Dashboard, Transactions, Settings, and Logs as navigation targets. Products, Capital & Equity, Assets, Depreciation, and Financial Statements remain migration-gated, unavailable, non-focusable, and non-activatable under one accessible Financial modules disclosure. This makes approved future information architecture visible without implying completed data models, permissions, formulas, routes, pages, or sample content. Expanded, collapsed, and mobile states communicate the same status in text or accessible naming, while the existing page controller and backend request path remain unchanged.

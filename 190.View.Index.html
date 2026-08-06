@@ -55,23 +55,26 @@
       body { background: var(--canvas); color: var(--text-primary); font-family: 'Inter', sans-serif; }
 
       #appShell { background: var(--canvas); }
-      #dashboardSidebar { width: 232px; background: var(--sidebar); }
+      #dashboardSidebar { width: 232px; background: var(--sidebar); box-shadow: none; }
       #mainContent { background: var(--canvas); }
-      #topUtilityBar { height: 64px; background: var(--surface-1); border-color: var(--border-subtle); }
-      #contentViewport { background: var(--canvas); }
-      #dashboardTabList { height: 48px; }
+      #topUtilityBar { height: 52px; min-height: 52px; background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }
+      #contentViewport { min-height: 0; background: var(--canvas); }
+      #dashboardTabList,
+      #transactionsTabList { height: 40px; min-height: 40px; }
       .dashboard-tab-panel { min-width: 0; }
       .transactions-tab-panel { min-width: 0; }
       .transactions-table-row:hover { background: var(--surface-2); }
       .transactions-number { text-align: right; font-variant-numeric: tabular-nums; }
-      .overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
+      .overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
-      .analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: var(--shadow-1); }
+      .analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }
       .performance-metric-value { font-variant-numeric: tabular-nums; }
       #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }
       #mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }
       #sidebarBackdrop { background: var(--overlay); }
-      .ui-sidebar-item { min-height: 40px; border-radius: 8px; }
+      .ui-sidebar-item { min-height: 40px; border-radius: 8px; gap: 8px; padding: 6px 12px; }
+      .ui-sidebar-item > i,
+      .ui-future-module > i { width: 20px; font-size: 16px; }
       .ui-sidebar-item[aria-current="page"]
       {
         background: var(--selected);
@@ -103,10 +106,14 @@
         }
 
         #dashboardSidebar { transform: translateX(0); }
-        #mainContent { margin-left: 232px; height: 100vh; height: 100dvh; overflow: hidden; }
-        #contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow: hidden; }
-        .dashboard-tab-panel:not(#dashboardPanelOverview) { height: calc(100dvh - 188px); overflow-y: auto; }
-        #dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }
+        #mainContent { display: grid; grid-template-rows: 52px minmax(0, 1fr); margin-left: 232px; height: 100vh; height: 100dvh; overflow: hidden; }
+        #contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }
+        #dashboard.active { display: flex; min-height: 0; height: 100%; flex-direction: column; overflow: hidden; }
+        #dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }
+        #dashboardTabList { margin: 0; }
+        #dashboardTabPanels { min-height: 0; overflow: hidden; }
+        .dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }
+        #dashboardPanelOverview { height: 100%; overflow: hidden; }
         #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
@@ -129,15 +136,16 @@
         #dashboardPanelPlanning:not([hidden]) { display: flex; flex-direction: column; gap: 8px; overflow: hidden; }
         #dashboardPanelPlanning #executiveCenter { min-height: 0; flex: 1 1 auto; height: auto; margin: 0; overflow: hidden; }
         #dashboardPanelPlanning > #kpiTargetReference { flex: 0 0 auto; margin: 0; padding: 10px 12px; border: 1px solid var(--border-subtle); border-radius: 16px; background: var(--surface-1); }
-        #transactions.active { height: 100%; overflow: hidden; }
-        #transactionsPanelGroup { min-height: 0; height: calc(100dvh - 208px); }
+        #transactions.active { display: grid; height: 100%; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; overflow: hidden; }
+        #transactionsTabList { margin: 0; }
+        #transactionsPanelGroup { min-height: 0; height: auto; }
         .transactions-tab-panel:not([hidden]) { display: flex; min-height: 0; height: 100%; flex-direction: column; }
         #transactionsEvidenceRegion { min-height: 0; flex: 1 1 auto; }
         #transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }
         #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
         #settings.active { height: 100%; overflow: hidden; }
         #logs.active { height: 100%; overflow: hidden; }
-        #logsWorkspace { height: calc(100dvh - 176px); min-height: 0; }
+        #logsWorkspace { height: 100%; min-height: 0; }
         #sessionLogsListRegion { min-height: 0; overflow-y: auto; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px; }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 64px; }
@@ -151,13 +159,16 @@
       @media (min-width: 1024px) and (max-width: 1279px)
       {
         #dashboardSidebar { width: 216px; }
-        #mainContent { margin-left: 216px; }
+        #mainContent { grid-template-rows: 48px minmax(0, 1fr); margin-left: 216px; }
+        #topUtilityBar { height: 48px; min-height: 48px; }
       }
 
       @media (max-width: 1023px)
       {
-        #dashboardSidebar { width: min(320px, calc(100vw - 32px)); }
-        #contentViewport { overflow: visible; }
+        #dashboardSidebar { width: min(320px, calc(100vw - 32px)); box-shadow: var(--shadow-2); }
+        #topUtilityBar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }
+        #dashboardUtilityControls { order: 3; width: 100%; flex-wrap: wrap; }
+        #contentViewport { overflow: visible; padding: 12px; }
         #dashboardPanelPerformance,
         #dashboardPanelAnalytics { height: auto; overflow: visible; }
         #dashboardPanelIntelligence,
@@ -488,19 +499,19 @@
     id="dashboardSidebar"
     class="fixed inset-y-0 left-0 z-50 flex h-full -translate-x-full flex-col text-slate-300 shadow-2xl transition-all duration-200 lg:translate-x-0"
     aria-label="NUMLOCK navigation">
-    <div class="border-b border-slate-800 p-4">
-      <div class="sidebar-brand flex items-center justify-between gap-3">
+    <div class="flex h-[52px] items-center border-b border-slate-800 px-3">
+      <div class="sidebar-brand flex w-full items-center justify-between gap-2">
         <div class="flex min-w-0 items-center gap-3">
-        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-base font-bold text-white" aria-hidden="true">N</div>
+        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white" aria-hidden="true">N</div>
         <div class="sidebar-expanded-content min-w-0">
-          <div class="text-2xl font-bold text-white"> NUMLOCK </div>
-          <p class="text-xs text-slate-400"> Business Intelligence </p>
+          <div class="text-sm font-bold tracking-wide text-white">NUMLOCK</div>
+          <p class="text-[10px] text-slate-400">Business Intelligence</p>
         </div>
         </div>
         <button
           id="sidebarCloseButton"
           type="button"
-          class="rounded-xl p-3 text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 lg:hidden"
+          class="rounded-lg p-2 text-white hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 lg:hidden"
           aria-label="Close navigation menu">
           <i class="fas fa-times" aria-hidden="true"></i>
         </button>
@@ -516,7 +527,7 @@
           aria-current="page"
           aria-label="Dashboard"
           title="Dashboard"
-          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left font-medium transition">
+          class="ui-sidebar-item flex w-full items-center text-left font-medium transition">
           <i class="fas fa-chart-line w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Dashboard</span>
         </button>
 
@@ -526,7 +537,7 @@
           data-navigation-destination="transactions"
           aria-label="Transactions"
           title="Transactions"
-          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition">
+          class="ui-sidebar-item flex w-full items-center text-left transition">
           <i class="fas fa-receipt w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Transactions</span>
         </button>
 
@@ -536,7 +547,7 @@
           data-navigation-destination="settings"
           aria-label="Settings"
           title="Settings"
-          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition">
+          class="ui-sidebar-item flex w-full items-center text-left transition">
           <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
         </button>
 
@@ -546,7 +557,7 @@
           data-navigation-destination="logs"
           aria-label="Logs"
           title="Logs"
-          class="ui-sidebar-item flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition">
+          class="ui-sidebar-item flex w-full items-center text-left transition">
           <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
         </button>
         </div>
@@ -598,14 +609,13 @@
       <button
         id="sidebarCollapseButton"
         type="button"
-        class="ui-sidebar-item hidden min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left lg:flex"
+        class="ui-sidebar-item hidden w-full items-center text-left lg:flex"
         aria-label="Collapse navigation"
         aria-expanded="true"
         title="Collapse navigation">
         <i id="sidebarCollapseIcon" class="fas fa-chevron-left w-6 text-center transition-transform" aria-hidden="true"></i>
         <span class="sidebar-expanded-content">Collapse</span>
       </button>
-      <div class="sidebar-expanded-content px-3 pt-3 text-xs text-slate-500">Version <?= version ?></div>
     </div>
   </aside>
 
@@ -613,12 +623,12 @@
      MAIN
 ================================================== -->
   <main id="mainContent" class="ml-0 min-w-0 w-full flex-1 transition-[margin] duration-200">
-    <header id="topUtilityBar" class="flex min-h-16 items-center justify-between gap-4 border-b px-4 sm:px-6" aria-label="Page utility bar">
+    <header id="topUtilityBar" class="flex items-center justify-between gap-3 border-b px-4 sm:px-5" aria-label="Page utility bar">
       <div class="flex min-w-0 items-center gap-3">
       <button
         id="sidebarMenuButton"
         type="button"
-        class="inline-flex min-h-11 items-center gap-2 rounded-xl bg-slate-950 px-3 font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 lg:hidden"
+        class="inline-flex min-h-11 items-center gap-2 rounded-lg bg-slate-950 px-3 font-semibold text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 lg:hidden"
         aria-label="Open navigation menu"
         aria-expanded="false"
         aria-controls="dashboardSidebar">
@@ -626,18 +636,64 @@
         <span class="sr-only">Menu</span>
       </button>
         <div class="min-w-0">
-          <div id="utilityPageTitle" class="truncate text-base font-bold ui-theme-primary">Dashboard</div>
-          <div id="utilityPageContext" class="truncate text-xs ui-theme-muted">Business performance and next actions</div>
+          <div id="utilityPageTitle" class="truncate text-sm font-bold ui-theme-primary">Dashboard</div>
+          <div id="utilityPageContext" class="truncate text-[11px] ui-theme-muted">Business performance and next actions</div>
         </div>
       </div>
+
+      <div id="dashboardUtilityControls" class="flex min-w-0 items-center gap-2">
+        <div
+          id="dateFilterControls"
+          onchange="handleDateFilterChange()"
+          class="flex min-w-0 items-center gap-2">
+          <label for="filter" class="sr-only">Reporting period</label>
+          <select
+            id="filter"
+            class="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm">
+            <option value="today">Today</option>
+            <option value="last7days">Last 7 Days</option>
+            <option value="currentMonth">Current Month</option>
+            <option value="previousMonth">Previous Month</option>
+            <option value="currentYear" selected>Current Year</option>
+            <option value="custom">Custom</option>
+          </select>
+
+          <button
+            id="printReportButton"
+            type="button"
+            onclick="printDashboardReport()"
+            class="h-9 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white"
+            aria-label="Print current dashboard report"
+            disabled>
+            Print Report
+          </button>
+
+          <div id="customDateRange" class="hidden min-w-0 items-center gap-2">
+            <label for="customStart" class="sr-only">Custom start date</label>
+            <input id="customStart" type="date" disabled aria-describedby="dateFilterValidation" class="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-sm">
+            <label for="customEnd" class="sr-only">Custom end date</label>
+            <input id="customEnd" type="date" disabled aria-describedby="dateFilterValidation" class="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-sm">
+          </div>
+
+          <p id="dateFilterValidation" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+
+          <div id="reportingInformation" class="sr-only" role="status" aria-live="polite" aria-atomic="true" aria-label="Reporting information">
+            <span id="dateFilterLabel"></span>
+            <span id="transactionCountLabel"></span>
+            <span id="latestDataLabel"></span>
+            <span id="freshnessStatusBadge" class="hidden"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="hidden min-w-0 items-center gap-4 text-xs ui-theme-muted sm:flex" aria-label="Dashboard metadata">
         <span><span class="sr-only">Current period: </span><span id="utilityActivePeriod">Current Year</span></span>
         <span><span class="sr-only">Last sync: </span><span id="utilityLastSync">Waiting for data</span></span>
-        <span>v<?= version ?></span>
+        <span id="utilityVersion" data-metadata-source="template.version">v<?= version ?></span>
       </div>
     </header>
 
-    <div id="contentViewport" class="min-w-0 p-4 sm:p-6 lg:p-5">
+    <div id="contentViewport" class="min-w-0">
 
     <!-- ==================================================
      DASHBOARD
@@ -645,76 +701,10 @@
     <div id="dashboard" class="page active">
 
     <!-- HEADER -->
-    <div id="dashboardHeaderRegion" class="mb-3 min-w-0">
-      <div id="dashboardScreenHeader" class="sr-only">
+    <div id="dashboardHeaderRegion" class="sr-only">
+      <div id="dashboardScreenHeader">
         <h1 id="dashboardHeading" tabindex="-1">Executive Dashboard</h1>
         <p>Business performance, attention areas, and next actions</p>
-      </div>
-
-      <div
-        id="dateFilterControls"
-        onchange="handleDateFilterChange()"
-        class="overview-surface flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border p-2">
-        <label for="filter" class="sr-only">Reporting period</label>
-        <select
-          id="filter"
-          class="min-h-11 min-w-0 w-full bg-white border border-slate-200 rounded-xl px-3 py-2 sm:w-auto">
-          <option value="today">Today</option>
-          <option value="last7days">Last 7 Days</option>
-          <option value="currentMonth">Current Month</option>
-          <option value="previousMonth">Previous Month</option>
-          <option value="currentYear" selected>Current Year</option>
-          <option value="custom">Custom</option>
-        </select>
-
-        <button
-          id="printReportButton"
-          type="button"
-          onclick="printDashboardReport()"
-          class="min-h-11 w-full rounded-xl bg-slate-950 px-4 py-2 font-semibold text-white sm:w-auto"
-          aria-label="Print current dashboard report"
-          disabled>
-          Print Report
-        </button>
-
-        <div id="customDateRange" class="hidden w-full mt-2 flex flex-wrap gap-2">
-          <label for="customStart" class="sr-only">Custom start date</label>
-          <input
-            id="customStart"
-            type="date"
-            disabled
-            aria-describedby="dateFilterValidation"
-            class="min-w-0 w-full bg-white border border-slate-200 rounded-xl px-4 py-3 sm:w-auto">
-          <label for="customEnd" class="sr-only">Custom end date</label>
-          <input
-            id="customEnd"
-            type="date"
-            disabled
-            aria-describedby="dateFilterValidation"
-            class="min-w-0 w-full bg-white border border-slate-200 rounded-xl px-4 py-3 sm:w-auto">
-        </div>
-
-        <p
-          id="dateFilterValidation"
-          class="hidden w-full mt-2 text-sm font-semibold text-red-700"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"></p>
-
-        <div
-          id="reportingInformation"
-          class="min-w-0 flex flex-1 flex-wrap items-center justify-end gap-x-3 gap-y-1 text-xs text-slate-600"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          aria-label="Reporting information">
-          <span id="dateFilterLabel"></span>
-          <span id="transactionCountLabel"></span>
-          <span id="latestDataLabel"></span>
-          <span
-            id="freshnessStatusBadge"
-            class="hidden rounded-full px-3 py-1 font-semibold"></span>
-        </div>
       </div>
     </div>
 
@@ -746,14 +736,14 @@
     <div id="dashboardContent" aria-busy="false">
       <div
         id="dashboardTabList"
-        class="mb-4 flex items-center gap-1 overflow-x-auto border-b border-slate-200"
+        class="flex items-center gap-3 overflow-x-auto border-b border-slate-200 px-3"
         role="tablist"
         aria-label="Dashboard sections">
-        <button id="dashboardTabOverview" type="button" role="tab" aria-selected="true" aria-controls="dashboardPanelOverview" tabindex="0" data-dashboard-tab="overview" class="min-h-11 shrink-0 border-b-2 border-indigo-600 px-4 text-sm font-semibold text-indigo-700">Overview</button>
-        <button id="dashboardTabPerformance" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPerformance" tabindex="-1" data-dashboard-tab="performance" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Performance</button>
-        <button id="dashboardTabAnalytics" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelAnalytics" tabindex="-1" data-dashboard-tab="analytics" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Analytics</button>
-        <button id="dashboardTabIntelligence" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelIntelligence" tabindex="-1" data-dashboard-tab="intelligence" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Intelligence</button>
-        <button id="dashboardTabPlanning" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPlanning" tabindex="-1" data-dashboard-tab="planning" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Planning</button>
+        <button id="dashboardTabOverview" type="button" role="tab" aria-selected="true" aria-controls="dashboardPanelOverview" tabindex="0" data-dashboard-tab="overview" class="h-10 shrink-0 border-b-2 border-indigo-600 px-3 text-[13px] font-semibold text-indigo-700">Overview</button>
+        <button id="dashboardTabPerformance" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPerformance" tabindex="-1" data-dashboard-tab="performance" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Performance</button>
+        <button id="dashboardTabAnalytics" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelAnalytics" tabindex="-1" data-dashboard-tab="analytics" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Analytics</button>
+        <button id="dashboardTabIntelligence" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelIntelligence" tabindex="-1" data-dashboard-tab="intelligence" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Intelligence</button>
+        <button id="dashboardTabPlanning" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPlanning" tabindex="-1" data-dashboard-tab="planning" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Planning</button>
       </div>
 
       <div id="dashboardTabPanels">
@@ -1041,7 +1031,7 @@
 
     <!-- TRANSACTIONS -->
     <section id="transactions" class="page" hidden aria-labelledby="transactionsHeading">
-      <header class="mb-3 flex min-w-0 flex-wrap items-end justify-between gap-3">
+      <header class="sr-only">
         <div class="min-w-0">
           <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Bounded transaction evidence</p>
           <h1 id="transactionsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Transactions</h1>
@@ -1049,11 +1039,11 @@
         </div>
       </header>
 
-      <div id="transactionsTabList" class="mb-3 flex min-w-0 overflow-x-auto border-b" role="tablist" aria-label="Transaction views">
-        <button id="transactionsTabRecent" type="button" role="tab" aria-selected="true" aria-controls="transactionsPanelRecent" tabindex="0" data-transactions-tab="recent" class="min-h-11 shrink-0 border-b-2 border-indigo-600 px-4 text-sm font-semibold text-indigo-700">Recent</button>
-        <button id="transactionsTabSales" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelSales" tabindex="-1" data-transactions-tab="sales" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Sales</button>
-        <button id="transactionsTabExpenses" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelExpenses" tabindex="-1" data-transactions-tab="expenses" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Expenses</button>
-        <button id="transactionsTabPurchases" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelPurchases" tabindex="-1" data-transactions-tab="purchases" class="min-h-11 shrink-0 border-b-2 border-transparent px-4 text-sm font-semibold text-slate-600">Purchases</button>
+      <div id="transactionsTabList" class="flex min-w-0 gap-3 overflow-x-auto border-b px-3" role="tablist" aria-label="Transaction views">
+        <button id="transactionsTabRecent" type="button" role="tab" aria-selected="true" aria-controls="transactionsPanelRecent" tabindex="0" data-transactions-tab="recent" class="h-10 shrink-0 border-b-2 border-indigo-600 px-3 text-[13px] font-semibold text-indigo-700">Recent</button>
+        <button id="transactionsTabSales" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelSales" tabindex="-1" data-transactions-tab="sales" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Sales</button>
+        <button id="transactionsTabExpenses" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelExpenses" tabindex="-1" data-transactions-tab="expenses" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Expenses</button>
+        <button id="transactionsTabPurchases" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelPurchases" tabindex="-1" data-transactions-tab="purchases" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Purchases</button>
       </div>
 
       <div id="transactionsPanelGroup">
@@ -1100,7 +1090,7 @@
 
     <!-- SETTINGS -->
     <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
-      <header class="mb-5 min-w-0">
+      <header class="sr-only">
         <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Application preferences</p>
         <h1 id="settingsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Settings</h1>
         <p class="mt-1 max-w-2xl text-sm ui-theme-secondary">Choose this browser’s appearance and review authoritative application details.</p>
@@ -1160,7 +1150,7 @@
 
     <!-- LOGS -->
     <section id="logs" class="page" hidden aria-labelledby="logsHeading">
-      <header class="mb-4 min-w-0">
+      <header class="sr-only">
         <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Session diagnostics</p>
         <h1 id="logsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Logs</h1>
         <p class="mt-1 max-w-3xl text-sm ui-theme-secondary">Sanitized application events generated during this browser page session.</p>
@@ -1306,6 +1296,8 @@
         stableDashboardElements.topUtilityBar.firstElementChild.lastElementChild.firstElementChild;
       stableDashboardElements.utilityPageContext =
         stableDashboardElements.utilityPageTitle.nextElementSibling;
+      stableDashboardElements.dashboardUtilityControls =
+        stableDashboardElements.topUtilityBar.children[1];
       stableDashboardElements.utilityMetadata =
         stableDashboardElements.topUtilityBar.lastElementChild;
       stableDashboardElements.utilityActivePeriod =
@@ -1742,6 +1734,7 @@
 
       elements.utilityPageTitle.innerText = contract.title;
       elements.utilityPageContext.innerText = contract.context;
+      elements.dashboardUtilityControls.hidden = pageId !== "dashboard";
 
       var heading = activePage.querySelector("h1");
 

@@ -2080,7 +2080,8 @@ function testUiShellThemeContract()
 
   [
     'id="topUtilityBar"',
-    '#topUtilityBar { height: 64px;',
+    '#topUtilityBar { height: 52px; min-height: 52px;',
+    '#topUtilityBar { height: 48px; min-height: 48px;',
     'height: 100dvh;',
     'overflow: hidden;',
     'id="contentViewport"'
@@ -2484,7 +2485,7 @@ function testNineDestinationNavigationContract()
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
     '#appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 64px;',
     '@media (max-width: 1023px)',
-    '#dashboardSidebar { width: min(320px, calc(100vw - 32px)); }',
+    '#dashboardSidebar { width: min(320px, calc(100vw - 32px));',
     '.sidebar-expanded-content { display: none; }',
     'title="Products — unavailable until module migration is approved"'
   ].forEach(function(token)
@@ -2580,6 +2581,257 @@ function testNineDestinationNavigationContract()
 
   Logger.log(
     "PASS: testNineDestinationNavigationContract | scenarios=" +
+    summary.scenarios +
+    " | destinations=" +
+    summary.destinations +
+    " | active=" +
+    summary.active +
+    " | unavailable=" +
+    summary.unavailable +
+    " | backendRequests=" +
+    summary.backendRequests +
+    " | idQueries=" +
+    summary.idQueries +
+    " | selectorQueries=" +
+    summary.selectorQueries
+  );
+
+  return summary;
+}
+
+function testFullShellVisualContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var doGetSource = String(doGet);
+  var utilitySource = getSourceRegion(
+    source,
+    'id="topUtilityBar"',
+    'id="contentViewport"',
+    "authoritative utility row"
+  );
+  var showPageSource = getSourceRegion(
+    source,
+    "function showPage(pageId)",
+    "function getResolvedTheme(preference)",
+    "shell page switching"
+  );
+  var sidebarSource = getSourceRegion(
+    source,
+    'id="dashboardSidebar"',
+    'id="mainContent"',
+    "sidebar metadata exclusion"
+  );
+  var scenariosPassed = 0;
+
+  assertSourceContainsOnce(source, 'id="topUtilityBar"', "one utility row");
+  [
+    'id="utilityPageTitle"',
+    'id="utilityPageContext"',
+    'id="dashboardUtilityControls"',
+    'id="utilityActivePeriod"',
+    'id="utilityLastSync"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(utilitySource, token, "authoritative utility ownership");
+  });
+  assertSourceContainsOnce(
+    utilitySource,
+    'id="utilityVersion"',
+    "utility version render target"
+  );
+  assertSourceContainsOnce(
+    utilitySource,
+    'data-metadata-source="template.version"',
+    "utility version provenance"
+  );
+  assertSourceContainsOnce(
+    doGetSource,
+    "template.version = PROJECT_CONFIG.VERSION;",
+    "authoritative utility version assignment"
+  );
+  assertSourceContainsOnce(source, 'id="utilityVersion"', "single utility version target");
+  assertSourceExcludes(sidebarSource, 'id="utilityVersion"', "sidebar utility version target");
+  assertSourceExcludes(sidebarSource, "<?= version ?>", "sidebar version injection");
+  assertSourceExcludes(utilitySource, 'id="aboutVersion"', "About version target");
+  assertSourceExcludes(utilitySource, 'id="printReportVersion"', "Print version target");
+  assertSourceExcludes(
+    utilitySource,
+    "1.0.0",
+    "hardcoded utility version"
+  );
+  scenariosPassed++;
+
+  [
+    '<div id="dashboardHeaderRegion" class="sr-only">',
+    '<section id="transactions" class="page" hidden aria-labelledby="transactionsHeading">\n      <header class="sr-only">',
+    '<section id="settings" class="page" hidden aria-labelledby="settingsHeading">\n      <header class="sr-only">',
+    '<section id="logs" class="page" hidden aria-labelledby="logsHeading">\n      <header class="sr-only">'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "single visible page identity");
+  });
+  assertSourceOccurrenceCount(source, 'id="utilityPageTitle"', 1, "visible page identity");
+  scenariosPassed++;
+
+  [
+    '#dashboardSidebar { width: 232px;',
+    '#dashboardSidebar { width: 216px;',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
+    '#topUtilityBar { height: 52px; min-height: 52px;',
+    '#topUtilityBar { height: 48px; min-height: 48px;',
+    '#dashboardTabList,',
+    '#transactionsTabList { height: 40px; min-height: 40px; }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "exact shell geometry");
+  });
+  scenariosPassed++;
+
+  [
+    "height: 100dvh;",
+    "overflow: hidden;",
+    "grid-template-rows: 52px minmax(0, 1fr)",
+    "grid-template-rows: 48px minmax(0, 1fr)",
+    '#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }',
+    '#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "one-viewport desktop shell");
+  });
+  scenariosPassed++;
+
+  [
+    '@media (max-width: 1023px)',
+    '#dashboardSidebar { width: min(320px, calc(100vw - 32px));',
+    '#topUtilityBar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }',
+    '#contentViewport { overflow: visible; padding: 12px; }',
+    'sidebar.inert = !isOpen && !isDesktop;',
+    'menuButton.focus();'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "mobile drawer and flow preservation");
+  });
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine destinations");
+  assertSourceOccurrenceCount(source, 'data-page="', 4, "four active destinations");
+  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable destinations");
+  assertSourceContainsOnce(source, 'id="financialModulesDisclosureButton"', "Financial modules disclosure");
+  scenariosPassed++;
+
+  [
+    'id="dashboardTabList"',
+    'id="dashboardTabPanels"',
+    'id="transactionsTabList"',
+    'id="transactionsPanelGroup"',
+    '#dashboard.active { display: flex;',
+    '#transactions.active { display: grid;'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "tab rail before active content");
+  });
+  scenariosPassed++;
+
+  assertSourceExcludes(utilitySource, "overview-surface", "nested utility surface");
+  assertSourceExcludes(utilitySource, "ui-theme-surface", "nested utility card");
+  [
+    '#topUtilityBar { height: 52px; min-height: 52px; background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }',
+    '.overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }',
+    '.analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }',
+    "border-radius: 8px;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded surface hierarchy");
+  });
+  scenariosPassed++;
+
+  [
+    "Search",
+    "Notifications",
+    "notification bell",
+    "avatar",
+    "Welcome back",
+    "Upgrade plan",
+    "workspace switcher",
+    "command palette"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "forbidden SaaS feature");
+  });
+  scenariosPassed++;
+
+  [
+    ':root[data-theme="dark"]',
+    'background: var(--surface-1)',
+    'background: var(--canvas)',
+    '@media print',
+    'background: #ffffff !important;',
+    '#topUtilityBar,'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Light Dark print parity");
+  });
+  scenariosPassed++;
+
+  [
+    'page.hidden = !isActivePage;',
+    'panel.hidden =',
+    'tab.setAttribute("tabindex", isSelected ? "0" : "-1");',
+    'elements.dashboardUtilityControls.hidden = pageId !== "dashboard";',
+    'heading.focus();',
+    '@media (prefers-reduced-motion: reduce)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "state focus and motion preservation");
+  });
+  scenariosPassed++;
+
+  ["google.script.run", "getDashboardData(", "requestDashboardData("]
+    .forEach(function(token)
+    {
+      assertSourceExcludes(showPageSource, token, "shell navigation backend request");
+    });
+  assertSourceContainsOnce(source, "function initializeResponsiveShell()", "responsive listener initializer");
+  assertSourceContainsOnce(source, "function initializeDashboardTabs()", "Dashboard listener initializer");
+  assertSourceContainsOnce(source, "function initializeTransactionsTabs()", "Transactions listener initializer");
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "response mutation");
+  });
+
+  var idQueryCount =
+    (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount =
+    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error(
+      "Full shell query budget exceeded: ids=" +
+      idQueryCount +
+      ", selectors=" +
+      selectorQueryCount
+    );
+  }
+  assertSourceContains(source, "requestAnimationFrame", "one deferred render phase");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    destinations: 9,
+    active: 4,
+    unavailable: 5,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+
+  Logger.log(
+    "PASS: testFullShellVisualContract | scenarios=" +
     summary.scenarios +
     " | destinations=" +
     summary.destinations +
@@ -2856,12 +3108,13 @@ function testDashboardTabFrameworkContract()
   scenariosPassed++;
 
   [
-    "#dashboardTabList { height: 48px; }",
+    "#dashboardTabList,",
+    "#transactionsTabList { height: 40px; min-height: 40px; }",
     ".dashboard-tab-panel:not(#dashboardPanelOverview)",
-    "height: calc(100dvh - 188px);",
-    "#dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }",
+    "#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }",
+    "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
     "@media (max-width: 1023px)",
-    "#contentViewport { overflow: visible; }"
+    "#contentViewport { overflow: visible; padding: 12px; }"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "responsive one-viewport tab contract");
@@ -3025,10 +3278,10 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
-    "#contentViewport { height: calc(100vh - 64px); height: calc(100dvh - 64px); overflow: hidden; }",
-    "#dashboardPanelOverview { height: calc(100dvh - 228px); overflow: hidden; }",
+    "#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }",
+    "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
     "@media (max-width: 1023px)",
-    "#contentViewport { overflow: visible; }",
+    "#contentViewport { overflow: visible; padding: 12px; }",
     "overview-surface",
     ':root[data-theme="dark"] .bg-white',
     "background: #ffffff !important;"
@@ -4249,7 +4502,7 @@ function testTransactionsVisualContract()
   [
     'role="status"', 'No visible transactions in this bounded view',
     ':root[data-theme="dark"] .bg-white',
-    '#transactions.active { height: 100%; overflow: hidden; }',
+    '#transactions.active { display: grid; height: 100%; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; overflow: hidden; }',
     '#transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }',
     '#transactionsTableScroll { overflow-x: auto; }',
     '@media (max-width: 1023px)', '@media (prefers-reduced-motion: reduce)'
@@ -4740,7 +4993,7 @@ function testLogsVisualContract()
     "ui-theme-surface", "ui-theme-inset", "ui-theme-primary",
     "ui-theme-secondary", "ui-theme-muted",
     '#logs.active { height: 100%; overflow: hidden; }',
-    '#logsWorkspace { height: calc(100dvh - 176px); min-height: 0; }',
+    '#logsWorkspace { height: 100%; min-height: 0; }',
     '#sessionLogsListRegion { min-height: 0; overflow-y: auto; }',
     '#logs.active,',
     '#logsWorkspace { height: auto; overflow: visible; }',
@@ -5728,7 +5981,7 @@ function testPerformanceAnalyticsVisualContract()
   scenariosPassed++;
 
   [
-    "height: calc(100dvh - 188px);",
+    ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
     "#dashboardPanelPerformance:not([hidden])",
     "#dashboardPanelAnalytics:not([hidden])",
     "overflow: hidden;",
@@ -6112,7 +6365,7 @@ function testIntelligencePlanningVisualContract()
     "#dashboardPanelIntelligence:not([hidden])",
     "grid-template-columns: repeat(3, minmax(0, 1fr))",
     "#dashboardPanelPlanning:not([hidden])",
-    "height: calc(100dvh - 188px);",
+    ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
     "overflow: hidden;",
     "@media (max-width: 1023px)",
     "#dashboardPanelPlanning { height: auto; overflow: visible; }",

@@ -244,7 +244,7 @@ Implemented and uploaded. The final bounded audit completes approved semantic di
 
 Packages 004–013 retain their recorded technical and functional evidence. The final Apps Script live suite passed 34/34, functional browser acceptance passed, and stabilization commit `7fbd2a3` was pushed. Those facts do not establish screenshot-based fidelity to the approved visual references. Package 013 is no longer treated as the final UI/UX package.
 
-Active UI/UX development continues through Packages 017–022. The [Gap Audit](UIUX-2.0-GAP-AUDIT.md) records the reopening and the [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) governs implementation. Products and financial modules remain migration-gated: Package 016 makes their sidebar entries visible and explicitly unavailable, but no empty pages or fabricated content may be created. Editable KPI targets, API projection, and expanded transaction history/drill-down remain blocked.
+Active UI/UX development continues through Packages 018–022. The [Gap Audit](UIUX-2.0-GAP-AUDIT.md) records the reopening and the [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) governs implementation. Products and financial modules remain migration-gated and unavailable. Editable KPI targets, API projection, and expanded transaction history/drill-down remain blocked.
 
 ### Package 014 — UI, refactor, and regression skills
 
@@ -257,3 +257,7 @@ Complete as documentation-only design authority. The [High-Fidelity Implementati
 ### Package 016 — nine-destination sidebar architecture
 
 Implemented and uploaded. The sidebar now represents exactly nine destinations while retaining Dashboard, Transactions, Settings, and Logs as the only active pages. Products, Capital & Equity, Assets, Depreciation, and Financial Statements are quiet, text-labelled, non-focusable, migration-gated items under one accessible Financial modules disclosure; no route, page, panel, skeleton, sample data, response field, or backend call was added. Desktop widths are 232/64px at 1440 and 216/64px at 1280, with equivalent mobile-drawer truthfulness. Six focused contracts and the ordered local 35/35 suite passed, deterministic Tailwind builds matched, and the exact 26-file clasp inventory was uploaded. Runtime, deployment, and deployed-browser acceptance remain unverified.
+
+### Package 017 — full-shell reconstruction
+
+Implemented locally. One slim 52/48px utility row owns the visible page identity, existing period/Print controls, active period, freshness, and version; redundant visible destination headers are retained only as focusable screen-reader targets. Desktop main content is a viewport-bound grid with 40px Dashboard/Transactions tab rails directly above active content, while mobile retains natural vertical flow and the accessible drawer. Sidebar geometry is quieter and more compact without changing its nine destinations. Existing page content, render targets, requests, responses, states, themes, exports, charts, Settings, and Logs remain compatible. Eight focused contracts and the ordered local 36/36 gate passed with the 71-ID/two-selector budget unchanged. Screenshot-based fidelity, Apps Script runtime, and deployed-browser evidence remain unverified.

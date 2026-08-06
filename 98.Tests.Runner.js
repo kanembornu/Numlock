@@ -23,6 +23,7 @@ function runAllBackendTests()
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testUiShellThemeContract", run: testUiShellThemeContract },
     { name: "testNineDestinationNavigationContract", run: testNineDestinationNavigationContract },
+    { name: "testFullShellVisualContract", run: testFullShellVisualContract },
     { name: "testDashboardTabFrameworkContract", run: testDashboardTabFrameworkContract },
     { name: "testDashboardOverviewContract", run: testDashboardOverviewContract },
     { name: "testPerformanceAnalyticsVisualContract", run: testPerformanceAnalyticsVisualContract },

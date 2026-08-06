@@ -932,7 +932,7 @@ function createResponsiveShellContractFixtures()
     { name: "active navigation", tokens: ['button.setAttribute("aria-current", "page");'] },
     { name: "table scroll wrapper", tokens: ['id="transactionsTableScroll"', 'overflow-x-auto'] },
     { name: "narrow content width", tokens: ['<main id="mainContent" class="ml-0 min-w-0 w-full flex-1'] },
-    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 232px;', '#dashboardSidebar { width: 216px;', '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;', 'lg:translate-x-0', '#mainContent { margin-left: 232px;'] },
+    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 232px;', '#dashboardSidebar { width: 216px;', '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;', 'lg:translate-x-0', 'grid-template-rows: 52px minmax(0, 1fr); margin-left: 232px;'] },
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
   ];
 }
