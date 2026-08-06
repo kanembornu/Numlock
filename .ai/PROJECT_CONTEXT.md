@@ -10,8 +10,8 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## Current state
 
-- UI/UX 2.0 is COMPLETE across Packages 004–013. Final local and Apps Script live `runAllBackendTests()` passed 34/34, browser acceptance passed, and stabilization commit `7fbd2a3` is pushed with local `main`, `origin/main`, and `HEAD` aligned. Version remains `1.0.0`; the accepted production baseline and rollback process remain unchanged.
-- NUMLOCK is on PROJECT HOLD with maintenance-only intake. Implementation-ready backlog count is zero. Editable KPI targets, API projection, and expanded transaction history/drill-down remain blocked; migrated Products, Capital & Equity, Assets, Depreciation, and Financial Statements remain future major capabilities requiring new product/data/migration authority.
+- The v1.0 feature/backend baseline remains stable, while UI/UX 2.0 is active and visually incomplete. Former Packages 005–013 retain functional evidence but do not establish approved-reference fidelity.
+- UI/UX 2.0 Package 015 is complete as documentation-only design authority. `docs/UIUX-2.0-HIGH-FIDELITY-SPEC.md` locks composition, nine-destination navigation truthfulness, page/component geometry, typography, light/dark tokens, states, and screenshot scoring for Packages 016–022.
 - Sprint 5.5 Dashboard Intelligence: complete.
 - Sprint 5.6 backend refactor: complete.
 - Aggregate migrations validated live: summary, revenue trend, expense breakdown, products, profit trend, and Hot/Cold split.
@@ -51,7 +51,7 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 - NUMLOCK is **Feature Complete v1.0** as of 2026-08-05. Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed the local preflight, Apps Script live `runAllBackendTests()` 25/25, immutable deployment version 185, deployed-browser acceptance, and production-health acceptance at the unchanged stable URL. Version metadata remains `1.0.0 — Production`, and immutable version 184 remains the rollback target.
 - The feature/backend v1.0 baseline remains stable. UI/UX 2.0 is reopened: Packages 005–013 are technically complete but do not prove approved-reference visual fidelity, and five approved future-module sidebar destinations are absent.
 - UI/UX 2.0 Package 014 is complete: `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` now own visual fidelity, behavior-preserving restructuring, and cross-feature acceptance respectively. The project-local inventory contains 19 skills.
-- Package 015 is next: create the high-fidelity implementation specification before production reconstruction. See `docs/UIUX-2.0-GAP-AUDIT.md` for the remaining sequence and acceptance contract.
+- Package 016 is next: implement sidebar/navigation architecture with four active destinations and five visible, migration-gated unavailable destinations without placeholder pages.
 - Editable KPI targets, additive payload projection, and expanded drill-down remain blocked and are not authorized by the UI/UX reopening.
 - Release candidate `658f4ab1011633e86634f14ce838a514c5205df0` began from a clean `main`/`origin/main` boundary and passed the 2026-08-05 repository preflight: dependency install, production/frontend syntax, manifest parse, Markdown links, eight focused release contracts, local unified 25/25, runner count, and Git checks. Authorized clasp identity and the exact 26-file inventory were confirmed; `clasp push --force` reported the script already up to date.
 - The existing stable production deployment now serves immutable version 185. Deployed-browser and production-health acceptance passed; immutable version 184 remains the known-good rollback target. No release evidence commit, annotated tag, or Git push has occurred.

@@ -26,7 +26,7 @@ The bounded v1.0 feature/backend baseline remains stable. UI/UX 2.0 is incomplet
 
 ## 5. Latest completed sprint/package
 
-**UI/UX 2.0 Package 014 — COMPLETE on 2026-08-06.** The project-local `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` skills now establish distinct visual-fidelity, behavior-preserving cleanup, and cross-feature acceptance ownership. No production source, Tailwind, test runner, clasp inventory, or runtime behavior changed.
+**UI/UX 2.0 Package 015 — COMPLETE on 2026-08-06.** The [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) now locks reference translation, exact desktop/mobile composition, nine-destination navigation, page/component geometry, typography, light/dark tokens, states, and screenshot scoring before production reconstruction. No production source, Tailwind, test runner, clasp inventory, or runtime behavior changed.
 
 ## 6. Current test gate and evidence level
 
@@ -89,7 +89,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 
 ## 9. Implementation-ready backlog
 
-**Count: 9 ordered UI/UX completion packages (014–022).** These are presentation/navigation work over the stable feature/backend baseline. The three data/API expansion scopes remain blocked.
+**Count: 7 remaining UI/UX completion packages (016–022).** Packages 014–015 are complete; remaining work is presentation/navigation implementation and acceptance over the stable feature/backend baseline. The three data/API expansion scopes remain blocked.
 
 ## 10. Blocked backlog
 
@@ -159,7 +159,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 ## 14. Active-development boundary
 
-Continue UI/UX 2.0 development only within Packages 014–022 while all of these conditions remain true:
+Continue UI/UX 2.0 development only within Packages 016–022 while all of these conditions remain true:
 
 - the feature/backend baseline remains stable and unchanged unless separately authorized;
 - version `1.0.0` continues to satisfy the documented bounded product need;
@@ -194,7 +194,7 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 
 ## 19. Next milestone
 
-**UI/UX 2.0 Package 015 — high-fidelity implementation specification.** Translate the approved visual references into annotated layouts, tokens, typography, density, component decisions, and screenshot criteria at all four required viewports before production reconstruction.
+**UI/UX 2.0 Package 016 — sidebar/navigation architecture.** Implement the nine ordered destinations with four active routes, five truthful migration-gated unavailable items, an accessible Financial modules disclosure, the specified desktop rail states, and equivalent mobile drawer behavior without empty pages.
 
 ## 20. Status-history log
 
@@ -216,3 +216,5 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-06 | UI/UX 2.0 completion | Packages 010–013 completed Transactions, Settings, Logs, and final stabilization; the runner reached 34 entries. |
 | 2026-08-06 | UI/UX 2.0 complete / Project hold | Packages 004–013 complete; final local/live suite passed 34/34, browser acceptance passed, final stabilization commit `7fbd2a3` was pushed, and the project entered hold with maintenance-only intake. |
 | 2026-08-06 | UI/UX 2.0 closure correction | The prior closure remains historical but is superseded as current status: functional evidence remains valid, visual parity and nine-destination navigation remain incomplete, and active UI/UX development resumes. |
+| 2026-08-06 | UI/UX 2.0 Package 014 | Added the three project-local UI, refactor, and regression skills without changing production behavior. |
+| 2026-08-06 | UI/UX 2.0 Package 015 | Locked the high-fidelity implementation specification and separate screenshot-scoring contract; documentation only. |

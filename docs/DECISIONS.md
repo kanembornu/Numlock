@@ -1,5 +1,11 @@
 # Engineering Decisions
 
+### Lock UI/UX 2.0 reconstruction to the high-fidelity specification
+
+UI/UX 2.0 Package 015 makes the [High-Fidelity Implementation Specification](UIUX-2.0-HIGH-FIDELITY-SPEC.md) authoritative for Packages 016–022. Reference 2 controls visual composition and reference 1 supports expanded/collapsed sidebar clarity. The specification requires a one-viewport desktop shell, `232/64px` navigation rail (`216/64px` at compact desktop), `52/48px` utility row, `40px` content tabs, compact KPI geometry, chart-led layouts, low-noise monochrome surfaces, editorial typography, and exact light/dark tokens.
+
+The navigation exposes nine ordered destinations, but only Dashboard, Transactions, Settings, and Logs navigate. Products, Capital & Equity, Assets, Depreciation, and Financial Statements remain visibly unavailable inside an accessible Financial modules disclosure and may not own placeholder routes or pages. Visual acceptance requires every prescribed capture to score `18/18`; functional acceptance remains necessary but cannot establish reference fidelity.
+
 ### Reopen UI/UX 2.0 and separate functional from visual acceptance
 
 The project-hold decision below remains historical but is superseded for current planning. Local/static contracts, Apps Script live 34/34, and functional browser acceptance prove behavior within the former scope; they do not prove fidelity to the approved visual reference. UI/UX 2.0 stays active until Packages 014–022 close the documented gaps with side-by-side screenshots at 1440×900, 1280×768, 768px, and 375px.

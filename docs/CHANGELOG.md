@@ -6,6 +6,8 @@ This document owns completed changes and release history. [Project Status](PROJE
 
 ## Unreleased
 
+- Completed UI/UX 2.0 Package 015 as documentation-only high-fidelity specification. Locked measurable reference translation, desktop/mobile shell geometry, nine-destination navigation truthfulness, Dashboard/Transactions/Settings/Logs composition, component dimensions, editorial typography, exact light/dark semantic tokens, state treatments, forbidden-decoration exclusions, and an `18/18` screenshot acceptance gate for Packages 016–022. No production source, Tailwind, tests, clasp, deployment, commit, or push changed.
+
 - Completed UI/UX 2.0 Package 014 by adding `$numlock-ui`, `$numlock-refactor`, and `$numlock-regression` as concise project-local skills with non-overlapping visual-fidelity, behavior-preserving cleanup, and cross-feature acceptance ownership. Updated the 19-skill inventory, routing guidance, and recommended combinations. No existing skill, production source, Tailwind, test runner, clasp inventory, deployment, commit, or push changed.
 
 - Corrected the premature UI/UX 2.0 closure after an evidence audit. Packages 005–013 retain their technical, live 34/34, and functional-browser evidence, but no screenshot-based approved-reference comparison proves visual fidelity and the runtime exposes four rather than nine approved destinations. Reopened active UI/UX development, added granular project history and gap audit, planned three missing skills without creating them, and defined Packages 014–022 plus a separate visual-acceptance contract. No production source, Tailwind, clasp, deployment, commit, or push changed.
