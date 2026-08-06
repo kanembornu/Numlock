@@ -126,16 +126,6 @@
 }
 
 @layer components {
-  .ui-surface {
-    background: var(--surface-1);
-    border-color: var(--border-subtle);
-    color: var(--text-primary);
-  }
-
-  .ui-muted {
-    color: var(--text-muted);
-  }
-
   .ui-sidebar-item {
     color: var(--text-on-dark);
   }

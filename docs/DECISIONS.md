@@ -1,5 +1,9 @@
 # Engineering Decisions
 
+### Require zero-reference or call-equivalence evidence for UI reconstruction cleanup
+
+UI/UX 2.0 Package 021 permits removal only when repository-wide search proves zero ownership or a wrapper has exact call equivalence and no independent side effect. Under that rule, `.ui-surface`, `.ui-muted`, `updateTransactionDrilldownPresentation()`, and two obsolete phase comments were removable; low-reference entry points, handlers, renderers, formatters, metadata targets, theme owners, and chart helpers remain because they retain live ownership. Test cleanup follows the same rule: raw template-scriptlet inspection is replaced by stable scoped ID and provenance assertions without weakening metadata exclusion. The rollback boundary is limited to authored CSS, frontend source, and contract tests; visual geometry, public behavior, formulas, data, responses, and APIs do not change.
+
 ### Own every screen, chart, and print color in the compiled semantic-token layer
 
 UI/UX 2.0 Package 020 establishes `assets/tailwind.input.css` as the single authored owner for Light, Dark, state, skeleton, tooltip, Chart.js, and print-light colors. Production HTML may consume semantic custom properties and generated utility adapters but may not define raw color literals. Chart renderers and theme synchronization read the same computed palette, while print explicitly reads the print-light palette and restores the active screen palette afterward. `data-theme-preference` remains the stored choice and `data-effective-theme` records the resolved visual state. The System media listener exists only while System is selected. This decision changes token ownership and listener lifecycle only; geometry, component composition, data, responses, chart instances, and product behavior remain unchanged.

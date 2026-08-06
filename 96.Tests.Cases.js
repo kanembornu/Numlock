@@ -2856,7 +2856,11 @@ function testFullShellVisualContract()
   );
   assertSourceContainsOnce(source, 'id="utilityVersion"', "single utility version target");
   assertSourceExcludes(sidebarSource, 'id="utilityVersion"', "sidebar utility version target");
-  assertSourceExcludes(sidebarSource, "<?= version ?>", "sidebar version injection");
+  assertSourceExcludes(
+    sidebarSource,
+    'data-metadata-source="template.version"',
+    "sidebar template-version provenance"
+  );
   assertSourceExcludes(utilitySource, 'id="aboutVersion"', "About version target");
   assertSourceExcludes(utilitySource, 'id="printReportVersion"', "Print version target");
   assertSourceExcludes(
@@ -5473,6 +5477,224 @@ function testLogsVisualContract()
     " | backendRequests=" + summary.backendRequests +
     " | idQueries=" + summary.idQueries +
     " | selectorQueries=" + summary.selectorQueries
+  );
+
+  return summary;
+}
+
+function testBoundedUiRefactorContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var tokenSource = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
+  var fullShellTestSource = String(testFullShellVisualContract);
+  var navigationTestSource = String(testNineDestinationNavigationContract);
+  var scenariosPassed = 0;
+
+  [
+    "function updateTransactionDrilldownPresentation(",
+    "Skeleton Chart Hide", "Render Res"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "proven removed frontend debt");
+  });
+  [".ui-surface{", ".ui-muted{"].forEach(function(token)
+  {
+    assertSourceExcludes(tokenSource, token, "proven removed authored selector");
+  });
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(
+    source,
+    "updateTransactionsViewPresentation(transactions);",
+    2,
+    "authoritative Transactions presentation call"
+  );
+  assertSourceContainsOnce(
+    source,
+    "function updateTransactionsViewPresentation(transactions)",
+    "authoritative Transactions presentation owner"
+  );
+  scenariosPassed++;
+
+  [
+    "function renderBusinessOverview(", "function renderCharts(",
+    "function renderBusinessIntelligence(", "function renderExecutiveCenter(",
+    "function renderTransactions(", "function renderSessionClientLogs("
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(source, token, "single authoritative render owner");
+  });
+  scenariosPassed++;
+
+  [fullShellTestSource, navigationTestSource].forEach(function(testSource)
+  {
+    assertSourceExcludes(testSource, "<!--", "comment-based source boundary");
+  });
+  assertSourceExcludes(
+    fullShellTestSource,
+    "<?= version ?>",
+    "raw template-token assertion"
+  );
+  [
+    'id="utilityVersion"', 'data-metadata-source="template.version"',
+    'id="aboutVersion"', 'id="printReportVersion"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "semantic metadata ownership marker");
+  });
+  scenariosPassed++;
+
+  var doGetSource = String(doGet);
+  [
+    "template.appName = PROJECT_CONFIG.APP_NAME;",
+    "template.version = PROJECT_CONFIG.VERSION;",
+    "template.releaseLabel = PROJECT_CONFIG.RELEASE_LABEL;",
+    "template.environment = PROJECT_CONFIG.ENVIRONMENT;"
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(doGetSource, token, "sole executable metadata assignment");
+  });
+  assertSourceExcludes(source, "1.0.0", "hardcoded production metadata");
+  scenariosPassed++;
+
+  [
+    "function getCurrentThemePalette(forceLight)",
+    "function synchronizeChartTheme(forceLight)",
+    "function synchronizeSystemThemeListener(preference)",
+    "function initializeThemeFoundation()"
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(source, token, "single theme or chart owner");
+  });
+  assertSourceOccurrenceCount(source, "systemThemeQuery.addEventListener(", 1, "single System listener attach path");
+  assertSourceOccurrenceCount(source, "systemThemeQuery.removeEventListener(", 1, "single System listener remove path");
+  scenariosPassed++;
+
+  [
+    "responsiveShellInitialized", "dashboardTabsInitialized",
+    "transactionsTabsInitialized", "themeFoundationInitialized"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "listener initialization guard");
+  });
+  ["ResizeObserver", 'addEventListener("resize"'].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "orphaned global resize callback");
+  });
+  scenariosPassed++;
+
+  [
+    ".page { display: none; }", "page.hidden = !isActivePage;",
+    "panel.hidden = !isSelected;", "sidebar.inert = !isOpen && !isDesktop;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "hidden focus exclusion");
+  });
+  scenariosPassed++;
+
+  var navigationSource = getSourceRegion(
+    source,
+    "function showPage(pageId)",
+    "function getResolvedTheme(preference)",
+    "refactor navigation ownership"
+  );
+  var dashboardTabSource = getSourceRegion(
+    source,
+    "function setActiveDashboardTab(tabName, moveFocus)",
+    "function initializeDashboardTabs",
+    "refactor Dashboard tab ownership"
+  );
+  var transactionsTabSource = getSourceRegion(
+    source,
+    "function setActiveTransactionsTab(tabName, moveFocus)",
+    "function initializeTransactionsTabs",
+    "refactor Transactions tab ownership"
+  );
+  [navigationSource, dashboardTabSource, transactionsTabSource].forEach(function(region)
+  {
+    ["google.script.run", "getDashboardData(", "requestDashboardData("].forEach(function(token)
+    {
+      assertSourceExcludes(region, token, "tab or navigation backend request");
+    });
+  });
+  scenariosPassed++;
+
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "refactor response mutation");
+  });
+  assertSourceContains(source, "res.recentTransactions.slice(0, 10)", "bounded Transactions copy");
+  scenariosPassed++;
+
+  [
+    "function destroyChartInstance(chart)",
+    "revenueChart = destroyChartInstance(revenueChart);",
+    "hotColdChart = destroyChartInstance(hotColdChart);",
+    "expenseChart = destroyChartInstance(expenseChart);",
+    "function resizeVisibleDashboardCharts(tabName)",
+    'chart.update("none");', "synchronizeChartTheme(true);",
+    "synchronizeChartTheme(false);"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "single chart lifecycle path");
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardSidebar { width: 232px;", "#dashboardSidebar { width: 216px;",
+    "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar { width: 64px;",
+    "#topUtilityBar { height: 52px;", "#topUtilityBar { height: 48px;",
+    "#dashboardTabList,\n      #transactionsTabList { height: 40px;", "#transactionsTableScroll th { height: 36px;",
+    "#transactionsTableScroll td { height: 40px;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "unchanged visual geometry");
+  });
+  scenariosPassed++;
+
+  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine navigation destinations");
+  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable destinations");
+  scenariosPassed++;
+
+  [
+    'value="light"', 'value="dark"', 'value="system"',
+    'data-effective-theme', "--canvas:#07111f", "--print-canvas:",
+    "synchronizeChartTheme(true);", "synchronizeChartTheme(false);"
+  ].forEach(function(token)
+  {
+    var owner = token.indexOf("--") === 0 ? tokenSource : source;
+    assertSourceContains(owner, token, "theme and print-light preservation");
+  });
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+  if (idQueryCount > 71 || selectorQueryCount > 2)
+  {
+    throw new Error("Bounded refactor query budget exceeded");
+  }
+  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "one deferred render phase");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    removedSymbols: 5,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount,
+    deferredPhases: 1,
+    backendRequests: 0,
+    responseMutation: false
+  };
+
+  Logger.log(
+    "PASS: testBoundedUiRefactorContract | scenarios=" + summary.scenarios +
+    " | removedSymbols=" + summary.removedSymbols +
+    " | idQueries=" + summary.idQueries +
+    " | selectorQueries=" + summary.selectorQueries +
+    " | deferredPhases=" + summary.deferredPhases +
+    " | backendRequests=" + summary.backendRequests +
+    " | responseMutation=" + summary.responseMutation
   );
 
   return summary;

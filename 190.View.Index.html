@@ -2256,9 +2256,6 @@
       elements.topProductSkeleton.classList.remove("hidden");
     }
 
-    //--------------------------------------------------
-    // Skeleton Chart Hide
-    //--------------------------------------------------
     function hideChartSkeleton()
     {
       var elements = initializeStableDashboardElements();
@@ -4286,11 +4283,6 @@
         visibleTransactionRowCount === 0;
     }
 
-    function updateTransactionDrilldownPresentation(transactions)
-    {
-      updateTransactionsViewPresentation(transactions);
-    }
-
     function applyTransactionDrilldown(type, value, label)
     {
       var allowedTypes = {
@@ -4339,12 +4331,9 @@
       var transactions = getVisibleTransactions();
 
       renderTransactionRows(transactions);
-      updateTransactionDrilldownPresentation(transactions);
+      updateTransactionsViewPresentation(transactions);
     }
 
-    //--------------------------------------------------
-    // Render Res
-    //--------------------------------------------------
     function scheduleDeferredDashboardRender(res, requestToken)
     {
       pendingDashboardRenderFrame =
