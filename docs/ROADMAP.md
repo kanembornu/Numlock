@@ -287,3 +287,7 @@ Closure Candidate locally. The directly runnable closure contract raises the ord
 ### Package 023 — workflow and Overview blueprint
 
 Complete as documentation/workflow scope. The compact [NUMLOCK Development System](../.codex/NDS.md) replaces repeated generic prompt context with current-state pointers, playbooks, templates, and visual checklists. The [Dashboard Overview Blueprint](UIUX-2.1-OVERVIEW-BLUEPRINT.md) defines the first screenshot-driven reconstruction slice, exact responsive hierarchy, preserved render targets, and approval gate. The next package may implement Overview only after capturing its matched production baseline.
+
+### Package 024 — Dashboard Overview reconstruction
+
+Uploaded candidate. Reconstructed Overview only from the captured production baseline toward Reference 2: executive plane, five compact KPIs, the existing Revenue Trend as the `8/12` hero, and compact comparison/Data Quality context at `4/12`. Stable IDs, backend/response/request behavior, chart lifecycle, drill-down, accessibility, themes, print, and performance contracts remain preserved. Deterministic Tailwind generation, five focused contracts, local `runAllBackendTests()` PASS 41/41, exact inventory, and the 26-file source upload are verified. Candidate capture is blocked because no browser instance is available; visual approval still requires screenshot review.
