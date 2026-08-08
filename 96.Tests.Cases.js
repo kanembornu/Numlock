@@ -2902,7 +2902,7 @@ function testFullShellVisualContract()
     "grid-template-rows: 52px minmax(0, 1fr)",
     "grid-template-rows: 48px minmax(0, 1fr)",
     '#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }',
-    '#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }'
+    '#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "one-viewport desktop shell");
@@ -3138,11 +3138,10 @@ function testDashboardTabFrameworkContract()
       "dashboardHeaderRegion",
       "executiveSummarySection",
       "keyMetricsSection",
-      "overviewContextRow"
+      "overviewEvidenceRow"
     ],
     performance: [
-      "businessPerformanceSection",
-      "revenueChartSection"
+      "businessPerformanceSection"
     ],
     analytics: [
       "hotColdChartSection",
@@ -3303,6 +3302,7 @@ function testDashboardTabFrameworkContract()
 
   [
     "function resizeVisibleDashboardCharts(tabName)",
+    '"overview": [revenueChart]',
     "chart.resize();",
     "revenueChart = destroyChartInstance(revenueChart);",
     "hotColdChart = destroyChartInstance(hotColdChart);",
@@ -3317,7 +3317,7 @@ function testDashboardTabFrameworkContract()
     "#dashboardTabList,",
     "#transactionsTabList { height: 40px; min-height: 40px; }",
     ".dashboard-tab-panel:not(#dashboardPanelOverview)",
-    "#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }",
+    "#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }",
     "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
     "@media (max-width: 1023px)",
     "#contentViewport { overflow: visible; padding: 12px; }"
@@ -3422,13 +3422,17 @@ function testDashboardOverviewContract()
     'id="executiveSummarySection"',
     "Business condition",
     'id="executiveAlertCard"',
-    "Attention status",
+    "Attention ·",
     'id="businessPriorityRegion"',
     'id="businessPriorityLevel"',
     'id="priorityTitle"',
     'id="priorityReason"',
     'id="priorityMessage"',
     'id="priorityMeta"',
+    ".hf-executive-plane { background: var(--surface-1); border-bottom: 1px solid var(--divider); }",
+    ".hf-priority-action { border-left: 1px solid var(--divider); }",
+    ".hf-priority-action #businessPriorityLevel { border-bottom: 2px solid currentColor; padding-bottom: 2px; }",
+    '"text-xs font-semibold " +',
     '"Next action: " + priority.action',
     "priority.evidence.metric"
   ].forEach(function(token)
@@ -3468,9 +3472,28 @@ function testDashboardOverviewContract()
     "new Array(5)",
     "five-card loading skeleton"
   );
+  [
+    "hf-kpi-strip",
+    ".hf-kpi-card { min-height: 76px; border: 0; border-radius: 0; box-shadow: none; }",
+    ".hf-kpi-card + .hf-kpi-card { border-left: 1px solid var(--divider); }",
+    'status === "No Comparison"',
+    "supportingText ?",
+    'text-[28px] font-extrabold leading-8 tracking-tight'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact KPI strip");
+  });
   scenariosPassed++;
 
   [
+    'id="overviewEvidenceRow"',
+    'id="revenueChartSection"',
+    'staging.querySelector("#overviewEvidenceRow")',
+    "grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)",
+    "#dashboardPanelOverview #mainChartWrapper { height: 360px; min-height: 360px; max-height: 360px; }",
+    ".hf-comparison-grid > *:nth-child(even) { border-left: 1px solid var(--divider); }",
+    'id="overviewContextRow" class="hf-overview-context border-l border-slate-200"',
+    "#dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }",
     'id="periodComparisonSection"',
     'id="periodComparisonMetrics"',
     'id="dataQualityInformation"',
@@ -3479,7 +3502,7 @@ function testDashboardOverviewContract()
     'aria-controls="dataQualityDetails"'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "compact comparison and Data Quality");
+    assertSourceContains(source, token, "Overview evidence hierarchy");
   });
   scenariosPassed++;
 
@@ -3497,18 +3520,19 @@ function testDashboardOverviewContract()
   });
   scenariosPassed++;
 
-  var overviewStart = source.indexOf('id="dashboardPanelOverview"');
-  var overviewEnd = source.indexOf('id="dashboardPanelPerformance"', overviewStart);
-  var overviewPanelSource = source.slice(overviewStart, overviewEnd);
+  var overviewOwnershipSource = getSourceRegion(
+    source,
+    "overview: [",
+    "performance: [",
+    "Overview ownership"
+  );
   [
-    "canvas",
-    "new Chart(",
     "sparkline",
     "google.script.run",
     "getDashboardData("
   ].forEach(function(token)
   {
-    assertSourceExcludes(overviewPanelSource, token, "Overview-only additions");
+    assertSourceExcludes(overviewOwnershipSource, token, "Overview-only additions");
   });
   scenariosPassed++;
 
@@ -3747,7 +3771,7 @@ function testExecutivePresentationContract()
 
   [
     "grid grid-cols-1 lg:grid-cols-12",
-    "grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5",
+    "hf-kpi-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5",
     'id="planningFocusRow" class="grid grid-cols-1 gap-2"'
   ].forEach(function(token)
   {
@@ -6739,7 +6763,7 @@ function testDashboardHighFidelityCompositionContract()
   var overviewOrder = [
     "executiveSummarySection",
     "keyMetricsSection",
-    "overviewContextRow"
+    "overviewEvidenceRow"
   ];
   overviewOrder.forEach(function(id, index)
   {
@@ -6758,8 +6782,11 @@ function testDashboardHighFidelityCompositionContract()
     "hf-executive-fact",
     "hf-priority-action",
     "hf-kpi-card",
+    "hf-kpi-strip",
     "lg:grid-cols-5",
-    "grid-cols-2 gap-2 sm:grid-cols-4"
+    "hf-overview-evidence",
+    "grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)",
+    "hf-comparison-grid mt-3 grid grid-cols-2"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "compact Overview composition");
@@ -6772,7 +6799,7 @@ function testDashboardHighFidelityCompositionContract()
   scenariosPassed++;
 
   [
-    "grid-template-columns: minmax(0, 4fr) minmax(0, 8fr)",
+    'staging.querySelector("#overviewEvidenceRow")',
     'data-composition-role="hero-chart"',
     'id="businessPerformanceSection"',
     'id="revenueChartSection"',
@@ -6916,7 +6943,8 @@ function testDashboardHighFidelityCompositionContract()
 
   [
     "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }",
-    "height: clamp(300px, calc(100dvh - 330px), 440px)",
+    "#dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }",
+    "#dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }",
     "revenueChart = destroyChartInstance(revenueChart);",
     "hotColdChart = destroyChartInstance(hotColdChart);",
     "expenseChart = destroyChartInstance(expenseChart);",
@@ -7000,9 +7028,11 @@ function testPerformanceAnalyticsVisualContract()
   var scenariosPassed = 0;
 
   var ownership = {
+    overview: [
+      "overviewEvidenceRow"
+    ],
     performance: [
-      "businessPerformanceSection",
-      "revenueChartSection"
+      "businessPerformanceSection"
     ],
     analytics: [
       "hotColdChartSection",
@@ -7026,15 +7056,14 @@ function testPerformanceAnalyticsVisualContract()
   scenariosPassed++;
 
   [
-    "#dashboardPanelPerformance:not([hidden])",
-    "grid-template-columns: minmax(0, 5fr) minmax(0, 7fr)",
+    "#dashboardPanelOverview #revenueChartSection",
+    "grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)",
     'id="businessPerformanceSection"',
     'id="revenueChartSection"',
-    "Primary trend",
     'id="mainChartWrapper"'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "Performance hero hierarchy");
+    assertSourceContains(source, token, "Overview Revenue hero hierarchy");
   });
   scenariosPassed++;
 
@@ -7122,7 +7151,9 @@ function testPerformanceAnalyticsVisualContract()
     'aria-labelledby="hotColdChartTitle"',
     'aria-labelledby="expenseChartTitle"',
     "shouldReduceMotion() ? false : undefined",
-    "pointHoverRadius: 7",
+    "pointHoverRadius: 6",
+    "lineWidth: 0.75",
+    "drawTicks: false",
     "usePointStyle: true",
     "chart.options.plugins.legend.labels.color = palette.axis;",
     "synchronizeChartTheme(false);"
@@ -7149,8 +7180,11 @@ function testPerformanceAnalyticsVisualContract()
   [
     "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }",
     "#mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }",
-    "#dashboardPanelPerformance #revenueChartSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }",
-    "#dashboardPanelPerformance #mainChartWrapper { height: clamp(300px, calc(100dvh - 330px), 440px); min-height: 300px; max-height: 440px; }"
+    "#dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }",
+    "#dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }",
+    "#dashboardPanelOverview #mainChartWrapper { height: 360px; min-height: 360px; max-height: 360px; }",
+    "#dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }",
+    "#dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "bounded Revenue Trend height");
@@ -7158,27 +7192,31 @@ function testPerformanceAnalyticsVisualContract()
 
   assertSourceExcludes(
     source,
-    "#dashboardPanelPerformance #mainChartWrapper { height: calc(100% - 76px)",
+    "#dashboardPanelOverview #mainChartWrapper { height: calc(100% - 76px)",
     "content-derived Revenue Trend height"
   );
 
   function resolveRevenueChartHeight(viewportWidth, viewportHeight)
   {
-    if (viewportWidth < 1024)
+    if (viewportWidth < 640)
     {
-      return 288;
+      return 220;
     }
 
-    return Math.max(
-      300,
-      Math.min(viewportHeight - 330, 440)
-    );
+    if (viewportWidth >= 1024 && viewportHeight >= 1000)
+    {
+      return 360;
+    }
+
+    return viewportHeight <= 800 ? 240 : 288;
   }
 
   [
-    { width: 375, height: 667, expected: 288 },
-    { width: 1280, height: 768, expected: 438 },
-    { width: 1440, height: 900, expected: 440 }
+    { width: 375, height: 667, expected: 220 },
+    { width: 768, height: 900, expected: 288 },
+    { width: 1280, height: 768, expected: 240 },
+    { width: 1440, height: 900, expected: 288 },
+    { width: 1920, height: 1200, expected: 360 }
   ].forEach(function(viewport)
   {
     var firstActivation = resolveRevenueChartHeight(

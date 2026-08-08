@@ -97,14 +97,41 @@
       .ui-theme-primary { color: var(--text-primary) !important; }
       .ui-theme-secondary { color: var(--text-secondary) !important; }
       .ui-theme-muted { color: var(--text-muted) !important; }
-      .hf-section-label { color: var(--text-muted); font-size: 12px; font-weight: 600; line-height: 16px; }
+      .hf-section-label { color: var(--text-muted); font-size: 12px; font-weight: 500; line-height: 16px; }
       .hf-section-heading { color: var(--text-primary); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 24px; }
-      .hf-executive-plane { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; }
+      .hf-executive-plane { background: var(--surface-1); border-bottom: 1px solid var(--divider); }
       .hf-executive-fact { min-width: 0; padding: 12px 16px; }
       .hf-executive-fact + .hf-executive-fact { border-left: 1px solid var(--divider); }
-      .hf-priority-action { background: var(--selected); border-left: 3px solid var(--brand); }
-      .hf-kpi-card { min-height: 96px; border: 1px solid var(--border-subtle); border-radius: 10px; box-shadow: none; }
+      .hf-priority-action { border-left: 1px solid var(--divider); }
+      .hf-priority-action #businessPriorityLevel { border-bottom: 2px solid currentColor; padding-bottom: 2px; }
+      .hf-kpi-strip { background: var(--surface-1); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); }
+      .hf-kpi-card { min-height: 76px; border: 0; border-radius: 0; box-shadow: none; }
+      .hf-kpi-card + .hf-kpi-card { border-left: 1px solid var(--divider); }
+      .hf-overview-evidence { display: grid; min-width: 0; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 12px; }
+      .hf-overview-context { display: flex; min-width: 0; flex-direction: column; }
+      .hf-overview-context > * + * { border-top: 1px solid var(--divider); }
+      .hf-comparison-grid > * { min-width: 0; padding: 8px 10px; }
+      .hf-comparison-grid > *:nth-child(even) { border-left: 1px solid var(--divider); }
+      .hf-comparison-grid > *:nth-child(n+3) { border-top: 1px solid var(--divider); }
       .hf-evidence-group > * + * { border-left: 1px solid var(--divider); }
+
+      /* Overview polish: preserve the composition while sharpening hierarchy and rhythm. */
+      #dashboardPanelOverview .hf-section-label { font-size: 11px; font-weight: 500; line-height: 16px; }
+      #dashboardPanelOverview #executiveSummary { color: var(--text-secondary); font-size: 14px; font-weight: 600; line-height: 20px; }
+      #dashboardPanelOverview #businessPriorityRegion { padding-left: 24px; }
+      #dashboardPanelOverview #businessPriorityHeading { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+      #dashboardPanelOverview #priorityTitle { color: var(--text-primary); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 24px; }
+      #dashboardPanelOverview #priorityReason { color: var(--text-muted); font-size: 11px; line-height: 16px; }
+      #dashboardPanelOverview #priorityMessage { font-size: 11px; line-height: 16px; }
+      #dashboardPanelOverview #keyMetricsTitle,
+      #dashboardPanelOverview #revenueChartTitle { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 24px; }
+      #dashboardPanelOverview .overview-kpi-value { font-size: 32px; font-weight: 800; letter-spacing: -0.035em; line-height: 36px; }
+      #dashboardPanelOverview .hf-kpi-card > span:last-child { color: var(--text-muted); font-weight: 400; line-height: 16px; }
+      #dashboardPanelOverview #revenueChartSection { border-color: transparent; border-radius: 0; padding: 16px 8px 8px 16px; }
+      #dashboardPanelOverview #revenueChartSummary { color: var(--text-muted); line-height: 16px; }
+      #dashboardPanelOverview #revenueChartSection > div:first-child { min-height: 32px; }
+      #dashboardPanelOverview #revenueChartSection > div:first-child button { align-self: flex-start; border-color: var(--divider); background: transparent; }
+      #dashboardTabList:has(#dashboardTabOverview[aria-selected="true"]) { border-bottom-color: transparent; }
       .hf-secondary-surface { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: none; }
       .hf-transactions-toolbar { min-height: 52px; }
       #transactionsTableScroll thead { background: var(--surface-2); }
@@ -134,18 +161,23 @@
         #mainContent { display: grid; grid-template-rows: 52px minmax(0, 1fr); margin-left: 232px; height: 100vh; height: 100dvh; overflow: hidden; }
         #contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }
         #dashboard.active { display: flex; min-height: 0; height: 100%; flex-direction: column; overflow: hidden; }
-        #dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; }
-        #dashboardTabList { margin: 0; }
-        #dashboardTabPanels { min-height: 0; overflow: hidden; }
+        #dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }
+        #dashboardTabList { margin: 0; padding-left: 16px; padding-right: 16px; }
+        #dashboardTabPanels { min-height: 0; overflow: hidden; padding-top: 10px; }
         .dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }
         #dashboardPanelOverview { height: 100%; overflow: hidden; }
         #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection,
+        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 12px; }
+        #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 8px; }
+        #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
-        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 12px; overflow: hidden; }
-        #dashboardPanelPerformance #businessPerformanceSection,
-        #dashboardPanelPerformance #revenueChartSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
-        #dashboardPanelPerformance #mainChartWrapper { height: clamp(300px, calc(100dvh - 330px), 440px); min-height: 300px; max-height: 440px; }
+        #dashboardPanelOverview #executiveSummarySection { max-height: 132px; overflow: hidden; }
+        #dashboardPanelOverview .hf-kpi-card { min-height: 82px; }
+        #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }
+        #dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }
+        #dashboardPanelPerformance:not([hidden]) { display: block; overflow: hidden; }
+        #dashboardPanelPerformance #businessPerformanceSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
         #dashboardPanelAnalytics:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #dashboardPanelAnalytics > section,
         #dashboardPanelAnalytics > div { min-height: 0; height: 100%; margin: 0; }
@@ -192,12 +224,20 @@
         #topUtilityBar { height: 48px; min-height: 48px; }
       }
 
+      @media (min-width: 1024px) and (min-height: 1000px)
+      {
+        #dashboardPanelOverview #mainChartWrapper { height: 360px; min-height: 360px; max-height: 360px; }
+      }
+
       @media (min-width: 1024px) and (max-height: 800px)
       {
         .hf-executive-fact { padding: 8px 12px; }
-        .hf-kpi-card { min-height: 96px; padding: 12px; }
+        .hf-kpi-card { min-height: 72px; padding: 10px 12px; }
+        #dashboardPanelOverview #executiveSummarySection { max-height: 116px; }
+        #dashboardPanelOverview .hf-kpi-card { min-height: 72px; }
         #dashboardPanelOverview #executiveSummarySection,
-        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 6px; }
+        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
+        #dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }
         .hf-setting-choice { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
       }
 
@@ -209,6 +249,8 @@
         #contentViewport { overflow: visible; padding: 12px; }
         #dashboardPanelPerformance,
         #dashboardPanelAnalytics { height: auto; overflow: visible; }
+        .hf-overview-evidence { display: grid; grid-template-columns: minmax(0, 1fr); }
+        #businessOverview > :last-child { grid-column: 1 / -1; }
         #dashboardPanelIntelligence,
         #dashboardPanelPlanning { height: auto; overflow: visible; }
         #dashboardPanelIntelligence #diagnosisContainer,
@@ -229,7 +271,14 @@
         #transactionsTableScroll td { height: 44px; }
         .hf-log-severity-strip > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-executive-fact + .hf-executive-fact { border-top: 1px solid var(--border-subtle); border-left: 0; }
+        .hf-kpi-card + .hf-kpi-card { border-top: 1px solid var(--divider); border-left: 0; }
         .hf-evidence-group > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
+      }
+
+      @media (max-width: 639px)
+      {
+        #businessOverview > :last-child { grid-column: auto; }
+        #dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -789,14 +838,14 @@
     <div id="dashboardContent" aria-busy="false">
       <div
         id="dashboardTabList"
-        class="flex items-center gap-3 overflow-x-auto border-b border-slate-200 px-3"
+        class="flex items-center gap-2 overflow-x-auto border-b border-slate-200"
         role="tablist"
         aria-label="Dashboard sections">
-        <button id="dashboardTabOverview" type="button" role="tab" aria-selected="true" aria-controls="dashboardPanelOverview" tabindex="0" data-dashboard-tab="overview" class="h-10 shrink-0 border-b-2 border-indigo-600 px-3 text-[13px] font-semibold text-indigo-700">Overview</button>
-        <button id="dashboardTabPerformance" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPerformance" tabindex="-1" data-dashboard-tab="performance" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Performance</button>
-        <button id="dashboardTabAnalytics" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelAnalytics" tabindex="-1" data-dashboard-tab="analytics" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Analytics</button>
-        <button id="dashboardTabIntelligence" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelIntelligence" tabindex="-1" data-dashboard-tab="intelligence" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Intelligence</button>
-        <button id="dashboardTabPlanning" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPlanning" tabindex="-1" data-dashboard-tab="planning" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Planning</button>
+        <button id="dashboardTabOverview" type="button" role="tab" aria-selected="true" aria-controls="dashboardPanelOverview" tabindex="0" data-dashboard-tab="overview" class="h-10 shrink-0 border-b-2 border-indigo-600 px-3 text-sm font-semibold text-indigo-700">Overview</button>
+        <button id="dashboardTabPerformance" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPerformance" tabindex="-1" data-dashboard-tab="performance" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Performance</button>
+        <button id="dashboardTabAnalytics" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelAnalytics" tabindex="-1" data-dashboard-tab="analytics" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Analytics</button>
+        <button id="dashboardTabIntelligence" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelIntelligence" tabindex="-1" data-dashboard-tab="intelligence" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Intelligence</button>
+        <button id="dashboardTabPlanning" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPlanning" tabindex="-1" data-dashboard-tab="planning" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Planning</button>
       </div>
 
       <div id="dashboardTabPanels">
@@ -815,7 +864,7 @@
       <div class="grid grid-cols-1 lg:grid-cols-12">
         <div class="hf-executive-fact lg:col-span-3">
           <div class="hf-section-label">Business condition</div>
-          <div id="executiveSummary" class="mt-2 text-sm font-semibold leading-snug text-slate-900">Loading...</div>
+          <div id="executiveSummary" class="mt-1 text-[15px] font-semibold leading-[21px] text-slate-900">Loading...</div>
         </div>
 
         <div id="executiveAlertCard" class="hf-executive-fact lg:col-span-3">Loading attention status...</div>
@@ -823,56 +872,59 @@
         <section id="businessPriorityRegion" class="hf-executive-fact hf-priority-action lg:col-span-6" aria-labelledby="businessPriorityHeading">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 id="businessPriorityHeading" class="hf-section-label">Business Priority</h3>
-            <span id="businessPriorityLevel" class="rounded-full px-3 py-1 text-xs font-bold">Loading</span>
+            <span id="businessPriorityLevel" class="text-xs font-semibold">Loading</span>
           </div>
-          <div id="priorityTitle" class="mt-2 text-base font-bold text-slate-900">Loading...</div>
-          <div id="priorityReason" class="mt-1 text-xs leading-snug text-slate-700">...</div>
-          <div id="priorityMessage" class="mt-2 text-xs font-semibold leading-snug text-slate-900">...</div>
-          <div id="priorityMeta" class="mt-2 text-[11px] text-slate-600">...</div>
+          <div id="priorityTitle" class="mt-1 text-lg font-semibold leading-6 text-slate-900">Loading...</div>
+          <div id="priorityReason" class="mt-0.5 text-xs leading-4 text-slate-700">...</div>
+          <div id="priorityMessage" class="mt-1 text-[11px] font-semibold leading-4 text-slate-900">...</div>
+          <div id="priorityMeta" class="sr-only">...</div>
         </section>
       </div>
     </section>
 
     <!-- BUSINESS OVERVIEW -->
     <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-3">
-      <div class="mb-2 flex items-end justify-between gap-3">
-        <h2 id="keyMetricsTitle" class="text-base font-bold text-slate-900">Key Metrics</h2>
-        <p class="text-xs text-slate-500">Select a card to view supporting transactions</p>
+      <div class="mb-2 flex items-end justify-between gap-3 px-4">
+        <h2 id="keyMetricsTitle" class="text-lg font-semibold leading-6 text-slate-900">Key Metrics</h2>
+        <p class="text-[11px] text-slate-500">Select a metric for transactions</p>
       </div>
-      <div id="businessOverview" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"></div>
+      <div id="businessOverview" class="hf-kpi-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"></div>
     </section>
 
-    <div id="overviewContextRow" class="grid grid-cols-1 gap-3 lg:grid-cols-3">
-      <section id="periodComparisonSection" class="overview-surface min-w-0 rounded-2xl border p-3 lg:col-span-2" role="region" aria-labelledby="periodComparisonLabel">
-        <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700">Loading period comparison...</h3>
-        <div id="periodComparisonMetrics" class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" role="list"></div>
-      </section>
-
-      <section id="dataQualityInformation" class="overview-surface min-w-0 rounded-2xl border p-3 text-xs text-slate-600" aria-labelledby="dataQualityHeading">
-        <div class="flex flex-wrap items-center gap-2">
-          <h3 id="dataQualityHeading" class="font-semibold text-slate-700">Data Quality</h3>
-          <span id="dataQualityStatusBadge" class="hidden rounded-full px-2 py-1 font-semibold"></span>
-          <span id="dataQualityIssueCount"></span>
-          <button id="dataQualityDetailsButton" type="button" class="hidden rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700" aria-expanded="false" aria-controls="dataQualityDetails" onclick="toggleDataQualityDetails()">Details</button>
+    <div id="overviewEvidenceRow" class="hf-overview-evidence">
+      <section id="revenueChartSection" class="analytics-surface min-w-0 rounded-lg border p-4" role="region" aria-labelledby="revenueChartTitle" data-composition-role="hero-chart">
+        <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <h2 id="revenueChartTitle" class="text-lg font-semibold leading-6">Revenue Trend</h2>
+          <button type="button" class="h-8 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
         </div>
-        <span id="dataQualityScopeSummary" class="mt-1 block"></span>
-        <ul id="dataQualityDetails" class="hidden mt-2 space-y-1 pl-5 text-slate-700"></ul>
-      </section>
-    </div>
-
-    <!-- PERFORMANCE HERO -->
-      <section id="revenueChartSection" class="analytics-surface min-w-0 rounded-xl border p-4" role="region" aria-labelledby="revenueChartTitle" data-composition-role="hero-chart">
-        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div><p class="hf-section-label">Primary trend</p><h2 id="revenueChartTitle" class="hf-section-heading mt-1">Revenue Trend</h2></div>
-          <button type="button" class="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
-        </div>
-        <p id="revenueChartSummary" class="mb-2 text-xs text-slate-500"></p>
+        <p id="revenueChartSummary" class="mb-2 text-xs leading-4 text-slate-500"></p>
         <div id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="mainChart" aria-hidden="true"></canvas>
             <p id="revenueChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="mainChartSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
       </section>
+
+      <aside id="overviewContextRow" class="hf-overview-context border-l border-slate-200" aria-label="Overview supporting evidence">
+        <section id="periodComparisonSection" class="min-w-0 px-4 pb-4" role="region" aria-labelledby="periodComparisonLabel">
+          <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700">Loading period comparison...</h3>
+          <div id="periodComparisonMetrics" class="hf-comparison-grid mt-3 grid grid-cols-2" role="list"></div>
+        </section>
+
+        <section id="dataQualityInformation" class="min-w-0 px-4 pt-4 text-xs text-slate-600" aria-labelledby="dataQualityHeading">
+          <div class="flex flex-wrap items-center gap-2">
+            <h3 id="dataQualityHeading" class="font-semibold text-slate-700">Data Quality</h3>
+            <span id="dataQualityStatusBadge" class="hidden rounded-full px-2 py-1 font-semibold"></span>
+            <span id="dataQualityIssueCount"></span>
+            <button id="dataQualityDetailsButton" type="button" class="hidden rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700" aria-expanded="false" aria-controls="dataQualityDetails" onclick="toggleDataQualityDetails()">Details</button>
+          </div>
+          <span id="dataQualityScopeSummary" class="mt-2 block"></span>
+          <ul id="dataQualityDetails" class="hidden mt-2 space-y-1 pl-5 text-slate-700"></ul>
+        </section>
+      </aside>
+    </div>
+
+    <!-- ANALYTICS -->
 
       <section id="hotColdChartSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="hotColdChartTitle" data-composition-tier="primary">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
@@ -1390,7 +1442,7 @@
     function resizeVisibleDashboardCharts(tabName)
     {
       var chartsByTab = {
-        performance: [revenueChart],
+        "overview": [revenueChart],
         analytics: [hotColdChart, expenseChart]
       };
 
@@ -1464,11 +1516,10 @@
           elements.dashboardHeaderRegion,
           staging.querySelector("#executiveSummarySection"),
           staging.querySelector("#keyMetricsSection"),
-          staging.querySelector("#overviewContextRow")
+          staging.querySelector("#overviewEvidenceRow")
         ],
         performance: [
-          staging.querySelector("#businessPerformanceSection"),
-          staging.querySelector("#revenueChartSection")
+          staging.querySelector("#businessPerformanceSection")
         ],
         analytics: [
           staging.querySelector("#hotColdChartSection"),
@@ -2605,9 +2656,9 @@
             metricName + " " + status + " " + display + " " + comparison.label;
 
           return `
-            <div class="rounded-lg bg-slate-50 px-3 py-2" role="listitem" aria-label="${accessibleText}">
-              <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-500">${metricName}</div>
-              <div class="mt-1 text-sm font-bold text-slate-900">${display}</div>
+            <div role="listitem" aria-label="${accessibleText}">
+              <div class="text-[10px] font-semibold text-slate-500">${metricName}</div>
+              <div class="mt-1 text-sm font-bold tabular-nums text-slate-900">${display}</div>
             </div>
           `;
         }).join("");
@@ -3130,17 +3181,20 @@
     //--------------------------------------------------
     function renderOverviewKpiCard(label, value, type, drilldownLabel, delta, status, valueClass)
     {
+      var supportingText =
+        status === "No Comparison"
+          ? ""
+          : delta;
+
       return `
         <button
           type="button"
-          class="hf-kpi-card overview-surface w-full p-4 text-left"
+          class="hf-kpi-card w-full px-4 py-3 text-left"
           onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
           aria-label="View transactions for ${label}">
           <span class="hf-section-label">${label}</span>
-          <strong class="overview-kpi-value mt-2 block truncate text-2xl font-bold ${valueClass || "text-slate-900"}">${value}</strong>
-          <span class="mt-2 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-            <span>${delta}</span><span class="font-semibold">${status}</span>
-          </span>
+          <strong class="overview-kpi-value mt-1 block truncate text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
+          ${supportingText ? `<span class="mt-1 block truncate text-[11px] text-slate-500">${supportingText}</span>` : ""}
         </button>`;
     }
 
@@ -3149,11 +3203,12 @@
       var comparison = res.periodComparison;
       var changes = comparison.changes;
       var statuses = comparison.status;
-      var comparisonLabel = comparison.label;
 
       function comparisonText(value, status)
       {
-        return formatPeriodComparisonValue(value, status) + " · " + comparisonLabel;
+        return status === "No Comparison"
+          ? ""
+          : formatPeriodComparisonValue(value, status) + " vs prior";
       }
 
       initializeStableDashboardElements().businessOverview.innerHTML = [
@@ -3161,7 +3216,7 @@
         renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions", comparisonText(changes.expensePercent, statuses.expense), statuses.expense),
         renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", comparisonText(changes.profitPercent, statuses.profit), statuses.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
         renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", comparisonText(changes.unitsSoldPercent, statuses.unitsSold), statuses.unitsSold),
-        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", "Current reporting period", "Current", Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600")
+        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", "Current period", "Current", Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600")
       ].join("");
     }
 
@@ -3386,9 +3441,9 @@
 
       var summary = isEmpty
         ? "Revenue trend has no represented months."
-        : labels.length + " represented months, total " + formatChartCurrency(total) +
-          ". Highest: " + formatChartMonthLabel(labels[highestIndex]) +
-          " at " + formatChartCurrency(values[highestIndex]) + ".";
+        : labels.length + " months · " + formatChartCurrency(total) +
+          " total · Peak " + formatChartMonthLabel(labels[highestIndex]) +
+          ": " + formatChartCurrency(values[highestIndex]);
       var chartAvailable = isChartLibraryAvailable();
 
       revenueChart = destroyChartInstance(revenueChart);
@@ -3419,11 +3474,11 @@
               data: values,
               borderColor: chartPalette.series[0],
               backgroundColor: chartPalette.revenueFill,
-              borderWidth: 3,
-              pointRadius: 3,
-              pointHoverRadius: 7,
+              borderWidth: 2.5,
+              pointRadius: 2,
+              pointHoverRadius: 6,
               pointHitRadius: 12,
-              pointBorderWidth: 2,
+              pointBorderWidth: 1,
               pointBackgroundColor: chartPalette.series[0],
               pointBorderColor: chartPalette.tooltipText,
               fill: true,
@@ -3462,7 +3517,15 @@
             },
             scales: {
               x: { grid: { display: false }, ticks: { color: chartPalette.axis } },
-              y: { beginAtZero: true, min: 0, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis } }
+              y: { beginAtZero: true, min: 0,
+                grid: {
+                  color: chartPalette.grid,
+                  drawTicks: false,
+                  borderDash: [3, 5],
+                  lineWidth: 0.75
+                },
+                ticks: { color: chartPalette.axis, padding: 8 }
+              }
             }
           }
         }
@@ -3830,7 +3893,7 @@
           document.getElementById("businessPriorityLevel");
 
         priorityLevel.className =
-          "rounded-full px-3 py-1 text-xs font-bold " +
+          "text-xs font-semibold " +
           priorityClasses[priority.level];
         priorityLevel.innerText =
           priority.level + " Priority";
@@ -4396,9 +4459,9 @@
           "hf-executive-fact lg:col-span-3";
         document.getElementById( "executiveAlertCard" ).innerHTML = `
         <div class="h-full">
-          <div class="hf-section-label">Attention status · ${res.executiveAlert.level}</div>
-          <div class="mt-2 text-base font-bold">${res.executiveAlert.title}</div>
-          <div class="mt-2 text-xs leading-snug text-slate-600"> ${res.executiveAlert.message} </div>
+          <div class="hf-section-label">Attention · ${res.executiveAlert.level}</div>
+          <div class="mt-1 text-[15px] font-semibold leading-5">${res.executiveAlert.title}</div>
+          <div class="mt-1 text-xs leading-4 text-slate-600"> ${res.executiveAlert.message} </div>
         </div>
         `;
       }

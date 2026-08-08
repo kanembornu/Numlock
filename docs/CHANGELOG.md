@@ -1,5 +1,13 @@
 # NUMLOCK Changelog
 
+## 2026-08-09 — UI/UX 2.1 Package 024 closure
+
+- Closed the Dashboard Overview implementation/upload scope after the final polish upload. Five focused Overview/theme/chart/accessibility contracts, deterministic Tailwind generation, `git diff --check`, and the ordered local 41/41 suite passed. No visual source changed during closure and no additional clasp upload was required; Apps Script live runtime, deployed-browser review, and screenshot-based visual approval remain unverified.
+
+## 2026-08-06 — UI/UX 2.1 Package 024
+
+- Reconstructed Dashboard Overview against the approved Reference 2 direction and captured production baseline: executive plane, five compact KPIs, and one `8/4` evidence row with the existing Revenue Trend as the dominant visual and comparison/Data Quality as compact supporting context. Preserved stable IDs, formulas, response fields, request paths, chart instance/lifecycle, drill-down, accessibility, theme/print behavior, and performance boundaries. Deterministic Tailwind generation, five focused contracts, and the ordered local 41/41 suite passed; the exact 26-file Apps Script source was uploaded. Candidate screenshot capture is blocked because no browser instance is available, and visual approval remains pending.
+
 ## 2026-08-06 — UI/UX 2.1 Package 023
 
 - Established the compact NUMLOCK Development System with current-state workspace notes, repeatable playbooks, minimal package/bug templates, and a visual-only Overview checklist. Added the screenshot-driven Dashboard Overview blueprint and moved current phase ownership to UI/UX 2.1 Visual Reconstruction. No production source, Tailwind, test, clasp, deployment, commit, or push changed.
