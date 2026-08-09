@@ -34,7 +34,7 @@
     --space-10: 2.5rem;
     --radius-micro: 0.25rem;
     --radius-control: 0.5rem;
-    --radius-card: 0.625rem;
+    --radius-card: 0.75rem;
     --radius-surface: 0.75rem;
     --radius-overlay: 1rem;
     --radius-pill: 999px;
@@ -55,7 +55,7 @@
     --card-bg: var(--surface-1);
     --card-inset-bg: var(--surface-2);
     --card-border: var(--border-subtle);
-    --card-shadow: none;
+    --card-shadow: var(--shadow-1);
   }
 
   :root,

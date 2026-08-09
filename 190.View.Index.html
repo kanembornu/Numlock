@@ -61,7 +61,10 @@
       #appShell { background: var(--canvas); }
       #dashboardSidebar { width: 232px; background: var(--sidebar); box-shadow: none; }
       #mainContent { background: var(--canvas); }
-      #topUtilityBar { height: 52px; min-height: 52px; background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }
+      #topUtilityBar { height: 52px; min-height: 52px; background: var(--surface-1); border-color: var(--divider); box-shadow: none; }
+      #utilityPageTitle { font-weight: 600; letter-spacing: -0.01em; }
+      #utilityPageContext,
+      #utilityMetadata { color: var(--text-muted); }
       #contentViewport { min-height: 0; background: var(--canvas); }
       #dashboardTabList,
       #transactionsTabList { height: 40px; min-height: 40px; }
@@ -69,16 +72,18 @@
       .transactions-tab-panel { min-width: 0; }
       .transactions-table-row:hover { background: var(--surface-2); }
       .transactions-number { text-align: right; font-variant-numeric: tabular-nums; }
-      .overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }
+      .overview-surface,
+      .analytics-surface,
+      .hf-secondary-surface { background: var(--card-bg); border-color: var(--card-border); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
-      .analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }
       .performance-metric-value { font-variant-numeric: tabular-nums; }
       #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }
       #mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }
       #sidebarBackdrop { background: var(--overlay); }
-      .ui-sidebar-item { min-height: 40px; border-radius: 8px; gap: 8px; padding: 6px 12px; }
+      .ui-sidebar-item { min-height: 40px; border-radius: 8px; gap: 10px; padding: 6px 10px; }
       .ui-sidebar-item > i,
-      .ui-future-module > i { width: 20px; font-size: 16px; }
+      .ui-future-module > i { width: 20px; flex: 0 0 20px; font-size: 15px; line-height: 1; }
+      .ui-sidebar-item:hover { color: var(--text-primary); }
       .ui-sidebar-item[aria-current="page"]
       {
         background: var(--selected);
@@ -87,11 +92,15 @@
       }
       .ui-future-module
       {
-        min-height: 40px;
+        min-height: 34px;
+        margin-left: 10px;
+        gap: 10px;
+        padding: 5px 10px;
         color: var(--disabled-text);
         cursor: not-allowed;
       }
-      .ui-future-module-status { color: var(--disabled-text); }
+      #financialModulesDisclosureButton[aria-expanded="true"] { background: var(--sidebar-hover); color: var(--text-primary); }
+      #financialModulesGroup { border-left: 1px solid var(--sidebar-divider); padding-left: 4px; }
       .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
       .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
       .ui-theme-primary { color: var(--text-primary) !important; }
@@ -105,7 +114,7 @@
       .hf-priority-action { border-left: 1px solid var(--divider); }
       .hf-priority-action #businessPriorityLevel { border-bottom: 2px solid currentColor; padding-bottom: 2px; }
       .hf-kpi-strip { background: var(--surface-1); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); }
-      .hf-kpi-card { min-height: 76px; border: 0; border-radius: 0; box-shadow: none; }
+      .hf-kpi-card { min-height: 64px; padding: 8px 12px; border: 0; border-radius: 0; box-shadow: none; }
       .hf-kpi-card + .hf-kpi-card { border-left: 1px solid var(--divider); }
       .hf-overview-evidence { display: grid; min-width: 0; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 12px; }
       .hf-overview-context { display: flex; min-width: 0; flex-direction: column; }
@@ -125,14 +134,14 @@
       #dashboardPanelOverview #priorityMessage { font-size: 11px; line-height: 16px; }
       #dashboardPanelOverview #keyMetricsTitle,
       #dashboardPanelOverview #revenueChartTitle { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 24px; }
-      #dashboardPanelOverview .overview-kpi-value { font-size: 32px; font-weight: 800; letter-spacing: -0.035em; line-height: 36px; }
+      #dashboardPanelOverview .overview-kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 32px; }
       #dashboardPanelOverview .hf-kpi-card > span:last-child { color: var(--text-muted); font-weight: 400; line-height: 16px; }
       #dashboardPanelOverview #revenueChartSection { border-color: transparent; border-radius: 0; padding: 16px 8px 8px 16px; }
       #dashboardPanelOverview #revenueChartSummary { color: var(--text-muted); line-height: 16px; }
       #dashboardPanelOverview #revenueChartSection > div:first-child { min-height: 32px; }
       #dashboardPanelOverview #revenueChartSection > div:first-child button { align-self: flex-start; border-color: var(--divider); background: transparent; }
       #dashboardTabList:has(#dashboardTabOverview[aria-selected="true"]) { border-bottom-color: transparent; }
-      .hf-secondary-surface { background: var(--surface-1); border: 1px solid var(--border-subtle); border-radius: 12px; box-shadow: none; }
+      .hf-secondary-surface { border-width: 1px; }
       .hf-transactions-toolbar { min-height: 52px; }
       #transactionsTableScroll thead { background: var(--surface-2); }
       #transactionsTableScroll th { height: 36px; padding-top: 0; padding-bottom: 0; font-size: 12px; font-weight: 600; line-height: 18px; text-transform: none; letter-spacing: 0; }
@@ -159,7 +168,7 @@
 
         #dashboardSidebar { transform: translateX(0); }
         #mainContent { display: grid; grid-template-rows: 52px minmax(0, 1fr); margin-left: 232px; height: 100vh; height: 100dvh; overflow: hidden; }
-        #contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }
+        #contentViewport { height: auto; min-height: 0; overflow: hidden; padding: var(--space-5) var(--space-6); }
         #dashboard.active { display: flex; min-height: 0; height: 100%; flex-direction: column; overflow: hidden; }
         #dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }
         #dashboardTabList { margin: 0; padding-left: 16px; padding-right: 16px; }
@@ -173,7 +182,7 @@
         #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection { max-height: 132px; overflow: hidden; }
-        #dashboardPanelOverview .hf-kpi-card { min-height: 82px; }
+        #dashboardPanelOverview .hf-kpi-card { min-height: 68px; }
         #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }
         #dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }
         #dashboardPanelPerformance:not([hidden]) { display: block; overflow: hidden; }
@@ -232,9 +241,9 @@
       @media (min-width: 1024px) and (max-height: 800px)
       {
         .hf-executive-fact { padding: 8px 12px; }
-        .hf-kpi-card { min-height: 72px; padding: 10px 12px; }
+        .hf-kpi-card { min-height: 60px; padding: 6px 12px; }
         #dashboardPanelOverview #executiveSummarySection { max-height: 116px; }
-        #dashboardPanelOverview .hf-kpi-card { min-height: 72px; }
+        #dashboardPanelOverview .hf-kpi-card { min-height: 60px; }
         #dashboardPanelOverview #executiveSummarySection,
         #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
         #dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }
@@ -246,7 +255,7 @@
         #dashboardSidebar { width: min(320px, calc(100vw - 32px)); box-shadow: var(--shadow-2); }
         #topUtilityBar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }
         #dashboardUtilityControls { order: 3; width: 100%; flex-wrap: wrap; }
-        #contentViewport { overflow: visible; padding: 12px; }
+        #contentViewport { overflow: visible; padding: var(--space-5); }
         #dashboardPanelPerformance,
         #dashboardPanelAnalytics { height: auto; overflow: visible; }
         .hf-overview-evidence { display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -664,50 +673,49 @@
         </button>
         </div>
 
-        <div class="mt-4 border-t border-slate-800 pt-3">
+        <div class="mt-3 border-t border-slate-800 pt-2">
           <button
             id="financialModulesDisclosureButton"
             type="button"
-            class="ui-sidebar-item flex w-full items-center gap-3 px-3 py-2 text-left text-sm font-medium transition"
-            aria-expanded="true"
+            class="ui-sidebar-item flex w-full items-center text-left text-sm font-medium transition"
+            aria-expanded="false"
             aria-controls="financialModulesGroup"
-            aria-label="Financial modules, expanded"
-            title="Financial modules"
+            aria-label="Finance, collapsed"
+            title="Finance"
             onclick="toggleFinancialModulesDisclosure(this)">
-            <i class="fas fa-layer-group w-6 text-center" aria-hidden="true"></i>
+            <i class="fas fa-wallet w-6 text-center" aria-hidden="true"></i>
             <span class="sidebar-expanded-content flex min-w-0 flex-1 items-center justify-between gap-2">
-              <span>Financial modules</span>
-              <span class="ui-future-module-status text-[10px] font-normal">Migration required</span>
+              <span>Finance</span>
             </span>
-            <i class="sidebar-expanded-content fas fa-chevron-up text-[10px]" aria-hidden="true"></i>
+            <i class="sidebar-expanded-content fas fa-chevron-down text-[10px]" aria-hidden="true"></i>
           </button>
 
-          <div id="financialModulesGroup" class="mt-1 space-y-1" role="list" aria-label="Unavailable financial modules">
-            <div data-navigation-destination="products" class="ui-future-module flex items-center gap-3 rounded-lg px-3 py-2 text-sm" role="listitem" aria-disabled="true" aria-label="Products, unavailable until module migration is approved" title="Products — unavailable until module migration is approved">
+          <div id="financialModulesGroup" class="mt-1 space-y-0" role="list" aria-label="Unavailable Finance destinations" hidden>
+            <div data-navigation-destination="products" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Products, unavailable until module migration is approved" title="Products — unavailable until module migration is approved">
               <i class="fas fa-mug-hot w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0"><span class="block">Products</span><span class="ui-future-module-status block text-[10px]">Unavailable · migration required</span></span>
+              <span class="sidebar-expanded-content min-w-0">Products</span>
             </div>
-            <div data-navigation-destination="capital-equity" class="ui-future-module flex items-center gap-3 rounded-lg px-3 py-2 text-sm" role="listitem" aria-disabled="true" aria-label="Capital and Equity, unavailable until module migration is approved" title="Capital &amp; Equity — unavailable until module migration is approved">
+            <div data-navigation-destination="capital-equity" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Capital and Equity, unavailable until module migration is approved" title="Capital &amp; Equity — unavailable until module migration is approved">
               <i class="fas fa-coins w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0"><span class="block">Capital &amp; Equity</span><span class="ui-future-module-status block text-[10px]">Unavailable · migration required</span></span>
+              <span class="sidebar-expanded-content min-w-0">Capital &amp; Equity</span>
             </div>
-            <div data-navigation-destination="assets" class="ui-future-module flex items-center gap-3 rounded-lg px-3 py-2 text-sm" role="listitem" aria-disabled="true" aria-label="Assets, unavailable until module migration is approved" title="Assets — unavailable until module migration is approved">
+            <div data-navigation-destination="assets" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Assets, unavailable until module migration is approved" title="Assets — unavailable until module migration is approved">
               <i class="fas fa-building-columns w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0"><span class="block">Assets</span><span class="ui-future-module-status block text-[10px]">Unavailable · migration required</span></span>
+              <span class="sidebar-expanded-content min-w-0">Assets</span>
             </div>
-            <div data-navigation-destination="depreciation" class="ui-future-module flex items-center gap-3 rounded-lg px-3 py-2 text-sm" role="listitem" aria-disabled="true" aria-label="Depreciation, unavailable until module migration is approved" title="Depreciation — unavailable until module migration is approved">
+            <div data-navigation-destination="depreciation" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Depreciation, unavailable until module migration is approved" title="Depreciation — unavailable until module migration is approved">
               <i class="fas fa-arrow-trend-down w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0"><span class="block">Depreciation</span><span class="ui-future-module-status block text-[10px]">Unavailable · migration required</span></span>
+              <span class="sidebar-expanded-content min-w-0">Depreciation</span>
             </div>
-            <div data-navigation-destination="financial-statements" class="ui-future-module flex items-center gap-3 rounded-lg px-3 py-2 text-sm" role="listitem" aria-disabled="true" aria-label="Financial Statements, unavailable until module migration is approved" title="Financial Statements — unavailable until module migration is approved">
+            <div data-navigation-destination="financial-statements" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Financial Statements, unavailable until module migration is approved" title="Financial Statements — unavailable until module migration is approved">
               <i class="fas fa-file-invoice-dollar w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0"><span class="block">Financial Statements</span><span class="ui-future-module-status block text-[10px]">Unavailable · migration required</span></span>
+              <span class="sidebar-expanded-content min-w-0">Financial Statements</span>
             </div>
           </div>
         </div>
       </nav>
 
-    <div class="border-t border-slate-800 p-3">
+    <div class="border-t border-slate-800 p-2">
       <button
         id="sidebarCollapseButton"
         type="button"
@@ -738,7 +746,7 @@
         <span class="sr-only">Menu</span>
       </button>
         <div class="min-w-0">
-          <div id="utilityPageTitle" class="truncate text-sm font-bold ui-theme-primary">Dashboard</div>
+          <div id="utilityPageTitle" class="truncate text-sm ui-theme-primary">Dashboard</div>
           <div id="utilityPageContext" class="truncate text-[11px] ui-theme-muted">Business performance and next actions</div>
         </div>
       </div>
@@ -1616,7 +1624,7 @@
       button.setAttribute("aria-expanded", String(nextExpanded));
       button.setAttribute(
         "aria-label",
-        "Financial modules, " + (nextExpanded ? "expanded" : "collapsed")
+        "Finance, " + (nextExpanded ? "expanded" : "collapsed")
       );
       group.hidden = !nextExpanded;
       disclosureIcon.classList.toggle("fa-chevron-up", nextExpanded);

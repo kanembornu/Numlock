@@ -2539,13 +2539,19 @@ function testNineDestinationNavigationContract()
     source,
     'id="financialModulesDisclosureButton"',
     'id="financialModulesGroup"',
-    "Financial modules disclosure"
+    "Finance disclosure"
   );
   var toggleSource = getSourceRegion(
     source,
     "function toggleFinancialModulesDisclosure(button)",
     "function setDesktopSidebarCollapsed(isCollapsed)",
-    "Financial modules disclosure behavior"
+    "Finance disclosure behavior"
+  );
+  var unavailableGroupSource = getSourceRegion(
+    source,
+    'id="financialModulesGroup"',
+    "</nav>",
+    "unavailable Finance group"
   );
   var activeDestinations = [
     "dashboard",
@@ -2641,35 +2647,43 @@ function testNineDestinationNavigationContract()
     5,
     "unavailable semantics"
   );
+  ["<button", "<a ", 'tabindex="0"', "onclick="].forEach(function(token)
+  {
+    assertSourceExcludes(
+      unavailableGroupSource,
+      token,
+      "unavailable destination activation and focus exclusion"
+    );
+  });
   scenariosPassed++;
 
   [
     'id="financialModulesDisclosureButton"',
-    'aria-expanded="true"',
+    'aria-expanded="false"',
     'aria-controls="financialModulesGroup"',
-    'aria-label="Financial modules, expanded"',
+    'aria-label="Finance, collapsed"',
     'id="financialModulesGroup"',
-    'aria-label="Unavailable financial modules"',
-    "Unavailable · migration required",
+    'aria-label="Unavailable Finance destinations"',
+    'id="financialModulesGroup" class="mt-1 space-y-0" role="list" aria-label="Unavailable Finance destinations" hidden',
     "unavailable until module migration is approved"
   ].forEach(function(token)
   {
     assertSourceContains(
       navigationSource,
       token,
-      "Financial modules grouping and status"
+      "Finance grouping and status"
     );
   });
   assertSourceContainsOnce(
     navigationSource,
     'id="financialModulesDisclosureButton"',
-    "one Financial modules disclosure"
+    "one Finance disclosure"
   );
   scenariosPassed++;
 
   [
     'button.setAttribute("aria-expanded", String(nextExpanded));',
-    '"Financial modules, " + (nextExpanded ? "expanded" : "collapsed")',
+    '"Finance, " + (nextExpanded ? "expanded" : "collapsed")',
     "group.hidden = !nextExpanded;",
     'disclosureIcon.classList.toggle("fa-chevron-up", nextExpanded);',
     'disclosureIcon.classList.toggle("fa-chevron-down", !nextExpanded);'
