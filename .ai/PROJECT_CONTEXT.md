@@ -4,10 +4,10 @@ Read `AGENTS.md` first. This file is a pointer, not project history.
 
 ## Current
 
-- Phase: **UI/UX 2.1 Visual Reconstruction**.
+- Phase: **Design System Foundation**.
 - Start at [NDS](../.codex/NDS.md) and [current workspace state](../.codex/workspace/CURRENT.md).
 - Living status: [PROJECT_STATUS.md](../docs/PROJECT_STATUS.md).
-- Next visual authority: [Overview Blueprint](../docs/UIUX-2.1-OVERVIEW-BLUEPRINT.md).
+- Active package: **Package 025 — Design System Foundation**.
 - Production remains `1.0.0`; five financial modules remain migration-gated.
 - Unified runner has 41 entries. Evidence levels remain non-substitutable.
 

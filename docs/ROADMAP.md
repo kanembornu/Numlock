@@ -282,12 +282,8 @@ Implemented locally. Source-search evidence removed exactly two zero-reference a
 
 Closure Candidate locally. The directly runnable closure contract raises the ordered runner to 41 entries and preserves the full functional, navigation, accessibility, theme/chart, performance, and 37-field response boundaries. No implementation-ready UI package remains. Final closure still requires current live 41/41, exact-candidate upload and immutable deployment, functional browser acceptance, all 80 required screen captures at 18/18, production health, and a recorded prior immutable rollback version; static checks do not satisfy visual acceptance.
 
-## UI/UX 2.1 — Visual Reconstruction
+## Design System Foundation
 
-### Package 023 — workflow and Overview blueprint
+### Package 025 — Design System Foundation
 
-Complete as documentation/workflow scope. The compact [NUMLOCK Development System](../.codex/NDS.md) replaces repeated generic prompt context with current-state pointers, playbooks, templates, and visual checklists. The [Dashboard Overview Blueprint](UIUX-2.1-OVERVIEW-BLUEPRINT.md) defines the first screenshot-driven reconstruction slice, exact responsive hierarchy, preserved render targets, and approval gate. The next package may implement Overview only after capturing its matched production baseline.
-
-### Package 024 — Dashboard Overview reconstruction
-
-Uploaded candidate. Reconstructed Overview only from the captured production baseline toward Reference 2: executive plane, five compact KPIs, the existing Revenue Trend as the `8/12` hero, and compact comparison/Data Quality context at `4/12`. Stable IDs, backend/response/request behavior, chart lifecycle, drill-down, accessibility, themes, print, and performance contracts remain preserved. Deterministic Tailwind generation, five focused contracts, local `runAllBackendTests()` PASS 41/41, exact inventory, and the 26-file source upload are verified. Candidate capture is blocked because no browser instance is available; visual approval still requires screenshot review.
+Next. Establish reusable visual foundations while preserving the stable application architecture, backend, responses, formulas, routes, IDs, accessibility, themes, print, charts, and performance contracts.
