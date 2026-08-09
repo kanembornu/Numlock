@@ -20,9 +20,9 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Design System Foundation**
+**Design System Foundation — complete locally**
 
-The bounded v1.0 feature/backend baseline remains stable. Package 025 is the active package and will establish reusable visual foundations without changing backend, response, formula, route, or runtime ownership.
+The bounded v1.0 feature/backend baseline remains stable. Package 025 established the reusable global visual foundation without changing backend, response, formula, route, layout, or runtime ownership. Its final light-theme sidebar contrast correction preserves the bright soft palette and clarifies brand, divider, active, normal, and unavailable hierarchy.
 
 ## 5. Latest completed sprint/package
 
@@ -30,7 +30,7 @@ The bounded v1.0 feature/backend baseline remains stable. Package 025 is the act
 
 **UI/UX 2.0 Package 022 — CLOSURE CANDIDATE locally on 2026-08-06.** The directly runnable closure contract raises the ordered gate to 41 entries and preserves nine-destination, accessibility, theme/chart, performance, and exact-response contracts while explicitly refusing a static visual PASS. Completion remains blocked by the current live, upload/deployment, browser, screenshot, production-health, and rollback evidence listed above.
 
-**Package 025 — DESIGN SYSTEM FOUNDATION is next.** Scope is limited to reusable visual foundations while preserving the current architecture, backend, test, accessibility, theme, print, chart, and performance contracts.
+**Package 025 — DESIGN SYSTEM FOUNDATION is COMPLETE locally on 2026-08-09.** Six focused theme/UI contracts and the ordered local `runAllBackendTests()` gate pass at 41/41. Two Tailwind builds produced the same SHA-256 hash, and `git diff --check` passed. The authored CSS and generated Tailwind candidate were uploaded during Packages 025/025A; no upload was performed during closure because source did not change. Apps Script runtime remains unverified because the configured API executable does not expose the current focused or unified functions; deployment and browser visual acceptance were not run.
 
 ## 6. Current test gate and evidence level
 

@@ -3,12 +3,68 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --text-display-size: 2rem;
+    --text-display-line: 2.25rem;
+    --text-kpi-size: 1.625rem;
+    --text-kpi-line: 1.875rem;
+    --text-title-size: 1.5rem;
+    --text-title-line: 1.875rem;
+    --text-section-size: 1.125rem;
+    --text-section-line: 1.5rem;
+    --text-component-size: 1rem;
+    --text-component-line: 1.375rem;
+    --text-body-size: 0.875rem;
+    --text-body-line: 1.3125rem;
+    --text-label-size: 0.8125rem;
+    --text-label-line: 1.125rem;
+    --text-caption-size: 0.75rem;
+    --text-caption-line: 1rem;
+    --space-0: 0;
+    --space-1: 0.125rem;
+    --space-2: 0.25rem;
+    --space-3: 0.375rem;
+    --space-4: 0.5rem;
+    --space-5: 0.75rem;
+    --space-6: 1rem;
+    --space-7: 1.25rem;
+    --space-8: 1.5rem;
+    --space-9: 2rem;
+    --space-10: 2.5rem;
+    --radius-micro: 0.25rem;
+    --radius-control: 0.5rem;
+    --radius-card: 0.625rem;
+    --radius-surface: 0.75rem;
+    --radius-overlay: 1rem;
+    --radius-pill: 999px;
+    --border-width: 1px;
+    --border-width-emphasis: 2px;
+    --focus-ring-width: 3px;
+    --focus-ring-offset: 2px;
+    --button-primary-bg: var(--brand);
+    --button-primary-hover-bg: var(--brand-hover);
+    --button-primary-text: #FFFFFF;
+    --button-secondary-bg: var(--surface-1);
+    --button-secondary-hover-bg: var(--hover);
+    --button-secondary-text: var(--text-primary);
+    --button-border: var(--border-strong);
+    --button-focus: var(--focus);
+    --button-disabled-bg: var(--disabled-bg);
+    --button-disabled-text: var(--disabled-text);
+    --card-bg: var(--surface-1);
+    --card-inset-bg: var(--surface-2);
+    --card-border: var(--border-subtle);
+    --card-shadow: none;
+  }
+
   :root,
   :root[data-theme="light"] {
     color-scheme: light;
-    --canvas: #F4F7FB;
-    --sidebar: #0F1B2D;
-    --sidebar-hover: #19283D;
+    --canvas: #F6F8FC;
+    --sidebar: #F8FAFD;
+    --sidebar-hover: #EEF4FF;
+    --sidebar-divider: #EDF2F7;
     --surface-1: #FFFFFF;
     --surface-2: #F8FAFC;
     --surface-3: #EEF2F7;
@@ -18,10 +74,10 @@
     --text-primary: #0F172A;
     --text-secondary: #475569;
     --text-muted: #64748B;
-    --text-on-dark: #F8FAFC;
-    --brand: #4F46E5;
-    --brand-hover: #4338CA;
-    --brand-soft: #EEF2FF;
+    --text-on-dark: #475569;
+    --brand: #2563EB;
+    --brand-hover: #1D4ED8;
+    --brand-soft: #EFF6FF;
     --success: #047857;
     --success-soft: #ECFDF5;
     --info: #0369A1;
@@ -32,8 +88,8 @@
     --critical-soft: #FEF2F2;
     --hover: #F1F5F9;
     --focus: #2563EB;
-    --selected: #E0E7FF;
-    --active: #E0E7FF;
+    --selected: #DBEAFE;
+    --active: #DBEAFE;
     --disabled-bg: #F1F5F9;
     --disabled-text: #94A3B8;
     --stale: #B45309;
@@ -45,21 +101,27 @@
     --tooltip-text: #F8FAFC;
     --chart-grid: #E2E8F0;
     --chart-axis: #64748B;
-    --chart-series-1: #4F46E5;
+    --chart-series-1: #2563EB;
     --chart-series-2: #0284C7;
     --chart-series-3: #059669;
     --chart-series-4: #D97706;
-    --chart-revenue-fill: rgba(79, 70, 229, 0.06);
+    --chart-series-5: #E11D48;
+    --chart-series-6: #7C3AED;
+    --chart-series-7: #0891B2;
+    --chart-series-8: #65A30D;
+    --chart-point-ring: #FFFFFF;
+    --chart-point-stroke: #2563EB;
+    --chart-revenue-fill: rgba(37, 99, 235, 0.08);
     --print-canvas: #FFFFFF;
     --print-text: #0F172A;
     --print-border: #CBD5E1;
     --print-chart-grid: #E2E8F0;
     --print-chart-axis: #64748B;
-    --print-chart-series-1: #4F46E5;
+    --print-chart-series-1: #2563EB;
     --print-chart-series-2: #0284C7;
     --print-chart-series-3: #059669;
     --print-chart-series-4: #D97706;
-    --print-chart-revenue-fill: rgba(79, 70, 229, 0.06);
+    --print-chart-revenue-fill: rgba(37, 99, 235, 0.08);
     --print-tooltip-bg: #0F172A;
     --print-tooltip-text: #F8FAFC;
     --overlay: rgba(15, 23, 42, 0.56);
@@ -72,6 +134,7 @@
     --canvas: #07111F;
     --sidebar: #0B1627;
     --sidebar-hover: #15243A;
+    --sidebar-divider: #243750;
     --surface-1: #0F1C2E;
     --surface-2: #142338;
     --surface-3: #1A2C45;
@@ -112,6 +175,12 @@
     --chart-series-2: #38BDF8;
     --chart-series-3: #34D399;
     --chart-series-4: #FBBF24;
+    --chart-series-5: #FB7185;
+    --chart-series-6: #C084FC;
+    --chart-series-7: #22D3EE;
+    --chart-series-8: #A3E635;
+    --chart-point-ring: #0F1C2E;
+    --chart-point-stroke: #60A5FA;
     --chart-revenue-fill: rgba(129, 140, 248, 0.12);
     --overlay: rgba(2, 6, 23, 0.72);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.28);
@@ -122,10 +191,31 @@
   body {
     background: var(--canvas);
     color: var(--text-primary);
+    font-family: var(--font-sans);
   }
 }
 
 @layer components {
+  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand .text-white {
+    color: var(--text-primary) !important;
+  }
+
+  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand .text-slate-400 {
+    color: var(--text-muted) !important;
+  }
+
+  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand button {
+    color: var(--text-secondary) !important;
+  }
+
+  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand button:hover {
+    background: var(--sidebar-hover) !important;
+  }
+
+  #dashboardSidebar .border-slate-800 {
+    border-color: var(--sidebar-divider);
+  }
+
   .ui-sidebar-item {
     color: var(--text-on-dark);
   }
