@@ -563,6 +563,20 @@ function createPeriodComparisonFixtures()
         expected: "2025-01-01|2025-08-12"
       },
       {
+        filter: "previousYear",
+        expected: "2024-01-01|2024-12-31"
+      },
+      {
+        filter: "customMonth",
+        startDate: "2026-03",
+        expected: "2026-02-01|2026-02-28"
+      },
+      {
+        filter: "customYear",
+        startDate: "2024",
+        expected: "2023-01-01|2023-12-31"
+      },
+      {
         filter: "custom",
         startDate: "2026-08-10",
         endDate: "2026-08-15",
@@ -587,12 +601,12 @@ function createPeriodComparisonFixtures()
     frontendTokens: [
       'id="periodComparisonSection"',
       'id="periodComparisonLabel"',
-      'id="periodComparisonMetrics"',
       "function renderPeriodComparison(periodComparison)",
       'status === "No Comparison"',
       'status === "Stable"',
-      'status === "Up" ? "▲ " : "▼ "',
-      'metricName + " " + status + " " + display + " " + comparison.label',
+      'status === "Up" ? "▲ " : "▼ -"',
+      'formatDashboardPresentationPeriod(comparison.previous.startDate, "day")',
+      '"Comparison unavailable · " + previousPeriod + " has no data"',
       'renderPeriodComparison(res.periodComparison);'
     ]
   };
@@ -932,7 +946,7 @@ function createResponsiveShellContractFixtures()
     { name: "active navigation", tokens: ['button.setAttribute("aria-current", "page");'] },
     { name: "table scroll wrapper", tokens: ['id="transactionsTableScroll"', 'overflow-x-auto'] },
     { name: "narrow content width", tokens: ['<main id="mainContent" class="ml-0 min-w-0 w-full flex-1'] },
-    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 232px;', '#dashboardSidebar { width: 216px;', '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;', 'lg:translate-x-0', 'grid-template-rows: 52px minmax(0, 1fr); margin-left: 232px;'] },
+    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 248px;', '#dashboardSidebar { width: 224px;', '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;', 'lg:translate-x-0', 'grid-template-rows: 76px minmax(0, 1fr); margin-left: 248px;'] },
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
   ];
 }
@@ -970,7 +984,8 @@ function createChartPresentationContractFixtures()
   return [
     { name: "Revenue Trend populated values", tokens: ["function renderRevenueChart(revenueTrend)", "data: values"] },
     { name: "Revenue Trend empty state", tokens: ['"No revenue data for the selected period."', "if (!chartAvailable || isEmpty)"] },
-    { name: "month label MM/YYYY", tokens: ['parts[1] + "/" + parts[0]'] },
+    { name: "daily and monthly two-line labels", tokens: ['return [parts[2] + " " + monthNames[Number(parts[1]) - 1], parts[0]];', 'return parts.length >= 2', '? [monthNames[Number(parts[1]) - 1], parts[0]]'] },
+    { name: "daily and monthly Y-axis steps", tokens: ['stepSize: granularity === "day" ? 100000 : 1000000', 'callback: formatRevenueAxisTick', 'typeof value === "number" && value === 0'] },
     { name: "Rupiah tooltip formatting", tokens: ['Number(value || 0).toLocaleString("id-ID")', '"Revenue: " + formatChartCurrency(context.raw)'] },
     { name: "Revenue Trend zero baseline", tokens: ["y: { beginAtZero: true, min: 0", "spanGaps: false"] },
     { name: "stale chart cleared on empty transition", tokens: ["revenueChart = destroyChartInstance(revenueChart);", "context.clearRect(0, 0, canvas.width, canvas.height);"] },
@@ -1001,11 +1016,11 @@ function createFrontendDependencyContractFixtures()
       { name: "single actionable diagnostic", tokens: ['"Chart.js unavailable; chart rendering was skipped."', "chartUnavailableDiagnosticLogged = true;"] },
       { name: "safe existing instance destruction", tokens: ["revenueChart = destroyChartInstance(revenueChart);", "hotColdChart = destroyChartInstance(hotColdChart);", "expenseChart = destroyChartInstance(expenseChart);"] },
       { name: "accessible summaries retained", tokens: ['id="revenueChartSummary"', 'id="hotColdChartSummary"', 'id="expenseChartSummary"'] },
-      { name: "non-chart continuation", tokens: ['document.getElementById( "topProductsContainer" ).innerHTML'] },
+      { name: "non-chart continuation", tokens: ['document.getElementById("topProductsContainer").innerHTML'] },
       { name: "Chart available constructors", tokens: ["revenueChart = new Chart(", "hotColdChart = new Chart(", "expenseChart = new Chart("] },
       { name: "responsive contract retained", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"'] },
       { name: "chart contract retained", tokens: ["renderRevenueChart(revenueTrend);", "renderHotColdChart(hotColdSplit);", "renderExpenseChart(expenseBreakdown);"] },
-      { name: "Font Awesome active usage", tokens: ['class="fas fa-times"', 'class="fas fa-chart-line w-6 text-center"', 'class="fas fa-receipt w-6 text-center"'] },
+      { name: "Font Awesome active usage", tokens: ['class="fas fa-times"', 'class="fas fa-chart-line w-6 text-center"', 'class="fas fa-arrow-right-arrow-left w-6 text-center"'] },
       { name: "no browser alert fallback", excludedTokens: ["alert(\"Chart unavailable.\")", "alert('Chart unavailable.')"] }
     ]
   };
@@ -1309,10 +1324,10 @@ function createSourceDataQualityPipelineFixtures()
     },
     frontendTokens: [
       'id="dataQualityScopeSummary"',
-      'quality.scope.scopedRows +',
-      '" scoped rows · "',
-      'quality.scope.excludedInvalidDateRows +',
-      '" invalid-date rows excluded"'
+      'quality.scope.scopedRows.toLocaleString("id-ID")',
+      '" rows · "',
+      'quality.scope.excludedInvalidDateRows.toLocaleString("id-ID")',
+      '" excluded"'
     ]
   };
 }

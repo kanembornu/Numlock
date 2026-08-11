@@ -56,17 +56,27 @@
     <style>
       .page { display: none; }
       .page.active { display: block; }
-      body { background: var(--canvas); color: var(--text-primary); font-family: 'Inter', sans-serif; }
+      body { background: var(--canvas); color: var(--text-primary); font-family: var(--font-sans); }
+      button, input, select, textarea, table { font-family: inherit; }
 
       #appShell { background: var(--canvas); }
-      #dashboardSidebar { width: 232px; background: var(--sidebar); box-shadow: none; }
+      #dashboardSidebar { width: 248px; background: var(--sidebar); border-right: 1px solid var(--sidebar-divider); box-shadow: none; }
       #mainContent { background: var(--canvas); }
-      #topUtilityBar { height: 52px; min-height: 52px; background: var(--surface-1); border-color: var(--divider); box-shadow: none; }
-      #utilityPageTitle { font-weight: 600; letter-spacing: -0.01em; }
+      #topUtilityBar { height: 76px; min-height: 76px; background: var(--surface-1); border-color: var(--divider); box-shadow: none; }
+      #utilityPageTitle { font-size: 32px; font-weight: 800; line-height: 35px; letter-spacing: -0.04em; }
+      #utilityPageContext { margin-top: 4px; font-size: 14px; line-height: 18px; }
       #utilityPageContext,
       #utilityMetadata { color: var(--text-muted); }
+      #dashboardUtilityControls { gap: 10px; }
+      #dateFilterControls { gap: 10px; }
+      #filter,
+      .hf-period-select { width: 148px; min-width: 148px; height: 44px; border-radius: 9px; padding-left: 14px; padding-right: 34px; }
+      .hf-period-secondary { display: flex; align-items: center; gap: 10px; }
+      #utilityMetadata { gap: 20px; font-size: 12px; }
       #contentViewport { min-height: 0; background: var(--canvas); }
-      #dashboardTabList,
+      #dashboardTabList { height: 44px; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); }
+      #dashboardTabList [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; }
+      #dashboardTabList [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
       #transactionsTabList { height: 40px; min-height: 40px; }
       .dashboard-tab-panel { min-width: 0; }
       .transactions-tab-panel { min-width: 0; }
@@ -77,30 +87,42 @@
       .hf-secondary-surface { background: var(--card-bg); border-color: var(--card-border); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
       .performance-metric-value { font-variant-numeric: tabular-nums; }
-      #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }
+      #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: visible; }
       #mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }
       #sidebarBackdrop { background: var(--overlay); }
-      .ui-sidebar-item { min-height: 40px; border-radius: 8px; gap: 10px; padding: 6px 10px; }
+      .numlock-mark { display: flex; width: 46px; height: 46px; flex: 0 0 46px; align-items: flex-end; justify-content: center; gap: 3px; padding: 5px 4px; color: var(--brand); }
+      .numlock-mark span { width: 6px; border-radius: 3px 3px 1px 1px; background: currentColor; }
+      .numlock-mark span:nth-child(1) { height: 13px; opacity: 0.55; }
+      .numlock-mark span:nth-child(2) { height: 21px; opacity: 0.78; }
+      .numlock-mark span:nth-child(3) { height: 29px; }
+      .sidebar-brand > div:first-child { gap: 10px; }
+      .sidebar-brand .text-xl { font-size: 24px; font-weight: 800; line-height: 28px; letter-spacing: 0.045em; }
+      .sidebar-brand p { margin-top: 3px; font-size: 12px; line-height: 17px; }
+      .ui-sidebar-item { min-height: 44px; border-radius: 9px; gap: 11px; padding: 8px 12px; font-size: 14px; }
       .ui-sidebar-item > i,
-      .ui-future-module > i { width: 20px; flex: 0 0 20px; font-size: 15px; line-height: 1; }
+      .ui-future-module > i { width: 20px; flex: 0 0 20px; font-size: 16px; line-height: 1; }
       .ui-sidebar-item:hover { color: var(--text-primary); }
       .ui-sidebar-item[aria-current="page"]
       {
         background: var(--selected);
         color: var(--text-primary);
-        box-shadow: inset 3px 0 0 var(--brand);
+        box-shadow: none;
       }
       .ui-future-module
       {
-        min-height: 34px;
-        margin-left: 10px;
+        min-height: 35px;
+        margin-left: 0;
         gap: 10px;
-        padding: 5px 10px;
+        padding: 6px 10px;
         color: var(--disabled-text);
         cursor: not-allowed;
       }
-      #financialModulesDisclosureButton[aria-expanded="true"] { background: var(--sidebar-hover); color: var(--text-primary); }
-      #financialModulesGroup { border-left: 1px solid var(--sidebar-divider); padding-left: 4px; }
+      #financialModulesDisclosureButton[aria-expanded="true"] { color: var(--text-primary); }
+      #financialModulesDisclosureButton { margin-top: 0; font-size: 14px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+      #financialModulesGroup { padding-left: 30px; }
+      #financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }
+      #sidebarCollapseButton { min-height: 44px; border: 0; background: transparent; box-shadow: none; }
+      #dashboardSidebar > div:last-child .text-\[10px\] { font-size: 11px; line-height: 16px; }
       .ui-theme-surface { background: var(--surface-1) !important; border-color: var(--border-subtle) !important; color: var(--text-primary) !important; }
       .ui-theme-inset { background: var(--surface-2) !important; border-color: var(--border-subtle) !important; }
       .ui-theme-primary { color: var(--text-primary) !important; }
@@ -108,36 +130,110 @@
       .ui-theme-muted { color: var(--text-muted) !important; }
       .hf-section-label { color: var(--text-muted); font-size: 12px; font-weight: 500; line-height: 16px; }
       .hf-section-heading { color: var(--text-primary); font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 24px; }
+      .ui-page-title,
+      .ui-page-heading { font-size: var(--text-display-size); font-weight: var(--font-weight-bold); line-height: var(--text-display-line); }
+      .ui-page-subtitle { font-size: var(--text-body-size); font-weight: var(--font-weight-normal); line-height: var(--text-body-line); }
+      .ui-nav-label { font-size: var(--text-body-size); font-weight: var(--font-weight-medium); line-height: var(--text-body-line); }
+      .ui-nav-child-label { font-size: var(--text-body-size); font-weight: var(--font-weight-normal); line-height: var(--text-body-line); }
+      .ui-tab-label { font-size: var(--text-label-size); font-weight: var(--font-weight-semibold); line-height: var(--text-label-line); }
+      .ui-section-title { font-size: var(--text-section-size); font-weight: var(--font-weight-semibold); line-height: var(--text-section-line); letter-spacing: -0.01em; }
+      .ui-card-title { font-size: var(--text-component-size); font-weight: var(--font-weight-semibold); line-height: var(--text-component-line); letter-spacing: -0.005em; }
+      .ui-kpi-label { font-size: var(--text-label-size); font-weight: var(--font-weight-medium); line-height: var(--text-label-line); }
+      .ui-kpi-value { font-size: var(--text-kpi-size); font-weight: var(--font-weight-bold); line-height: var(--text-kpi-line); }
+      .ui-body-text { font-size: var(--text-body-size); font-weight: var(--font-weight-normal); line-height: var(--text-body-line); }
+      .ui-body-strong { font-size: var(--text-body-size); font-weight: var(--font-weight-semibold); line-height: var(--text-body-line); }
+      .ui-meta-text { font-size: var(--text-caption-size); font-weight: var(--font-weight-normal); line-height: var(--text-caption-line); }
+      .ui-table-header { font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
+      .ui-table-body { font-size: var(--text-caption-size); font-weight: var(--font-weight-normal); line-height: var(--text-label-line); }
+      .ui-badge-label { font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
+      .ui-action-label { font-size: var(--text-label-size); font-weight: var(--font-weight-semibold); line-height: var(--text-label-line); }
+      .ui-form-text { font-family: var(--font-sans); font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
+      .ui-empty-state { font-size: var(--text-body-size); font-weight: var(--font-weight-normal); line-height: var(--text-body-line); color: var(--text-muted); }
+      .hf-analytics-card-header { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: var(--space-5); }
+      .hf-analytics-title-group { display: inline-flex; min-width: 0; align-items: center; gap: var(--space-5); }
+      .hf-analytics-title-icon { display: inline-flex; width: 44px; height: 44px; flex: 0 0 44px; align-items: center; justify-content: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 17px; }
+      .hf-analytics-title-icon-products { background: var(--warning-soft); color: var(--warning); }
+      #topProductWrapper { margin-top: var(--card-header-content-gap); }
+      .ui-custom-select { position: relative; width: 148px; min-width: 148px; font-family: var(--font-sans); }
+      .ui-custom-select-trigger { display: flex; width: 100%; height: 44px; align-items: center; justify-content: space-between; gap: var(--space-4); border: 1px solid var(--card-border); border-radius: 9px; padding: 0 12px 0 14px; background: var(--surface-1); color: var(--text-primary); text-align: left; }
+      .ui-custom-select-listbox { position: absolute; z-index: 80; top: calc(100% + var(--space-3)); left: 0; width: max-content; min-width: 100%; max-height: 280px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-control); padding: var(--space-3); background: var(--surface-1); box-shadow: var(--shadow-2); }
+      .ui-custom-select-option { display: flex; width: 100%; min-width: 150px; min-height: 40px; align-items: center; gap: var(--space-4); border-radius: 6px; padding: 0 12px; color: var(--text-secondary); text-align: left; white-space: nowrap; }
+      .ui-custom-select-option:hover,
+      .ui-custom-select-option[data-active="true"] { background: var(--hover); color: var(--text-primary); }
+      .ui-custom-select-option[aria-selected="true"] { background: var(--brand-soft); color: var(--brand); font-weight: var(--font-weight-semibold); }
+      .ui-custom-select-option:focus-visible,
+      .ui-custom-select-trigger:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+      .ui-custom-select-check { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; align-self: center; transform: none; font-size: 12px; line-height: 1; visibility: hidden; }
+      .ui-custom-select-option[aria-selected="true"] .ui-custom-select-check { visibility: visible; }
+      .ui-native-select { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; }
       .hf-executive-plane { background: var(--surface-1); border-bottom: 1px solid var(--divider); }
+      .hf-summary-action-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 18px; }
+      .hf-summary-card-header { display: flex; align-items: center; gap: 12px; }
+      .hf-summary-title-icon { display: inline-flex; width: 38px; height: 38px; flex: 0 0 38px; align-items: center; justify-content: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 15px; }
+      .hf-summary-title-icon-purple { background: color-mix(in srgb, var(--chart-series-6) 12%, transparent); color: var(--chart-series-6); }
+      .hf-summary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
+      .hf-summary-metrics > * { min-width: 0; padding: 5px 18px; }
+      .hf-summary-metrics > * + * { border-left: 1px solid var(--divider); }
+      .hf-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+      .hf-quick-actions button { display: grid; width: 100%; min-width: 0; min-height: 50px; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 11px; border-color: var(--card-border); background: var(--surface-1); transition: background-color 150ms ease, border-color 150ms ease; }
+      .hf-quick-actions button:hover { border-color: var(--border-strong); background: var(--hover); }
+      .hf-quick-actions button > i:first-child { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 9px; background: var(--brand-soft); color: var(--brand); font-size: 13px; }
+      .hf-action-copy { min-width: 0; }
+      .hf-action-copy strong,
+      .hf-action-copy span { display: block; }
+      .hf-action-copy strong { color: var(--text-primary); font-size: 12px; line-height: 17px; }
+      #printReportButton .hf-action-copy strong { white-space: nowrap; }
+      .hf-action-copy span { color: var(--text-muted); font-size: 11px; line-height: 14px; }
+      .hf-action-chevron { color: var(--text-muted); font-size: 11px; }
       .hf-executive-fact { min-width: 0; padding: 12px 16px; }
       .hf-executive-fact + .hf-executive-fact { border-left: 1px solid var(--divider); }
       .hf-priority-action { border-left: 1px solid var(--divider); }
       .hf-priority-action #businessPriorityLevel { border-bottom: 2px solid currentColor; padding-bottom: 2px; }
-      .hf-kpi-strip { background: var(--surface-1); border-top: 1px solid var(--divider); border-bottom: 1px solid var(--divider); }
-      .hf-kpi-card { min-height: 64px; padding: 8px 12px; border: 0; border-radius: 0; box-shadow: none; }
-      .hf-kpi-card + .hf-kpi-card { border-left: 1px solid var(--divider); }
-      .hf-overview-evidence { display: grid; min-width: 0; grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); gap: 12px; }
-      .hf-overview-context { display: flex; min-width: 0; flex-direction: column; }
-      .hf-overview-context > * + * { border-top: 1px solid var(--divider); }
-      .hf-comparison-grid > * { min-width: 0; padding: 8px 10px; }
+      .hf-kpi-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; background: transparent; }
+      .hf-kpi-card { min-height: 130px; padding: 17px 18px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--card-bg); box-shadow: var(--card-shadow); }
+      .hf-kpi-icon { display: inline-flex; width: 38px; height: 38px; flex: 0 0 38px; align-items: center; justify-content: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 16px; }
+      .hf-kpi-comparison { display: flex; margin-top: 8px; align-items: baseline; justify-content: space-between; gap: 8px; font-size: 11px; line-height: 16px; }
+      .hf-kpi-comparison > span:first-child { color: var(--text-muted); }
+      .hf-kpi-comparison > strong { font-weight: 700; }
+      #dashboardPanelOverview .hf-kpi-card .hf-section-label { font-size: 13px; line-height: 18px; }
+      .hf-kpi-card:nth-child(2) .hf-kpi-icon,
+      .hf-kpi-card:nth-child(3) .hf-kpi-icon { background: var(--success-soft); color: var(--success); }
+      .hf-kpi-card:nth-child(4) .hf-kpi-icon { background: var(--warning-soft); color: var(--warning); }
+      .hf-kpi-card:nth-child(5) .hf-kpi-icon { background: color-mix(in srgb, var(--chart-series-6) 12%, transparent); color: var(--chart-series-6); }
+      .hf-overview-evidence { display: grid; min-width: 0; grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr); gap: 18px; }
+      .hf-overview-context { display: grid; min-width: 0; grid-template-rows: 164px 120px; align-content: start; gap: 16px; }
+      #periodComparisonSection,
+      #dataQualityInformation { border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--card-bg); box-shadow: var(--card-shadow); }
+      .hf-comparison-grid { gap: 8px; }
+      .hf-comparison-grid > * { min-width: 0; padding: 11px 12px; border: 1px solid var(--divider) !important; border-radius: 8px; background: var(--surface-2); }
       .hf-comparison-grid > *:nth-child(even) { border-left: 1px solid var(--divider); }
       .hf-comparison-grid > *:nth-child(n+3) { border-top: 1px solid var(--divider); }
       .hf-evidence-group > * + * { border-left: 1px solid var(--divider); }
 
       /* Overview polish: preserve the composition while sharpening hierarchy and rhythm. */
-      #dashboardPanelOverview .hf-section-label { font-size: 11px; font-weight: 500; line-height: 16px; }
+      #dashboardPanelOverview .hf-section-label { font-size: 12px; font-weight: 600; line-height: 17px; }
       #dashboardPanelOverview #executiveSummary { color: var(--text-secondary); font-size: 14px; font-weight: 600; line-height: 20px; }
-      #dashboardPanelOverview #businessPriorityRegion { padding-left: 24px; }
-      #dashboardPanelOverview #businessPriorityHeading { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
-      #dashboardPanelOverview #priorityTitle { color: var(--text-primary); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 24px; }
-      #dashboardPanelOverview #priorityReason { color: var(--text-muted); font-size: 11px; line-height: 16px; }
-      #dashboardPanelOverview #priorityMessage { font-size: 11px; line-height: 16px; }
+      #dashboardPanelInsights #businessPriorityHeading { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+      #dashboardPanelInsights #priorityTitle { color: var(--text-primary); font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 24px; }
+      #dashboardPanelInsights #priorityReason { color: var(--text-muted); font-size: 11px; line-height: 16px; }
+      #dashboardPanelInsights #priorityMessage { font-size: 11px; line-height: 16px; }
       #dashboardPanelOverview #keyMetricsTitle,
-      #dashboardPanelOverview #revenueChartTitle { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 24px; }
-      #dashboardPanelOverview .overview-kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -0.03em; line-height: 32px; }
+      #dashboardPanelOverview #revenueChartTitle { font-size: 20px; font-weight: 700; letter-spacing: -0.025em; line-height: 25px; }
+      #dashboardPanelOverview .overview-kpi-value { font-size: 31px; font-weight: 800; letter-spacing: -0.04em; line-height: 35px; }
       #dashboardPanelOverview .hf-kpi-card > span:last-child { color: var(--text-muted); font-weight: 400; line-height: 16px; }
-      #dashboardPanelOverview #revenueChartSection { border-color: transparent; border-radius: 0; padding: 16px 8px 8px 16px; }
-      #dashboardPanelOverview #revenueChartSummary { color: var(--text-muted); line-height: 16px; }
+      #dashboardPanelOverview #revenueChartSection,
+      #dashboardPanelOverview #topProductsSection { padding: 20px 20px 10px; }
+      #dashboardPanelOverview #revenueChartSection > div:first-child > span { height: 36px; border-color: var(--card-border); border-radius: 9px; padding-left: 12px; padding-right: 12px; background: var(--surface-1); }
+      #dashboardPanelOverview #revenueChartSummary { color: var(--text-muted); font-size: 11px; line-height: 16px; }
+      #periodComparisonSection { padding: 16px 18px; }
+      #periodComparisonLabel { color: var(--text-primary); font-size: 13px; font-weight: 700; line-height: 18px; }
+      #periodComparisonMetrics .text-\[10px\] { color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 14px; }
+      #periodComparisonMetrics .text-sm { color: var(--text-primary); font-size: 15px; line-height: 19px; }
+      #dataQualityInformation { padding: 15px 18px; color: var(--text-muted); }
+      #dataQualityInformation > div:first-child { align-items: center; gap: 8px; }
+      #dataQualityHeading { color: var(--text-primary); font-size: 13px; line-height: 18px; }
+      #dataQualityStatusBadge { min-height: 24px; padding: 3px 9px; font-size: 11px; line-height: 16px; }
+      #dataQualityScopeSummary { margin-top: 7px; font-size: 11px; line-height: 16px; }
       #dashboardPanelOverview #revenueChartSection > div:first-child { min-height: 32px; }
       #dashboardPanelOverview #revenueChartSection > div:first-child button { align-self: flex-start; border-color: var(--divider); background: transparent; }
       #dashboardTabList:has(#dashboardTabOverview[aria-selected="true"]) { border-bottom-color: transparent; }
@@ -167,44 +263,53 @@
         }
 
         #dashboardSidebar { transform: translateX(0); }
-        #mainContent { display: grid; grid-template-rows: 52px minmax(0, 1fr); margin-left: 232px; height: 100vh; height: 100dvh; overflow: hidden; }
-        #contentViewport { height: auto; min-height: 0; overflow: hidden; padding: var(--space-5) var(--space-6); }
+        #mainContent { display: grid; grid-template-rows: 76px minmax(0, 1fr); margin-left: 248px; height: 100vh; height: 100dvh; overflow: hidden; }
+        #contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 20px 24px 12px; }
         #dashboard.active { display: flex; min-height: 0; height: 100%; flex-direction: column; overflow: hidden; }
-        #dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }
-        #dashboardTabList { margin: 0; padding-left: 16px; padding-right: 16px; }
-        #dashboardTabPanels { min-height: 0; overflow: hidden; padding-top: 10px; }
+        #dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 44px minmax(0, 1fr); gap: 12px; }
+        #dashboardTabList { width: max-content; margin: 0 0 0 4px; }
+        #dashboardTabPanels { min-height: 0; overflow: visible; }
         .dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }
-        #dashboardPanelOverview { height: 100%; overflow: hidden; }
+        #dashboardPanelOverview { height: 100%; overflow: visible; }
         #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
-        #dashboardPanelOverview #executiveSummarySection,
-        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 12px; }
-        #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 8px; }
-        #dashboardPanelOverview #executiveSummarySection,
-        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
-        #dashboardPanelOverview #executiveSummarySection { max-height: 132px; overflow: hidden; }
-        #dashboardPanelOverview .hf-kpi-card { min-height: 68px; }
-        #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }
-        #dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }
-        #dashboardPanelPerformance:not([hidden]) { display: block; overflow: hidden; }
-        #dashboardPanelPerformance #businessPerformanceSection { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
-        #dashboardPanelAnalytics:not([hidden]) { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); grid-template-rows: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
-        #dashboardPanelAnalytics > section,
-        #dashboardPanelAnalytics > div { min-height: 0; height: 100%; margin: 0; }
-        #dashboardPanelAnalytics #hotColdWrapper,
-        #dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 180px; }
-        #dashboardPanelIntelligence:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); gap: 12px; overflow: hidden; }
-        #dashboardPanelIntelligence > section,
-        #dashboardPanelIntelligence > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
-        #dashboardPanelIntelligence #diagnosisContainer,
-        #dashboardPanelIntelligence #recommendationContainer { min-height: 0; overflow-y: auto; }
-        #dashboardPanelIntelligence #riskOpportunitySection { display: flex; flex-direction: column; gap: 8px; }
-        #dashboardPanelIntelligence #riskOpportunitySection > div { min-height: 0; flex: 1 1 0; }
-        #dashboardPanelPlanning:not([hidden]) { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 8px; overflow: hidden; }
-        #dashboardPanelPlanning #executiveCenter { display: grid; min-height: 0; height: auto; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; margin: 0; overflow: hidden; }
+        #dashboardPanelOverview #executiveSummarySection { margin-bottom: 12px; }
+        #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 0; }
+        #dashboardPanelOverview #executiveSummarySection { margin-bottom: 8px; }
+        #dashboardSidebar > nav + div > .space-y-1 { transform: translateY(-24px); margin-bottom: -24px; }
+        #dashboardPanelOverview #executiveSummarySection { height: 194px; min-height: 194px; max-height: 194px; overflow: visible; }
+        #dashboardPanelOverview .hf-kpi-card { min-height: 130px; }
+        #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: visible; }
+        #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: auto 300px 42px 194px; align-content: start; gap: 12px; }
+        #dashboardPanelOverview #dashboardHeaderRegion,
+        #dashboardPanelOverview #keyMetricsSection { grid-row: 1; margin: 0; }
+        #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; min-height: 0; }
+        #dashboardPanelOverview #overviewContextRow { grid-row: 3; min-height: 42px; }
+        #dashboardPanelOverview #executiveSummarySection { grid-row: 4; margin: 0; }
+        #dashboardPanelOverview #revenueChartSection { height: 100%; }
+        #dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }
+        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto repeat(2, minmax(0, 1fr)); gap: 12px; overflow: hidden; }
+        #dashboardPanelPerformance #forecastContainer { grid-column: 1 / -1; margin: 0; }
+        #dashboardPanelPerformance > section,
+        #dashboardPanelPerformance > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
+        #dashboardPanelPerformance #hotColdWrapper,
+        #dashboardPanelPerformance #expenseWrapper { height: calc(100% - 58px); min-height: 150px; }
+        #dashboardPanelPerformance #topProductWrapper { max-height: calc(100% - 28px); overflow-y: auto; }
+        #dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
+        #dashboardPanelInsights > section,
+        #dashboardPanelInsights > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
+        #dashboardPanelInsights #diagnosisContainer,
+        #dashboardPanelInsights #recommendationContainer { min-height: 0; overflow-y: auto; }
+        #dashboardPanelInsights #riskOpportunitySection { display: flex; flex-direction: column; gap: 8px; }
+        #dashboardPanelInsights #riskOpportunitySection > div { min-height: 0; flex: 1 1 0; }
+        #dashboardPanelInsights #businessPriorityRegion { grid-column: 1 / -1; height: auto; padding: 12px 16px; border: 1px solid var(--divider); border-radius: var(--radius-card); background: var(--surface-1); }
+        #dashboardPanelInsights #diagnosisSection { grid-column: 1; grid-row: 2; }
+        #dashboardPanelInsights #recommendationsSection { grid-column: 2; grid-row: 2; }
+        #dashboardPanelInsights #riskOpportunitySection { grid-column: 3; grid-row: 2; }
+        #dashboardPanelInsights #executiveCenter { display: grid; grid-column: 1 / span 2; grid-row: 3; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); grid-template-rows: auto minmax(0, 1fr); gap: 12px; }
         #planningFocusRow { grid-column: 1; grid-row: 1; }
         #actionRoadmapCard { grid-column: 2; grid-row: 1 / span 2; min-height: 0; margin: 0; overflow-y: auto; }
         #planningSupportRow { grid-column: 1; grid-row: 2; }
-        #dashboardPanelPlanning > #kpiTargetReference { margin: 0; padding: 8px 12px; border-top: 1px solid var(--border-subtle); background: var(--surface-1); }
+        #dashboardPanelInsights > #kpiTargetReference { grid-column: 3; grid-row: 3; margin: 0; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--surface-1); }
         #transactions.active { display: grid; height: 100%; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #transactionsTabList { margin: 0; }
         #transactionsPanelGroup { min-height: 0; height: auto; }
@@ -228,25 +333,22 @@
 
       @media (min-width: 1024px) and (max-width: 1279px)
       {
-        #dashboardSidebar { width: 216px; }
-        #mainContent { grid-template-rows: 48px minmax(0, 1fr); margin-left: 216px; }
-        #topUtilityBar { height: 48px; min-height: 48px; }
-      }
-
-      @media (min-width: 1024px) and (min-height: 1000px)
-      {
-        #dashboardPanelOverview #mainChartWrapper { height: 360px; min-height: 360px; max-height: 360px; }
+        #dashboardSidebar { width: 224px; }
+        #mainContent { grid-template-rows: 68px minmax(0, 1fr); margin-left: 224px; }
+        #topUtilityBar { height: 68px; min-height: 68px; }
       }
 
       @media (min-width: 1024px) and (max-height: 800px)
       {
+        #dashboardSidebar > nav + div > .space-y-1 { transform: none; margin-bottom: 0; }
         .hf-executive-fact { padding: 8px 12px; }
-        .hf-kpi-card { min-height: 60px; padding: 6px 12px; }
-        #dashboardPanelOverview #executiveSummarySection { max-height: 116px; }
-        #dashboardPanelOverview .hf-kpi-card { min-height: 60px; }
-        #dashboardPanelOverview #executiveSummarySection,
-        #dashboardPanelOverview #keyMetricsSection { margin-bottom: 8px; }
-        #dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }
+        .hf-kpi-card { min-height: 108px; padding: 12px; }
+        #dashboardPanelOverview #executiveSummarySection { height: 160px; min-height: 160px; max-height: 160px; }
+        #dashboardPanelOverview .hf-kpi-card { min-height: 108px; }
+        #dashboardPanelOverview:not([hidden]) { grid-template-rows: 108px minmax(210px, 1fr) 38px 160px; gap: 8px; }
+        #dashboardPanelOverview #executiveSummarySection { margin-bottom: 8px; }
+        #dashboardPanelOverview #mainChartWrapper { height: 136px; min-height: 136px; max-height: 136px; }
+        .hf-quick-actions button { min-height: 38px; }
         .hf-setting-choice { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
       }
 
@@ -256,16 +358,18 @@
         #topUtilityBar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }
         #dashboardUtilityControls { order: 3; width: 100%; flex-wrap: wrap; }
         #contentViewport { overflow: visible; padding: var(--space-5); }
-        #dashboardPanelPerformance,
-        #dashboardPanelAnalytics { height: auto; overflow: visible; }
+        #dashboardPanelPerformance { height: auto; overflow: visible; }
+        .hf-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .hf-overview-evidence { display: grid; grid-template-columns: minmax(0, 1fr); }
         #businessOverview > :last-child { grid-column: 1 / -1; }
-        #dashboardPanelIntelligence,
-        #dashboardPanelPlanning { height: auto; overflow: visible; }
-        #dashboardPanelIntelligence #diagnosisContainer,
-        #dashboardPanelIntelligence #recommendationContainer { overflow: visible; }
-        #dashboardPanelPlanning #executiveCenter { overflow: visible; }
-        #dashboardPanelPlanning #executiveCenter { display: block; }
+        #dashboardPanelInsights { height: auto; overflow: visible; }
+        #dashboardPanelInsights #diagnosisContainer,
+        #dashboardPanelInsights #recommendationContainer { overflow: visible; }
+        #dashboardPanelInsights #executiveCenter { overflow: visible; }
+        #dashboardPanelInsights #executiveCenter { display: block; }
+        #dashboardPanelOverview #mainChartWrapper,
+        #dashboardPanelPerformance #hotColdWrapper,
+        #dashboardPanelPerformance #expenseWrapper { height: 288px; min-height: 288px; max-height: 288px; }
         #actionRoadmapCard { overflow: visible; }
         #transactions.active,
         #transactionsPanelGroup,
@@ -280,14 +384,19 @@
         #transactionsTableScroll td { height: 44px; }
         .hf-log-severity-strip > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-executive-fact + .hf-executive-fact { border-top: 1px solid var(--border-subtle); border-left: 0; }
-        .hf-kpi-card + .hf-kpi-card { border-top: 1px solid var(--divider); border-left: 0; }
+        .hf-summary-action-grid { grid-template-columns: minmax(0, 1fr); }
+        .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .hf-summary-metrics > * + * { border-left: 0; }
         .hf-evidence-group > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
       }
 
       @media (max-width: 639px)
       {
+        .hf-kpi-strip { grid-template-columns: minmax(0, 1fr); }
         #businessOverview > :last-child { grid-column: auto; }
-        #dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }
+        #dashboardPanelOverview #mainChartWrapper,
+        #dashboardPanelPerformance #hotColdWrapper,
+        #dashboardPanelPerformance #expenseWrapper { height: 220px; min-height: 220px; max-height: 220px; }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -592,6 +701,132 @@
           word-break: normal;
         }
       }
+      /* WO-028 functional refinement overrides. */
+      #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important; border-top: 0 !important; }
+      #sidebarCollapseButton { width: 100% !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+      #dashboardTabInsights { white-space: nowrap !important; }
+      @media (min-width: 1024px) and (max-height: 800px) {
+        #dashboardPanelOverview:not([hidden]) { --overview-section-gap: 8px; grid-template-rows: 108px minmax(228px, 1fr) 38px 160px !important; gap: var(--overview-section-gap) !important; }
+        #dashboardPanelOverview #overviewContextRow { min-height: 38px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+        #dashboardPanelOverview #executiveSummarySection { height: 160px !important; min-height: 160px !important; max-height: 160px !important; }
+        #dashboardPanelOverview #executiveSummarySection > * { padding: 12px !important; }
+        #dashboardPanelOverview .hf-summary-metrics { margin-top: 8px !important; }
+        #dashboardPanelOverview .hf-quick-actions { margin-top: 8px !important; gap: 6px 10px !important; }
+        #dashboardPanelOverview .hf-quick-actions button { min-height: 38px !important; padding-top: 6px !important; padding-bottom: 6px !important; }
+      }
+      @media (min-width: 1024px) and (min-height: 801px) and (max-height: 883px) {
+        #dashboardPanelOverview:not([hidden]) { --overview-section-gap: 8px; grid-template-rows: 108px minmax(268px, 1fr) 40px 174px !important; gap: var(--overview-section-gap) !important; }
+        #dashboardPanelOverview #executiveSummarySection { height: 174px !important; min-height: 174px !important; max-height: 174px !important; }
+      }
+      @media (min-width: 1024px) and (min-height: 884px) {
+        #dashboardPanelOverview:not([hidden]) { --overview-section-gap: 8px; grid-template-rows: 126px minmax(320px, 1fr) 42px 190px !important; gap: var(--overview-section-gap) !important; }
+        #dashboardPanelOverview #executiveSummarySection { height: 190px !important; min-height: 190px !important; max-height: 190px !important; }
+        #dashboardPanelOverview #executiveSummarySection > * { padding: 16px !important; }
+        #dashboardPanelOverview .hf-summary-metrics { margin-top: 18px !important; }
+        #dashboardPanelOverview .hf-quick-actions { margin-top: 12px !important; gap: 8px 12px !important; }
+        #dashboardPanelOverview .hf-quick-actions button { min-height: 44px !important; padding-top: 8px !important; padding-bottom: 8px !important; }
+      }
+      #dashboardPanelOverview .hf-overview-context { display: flex !important; min-height: 42px !important; align-items: center !important; justify-content: space-between !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
+      #dashboardPanelOverview #periodComparisonSection,
+      #dashboardPanelOverview #dataQualityInformation { padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
+      #dashboardPanelOverview #dataQualityInformation { display: flex !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }
+      #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: inline-flex !important; align-items: center !important; justify-content: flex-end !important; flex-wrap: nowrap !important; gap: 8px !important; line-height: 16px !important; }
+      #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row > * { margin-top: 0 !important; margin-bottom: 0 !important; line-height: 16px !important; }
+      #dashboardPanelOverview #dataQualityStatusBadge { align-self: center; }
+      #dashboardPanelOverview #dataQualityDetails:not(.hidden) { flex-basis: 100% !important; white-space: normal !important; }
+      #dashboardPanelOverview #mainChartWrapper { height: calc(100% - 48px) !important; min-height: 0 !important; }
+      #dashboardContent { gap: var(--overview-section-gap) !important; }
+      .hf-top-products-table { width: 100%; table-layout: fixed; }
+      .hf-top-products-table th,
+      .hf-top-products-table td { height: 34px; padding: 0 6px; border-bottom: 1px solid var(--divider); text-align: left !important; white-space: nowrap; }
+      .hf-top-products-table tbody td,
+      .hf-top-products-table tbody th { font-size: var(--text-caption-size); font-weight: var(--font-weight-normal); line-height: var(--text-label-line); }
+      .hf-top-products-table tbody th { font-weight: var(--font-weight-semibold); }
+      .hf-top-products-table thead th { color: var(--text-muted); font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); text-align: left !important; text-transform: none; letter-spacing: 0; }
+      .hf-top-products-table .hf-col-rank { width: 8%; }
+      .hf-top-products-table .hf-col-product { width: 45%; }
+      .hf-top-products-table .hf-col-units { width: 18%; }
+      .hf-top-products-table .hf-col-revenue { width: 29%; }
+      @media (min-width: 1024px) {
+        #dashboardSidebar { width: 264px !important; }
+        #mainContent { margin-left: 264px !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px !important; }
+        #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 64px !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > div:first-of-type,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; padding-left: 0 !important; padding-right: 0 !important; margin-left: 0 !important; margin-right: 0 !important; }
+        #appShell[data-sidebar-collapsed="true"] #financialModulesGroup { width: 64px !important; padding-left: 0 !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-brand,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-brand > div:first-child,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 64px !important; max-width: 64px !important; margin-left: 0 !important; margin-right: 0 !important; justify-content: center !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .numlock-mark { width: 46px !important; height: 46px !important; flex-basis: 46px !important; margin-left: auto !important; margin-right: auto !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { grid-template-columns: 24px !important; gap: 0 !important; padding-left: 0 !important; padding-right: 0 !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item > i,
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module > i { width: 24px !important; flex-basis: 24px !important; text-align: center !important; }
+        #dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap !important; }
+        #dashboardSidebar #sidebarCollapseButton { min-height: 44px !important; gap: 11px !important; padding: 8px 12px !important; }
+        #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; box-sizing: border-box !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }
+        #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr) !important; }
+      }
+      @media (min-width: 1280px) and (min-height: 900px) {
+        #dashboardSidebar #sidebarCollapseButton { min-height: 48px !important; gap: 12px !important; padding: 10px 12px !important; }
+      }
+      @media (max-width: 767px) {
+        #dashboardPanelOverview .hf-overview-context { align-items: flex-start !important; flex-direction: column !important; }
+      }
+      /* Final runtime visual enforcement II: keep this after legacy component overrides. */
+      :root { --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --font-display: var(--font-sans); --overview-section-gap: 8px; --card-header-content-gap: 16px; --section-icon-size: 48px; --section-icon-glyph-size: 18px; --section-title-gap: 12px; }
+      html, body, #appShell, #mainContent, .page, button, input, select, textarea, table { font-family: var(--font-sans) !important; font-synthesis: none; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; font-feature-settings: "kern" 1, "liga" 1, "calt" 1; letter-spacing: -0.006em; }
+      :where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important; font-kerning: normal; text-wrap: balance; }
+      :where(button, input, select, textarea, .ui-form-text, .ui-action-label, .ui-badge-label) { letter-spacing: -0.005em; }
+      :where(.ui-page-subtitle, .ui-body-text, .ui-meta-text, .ui-empty-state, .hf-section-label) { letter-spacing: 0; }
+      #utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
+      #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
+      #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
+      #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-radius: 8px 8px 0 0 !important; padding: 0 12px !important; font-size: 13px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
+      #dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important; grid-template-columns: none !important; gap: 0 !important; padding: 0 !important; }
+      #dashboardTabList [role="tab"], #dashboardTabInsights { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; padding-right: 18px !important; padding-left: 18px !important; }
+      #dashboardTabList [role="tab"]:hover { background: color-mix(in srgb, var(--hover) 64%, transparent) !important; color: var(--text-primary) !important; }
+      #dashboardTabList [role="tab"][aria-selected="true"], #dashboardTabList [role="tab"][aria-selected="true"]:hover { border-bottom-color: var(--brand) !important; background: var(--brand-soft) !important; color: var(--brand) !important; }
+      #dashboardTabList [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; }
+      #dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading, #dashboardPanelPerformance h2, #dashboardPanelInsights h2, #transactions h2 { font-size: var(--text-section-size) !important; font-weight: 600 !important; line-height: var(--text-section-line) !important; letter-spacing: -0.01em !important; }
+      #dashboardPanelOverview .hf-analytics-card-header, #dashboardPanelOverview .hf-summary-card-header { min-height: var(--section-icon-size) !important; align-items: center !important; }
+      #dashboardPanelOverview .hf-analytics-title-group, #dashboardPanelOverview .hf-summary-card-header { gap: var(--section-title-gap) !important; }
+      #dashboardPanelOverview .hf-analytics-title-icon, #dashboardPanelOverview .hf-summary-title-icon { width: var(--section-icon-size) !important; height: var(--section-icon-size) !important; flex-basis: var(--section-icon-size) !important; border-radius: 10px !important; font-size: var(--section-icon-glyph-size) !important; }
+      #dashboardPanelOverview .hf-analytics-title-icon > i, #dashboardPanelOverview .hf-summary-title-icon > i { font-size: var(--section-icon-glyph-size) !important; line-height: 1 !important; }
+      #dashboardPanelOverview .hf-analytics-title-icon-products > i { font-size: 17px !important; }
+      #dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 8px 16px !important; }
+      #dashboardPanelOverview #revenueChartSection { padding-left: 4px !important; }
+      #dashboardPanelOverview #keyMetricsSection { margin: 0 !important; }
+      #dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 12px !important; padding-left: 12px !important; }
+      @media (min-width: 1024px) {
+        #dashboardPanelOverview:not([hidden]) { gap: 0 !important; }
+        #dashboardPanelOverview #keyMetricsSection { grid-row: 1 !important; }
+        #dashboardPanelOverview #overviewEvidenceRow { grid-row: 3 !important; }
+        #dashboardPanelOverview #overviewContextRow { grid-row: 5 !important; }
+        #dashboardPanelOverview #executiveSummarySection { grid-row: 7 !important; }
+      }
+      @media (min-width: 1024px) and (max-height: 800px) {
+        #dashboardPanelOverview:not([hidden]) { grid-template-rows: 108px 0 minmax(228px, 1fr) 8px 38px 8px 160px !important; }
+      }
+      @media (min-width: 1024px) and (min-height: 801px) and (max-height: 883px) { #dashboardPanelOverview:not([hidden]) { grid-template-rows: 108px 0 minmax(268px, 1fr) 8px 40px 8px 174px !important; } }
+      @media (min-width: 1024px) and (min-height: 884px) { #dashboardPanelOverview:not([hidden]) { grid-template-rows: 126px 0 minmax(320px, 1fr) 8px 42px 8px 190px !important; } }
+      #dashboardPanelOverview .hf-kpi-card .hf-section-label { font-size: 13px !important; font-weight: 500 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 23px !important; font-weight: 700 !important; line-height: 30px !important; letter-spacing: -0.03em !important; }
+      .hf-top-products-table thead th, #transactionsTableScroll th { font-size: 12px !important; font-weight: 600 !important; line-height: 18px !important; letter-spacing: 0 !important; text-transform: none !important; }
+      .hf-top-products-table tbody th, .hf-top-products-table tbody td, #transactionsTableScroll td { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
+      .hf-top-products-table tbody th { font-weight: 600 !important; }
+      .ui-custom-select-trigger, .ui-custom-select-option { font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 500 !important; line-height: 18px !important; }
+      .ui-custom-select-option { display: flex !important; height: 40px !important; min-height: 40px !important; align-items: center !important; padding: 0 12px !important; }
+      .ui-custom-select-check { display: inline-flex !important; width: 18px !important; height: 18px !important; flex-basis: 18px !important; align-items: center !important; justify-content: center !important; align-self: center !important; transform: none !important; line-height: 18px !important; }
+      .ui-custom-select-option:hover, .ui-custom-select-option[data-active="true"] { background: var(--hover) !important; color: var(--text-primary) !important; }
+      .ui-custom-select-option[aria-selected="true"], .ui-custom-select-option[aria-selected="true"]:hover, .ui-custom-select-option[aria-selected="true"][data-active="true"] { background: var(--brand-soft) !important; color: var(--brand) !important; }
+      #dashboardPanelInsights #riskOpportunitySection { min-height: 0 !important; overflow-y: auto !important; }
+      #dashboardPanelInsights #riskOpportunitySection > div { flex: 0 0 auto !important; overflow-wrap: anywhere; }
     </style>
   </head>
 
@@ -610,13 +845,13 @@
     id="dashboardSidebar"
     class="fixed inset-y-0 left-0 z-50 flex h-full -translate-x-full flex-col text-slate-300 shadow-2xl transition-all duration-200 lg:translate-x-0"
     aria-label="NUMLOCK navigation">
-    <div class="flex h-[52px] items-center border-b border-slate-800 px-3">
+    <div class="flex h-[82px] items-center px-5">
       <div class="sidebar-brand flex w-full items-center justify-between gap-2">
-        <div class="flex min-w-0 items-center gap-3">
-        <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white" aria-hidden="true">N</div>
+        <div class="flex min-w-0 items-center gap-4">
+        <div class="numlock-mark" aria-hidden="true"><span></span><span></span><span></span></div>
         <div class="sidebar-expanded-content min-w-0">
-          <div class="text-sm font-bold tracking-wide text-white">NUMLOCK</div>
-          <p class="text-[10px] text-slate-400">Business Intelligence</p>
+          <div class="text-xl font-extrabold tracking-wide text-white">NUMLOCK</div>
+          <p class="mt-0.5 text-xs leading-4 text-slate-400">Business Intelligence</p>
         </div>
         </div>
         <button
@@ -649,48 +884,29 @@
           aria-label="Transactions"
           title="Transactions"
           class="ui-sidebar-item flex w-full items-center text-left transition">
-          <i class="fas fa-receipt w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Transactions</span>
+          <i class="fas fa-arrow-right-arrow-left w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Transactions</span>
         </button>
 
-        <button
-          type="button"
-          data-page="settings"
-          data-navigation-destination="settings"
-          aria-label="Settings"
-          title="Settings"
-          class="ui-sidebar-item flex w-full items-center text-left transition">
-          <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
-        </button>
-
-        <button
-          type="button"
-          data-page="logs"
-          data-navigation-destination="logs"
-          aria-label="Logs"
-          title="Logs"
-          class="ui-sidebar-item flex w-full items-center text-left transition">
-          <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
-        </button>
         </div>
 
-        <div class="mt-3 border-t border-slate-800 pt-2">
+        <div class="sidebar-finance-group mt-1">
           <button
             id="financialModulesDisclosureButton"
             type="button"
-            class="ui-sidebar-item flex w-full items-center text-left text-sm font-medium transition"
-            aria-expanded="false"
+            class="ui-sidebar-item flex w-full items-center text-left text-sm font-normal transition"
+            aria-expanded="true"
             aria-controls="financialModulesGroup"
-            aria-label="Finance, collapsed"
+            aria-label="Finance, expanded"
             title="Finance"
             onclick="toggleFinancialModulesDisclosure(this)">
             <i class="fas fa-wallet w-6 text-center" aria-hidden="true"></i>
             <span class="sidebar-expanded-content flex min-w-0 flex-1 items-center justify-between gap-2">
               <span>Finance</span>
             </span>
-            <i class="sidebar-expanded-content fas fa-chevron-down text-[10px]" aria-hidden="true"></i>
+            <i class="sidebar-expanded-content fas fa-chevron-up text-[10px]" aria-hidden="true"></i>
           </button>
 
-          <div id="financialModulesGroup" class="mt-1 space-y-0" role="list" aria-label="Unavailable Finance destinations" hidden>
+          <div id="financialModulesGroup" class="mt-1 space-y-0 pl-5" role="list" aria-label="Unavailable Finance destinations">
             <div data-navigation-destination="products" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Products, unavailable until module migration is approved" title="Products — unavailable until module migration is approved">
               <i class="fas fa-mug-hot w-6 text-center" aria-hidden="true"></i>
               <span class="sidebar-expanded-content min-w-0">Products</span>
@@ -713,9 +929,18 @@
             </div>
           </div>
         </div>
+
       </nav>
 
-    <div class="border-t border-slate-800 p-2">
+    <div class="p-2">
+      <div class="space-y-1 pb-2">
+        <button type="button" data-page="settings" data-navigation-destination="settings" aria-label="Settings" title="Settings" class="ui-sidebar-item flex w-full items-center text-left transition">
+          <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
+        </button>
+        <button type="button" data-page="logs" data-navigation-destination="logs" aria-label="Logs" title="Logs" class="ui-sidebar-item flex w-full items-center text-left transition">
+          <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
+        </button>
+      </div>
       <button
         id="sidebarCollapseButton"
         type="button"
@@ -726,6 +951,9 @@
         <i id="sidebarCollapseIcon" class="fas fa-chevron-left w-6 text-center transition-transform" aria-hidden="true"></i>
         <span class="sidebar-expanded-content">Collapse</span>
       </button>
+      <div class="sidebar-status-region sidebar-expanded-content px-2 pt-2 text-[10px] leading-4 text-slate-400">
+        <div id="sidebarDataStatus" class="truncate">Waiting for data</div>
+      </div>
     </div>
   </aside>
 
@@ -746,61 +974,11 @@
         <span class="sr-only">Menu</span>
       </button>
         <div class="min-w-0">
-          <div id="utilityPageTitle" class="truncate text-sm ui-theme-primary">Dashboard</div>
-          <div id="utilityPageContext" class="truncate text-[11px] ui-theme-muted">Business performance and next actions</div>
+          <div id="utilityPageTitle" class="ui-page-title truncate ui-theme-primary">Dashboard</div>
+          <div id="utilityPageContext" class="ui-page-subtitle truncate ui-theme-muted">Business performance at a glance.</div>
         </div>
       </div>
 
-      <div id="dashboardUtilityControls" class="flex min-w-0 items-center gap-2">
-        <div
-          id="dateFilterControls"
-          onchange="handleDateFilterChange()"
-          class="flex min-w-0 items-center gap-2">
-          <label for="filter" class="sr-only">Reporting period</label>
-          <select
-            id="filter"
-            class="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-3 text-sm">
-            <option value="today">Today</option>
-            <option value="last7days">Last 7 Days</option>
-            <option value="currentMonth">Current Month</option>
-            <option value="previousMonth">Previous Month</option>
-            <option value="currentYear" selected>Current Year</option>
-            <option value="custom">Custom</option>
-          </select>
-
-          <button
-            id="printReportButton"
-            type="button"
-            onclick="printDashboardReport()"
-            class="h-9 rounded-lg bg-slate-950 px-3 text-sm font-semibold text-white"
-            aria-label="Print current dashboard report"
-            disabled>
-            Print Report
-          </button>
-
-          <div id="customDateRange" class="hidden min-w-0 items-center gap-2">
-            <label for="customStart" class="sr-only">Custom start date</label>
-            <input id="customStart" type="date" disabled aria-describedby="dateFilterValidation" class="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-sm">
-            <label for="customEnd" class="sr-only">Custom end date</label>
-            <input id="customEnd" type="date" disabled aria-describedby="dateFilterValidation" class="h-9 min-w-0 rounded-lg border border-slate-200 bg-white px-2 text-sm">
-          </div>
-
-          <p id="dateFilterValidation" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-
-          <div id="reportingInformation" class="sr-only" role="status" aria-live="polite" aria-atomic="true" aria-label="Reporting information">
-            <span id="dateFilterLabel"></span>
-            <span id="transactionCountLabel"></span>
-            <span id="latestDataLabel"></span>
-            <span id="freshnessStatusBadge" class="hidden"></span>
-          </div>
-        </div>
-      </div>
-
-      <div id="utilityMetadata" class="hidden min-w-0 items-center gap-4 text-xs ui-theme-muted sm:flex" aria-label="Dashboard metadata">
-        <span><span class="sr-only">Current period: </span><span id="utilityActivePeriod">Current Year</span></span>
-        <span><span class="sr-only">Last sync: </span><span id="utilityLastSync">Waiting for data</span></span>
-        <span id="utilityVersion" data-metadata-source="template.version">v<?= version ?></span>
-      </div>
     </header>
 
     <div id="contentViewport" class="min-w-0">
@@ -813,8 +991,8 @@
     <!-- HEADER -->
     <div id="dashboardHeaderRegion" class="sr-only">
       <div id="dashboardScreenHeader">
-        <h1 id="dashboardHeading" tabindex="-1">Executive Dashboard</h1>
-        <p>Business performance, attention areas, and next actions</p>
+        <h1 id="dashboardHeading" tabindex="-1">Dashboard</h1>
+        <p>Business performance at a glance</p>
       </div>
     </div>
 
@@ -851,86 +1029,113 @@
         aria-label="Dashboard sections">
         <button id="dashboardTabOverview" type="button" role="tab" aria-selected="true" aria-controls="dashboardPanelOverview" tabindex="0" data-dashboard-tab="overview" class="h-10 shrink-0 border-b-2 border-indigo-600 px-3 text-sm font-semibold text-indigo-700">Overview</button>
         <button id="dashboardTabPerformance" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPerformance" tabindex="-1" data-dashboard-tab="performance" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Performance</button>
-        <button id="dashboardTabAnalytics" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelAnalytics" tabindex="-1" data-dashboard-tab="analytics" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Analytics</button>
-        <button id="dashboardTabIntelligence" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelIntelligence" tabindex="-1" data-dashboard-tab="intelligence" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Intelligence</button>
-        <button id="dashboardTabPlanning" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelPlanning" tabindex="-1" data-dashboard-tab="planning" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Planning</button>
+        <button id="dashboardTabInsights" type="button" role="tab" aria-selected="false" aria-controls="dashboardPanelInsights" tabindex="-1" data-dashboard-tab="insights" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-sm font-semibold text-slate-600">Insights &amp; Plans</button>
       </div>
 
       <div id="dashboardTabPanels">
         <section id="dashboardPanelOverview" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabOverview" data-dashboard-panel="overview"></section>
         <section id="dashboardPanelPerformance" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabPerformance" data-dashboard-panel="performance" hidden></section>
-        <section id="dashboardPanelAnalytics" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabAnalytics" data-dashboard-panel="analytics" hidden></section>
-        <section id="dashboardPanelIntelligence" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabIntelligence" data-dashboard-panel="intelligence" hidden></section>
-        <section id="dashboardPanelPlanning" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabPlanning" data-dashboard-panel="planning" hidden></section>
+        <section id="dashboardPanelInsights" class="dashboard-tab-panel" role="tabpanel" aria-labelledby="dashboardTabInsights" data-dashboard-panel="insights" hidden></section>
       </div>
 
       <div id="dashboardSectionStaging" hidden>
     <!-- EXECUTIVE SUMMARY -->
-    <section id="executiveSummarySection" class="hf-executive-plane min-w-0 mb-3" aria-labelledby="executiveSummaryTitle">
-      <h2 id="executiveSummaryTitle" class="sr-only">Executive Summary</h2>
-
-      <div class="grid grid-cols-1 lg:grid-cols-12">
-        <div class="hf-executive-fact lg:col-span-3">
-          <div class="hf-section-label">Business condition</div>
-          <div id="executiveSummary" class="mt-1 text-[15px] font-semibold leading-[21px] text-slate-900">Loading...</div>
+    <section id="executiveSummarySection" class="hf-summary-action-grid min-w-0 mb-3" aria-labelledby="executiveSummaryTitle">
+      <div class="overview-surface min-w-0 border p-4">
+        <div class="hf-summary-card-header">
+          <span class="hf-summary-title-icon" aria-hidden="true"><i class="fas fa-chart-pie"></i></span>
+          <div><h2 id="executiveSummaryTitle" class="hf-section-heading" tabindex="-1">Key Summary</h2><p id="executiveSummaryPeriod" class="text-[11px] text-slate-500">This Year</p></div>
         </div>
-
-        <div id="executiveAlertCard" class="hf-executive-fact lg:col-span-3">Loading attention status...</div>
-
-        <section id="businessPriorityRegion" class="hf-executive-fact hf-priority-action lg:col-span-6" aria-labelledby="businessPriorityHeading">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <h3 id="businessPriorityHeading" class="hf-section-label">Business Priority</h3>
-            <span id="businessPriorityLevel" class="text-xs font-semibold">Loading</span>
-          </div>
-          <div id="priorityTitle" class="mt-1 text-lg font-semibold leading-6 text-slate-900">Loading...</div>
-          <div id="priorityReason" class="mt-0.5 text-xs leading-4 text-slate-700">...</div>
-          <div id="priorityMessage" class="mt-1 text-[11px] font-semibold leading-4 text-slate-900">...</div>
-          <div id="priorityMeta" class="sr-only">...</div>
-        </section>
+        <div id="executiveSummary" class="hf-summary-metrics">Loading...</div>
       </div>
+      <section class="overview-surface min-w-0 border p-4" aria-labelledby="quickActionsTitle">
+        <div class="hf-summary-card-header">
+          <span class="hf-summary-title-icon hf-summary-title-icon-purple" aria-hidden="true"><i class="fas fa-bolt"></i></span>
+          <div><h2 id="quickActionsTitle" class="hf-section-heading">Quick Actions</h2><p class="text-[11px] text-slate-500">Frequently used actions</p></div>
+        </div>
+        <div class="hf-quick-actions mt-2">
+          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="showPage('transactions')"><i class="fas fa-receipt" aria-hidden="true"></i><span class="hf-action-copy"><strong>View Transactions</strong><span>Review latest activity</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="showPage('transactions'); initializeStableDashboardElements().exportCsvButton.click()"><i class="fas fa-download" aria-hidden="true"></i><span class="hf-action-copy"><strong>Export Report</strong><span>Download visible CSV</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+          <button id="printReportButton" type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="printDashboardReport()" aria-label="Print current dashboard report" disabled><i class="fas fa-print" aria-hidden="true"></i><span class="hf-action-copy"><strong>Print Report</strong><span>Open print layout</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="this.closest('#executiveSummarySection').querySelector('#executiveSummaryTitle').focus()"><i class="fas fa-table-list" aria-hidden="true"></i><span class="hf-action-copy"><strong>Data Summary</strong><span>Review yearly totals</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+        </div>
+      </section>
+    </section>
+
+    <section id="businessPriorityRegion" class="hf-priority-action" aria-labelledby="businessPriorityHeading">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="businessPriorityHeading" class="hf-section-label">Business Priority</h2>
+        <span id="businessPriorityLevel" class="text-xs font-semibold">Loading</span>
+      </div>
+      <div id="priorityTitle" class="mt-1 text-lg font-semibold leading-6 text-slate-900">Loading...</div>
+      <div id="priorityReason" class="mt-0.5 text-xs leading-4 text-slate-700">...</div>
+      <div id="priorityMessage" class="mt-1 text-[11px] font-semibold leading-4 text-slate-900">...</div>
+      <div id="priorityMeta" class="sr-only">...</div>
     </section>
 
     <!-- BUSINESS OVERVIEW -->
-    <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-3">
-      <div class="mb-2 flex items-end justify-between gap-3 px-4">
-        <h2 id="keyMetricsTitle" class="text-lg font-semibold leading-6 text-slate-900">Key Metrics</h2>
-        <p class="text-[11px] text-slate-500">Select a metric for transactions</p>
+    <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle">
+      <div class="sr-only">
+        <h2 id="keyMetricsTitle">Key Metrics</h2>
+        <p>Select a metric for transactions</p>
       </div>
-      <div id="businessOverview" class="hf-kpi-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5"></div>
+      <div id="businessOverview" class="hf-kpi-strip"></div>
     </section>
 
     <div id="overviewEvidenceRow" class="hf-overview-evidence">
-      <section id="revenueChartSection" class="analytics-surface min-w-0 rounded-lg border p-4" role="region" aria-labelledby="revenueChartTitle" data-composition-role="hero-chart">
-        <div class="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="revenueChartTitle" class="text-lg font-semibold leading-6">Revenue Trend</h2>
-          <button type="button" class="h-8 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Revenue transactions')">View transactions</button>
+      <section id="revenueChartSection" class="analytics-surface min-w-0 border" role="region" aria-labelledby="revenueChartTitle" data-composition-role="hero-chart">
+        <div class="hf-analytics-card-header mb-1 flex-wrap">
+          <span class="hf-analytics-title-group"><span class="hf-analytics-title-icon" aria-hidden="true"><i class="fas fa-chart-area"></i></span><h2 id="revenueChartTitle" class="ui-section-title">Revenue Trend</h2></span>
+          <div id="dateFilterControls" class="flex min-w-0 flex-wrap items-center justify-end gap-2" onchange="handleDateFilterChange(event)">
+            <label for="filter" class="sr-only">Reporting period</label>
+            <select id="filter" class="ui-form-text h-9 rounded-lg border border-slate-200 bg-white px-3">
+              <option value="currentMonth">This Month</option>
+              <option value="previousMonth">Previous Month</option>
+              <option value="currentYear" selected>This Year</option>
+              <option value="previousYear">Previous Year</option>
+              <option value="customMonth">Custom Month</option>
+              <option value="customYear">Custom Year</option>
+              <option value="custom">Custom Range</option>
+            </select>
+            <div id="customDateRange" class="hf-period-secondary hidden min-w-0 items-center gap-2">
+              <label for="customYear" class="sr-only">Custom year</label>
+              <select id="customYear" disabled class="ui-form-text hf-period-select hidden h-9 rounded-lg border border-slate-200 bg-white px-3" aria-label="Available custom year"></select>
+              <label for="customMonth" class="sr-only">Custom month</label>
+              <select id="customMonth" disabled class="ui-form-text hf-period-select hidden h-9 rounded-lg border border-slate-200 bg-white px-3" aria-label="Available custom month"></select>
+              <label for="customStart" class="sr-only">Custom start date</label>
+              <input id="customStart" type="date" disabled aria-describedby="dateFilterValidation" class="hidden h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs">
+              <label for="customEnd" class="sr-only">Custom end date</label>
+              <input id="customEnd" type="date" disabled aria-describedby="dateFilterValidation" class="hidden h-9 rounded-lg border border-slate-200 bg-white px-2 text-xs">
+            </div>
+            <p id="dateFilterValidation" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+            <div id="reportingInformation" class="sr-only" role="status" aria-live="polite" aria-atomic="true" aria-label="Reporting information"><span id="dateFilterLabel"></span><span id="transactionCountLabel"></span><span id="latestDataLabel"></span><span id="freshnessStatusBadge" class="hidden"></span></div>
+          </div>
         </div>
-        <p id="revenueChartSummary" class="mb-2 text-xs leading-4 text-slate-500"></p>
+        <p id="revenueChartSummary" class="sr-only"></p>
         <div id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96">
             <canvas id="mainChart" aria-hidden="true"></canvas>
-            <p id="revenueChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
+            <p id="revenueChartEmpty" class="ui-empty-state hidden absolute inset-0 items-center justify-center p-6 text-center" role="status"></p>
             <div id="mainChartSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
       </section>
 
-      <aside id="overviewContextRow" class="hf-overview-context border-l border-slate-200" aria-label="Overview supporting evidence">
-        <section id="periodComparisonSection" class="min-w-0 px-4 pb-4" role="region" aria-labelledby="periodComparisonLabel">
-          <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700">Loading period comparison...</h3>
-          <div id="periodComparisonMetrics" class="hf-comparison-grid mt-3 grid grid-cols-2" role="list"></div>
-        </section>
+    </div>
 
-        <section id="dataQualityInformation" class="min-w-0 px-4 pt-4 text-xs text-slate-600" aria-labelledby="dataQualityHeading">
-          <div class="flex flex-wrap items-center gap-2">
+      <aside id="overviewContextRow" class="hf-overview-context" aria-label="Overview comparison and data quality">
+        <section id="periodComparisonSection" class="min-w-0" role="region" aria-labelledby="periodComparisonLabel">
+          <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700">Loading period comparison...</h3>
+        </section>
+        <section id="dataQualityInformation" class="min-w-0 text-xs text-slate-600" aria-labelledby="dataQualityHeading">
+          <div class="hf-data-quality-row">
             <h3 id="dataQualityHeading" class="font-semibold text-slate-700">Data Quality</h3>
             <span id="dataQualityStatusBadge" class="hidden rounded-full px-2 py-1 font-semibold"></span>
-            <span id="dataQualityIssueCount"></span>
+            <span id="dataQualityIssueCount" class="sr-only"></span>
             <button id="dataQualityDetailsButton" type="button" class="hidden rounded-lg border border-slate-200 bg-white px-2 py-1 font-semibold text-slate-700" aria-expanded="false" aria-controls="dataQualityDetails" onclick="toggleDataQualityDetails()">Details</button>
+            <span id="dataQualityScopeSummary" class="whitespace-nowrap"></span>
           </div>
-          <span id="dataQualityScopeSummary" class="mt-2 block"></span>
           <ul id="dataQualityDetails" class="hidden mt-2 space-y-1 pl-5 text-slate-700"></ul>
         </section>
       </aside>
-    </div>
 
     <!-- ANALYTICS -->
 
@@ -948,7 +1153,7 @@
       </section>
 
       <section id="topProductsSection" class="analytics-surface min-w-0 rounded-xl border p-3" aria-labelledby="topProductsTitle" data-composition-tier="secondary">
-        <div class="mb-2 flex items-center justify-between gap-2"><h2 id="topProductsTitle" class="text-sm font-bold">Top Products</h2><span class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Current ranking</span></div>
+        <div class="hf-analytics-card-header mb-1"><span class="hf-analytics-title-group"><span class="hf-analytics-title-icon hf-analytics-title-icon-products" aria-hidden="true"><i class="fas fa-trophy"></i></span><h2 id="topProductsTitle" class="ui-section-title">Top Products</h2></span></div>
         <div id="topProductWrapper" class="relative">
           <div id="topProductsContainer"></div>
           <div id="topProductSkeleton" class="hidden absolute inset-0 bg-white rounded-2xl p-3">
@@ -1002,38 +1207,11 @@
 
       </section>
 
-      <!-- BUSINESS INTELLIGENCE -->
-      <section id="businessPerformanceSection" class="analytics-surface min-w-0 rounded-xl border p-4 h-full flex flex-col" aria-labelledby="businessPerformanceTitle">
+      <section id="forecastSection" class="analytics-surface min-w-0 rounded-xl border px-4 py-3" aria-label="Revenue forecast">
+        <div id="forecastContainer"></div>
+      </section>
 
-        <div class="mb-3">
-          <p class="hf-section-label">Performance detail</p>
-
-          <h2 id="businessPerformanceTitle" class="mt-1 text-lg font-bold text-slate-900">
-            Business Performance
-          </h2>
-
-          <p class="mt-1 text-xs text-slate-500">
-            Five current-period measures with factual context
-          </p>
-        </div>
-
-        <div class="min-w-0 flex-1 divide-y divide-slate-200" role="list" aria-label="Performance metrics">
-
-          <div class="self-start" id="revenueIntelContainer"></div>
-
-          <div class="self-start" id="expenseIntelContainer"></div>
-
-          <div class="self-start" id="profitIntelContainer"></div>
-
-          <div class="self-start" id="marginIntelContainer"></div>
-
-          <div class="self-start" id="unitsIntelContainer"></div>
-
-        </div>
-
-        <div id="forecastContainer" class="mt-3 border-t border-slate-200 px-1 pt-3"></div>
-
-        <div id="kpiTargetReference" class="mt-5 border-t border-slate-200 pt-5">
+        <div id="kpiTargetReference">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 class="text-sm font-bold text-slate-900">Target Reference</h3>
@@ -1051,8 +1229,6 @@
           </div>
           <ul id="kpiTargetDetails" class="hidden mt-4 space-y-3"></ul>
         </div>
-
-      </section>
 
       <!-- ACTION CENTER -->
       <section id="recommendationsSection" class="analytics-surface min-w-0 rounded-xl border p-3 flex flex-col" aria-labelledby="recommendationsHeading">
@@ -1320,6 +1496,273 @@
   let activeDashboardTab = "overview";
   let transactionsTabsInitialized = false;
   let activeTransactionsTab = "recent";
+  let availableDashboardMonths = [];
+  let availableDashboardYears = [];
+  let customSelectRegistry = {};
+  let customSelectSystemInitialized = false;
+
+    function closeCustomSelect(state, restoreFocus)
+    {
+      if (!state || !state.isOpen)
+      {
+        return;
+      }
+
+      state.isOpen = false;
+      state.trigger.setAttribute("aria-expanded", "false");
+      state.listbox.hidden = true;
+
+      if (restoreFocus)
+      {
+        state.trigger.focus();
+      }
+    }
+
+    function closeAllCustomSelects(exceptState)
+    {
+      Object.keys(customSelectRegistry).forEach(function(id)
+      {
+        var state = customSelectRegistry[id];
+
+        if (state !== exceptState)
+        {
+          closeCustomSelect(state, false);
+        }
+      });
+    }
+
+    function focusCustomSelectOption(state, index)
+    {
+      if (!state.options.length)
+      {
+        return;
+      }
+
+      var nextIndex = Math.max(0, Math.min(index, state.options.length - 1));
+      state.activeIndex = nextIndex;
+      state.options.forEach(function(option, optionIndex)
+      {
+        option.setAttribute("data-active", String(optionIndex === nextIndex));
+      });
+      state.options[nextIndex].focus();
+    }
+
+    function openCustomSelect(state, focusSelected)
+    {
+      if (!state || state.trigger.disabled)
+      {
+        return;
+      }
+
+      closeAllCustomSelects(state);
+      state.isOpen = true;
+      state.trigger.setAttribute("aria-expanded", "true");
+      state.listbox.hidden = false;
+
+      if (focusSelected)
+      {
+        focusCustomSelectOption(
+          state,
+          Math.max(0, state.options.findIndex(function(option)
+          {
+            return option.getAttribute("aria-selected") === "true";
+          }))
+        );
+      }
+    }
+
+    function selectCustomSelectOption(state, option)
+    {
+      state.select.value = option.getAttribute("data-value");
+      synchronizeCustomSelect(state.select.id, false);
+      closeCustomSelect(state, true);
+      state.select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    function renderCustomSelectOptions(state)
+    {
+      state.listbox.innerHTML = "";
+      state.options = Array.prototype.map.call(state.select.options, function(nativeOption, index)
+      {
+        var option = document.createElement("button");
+        var check = document.createElement("span");
+        var label = document.createElement("span");
+        option.type = "button";
+        option.className = "ui-custom-select-option ui-form-text";
+        option.setAttribute("role", "option");
+        option.setAttribute("tabindex", "-1");
+        option.setAttribute("data-value", nativeOption.value);
+        option.setAttribute("aria-selected", String(nativeOption.value === state.select.value));
+        check.className = "ui-custom-select-check";
+        check.setAttribute("aria-hidden", "true");
+        check.innerHTML = '<i class="fas fa-check"></i>';
+        label.textContent = nativeOption.textContent;
+        option.appendChild(check);
+        option.appendChild(label);
+        option.addEventListener("click", function()
+        {
+          selectCustomSelectOption(state, option);
+        });
+        option.addEventListener("keydown", function(event)
+        {
+          var currentIndex = state.options.indexOf(option);
+
+          if (event.key === "ArrowDown" || event.key === "ArrowUp")
+          {
+            event.preventDefault();
+            focusCustomSelectOption(state, currentIndex + (event.key === "ArrowDown" ? 1 : -1));
+          }
+          else if (event.key === "Home" || event.key === "End")
+          {
+            event.preventDefault();
+            focusCustomSelectOption(state, event.key === "Home" ? 0 : state.options.length - 1);
+          }
+          else if (event.key === "Enter" || event.key === " ")
+          {
+            event.preventDefault();
+            selectCustomSelectOption(state, option);
+          }
+          else if (event.key === "Escape")
+          {
+            event.preventDefault();
+            closeCustomSelect(state, true);
+          }
+        });
+        state.listbox.appendChild(option);
+        return option;
+      });
+    }
+
+    function synchronizeCustomSelect(selectId, rebuildOptions)
+    {
+      var state = customSelectRegistry[selectId];
+
+      if (!state)
+      {
+        return;
+      }
+
+      if (rebuildOptions)
+      {
+        renderCustomSelectOptions(state);
+      }
+
+      state.trigger.disabled = state.select.disabled;
+      state.triggerText.textContent = state.select.options.length
+        ? state.select.options[state.select.selectedIndex >= 0 ? state.select.selectedIndex : 0].textContent
+        : "No options";
+      state.wrapper.classList.toggle("hidden", state.select.classList.contains("hidden"));
+      state.options.forEach(function(option)
+      {
+        option.setAttribute("aria-selected", String(option.getAttribute("data-value") === state.select.value));
+      });
+    }
+
+    function synchronizeAllCustomSelects()
+    {
+      Object.keys(customSelectRegistry).forEach(function(id)
+      {
+        synchronizeCustomSelect(id, false);
+      });
+    }
+
+    function enhanceCustomSelect(select, accessibleName)
+    {
+      var wrapper = document.createElement("div");
+      var trigger = document.createElement("button");
+      var triggerText = document.createElement("span");
+      var listbox = document.createElement("div");
+      var listboxId = select.id + "Listbox";
+      var state;
+      wrapper.className = "ui-custom-select";
+      trigger.type = "button";
+      trigger.className = "ui-custom-select-trigger ui-form-text";
+      trigger.setAttribute("aria-label", accessibleName);
+      trigger.setAttribute("aria-haspopup", "listbox");
+      trigger.setAttribute("aria-expanded", "false");
+      trigger.setAttribute("aria-controls", listboxId);
+      triggerText.className = "truncate";
+      listbox.id = listboxId;
+      listbox.className = "ui-custom-select-listbox";
+      listbox.setAttribute("role", "listbox");
+      listbox.setAttribute("aria-label", accessibleName + " options");
+      listbox.hidden = true;
+      select.parentNode.insertBefore(wrapper, select);
+      wrapper.appendChild(select);
+      wrapper.appendChild(trigger);
+      wrapper.appendChild(listbox);
+      select.classList.add("ui-native-select");
+      select.setAttribute("aria-hidden", "true");
+      select.setAttribute("tabindex", "-1");
+      trigger.appendChild(triggerText);
+      state = {
+        select: select,
+        wrapper: wrapper,
+        trigger: trigger,
+        triggerText: triggerText,
+        listbox: listbox,
+        options: [],
+        activeIndex: 0,
+        isOpen: false
+      };
+      customSelectRegistry[select.id] = state;
+      trigger.addEventListener("click", function()
+      {
+        if (state.isOpen)
+        {
+          closeCustomSelect(state, false);
+        }
+        else
+        {
+          openCustomSelect(state, false);
+        }
+      });
+      trigger.addEventListener("keydown", function(event)
+      {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp")
+        {
+          event.preventDefault();
+          openCustomSelect(state, true);
+        }
+        else if (event.key === "Enter" || event.key === " ")
+        {
+          event.preventDefault();
+          state.isOpen ? closeCustomSelect(state, false) : openCustomSelect(state, true);
+        }
+        else if (event.key === "Escape")
+        {
+          closeCustomSelect(state, false);
+        }
+      });
+      renderCustomSelectOptions(state);
+      synchronizeCustomSelect(select.id, false);
+    }
+
+    function initializeCustomSelectSystem()
+    {
+      if (customSelectSystemInitialized)
+      {
+        return;
+      }
+
+      var elements = initializeStableDashboardElements();
+      enhanceCustomSelect(elements.filter, "Reporting period");
+      enhanceCustomSelect(elements.customYear, "Available custom year");
+      enhanceCustomSelect(elements.customMonth, "Available custom month");
+      document.addEventListener("click", function(event)
+      {
+        Object.keys(customSelectRegistry).forEach(function(id)
+        {
+          var state = customSelectRegistry[id];
+
+          if (state.isOpen && !state.wrapper.contains(event.target))
+          {
+            closeCustomSelect(state, false);
+          }
+        });
+      });
+      customSelectSystemInitialized = true;
+    }
 
     function initializeStableDashboardElements()
     {
@@ -1332,7 +1775,7 @@
         "dashboardSidebar", "sidebarBackdrop", "sidebarMenuButton",
         "sidebarCloseButton", "businessOverview", "mainChartSkeleton",
         "hotColdSkeleton", "expenseSkeleton", "topProductSkeleton", "filter",
-        "customDateRange", "customStart", "customEnd", "dateFilterValidation",
+        "customDateRange", "customMonth", "customYear", "customStart", "customEnd", "dateFilterValidation",
         "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
         "dashboardContent", "tableBody", "printReportButton",
         "printReportHeader", "transactions", "transactionsHeading",
@@ -1342,8 +1785,7 @@
         "transactionDrilldownSummary", "transactionDrilldownText",
         "transactionsStateAnnouncement", "appShell", "sidebarCollapseButton",
         "mainContent", "topUtilityBar", "utilityPageTitle",
-        "utilityPageContext", "dashboardUtilityControls", "utilityMetadata",
-        "utilityActivePeriod", "utilityLastSync", "settings", "logs",
+        "utilityPageContext", "sidebarDataStatus", "settings", "logs",
         "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
         "sessionLogsInfoCount", "sessionLogsWarningCount",
         "sessionLogsErrorCount", "sessionLogsToolbar",
@@ -1380,6 +1822,8 @@
         topProductSkeleton: required.topProductSkeleton,
         filter: required.filter,
         customDateRange: required.customDateRange,
+        customMonth: required.customMonth,
+        customYear: required.customYear,
         customStart: required.customStart,
         customEnd: required.customEnd,
         dateFilterValidation: required.dateFilterValidation,
@@ -1408,10 +1852,7 @@
         topUtilityBar: required.topUtilityBar,
         utilityPageTitle: required.utilityPageTitle,
         utilityPageContext: required.utilityPageContext,
-        dashboardUtilityControls: required.dashboardUtilityControls,
-        utilityMetadata: required.utilityMetadata,
-        utilityActivePeriod: required.utilityActivePeriod,
-        utilityLastSync: required.utilityLastSync,
+        sidebarDataStatus: required.sidebarDataStatus,
         settingsPage: required.settings,
         logsPage: required.logs,
         themeStatus: required.themeStatus,
@@ -1450,8 +1891,8 @@
     function resizeVisibleDashboardCharts(tabName)
     {
       var chartsByTab = {
-        "overview": [revenueChart],
-        analytics: [hotColdChart, expenseChart]
+        overview: [revenueChart],
+        performance: [hotColdChart, expenseChart]
       };
 
       (chartsByTab[tabName] || [])
@@ -1519,28 +1960,29 @@
 
       var elements = initializeStableDashboardElements();
       var staging = elements.dashboardSectionStaging;
+      var overviewEvidenceRow = staging.querySelector("#overviewEvidenceRow");
+      var topProductsSection = staging.querySelector("#topProductsSection");
+
+      overviewEvidenceRow.appendChild(topProductsSection);
       var sectionOwnership = {
         overview: [
           elements.dashboardHeaderRegion,
-          staging.querySelector("#executiveSummarySection"),
           staging.querySelector("#keyMetricsSection"),
-          staging.querySelector("#overviewEvidenceRow")
+          overviewEvidenceRow,
+          staging.querySelector("#overviewContextRow"),
+          staging.querySelector("#executiveSummarySection")
         ],
         performance: [
-          staging.querySelector("#businessPerformanceSection")
-        ],
-        analytics: [
+          staging.querySelector("#forecastSection"),
           staging.querySelector("#hotColdChartSection"),
           staging.querySelector("#expenseChartSection"),
-          staging.querySelector("#topProductsSection"),
           staging.querySelector("#productConcentrationSection")
         ],
-        intelligence: [
+        insights: [
+          staging.querySelector("#businessPriorityRegion"),
           staging.querySelector("#diagnosisSection"),
           staging.querySelector("#recommendationsSection"),
-          staging.querySelector("#riskOpportunitySection")
-        ],
-        planning: [
+          staging.querySelector("#riskOpportunitySection"),
           staging.querySelector("#executiveCenter"),
           staging.querySelector("#kpiTargetReference")
         ]
@@ -1648,6 +2090,11 @@
         "aria-label",
         isCollapsed ? "Expand navigation" : "Collapse navigation"
       );
+
+      window.setTimeout(function()
+      {
+        resizeVisibleDashboardCharts(activeDashboardTab);
+      }, 220);
       collapseButton.setAttribute(
         "title",
         isCollapsed ? "Expand navigation" : "Collapse navigation"
@@ -1785,7 +2232,7 @@
       var pageContract = {
         dashboard: {
           title: "Dashboard",
-          context: "Business performance and next actions"
+          context: "Business performance at a glance."
         },
         transactions: {
           title: "Transactions",
@@ -1818,7 +2265,6 @@
 
       elements.utilityPageTitle.innerText = contract.title;
       elements.utilityPageContext.innerText = contract.context;
-      elements.dashboardUtilityControls.hidden = pageId !== "dashboard";
 
       var heading = activePage.querySelector("h1");
 
@@ -1863,7 +2309,10 @@
         axis: readToken("chart-axis"),
         tooltipBackground: readToken("tooltip-bg"),
         tooltipText: readToken("tooltip-text"),
-        revenueFill: readToken("chart-revenue-fill")
+        revenueFill: readToken("chart-revenue-fill"),
+        revenueFillTransparent: readToken("chart-revenue-fill-transparent"),
+        pointRing: readToken("chart-point-ring"),
+        pointStroke: readToken("chart-point-stroke")
       };
     }
 
@@ -1913,9 +2362,9 @@
       if (revenueChart)
       {
         revenueChart.data.datasets[0].borderColor = palette.series[0];
-        revenueChart.data.datasets[0].backgroundColor = palette.revenueFill;
+        revenueChart.data.datasets[0].backgroundColor = createRevenueGradient;
         revenueChart.data.datasets[0].pointBackgroundColor = palette.series[0];
-        revenueChart.data.datasets[0].pointBorderColor = palette.tooltipText;
+        revenueChart.data.datasets[0].pointBorderColor = palette.pointStroke;
       }
 
       if (hotColdChart)
@@ -2309,15 +2758,14 @@
     {
       var elements = initializeStableDashboardElements();
       elements.filter.disabled = disabled;
-
-      var isCustom =
-        elements.filter.value === "custom";
-
-      elements.customStart.disabled =
-        disabled || !isCustom;
-
-      elements.customEnd.disabled =
-        disabled || !isCustom;
+      var filter = elements.filter.value;
+      elements.customMonth.disabled = disabled || filter !== "customMonth";
+      elements.customYear.disabled = disabled || (
+        filter !== "customMonth" && filter !== "customYear"
+      );
+      elements.customStart.disabled = disabled || filter !== "custom";
+      elements.customEnd.disabled = disabled || filter !== "custom";
+      synchronizeAllCustomSelects();
     }
 
     function setDashboardState(state, message)
@@ -2350,6 +2798,10 @@
         "hidden",
         state === "success"
       );
+      status.classList.toggle(
+        "sr-only",
+        state === "loading"
+      );
 
       retryButton.classList.toggle(
         "hidden",
@@ -2358,7 +2810,7 @@
 
       content.classList.toggle(
         "hidden",
-        state === "empty" || state === "error"
+        state === "error"
       );
 
       content.style.opacity =
@@ -2383,24 +2835,29 @@
 
       if (state === "loading")
       {
+        statusText.classList.add("sr-only");
         statusText.innerText = "Loading dashboard data.";
         showBusinessOverviewSkeleton();
         showChartSkeleton();
       }
       else if (state === "empty")
       {
+        status.classList.add("sr-only");
+        statusText.classList.add("sr-only");
         statusText.innerText =
           "No data available for the selected period.";
         hideChartSkeleton();
       }
       else if (state === "error")
       {
+        statusText.classList.remove("sr-only");
         statusText.innerText =
           message || "Unable to load dashboard data.";
         hideChartSkeleton();
       }
       else
       {
+        statusText.classList.remove("sr-only");
         statusText.innerText = "";
         hideChartSkeleton();
       }
@@ -2409,15 +2866,25 @@
     function updateCustomDateVisibility()
     {
       var elements = initializeStableDashboardElements();
-      var isCustom = elements.filter.value === "custom";
+      var filter = elements.filter.value;
+      var isCustom = filter === "custom";
+      var isCustomMonth = filter === "customMonth";
+      var isCustomYear = filter === "customYear";
 
       elements.customDateRange.classList.toggle(
         "hidden",
-        !isCustom
+        !isCustom && !isCustomMonth && !isCustomYear
       );
+      elements.customMonth.classList.toggle("hidden", !isCustomMonth);
+      elements.customYear.classList.toggle("hidden", !isCustomMonth && !isCustomYear);
+      elements.customStart.classList.toggle("hidden", !isCustom);
+      elements.customEnd.classList.toggle("hidden", !isCustom);
+      synchronizeAllCustomSelects();
 
       if (!dashboardRequestInFlight)
       {
+        elements.customMonth.disabled = !isCustomMonth;
+        elements.customYear.disabled = !isCustomMonth && !isCustomYear;
         elements.customStart.disabled = !isCustom;
         elements.customEnd.disabled = !isCustom;
       }
@@ -2440,6 +2907,14 @@
         "aria-invalid",
         String(hasError)
       );
+      elements.customMonth.setAttribute(
+        "aria-invalid",
+        String(hasError)
+      );
+      elements.customYear.setAttribute(
+        "aria-invalid",
+        String(hasError)
+      );
     }
 
     function getDashboardFilterRequest()
@@ -2448,8 +2923,33 @@
       var filter = elements.filter.value;
 
       var customStart = elements.customStart.value;
-
       var customEnd = elements.customEnd.value;
+
+      if (filter === "customMonth")
+      {
+        customStart = elements.customYear.value && elements.customMonth.value
+          ? elements.customYear.value + "-" + elements.customMonth.value
+          : "";
+        customEnd = null;
+
+        if (!customStart)
+        {
+          setDateFilterValidation("Select a custom month");
+          return null;
+        }
+      }
+
+      if (filter === "customYear")
+      {
+        customStart = elements.customYear.value;
+        customEnd = null;
+
+        if (!/^\d{4}$/.test(customStart))
+        {
+          setDateFilterValidation("Select an available year");
+          return null;
+        }
+      }
 
       if (filter === "custom")
       {
@@ -2472,14 +2972,29 @@
 
       return {
         filter: filter,
-        customStart: filter === "custom" ? customStart : null,
+        customStart:
+          filter === "custom" || filter === "customMonth" || filter === "customYear"
+            ? customStart
+            : null,
         customEnd: filter === "custom" ? customEnd : null
       };
     }
 
-    function handleDateFilterChange()
+    function handleDateFilterChange(event)
     {
+      var elements = initializeStableDashboardElements();
       updateCustomDateVisibility();
+
+      if (
+        elements.filter.value === "customMonth" &&
+        event &&
+        event.target &&
+        event.target.id === "customYear"
+      )
+      {
+        renderAvailableMonthOptions("");
+      }
+
       loadData();
     }
 
@@ -2531,6 +3046,95 @@
       return parts[2] + "/" + parts[1] + "/" + parts[0];
     }
 
+    function formatDashboardPresentationPeriod(dateKey, granularity)
+    {
+      var parts = String(dateKey || "").split("-");
+      var monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      var month = monthNames[Number(parts[1]) - 1];
+
+      if (!/^\d{4}$/.test(parts[0]) || !month)
+      {
+        return "";
+      }
+
+      if (granularity === "day" && /^\d{2}$/.test(parts[2] || ""))
+      {
+        return parts[2] + " " + month + " " + parts[0];
+      }
+
+      return month + " " + parts[0];
+    }
+
+    function renderAvailablePeriodOptions(dateFilter)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedMonth = elements.customMonth.value;
+      var selectedYear = elements.customYear.value;
+      var monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      availableDashboardMonths = Array.isArray(dateFilter.availableMonths)
+        ? dateFilter.availableMonths
+        : [];
+      availableDashboardYears = Array.isArray(dateFilter.availableYears)
+        ? dateFilter.availableYears
+        : [];
+      var scopedParts = String(dateFilter.endDate || "").split("-");
+      var scopedYear = scopedParts[0];
+      var scopedMonth = scopedParts[1];
+      var nextYear = availableDashboardYears.indexOf(selectedYear) !== -1
+        ? selectedYear
+        : availableDashboardYears.indexOf(scopedYear) !== -1
+          ? scopedYear
+          : availableDashboardYears[availableDashboardYears.length - 1] || "";
+
+      elements.customYear.innerHTML = availableDashboardYears.map(function(year)
+      {
+        return '<option value="' + year + '">' + year + "</option>";
+      }).join("");
+      elements.customYear.value = nextYear;
+      synchronizeCustomSelect("customYear", true);
+
+      renderAvailableMonthOptions(
+        selectedMonth || (nextYear === scopedYear ? scopedMonth : ""),
+        monthNames
+      );
+    }
+
+    function renderAvailableMonthOptions(preferredMonth, monthNames)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedYear = elements.customYear.value;
+      var names = monthNames || [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      var representedMonths = availableDashboardMonths
+        .filter(function(monthKey)
+        {
+          return monthKey.slice(0, 4) === selectedYear;
+        })
+        .map(function(monthKey)
+        {
+          return monthKey.slice(5, 7);
+        });
+
+      elements.customMonth.innerHTML = representedMonths.map(function(month)
+      {
+        return '<option value="' + month + '">' +
+          names[Number(month) - 1] +
+          "</option>";
+      }).join("");
+      elements.customMonth.value = representedMonths.indexOf(preferredMonth) !== -1
+        ? preferredMonth
+        : representedMonths[representedMonths.length - 1] || "";
+      synchronizeCustomSelect("customMonth", true);
+    }
+
     function renderReportingMetadata(res)
     {
       var scope = res && res.reportingScope;
@@ -2541,18 +3145,13 @@
         throw new Error("Dashboard reporting metadata is missing");
       }
 
+      renderAvailablePeriodOptions(res.dateFilter);
+
       document.getElementById("dateFilterLabel").innerText =
         formatDashboardMonthRange(
           res.dateFilter.startDate,
           res.dateFilter.endDate
         );
-      initializeStableDashboardElements().utilityActivePeriod.innerText =
-        res.dateFilter.label ||
-        formatDashboardMonthRange(
-          res.dateFilter.startDate,
-          res.dateFilter.endDate
-        );
-
       document.getElementById("transactionCountLabel").innerText =
         scope.transactionCount + " transactions";
 
@@ -2563,7 +3162,7 @@
         latestDate
           ? "Updated " + latestDate
           : "No transaction data";
-      initializeStableDashboardElements().utilityLastSync.innerText =
+      initializeStableDashboardElements().sidebarDataStatus.innerText =
         latestDate
           ? freshness.status + " · " + latestDate
           : freshness.status;
@@ -2587,7 +3186,7 @@
     {
       if (status === "No Comparison")
       {
-        return "No comparison";
+        return "N/A";
       }
 
       if (status === "Stable")
@@ -2599,10 +3198,10 @@
 
       if (!isFinite(value))
       {
-        return "No comparison";
+        return "N/A";
       }
 
-      return (status === "Up" ? "▲ " : "▼ ") +
+      return (status === "Up" ? "▲ " : "▼ -") +
         Math.abs(value).toFixed(1) +
         "%";
     }
@@ -2623,53 +3222,15 @@
         );
       }
 
+      var previousPeriod =
+        formatDashboardPresentationPeriod(comparison.previous.startDate, "day") +
+        " – " +
+        formatDashboardPresentationPeriod(comparison.previous.endDate, "day");
+
       document.getElementById("periodComparisonLabel").innerText =
-        comparison.label;
-
-      var metrics = [
-        {
-          name: "Revenue",
-          percentage: comparison.changes.revenuePercent,
-          status: comparison.status.revenue
-        },
-        {
-          name: "Expense",
-          percentage: comparison.changes.expensePercent,
-          status: comparison.status.expense
-        },
-        {
-          name: "Profit",
-          percentage: comparison.changes.profitPercent,
-          status: comparison.status.profit
-        },
-        {
-          name: "Units Sold",
-          percentage: comparison.changes.unitsSoldPercent,
-          status: comparison.status.unitsSold
-        }
-      ];
-
-      document.getElementById("periodComparisonMetrics").innerHTML =
-        metrics.map(function(metric)
-        {
-          var metricName = metric.name;
-          var status = metric.status;
-          var display =
-            formatPeriodComparisonValue(
-              metric.percentage,
-              status
-            );
-
-          var accessibleText =
-            metricName + " " + status + " " + display + " " + comparison.label;
-
-          return `
-            <div role="listitem" aria-label="${accessibleText}">
-              <div class="text-[10px] font-semibold text-slate-500">${metricName}</div>
-              <div class="mt-1 text-sm font-bold tabular-nums text-slate-900">${display}</div>
-            </div>
-          `;
-        }).join("");
+        comparison.previous.rowCount > 0
+          ? "Compared with " + previousPeriod
+          : "Comparison unavailable · " + previousPeriod + " has no data";
     }
 
     function toggleKpiTargetDetails()
@@ -2822,7 +3383,7 @@
       }
 
       badge.className =
-        "rounded-full px-3 py-1 font-semibold " +
+        "inline-flex items-center rounded-full px-3 py-1 font-semibold " +
         statusClasses[quality.status];
       badge.innerText = quality.status;
 
@@ -2832,10 +3393,10 @@
           : quality.issueCount + " data issues";
 
       scopeSummary.innerText =
-        quality.scope.scopedRows +
-        " scoped rows · " +
-        quality.scope.excludedInvalidDateRows +
-        " invalid-date rows excluded";
+        "· " + quality.scope.scopedRows.toLocaleString("id-ID") +
+        " rows · " +
+        quality.scope.excludedInvalidDateRows.toLocaleString("id-ID") +
+        " excluded";
 
       button.classList.toggle(
         "hidden",
@@ -3191,8 +3752,21 @@
     {
       var supportingText =
         status === "No Comparison"
-          ? ""
+          ? "N/A"
           : delta;
+      var iconByLabel = {
+        Revenue: "fa-arrow-trend-up",
+        Expense: "fa-wallet",
+        Profit: "fa-coins",
+        "Profit Margin": "fa-percent",
+        "Units Sold": "fa-mug-hot"
+      };
+      var comparisonClass =
+        status === "Increase" || status === "Improved" || status === "Up"
+          ? "text-emerald-600"
+          : status === "Decrease" || status === "Declined" || status === "Down"
+            ? "text-red-600"
+            : "text-slate-500";
 
       return `
         <button
@@ -3200,31 +3774,30 @@
           class="hf-kpi-card w-full px-4 py-3 text-left"
           onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
           aria-label="View transactions for ${label}">
-          <span class="hf-section-label">${label}</span>
-          <strong class="overview-kpi-value mt-1 block truncate text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
-          ${supportingText ? `<span class="mt-1 block truncate text-[11px] text-slate-500">${supportingText}</span>` : ""}
+          <span class="flex items-center gap-2"><span class="hf-kpi-icon"><i class="fas ${iconByLabel[label]}" aria-hidden="true"></i></span><span class="hf-section-label">${label}</span></span>
+          <strong class="overview-kpi-value mt-2 block truncate text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
+          <span class="hf-kpi-comparison"><span>vs Last Period</span><strong class="${comparisonClass}">${supportingText}</strong></span>
         </button>`;
     }
 
     function renderBusinessOverview(res)
     {
       var comparison = res.periodComparison;
-      var changes = comparison.changes;
-      var statuses = comparison.status;
-
-      function comparisonText(value, status)
-      {
-        return status === "No Comparison"
-          ? ""
-          : formatPeriodComparisonValue(value, status) + " vs prior";
-      }
+      var marginPoints = comparison.changes.profitMarginPoints;
+      var marginStatus = comparison.status.profitMargin;
+      var marginDelta =
+        marginPoints === null || !isFinite(Number(marginPoints))
+          ? "—"
+          : (marginStatus === "Up" ? "▲ " : marginStatus === "Down" ? "▼ -" : "") +
+            Math.abs(Number(marginPoints)).toFixed(1) + "pp";
+      var negativeClass = "text-red-600";
 
       initializeStableDashboardElements().businessOverview.innerHTML = [
-        renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions", comparisonText(changes.revenuePercent, statuses.revenue), statuses.revenue),
-        renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions", comparisonText(changes.expensePercent, statuses.expense), statuses.expense),
-        renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", comparisonText(changes.profitPercent, statuses.profit), statuses.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
-        renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", comparisonText(changes.unitsSoldPercent, statuses.unitsSold), statuses.unitsSold),
-        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", "Current period", "Current", Number(res.insights.profitMargin) >= 15 ? "text-emerald-600" : Number(res.insights.profitMargin) >= 10 ? "text-amber-500" : "text-red-600")
+        renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions", formatPeriodComparisonValue(comparison.changes.revenuePercent, comparison.status.revenue), comparison.status.revenue, res.summary.revenue < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions", formatPeriodComparisonValue(comparison.changes.expensePercent, comparison.status.expense), comparison.status.expense, res.summary.expense < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", formatPeriodComparisonValue(comparison.changes.profitPercent, comparison.status.profit), comparison.status.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
+        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", formatPeriodComparisonValue(comparison.changes.unitsSoldPercent, comparison.status.unitsSold), comparison.status.unitsSold, res.summary.unitsSold < 0 ? negativeClass : "")
       ].join("");
     }
 
@@ -3264,19 +3837,6 @@
       `;
     }
 
-    function renderIntelCard(config)
-    {
-      return `
-        <div class="flex min-h-[58px] items-center justify-between gap-3 py-2" role="listitem">
-          <div class="min-w-0">
-            <div class="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">${config.label}</div>
-            <div class="mt-1 truncate text-xs text-slate-500">${config.subtitle}</div>
-          </div>
-          <div class="performance-metric-value shrink-0 text-right text-lg font-extrabold ${config.valueClass || "text-slate-900"}">${config.value}</div>
-        </div>`;
-
-    }
-    
     function renderTimelineItem(item,index,items)
     {
         var config =
@@ -3375,6 +3935,64 @@
         : String(label || "");
     }
 
+    function formatRevenueAxisLabel(label, granularity)
+    {
+      var parts = String(label || "").split("-");
+      var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      if (granularity === "day" && parts.length === 3)
+      {
+        return [parts[2] + " " + monthNames[Number(parts[1]) - 1], parts[0]];
+      }
+
+      return parts.length >= 2
+        ? [monthNames[Number(parts[1]) - 1], parts[0]]
+        : String(label || "");
+    }
+
+    function formatRevenueTooltipPeriod(label, granularity)
+    {
+      return formatDashboardPresentationPeriod(label, granularity);
+    }
+
+    function formatCompactChartNumber(value)
+    {
+      var number = Number(value || 0);
+
+      if (Math.abs(number) >= 1000000)
+      {
+        return (number / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "M";
+      }
+
+      if (Math.abs(number) >= 1000)
+      {
+        return (number / 1000).toLocaleString("en-US", { maximumFractionDigits: 0 }) + "K";
+      }
+
+      return number.toLocaleString("en-US");
+    }
+
+    function formatRevenueAxisTick(value)
+    {
+      return typeof value === "number" && value === 0
+        ? ""
+        : formatCompactChartNumber(value);
+    }
+
+    function formatChartMonthLongLabel(label)
+    {
+      var parts = String(label || "").split("-");
+      var months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      var monthIndex = Number(parts[1]) - 1;
+
+      return parts.length === 2 && months[monthIndex]
+        ? months[monthIndex] + " " + parts[0]
+        : String(label || "");
+    }
+
     function destroyChartInstance(chart)
     {
       if (chart)
@@ -3430,11 +4048,29 @@
       summaryElement.innerText = summary;
     }
 
+    function createRevenueGradient(context)
+    {
+      var chart = context.chart;
+      var area = chart.chartArea;
+      var palette = getCurrentThemePalette();
+
+      if (!area)
+      {
+        return palette.revenueFill;
+      }
+
+      var gradient = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+      gradient.addColorStop(0, palette.revenueFill);
+      gradient.addColorStop(1, palette.revenueFillTransparent);
+      return gradient;
+    }
+
     function renderRevenueChart(revenueTrend)
     {
       var chartPalette = getCurrentThemePalette();
       var labels = Array.isArray(revenueTrend.labels) ? revenueTrend.labels : [];
       var values = Array.isArray(revenueTrend.values) ? revenueTrend.values : [];
+      var granularity = revenueTrend.granularity === "day" ? "day" : "month";
       var isEmpty = values.length === 0;
       var total = values.reduce(function(sum, value) { return sum + Number(value || 0); }, 0);
       var highestIndex = -1;
@@ -3448,10 +4084,9 @@
       });
 
       var summary = isEmpty
-        ? "Revenue trend has no represented months."
-        : labels.length + " months · " + formatChartCurrency(total) +
-          " total · Peak " + formatChartMonthLabel(labels[highestIndex]) +
-          ": " + formatChartCurrency(values[highestIndex]);
+        ? "Revenue trend has no represented periods."
+        : "Revenue trend for " + labels.length + " represented " +
+          (granularity === "day" ? "days." : "months.");
       var chartAvailable = isChartLibraryAvailable();
 
       revenueChart = destroyChartInstance(revenueChart);
@@ -3476,19 +4111,28 @@
         {
           type: "line",
           data: {
-            labels: labels.map(formatChartMonthLabel),
+            labels: labels.map(function(label)
+            {
+              return formatRevenueAxisLabel(label, granularity);
+            }),
             datasets: [{
               label: "Revenue",
               data: values,
               borderColor: chartPalette.series[0],
-              backgroundColor: chartPalette.revenueFill,
-              borderWidth: 2.5,
-              pointRadius: 2,
-              pointHoverRadius: 6,
+              backgroundColor: createRevenueGradient,
+              borderWidth: 2.75,
+              pointRadius: values.map(function(value)
+              {
+                return Number(value) === Number(values[highestIndex]) ? 6.5 : 3.5;
+              }),
+              pointHoverRadius: 7,
               pointHitRadius: 12,
               pointBorderWidth: 1,
-              pointBackgroundColor: chartPalette.series[0],
-              pointBorderColor: chartPalette.tooltipText,
+              pointBackgroundColor: values.map(function(value)
+              {
+                return Number(value) === Number(values[highestIndex]) ? chartPalette.series[2] : chartPalette.series[0];
+              }),
+              pointBorderColor: chartPalette.pointStroke,
               fill: true,
               tension: 0.4,
               spanGaps: false
@@ -3498,11 +4142,12 @@
             animation: shouldReduceMotion() ? false : undefined,
             responsive: true,
             maintainAspectRatio: false,
+            layout: { padding: { top: 10, right: 12, bottom: 10, left: 6 } },
             onClick: function(event, elements)
             {
               if (elements.length)
               {
-                var month = labels[elements[0].index];
+                var month = labels[elements[0].index].slice(0, 7);
                 applyTransactionDrilldown(
                   "month",
                   month,
@@ -3519,20 +4164,34 @@
                 displayColors: false,
                 padding: 12,
                 callbacks: {
+                  title: function(context)
+                  {
+                    return context.length
+                      ? formatRevenueTooltipPeriod(
+                          labels[context[0].dataIndex],
+                          granularity
+                        )
+                      : "";
+                  },
                   label: function(context) { return "Revenue: " + formatChartCurrency(context.raw); }
                 }
               }
             },
             scales: {
-              x: { grid: { display: false }, ticks: { color: chartPalette.axis } },
+              x: { grid: { display: false }, ticks: { color: chartPalette.axis, padding: 10, maxTicksLimit: granularity === "day" ? 12 : 12, font: { size: 11, weight: "500" } } },
               y: { beginAtZero: true, min: 0,
                 grid: {
                   color: chartPalette.grid,
                   drawTicks: false,
-                  borderDash: [3, 5],
-                  lineWidth: 0.75
+                  lineWidth: 0.6
                 },
-                ticks: { color: chartPalette.axis, padding: 8 }
+                ticks: {
+                  color: chartPalette.axis,
+                  padding: 9,
+                  stepSize: granularity === "day" ? 100000 : 1000000,
+                  callback: formatRevenueAxisTick,
+                  font: { size: 11, weight: "500" }
+                }
               }
             }
           }
@@ -3731,21 +4390,17 @@
       renderHotColdChart(hotColdSplit);
       renderExpenseChart(expenseBreakdown);
 
-    document.getElementById( "topProductsContainer" ).innerHTML = topProducts .slice(0,5) .map(function(p,index)
-    {
-      return `
-        <div class="flex items-center justify-between gap-3 border-b border-slate-100 py-2">
-          <div>
-            <div class="text-sm font-semibold">
-              #${index + 1}
-              ${p.name}
-            </div>
-            <div class="text-xs text-slate-500"> ${p.qty} cups sold </div>
-          </div>
-          <div class="performance-metric-value text-right text-sm font-bold"> Rp ${p.revenue.toLocaleString("id-ID")} </div>
-        </div>
-        `;
-      }).join("");
+      document.getElementById("topProductsContainer").innerHTML = topProducts.length
+        ? '<table class="hf-top-products-table ui-table-body"><colgroup><col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue"></colgroup>' +
+          '<thead><tr><th scope="col">#</th><th scope="col">Product</th><th scope="col">Units</th><th scope="col">Revenue</th></tr></thead>' +
+          '<tbody>' + topProducts.slice(0, 10).map(function(p, index)
+          {
+            return '<tr><td>' + (index + 1) + '</td>' +
+              '<th scope="row" class="text-left font-semibold">' + p.name + '</th>' +
+              '<td class="tabular-nums">' + Number(p.qty || 0).toLocaleString("id-ID") + '</td>' +
+              '<td class="font-semibold tabular-nums ' + (Number(p.revenue || 0) < 0 ? 'text-red-600' : '') + '">Rp ' + Number(p.revenue || 0).toLocaleString("id-ID") + '</td></tr>';
+          }).join("") + '</tbody></table>'
+        : '<p class="ui-empty-state py-6 text-center">No product sales for the selected period.</p>';
     }
 
     //--------------------------------------------------
@@ -3758,14 +4413,22 @@
           ? res.diagnosis
           : [];
 
-      if (
-        res.summary &&
-        res.revenueIntelligence &&
-        res.profitIntelligence
-      )
+      if (res.revenueIntelligence && res.profitIntelligence)
       {
         var diagnosisContainer =
           document.getElementById("diagnosisContainer");
+        var revenueMovementClass =
+          Number(res.revenueIntelligence.growthRate) < 0
+            ? "text-red-600"
+            : Number(res.revenueIntelligence.growthRate) > 0
+              ? "text-emerald-600"
+              : "text-slate-500";
+        var profitMovementClass =
+          Number(res.profitIntelligence.changeRate) < 0
+            ? "text-red-600"
+            : Number(res.profitIntelligence.changeRate) > 0
+              ? "text-emerald-600"
+              : "text-slate-500";
         var alert = res.executiveAlert;
         var alertMarkup = alert
           ? '<div class="border-b border-slate-200 pb-3" aria-label="Executive Alert">' +
@@ -3784,95 +4447,33 @@
         diagnosisContainer.nextElementSibling.innerHTML =
           '<div class="pr-2">' +
           '<div class="hf-section-label">Revenue Intelligence</div>' +
-          '<div class="mt-1 text-sm font-bold">' + res.revenueIntelligence.direction +
+          '<div class="mt-1 text-sm font-bold ' + revenueMovementClass + '">' + res.revenueIntelligence.direction +
           ' · ' + res.revenueIntelligence.growthRate + '%</div>' +
           '<div class="mt-1 text-[10px] text-slate-500">' + res.revenueIntelligence.momentum + '</div></div>' +
           '<div class="border-l border-slate-200 pl-2">' +
           '<div class="hf-section-label">Profit Intelligence</div>' +
-          '<div class="mt-1 text-sm font-bold">' + res.profitIntelligence.direction +
+          '<div class="mt-1 text-sm font-bold ' + profitMovementClass + '">' + res.profitIntelligence.direction +
           ' · ' + res.profitIntelligence.changeRate + '%</div>' +
           '<div class="mt-1 text-[10px] text-slate-500">' + res.profitIntelligence.status +
           ' · Rp ' + res.summary.profit.toLocaleString("id-ID") + '</div></div>';
-
-        document.getElementById("revenueIntelContainer").innerHTML =
-        renderIntelCard({
-
-          label:"Revenue",
-
-          value:
-          "Rp " +
-          res.summary.revenue.toLocaleString("id-ID"),
-
-          subtitle:
-          (res.revenueIntelligence.growthRate>=0 ? "▲ " : "▼ ")
-          +
-          Math.abs(res.revenueIntelligence.growthRate)
-          +
-          "% dibanding periode sebelumnya"
-
-          });
-
-        document.getElementById("expenseIntelContainer").innerHTML =
-        renderIntelCard({
-
-          label:"Expense",
-          value:
-          "Rp " +
-          res.summary.expense.toLocaleString("id-ID"),
-
-          subtitle:
-          "Largest: " + res.expenseIntelligence.highestExpense + " · " +
-          res.expenseIntelligence.expenseShare + "% of total"
-
-          });
-
-        var profitMetricContainer =
-          document.getElementById("profitIntelContainer");
-
-        profitMetricContainer.innerHTML =
-        renderIntelCard({
-
-          label:"Profit",
-          value:
-          "Rp " +
-          res.summary.profit.toLocaleString("id-ID"),
-
-          subtitle:
-          res.summary.profit >= 0 ? "Net profit" : "Net loss",
-
-          valueClass: res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"
-
-          });
-
-        profitMetricContainer.nextElementSibling.innerHTML =
-        renderIntelCard({
-          label:"Profit Margin",
-          value:res.insights.profitMargin + "%",
-          subtitle:"Current reporting period"
-        });
-
-        profitMetricContainer.nextElementSibling.nextElementSibling.innerHTML =
-        renderIntelCard({
-          label:"Units Sold",
-          value:res.summary.unitsSold.toLocaleString("id-ID"),
-          subtitle:"Sales units in scope"
-        });
       }
 
       if (res.forecast)
       {
         const growthColor =
-          res.forecast.growthRate >= 0
+          res.forecast.nextMonthRevenue < 0 || res.forecast.growthRate < 0
+            ? "text-red-600"
+            : res.forecast.growthRate > 0
             ? "text-emerald-600"
-            : "text-red-600";
+            : "text-slate-500";
 
         document.getElementById("forecastContainer").innerHTML =
         '<div class="flex items-center justify-between gap-3 text-xs">' +
         '<span class="font-semibold text-slate-600">Next-month forecast</span>' +
-        '<span class="performance-metric-value font-bold text-slate-900">Rp ' +
+        '<span class="performance-metric-value font-bold ' + growthColor + '">Rp ' +
         res.forecast.nextMonthRevenue.toLocaleString("id-ID") +
         ' · ' +
-        (res.forecast.growthRate >= 0 ? "▲ " : "▼ ") +
+        (res.forecast.growthRate > 0 ? "▲ " : res.forecast.growthRate < 0 ? "▼ -" : "") +
         Math.abs(res.forecast.growthRate) +
         '%</span></div>';
       }
@@ -3883,7 +4484,50 @@
     //--------------------------------------------------
     function renderExecutiveSummary(res)
     {
-      document.getElementById("executiveSummary").innerText = res.executiveSummary || "-";
+      var revenueTrend = res.revenueTrend || { labels: [], values: [] };
+      var granularity = revenueTrend.granularity === "day" ? "day" : "month";
+      var revenueValues = Array.isArray(revenueTrend.values)
+        ? revenueTrend.values
+        : [];
+      var highestRevenue = revenueValues.length
+        ? Math.max.apply(null, revenueValues)
+        : 0;
+      var highestRevenueIndex = revenueValues.indexOf(highestRevenue);
+      var highestRevenuePeriod =
+        highestRevenueIndex >= 0 && revenueTrend.labels[highestRevenueIndex]
+          ? formatRevenueAxisLabel(revenueTrend.labels[highestRevenueIndex], granularity).join(" ")
+          : "No represented period";
+      var averageMonthlyRevenue =
+        Number(res.summary.averageMonthlyRevenue || 0);
+      var presentedAverageMonthlyRevenue =
+        Math.round(averageMonthlyRevenue / 1000) * 1000;
+      var periodLabels = {
+        currentMonth: "This Month",
+        previousMonth: "Previous Month",
+        currentYear: "This Year",
+        previousYear: "Previous Year",
+        customMonth: "Custom Month",
+        customYear: "Custom Year",
+        custom: "Custom Range"
+      };
+      document.getElementById("executiveSummaryPeriod").innerText =
+        periodLabels[res.dateFilter.filter] || res.dateFilter.label;
+      var summaryMetrics = [
+        ["Highest Revenue", formatChartCurrency(highestRevenue), highestRevenuePeriod, highestRevenue < 0 ? "text-red-600" : ""],
+        ["Average Monthly Revenue", formatChartCurrency(presentedAverageMonthlyRevenue), "Across represented months", presentedAverageMonthlyRevenue < 0 ? "text-red-600" : ""],
+        ["Total Profit", formatChartCurrency(res.summary.profit), "Revenue less expense", res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"],
+        ["Average Profit Margin", Number(res.insights.profitMargin || 0).toLocaleString("id-ID") + "%", "Current selected period", Number(res.insights.profitMargin || 0) < 0 ? "text-red-600" : ""]
+      ];
+
+      document.getElementById("executiveSummary").innerHTML =
+        summaryMetrics.map(function(metric)
+        {
+          return '<div class="min-w-0">' +
+            '<div class="hf-section-label">' + metric[0] + '</div>' +
+            '<div class="performance-metric-value mt-1 truncate text-lg font-extrabold ' + metric[3] + '">' +
+            metric[1] + '</div>' +
+            '<div class="mt-0.5 truncate text-[10px] text-slate-500">' + metric[2] + '</div></div>';
+        }).join("");
 
       if (res.businessPriority)
       {
@@ -4325,7 +4969,7 @@
 
                   <td class="max-w-[280px] px-4 break-words"> ${r.product || r.purchaseCategory || "-"} </td>
                   <td class="transactions-number px-4"> ${r.qty || "-"} </td>
-                  <td class="transactions-number whitespace-nowrap px-4 font-semibold"> Rp ${amount.toLocaleString("id-ID")}</td>
+                  <td class="transactions-number whitespace-nowrap px-4 font-semibold ${amount < 0 ? "text-red-600" : ""}"> Rp ${amount.toLocaleString("id-ID")}</td>
                 </tr>`;
             }).join("")
           : '<tr><td colspan="5" class="p-8 text-center text-sm ui-theme-muted">No visible transactions in this bounded view for the selected period.</td></tr>';
@@ -4456,23 +5100,6 @@
       renderBusinessIntelligence(res);
       renderExecutiveCenter(res);
       renderTransactions(res);
-
-      //--------------------------------------------------
-      // Executive Alert
-      //--------------------------------------------------
-
-      if (res.executiveAlert)
-      {
-        document.getElementById("executiveAlertCard").className =
-          "hf-executive-fact lg:col-span-3";
-        document.getElementById( "executiveAlertCard" ).innerHTML = `
-        <div class="h-full">
-          <div class="hf-section-label">Attention · ${res.executiveAlert.level}</div>
-          <div class="mt-1 text-[15px] font-semibold leading-5">${res.executiveAlert.title}</div>
-          <div class="mt-1 text-xs leading-4 text-slate-600"> ${res.executiveAlert.message} </div>
-        </div>
-        `;
-      }
 
       //--------------------------------------------------
       // Business Focus
@@ -4620,6 +5247,7 @@ window.onload = function()
   initializeResponsiveShell();
   initializeDashboardTabs();
   initializeTransactionsTabs();
+  initializeCustomSelectSystem();
   updateCustomDateVisibility();
   loadData();
 };

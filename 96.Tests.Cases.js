@@ -438,7 +438,33 @@ function testSparseDatasetResilience()
           property !== "kpiTargets"
         )
         {
-          comparableResponse[property] = response[property];
+          if (property === "dateFilter")
+          {
+            comparableResponse[property] = {
+              filter: response.dateFilter.filter,
+              startDate: response.dateFilter.startDate,
+              endDate: response.dateFilter.endDate,
+              label: response.dateFilter.label,
+              rowCount: response.dateFilter.rowCount
+            };
+          }
+          else if (property === "summary")
+          {
+            comparableResponse[property] = {
+              revenue: response.summary.revenue,
+              expense: response.summary.expense,
+              profit: response.summary.profit,
+              unitsSold: response.summary.unitsSold,
+              bestSeller: response.summary.bestSeller,
+              topRevenueProduct: response.summary.topRevenueProduct,
+              avgDailyRevenue: response.summary.avgDailyRevenue,
+              activeDays: response.summary.activeDays
+            };
+          }
+          else
+          {
+            comparableResponse[property] = response[property];
+          }
         }
       });
 
@@ -660,6 +686,24 @@ function testDashboardDateFilter()
     return response;
   }
 
+  function createExpectedDailySeries(startDate, endDate, revenueByDate)
+  {
+    var labels = [];
+    var values = [];
+    var cursor = new Date(startDate + "T00:00:00Z");
+    var end = new Date(endDate + "T00:00:00Z");
+
+    while (cursor <= end)
+    {
+      var label = cursor.toISOString().slice(0, 10);
+      labels.push(label);
+      values.push(revenueByDate[label] || 0);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    }
+
+    return { labels: labels, values: values };
+  }
+
   assertTrend(
     "today",
     null,
@@ -693,6 +737,17 @@ function testDashboardDateFilter()
     "last 7 days crossing two months"
   );
 
+  var currentMonthExpected = createExpectedDailySeries(
+    "2026-06-01",
+    "2026-06-15",
+    {
+      "2026-06-01": 10,
+      "2026-06-08": 80,
+      "2026-06-09": 90,
+      "2026-06-14": 140,
+      "2026-06-15": 150
+    }
+  );
   var currentMonthResponse =
     assertTrend(
       "currentMonth",
@@ -700,8 +755,8 @@ function testDashboardDateFilter()
       null,
       rows,
       referenceDate,
-      ["2026-06"],
-      [470],
+      currentMonthExpected.labels,
+      currentMonthExpected.values,
       "current month with revenue"
     );
 
@@ -711,18 +766,40 @@ function testDashboardDateFilter()
     "current month trend is non-empty"
   );
 
+  assertEqual(
+    JSON.stringify(currentMonthResponse.dateFilter.availableMonths),
+    JSON.stringify(["2025-12", "2026-01", "2026-04", "2026-05", "2026-06"]),
+    "available custom months derive from represented transaction dates"
+  );
+
+  assertEqual(
+    JSON.stringify(currentMonthResponse.dateFilter.availableYears),
+    JSON.stringify(["2025", "2026"]),
+    "available custom years derive from represented transaction dates"
+  );
+
+  var previousMonthExpected = createExpectedDailySeries(
+    "2026-05-01",
+    "2026-05-31",
+    { "2026-05-20": 50 }
+  );
   assertTrend(
     "previousMonth",
     null,
     null,
     fixture.trendRows,
     referenceDate,
-    ["2026-05"],
-    [50],
+    previousMonthExpected.labels,
+    previousMonthExpected.values,
     "previous month trend"
   );
 
-  assertTrend(
+  var customMonthExpected = createExpectedDailySeries(
+    "2026-06-01",
+    "2026-06-30",
+    { "2026-06-01": 60, "2026-06-15": 150 }
+  );
+  var currentYearEquivalentResponse = assertTrend(
     "currentYear",
     null,
     null,
@@ -733,25 +810,67 @@ function testDashboardDateFilter()
     "current year includes partial current month"
   );
 
+  var customYearEquivalentResponse = assertTrend(
+    "customYear",
+    "2026",
+    null,
+    fixture.trendRows,
+    new Date(2026, 7, 3, 12, 0, 0),
+    ["2026-01", "2026-05", "2026-06", "2026-07", "2026-08"],
+    [10, 50, 210, 70, 80],
+    "custom year equivalent represented months"
+  );
+
+  [
+    [currentYearEquivalentResponse.summary.revenue, customYearEquivalentResponse.summary.revenue, "equivalent year revenue"],
+    [Math.max.apply(null, currentYearEquivalentResponse.revenueTrend.values), Math.max.apply(null, customYearEquivalentResponse.revenueTrend.values), "equivalent year highest revenue"],
+    [currentYearEquivalentResponse.summary.averageMonthlyRevenue, customYearEquivalentResponse.summary.averageMonthlyRevenue, "equivalent year average monthly revenue"],
+    [currentYearEquivalentResponse.summary.profit, customYearEquivalentResponse.summary.profit, "equivalent year total profit"],
+    [currentYearEquivalentResponse.insights.profitMargin, customYearEquivalentResponse.insights.profitMargin, "equivalent year profit margin"]
+  ].forEach(function(metric)
+  {
+    assertEqual(metric[0], metric[1], metric[2]);
+  });
+
+  assertEqual(
+    currentYearEquivalentResponse.summary.representedMonths,
+    5,
+    "represented distinct month denominator"
+  );
+  assertEqual(
+    currentYearEquivalentResponse.summary.averageMonthlyRevenue,
+    84,
+    "average monthly revenue uses represented distinct months"
+  );
+
+  var emptySummary = buildSummaryFromAggregate(buildAggregate([]));
+  assertEqual(emptySummary.representedMonths, 0, "zero represented months");
+  assertEqual(emptySummary.averageMonthlyRevenue, 0, "zero represented month average safety");
+
   assertTrend(
     "custom",
     "2026-06-01",
     "2026-06-30",
     fixture.trendRows,
     referenceDate,
-    ["2026-06"],
-    [210],
+    customMonthExpected.labels,
+    customMonthExpected.values,
     "custom single-month trend"
   );
 
+  var customCrossYearExpected = createExpectedDailySeries(
+    "2025-12-01",
+    "2026-02-28",
+    { "2025-12-31": 120, "2026-01-01": 10 }
+  );
   assertTrend(
     "custom",
     "2025-12-01",
     "2026-02-28",
     fixture.trendRows,
     referenceDate,
-    ["2025-12", "2026-01"],
-    [120, 10],
+    customCrossYearExpected.labels,
+    customCrossYearExpected.values,
     "custom multi-month cross-year trend"
   );
 
@@ -761,9 +880,25 @@ function testDashboardDateFilter()
     "2026-08-03",
     fixture.trendRows,
     referenceDate,
-    [],
-    [],
+    ["2026-08-03"],
+    [0],
     "zero-revenue filtered period"
+  );
+
+  var continuousRangeExpected = createExpectedDailySeries(
+    "2026-08-01",
+    "2026-08-09",
+    { "2026-08-01": 80 }
+  );
+  assertTrend(
+    "custom",
+    "2026-08-01",
+    "2026-08-09",
+    fixture.trendRows,
+    referenceDate,
+    continuousRangeExpected.labels,
+    continuousRangeExpected.values,
+    "continuous daily zero-filled range"
   );
 
   assertThrowsMessage(
@@ -1119,8 +1254,10 @@ function testPeriodComparison()
   );
 
   if (
-    emptyComparison.status.revenue !== "Stable" ||
-    emptyComparison.changes.revenuePercent !== 0
+    emptyComparison.status.revenue !== "No Comparison" ||
+    emptyComparison.changes.revenuePercent !== null ||
+    emptyComparison.status.profitMargin !== "No Comparison" ||
+    emptyComparison.changes.profitMarginPoints !== null
   )
   {
     throw new Error(
@@ -1492,43 +1629,21 @@ function testBusinessPriorityContract()
   assertSourceContainsOnce(
     source,
     'id="businessPriorityRegion"',
-    "authoritative Overview Business Priority render target"
+    "authoritative Insights Business Priority render target"
   );
 
-  var overviewOwnershipStart = source.indexOf("overview: [");
-  var overviewOwnershipEnd = source.indexOf("]", overviewOwnershipStart);
-  var overviewOwnershipSource = source.slice(
-    overviewOwnershipStart,
-    overviewOwnershipEnd
-  );
-  var intelligenceOwnershipStart = source.indexOf("intelligence: [");
-  var intelligenceOwnershipEnd = source.indexOf("]", intelligenceOwnershipStart);
-  var intelligenceOwnershipSource = source.slice(
-    intelligenceOwnershipStart,
-    intelligenceOwnershipEnd
-  );
-  var planningOwnershipStart = source.indexOf("planning: [");
-  var planningOwnershipEnd = source.indexOf("]", planningOwnershipStart);
-  var planningOwnershipSource = source.slice(
-    planningOwnershipStart,
-    planningOwnershipEnd
+  var insightsOwnershipStart = source.indexOf("insights: [");
+  var insightsOwnershipEnd = source.indexOf("]", insightsOwnershipStart);
+  var insightsOwnershipSource = source.slice(
+    insightsOwnershipStart,
+    insightsOwnershipEnd
   );
 
   assertSourceContains(
-    overviewOwnershipSource,
-    'staging.querySelector("#executiveSummarySection")',
-    "Overview Business Priority owner"
+    insightsOwnershipSource,
+    'staging.querySelector("#businessPriorityRegion")',
+    "Insights Business Priority owner"
   );
-
-  [intelligenceOwnershipSource, planningOwnershipSource]
-    .forEach(function(panelOwnershipSource)
-    {
-      assertSourceExcludes(
-        panelOwnershipSource,
-        "businessPriorityRegion",
-        "non-Overview Business Priority ownership"
-      );
-    });
 
   var priorityRendererStart =
     source.indexOf("function renderExecutiveSummary(res)");
@@ -2269,8 +2384,8 @@ function testUiShellThemeContract()
   [
     'id="appShell"',
     'data-sidebar-collapsed="false"',
-    '#dashboardSidebar { width: 232px;',
-    '#dashboardSidebar { width: 216px;',
+    '#dashboardSidebar { width: 248px;',
+    '#dashboardSidebar { width: 224px;',
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
     'id="sidebarCollapseButton"',
     'function setDesktopSidebarCollapsed(isCollapsed)'
@@ -2282,8 +2397,8 @@ function testUiShellThemeContract()
 
   [
     'id="topUtilityBar"',
-    '#topUtilityBar { height: 52px; min-height: 52px;',
-    '#topUtilityBar { height: 48px; min-height: 48px;',
+    '#topUtilityBar { height: 76px; min-height: 76px;',
+    '#topUtilityBar { height: 68px; min-height: 68px;',
     'height: 100dvh;',
     'overflow: hidden;',
     'id="contentViewport"'
@@ -2659,12 +2774,12 @@ function testNineDestinationNavigationContract()
 
   [
     'id="financialModulesDisclosureButton"',
-    'aria-expanded="false"',
+    'aria-expanded="true"',
     'aria-controls="financialModulesGroup"',
-    'aria-label="Finance, collapsed"',
+    'aria-label="Finance, expanded"',
     'id="financialModulesGroup"',
     'aria-label="Unavailable Finance destinations"',
-    'id="financialModulesGroup" class="mt-1 space-y-0" role="list" aria-label="Unavailable Finance destinations" hidden',
+    'id="financialModulesGroup" class="mt-1 space-y-0 pl-5" role="list" aria-label="Unavailable Finance destinations"',
     "unavailable until module migration is approved"
   ].forEach(function(token)
   {
@@ -2696,8 +2811,8 @@ function testNineDestinationNavigationContract()
   scenariosPassed++;
 
   [
-    '#dashboardSidebar { width: 232px;',
-    '#dashboardSidebar { width: 216px;',
+    '#dashboardSidebar { width: 248px;',
+    '#dashboardSidebar { width: 224px;',
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
     '#appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: 64px;',
     '@media (max-width: 1023px)',
@@ -2743,7 +2858,7 @@ function testNineDestinationNavigationContract()
   [
     '.ui-sidebar-item[aria-current="page"]',
     "background:var(--selected)",
-    "box-shadow:inset 3px 0 0 var(--brand)",
+    "box-shadow:none",
     ".ui-future-module",
     "color:var(--disabled-text)"
   ].forEach(function(token)
@@ -2821,7 +2936,6 @@ function testFullShellVisualContract()
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
     ).getContent();
-  var doGetSource = String(doGet);
   var utilitySource = getSourceRegion(
     source,
     'id="topUtilityBar"',
@@ -2845,31 +2959,13 @@ function testFullShellVisualContract()
   assertSourceContainsOnce(source, 'id="topUtilityBar"', "one utility row");
   [
     'id="utilityPageTitle"',
-    'id="utilityPageContext"',
-    'id="dashboardUtilityControls"',
-    'id="utilityActivePeriod"',
-    'id="utilityLastSync"'
+    'id="utilityPageContext"'
   ].forEach(function(token)
   {
     assertSourceContains(utilitySource, token, "authoritative utility ownership");
   });
-  assertSourceContainsOnce(
-    utilitySource,
-    'id="utilityVersion"',
-    "utility version render target"
-  );
-  assertSourceContainsOnce(
-    utilitySource,
-    'data-metadata-source="template.version"',
-    "utility version provenance"
-  );
-  assertSourceContainsOnce(
-    doGetSource,
-    "template.version = PROJECT_CONFIG.VERSION;",
-    "authoritative utility version assignment"
-  );
-  assertSourceContainsOnce(source, 'id="utilityVersion"', "single utility version target");
-  assertSourceExcludes(sidebarSource, 'id="utilityVersion"', "sidebar utility version target");
+  assertSourceContainsOnce(sidebarSource, 'id="sidebarDataStatus"', "sidebar runtime status target");
+  assertSourceExcludes(utilitySource, 'id="utilityVersion"', "removed utility version target");
   assertSourceExcludes(
     sidebarSource,
     'data-metadata-source="template.version"',
@@ -2897,11 +2993,11 @@ function testFullShellVisualContract()
   scenariosPassed++;
 
   [
-    '#dashboardSidebar { width: 232px;',
-    '#dashboardSidebar { width: 216px;',
+    '#dashboardSidebar { width: 248px;',
+    '#dashboardSidebar { width: 224px;',
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;',
-    '#topUtilityBar { height: 52px; min-height: 52px;',
-    '#topUtilityBar { height: 48px; min-height: 48px;',
+    '#topUtilityBar { height: 76px; min-height: 76px;',
+    '#topUtilityBar { height: 68px; min-height: 68px;',
     '#dashboardTabList,',
     '#transactionsTabList { height: 40px; min-height: 40px; }'
   ].forEach(function(token)
@@ -2913,10 +3009,10 @@ function testFullShellVisualContract()
   [
     "height: 100dvh;",
     "overflow: hidden;",
-    "grid-template-rows: 52px minmax(0, 1fr)",
-    "grid-template-rows: 48px minmax(0, 1fr)",
-    '#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }',
-    '#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }'
+    "grid-template-rows: 76px minmax(0, 1fr)",
+    "grid-template-rows: 68px minmax(0, 1fr)",
+    '#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 20px 24px 12px; }',
+    '#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 44px minmax(0, 1fr); gap: 12px; }'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "one-viewport desktop shell");
@@ -2927,7 +3023,7 @@ function testFullShellVisualContract()
     '@media (max-width: 1023px)',
     '#dashboardSidebar { width: min(320px, calc(100vw - 32px));',
     '#topUtilityBar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }',
-    '#contentViewport { overflow: visible; padding: 12px; }',
+    '#contentViewport { overflow: visible; padding: var(--space-5); }',
     'sidebar.inert = !isOpen && !isDesktop;',
     'menuButton.focus();'
   ].forEach(function(token)
@@ -2958,9 +3054,9 @@ function testFullShellVisualContract()
   assertSourceExcludes(utilitySource, "overview-surface", "nested utility surface");
   assertSourceExcludes(utilitySource, "ui-theme-surface", "nested utility card");
   [
-    '#topUtilityBar { height: 52px; min-height: 52px; background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }',
-    '.overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }',
-    '.analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }',
+    '#topUtilityBar { height: 76px; min-height: 76px; background: var(--surface-1); border-color: var(--divider); box-shadow: none; }',
+    '.overview-surface,',
+    '.analytics-surface,',
     "border-radius: 8px;"
   ].forEach(function(token)
   {
@@ -3000,7 +3096,6 @@ function testFullShellVisualContract()
     'page.hidden = !isActivePage;',
     'panel.hidden =',
     'tab.setAttribute("tabindex", isSelected ? "0" : "-1");',
-    'elements.dashboardUtilityControls.hidden = pageId !== "dashboard";',
     'heading.focus();',
     '@media (prefers-reduced-motion: reduce)'
   ].forEach(function(token)
@@ -3080,9 +3175,7 @@ function testDashboardTabFrameworkContract()
   var tabNames = [
     "overview",
     "performance",
-    "analytics",
-    "intelligence",
-    "planning"
+    "insights"
   ];
   var dashboardTabRegion = getSourceRegion(
     source,
@@ -3150,27 +3243,24 @@ function testDashboardTabFrameworkContract()
   var ownership = {
     overview: [
       "dashboardHeaderRegion",
-      "executiveSummarySection",
       "keyMetricsSection",
-      "overviewEvidenceRow"
+      "overviewEvidenceRow",
+      "executiveSummarySection"
     ],
     performance: [
-      "businessPerformanceSection"
-    ],
-    analytics: [
+      "forecastSection",
       "hotColdChartSection",
       "expenseChartSection",
       "topProductsSection",
       "productConcentrationSection"
     ],
-    intelligence: [
+    insights: [
+      "businessPriorityRegion",
       "diagnosisSection",
       "recommendationsSection",
-      "riskOpportunitySection"
-    ],
-    planning: [
-      "kpiTargetReference",
-      "executiveCenter"
+      "riskOpportunitySection",
+      "executiveCenter",
+      "kpiTargetReference"
     ]
   };
 
@@ -3303,7 +3393,7 @@ function testDashboardTabFrameworkContract()
   {
     assertSourceContains(source, token, "cross-tab print visibility");
   });
-  ownership.analytics.concat(ownership.performance)
+  ownership.overview.concat(ownership.performance)
     .forEach(function(sectionId)
     {
       assertSourceContains(
@@ -3316,7 +3406,8 @@ function testDashboardTabFrameworkContract()
 
   [
     "function resizeVisibleDashboardCharts(tabName)",
-    '"overview": [revenueChart]',
+    "overview: [revenueChart]",
+    "performance: [hotColdChart, expenseChart]",
     "chart.resize();",
     "revenueChart = destroyChartInstance(revenueChart);",
     "hotColdChart = destroyChartInstance(hotColdChart);",
@@ -3331,10 +3422,10 @@ function testDashboardTabFrameworkContract()
     "#dashboardTabList,",
     "#transactionsTabList { height: 40px; min-height: 40px; }",
     ".dashboard-tab-panel:not(#dashboardPanelOverview)",
-    "#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 40px minmax(0, 1fr); gap: 0; background: var(--surface-1); }",
-    "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
+    "#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 44px minmax(0, 1fr); gap: 12px; }",
+    "#dashboardPanelOverview { height: 100%; overflow: visible; }",
     "@media (max-width: 1023px)",
-    "#contentViewport { overflow: visible; padding: 12px; }"
+    "#contentViewport { overflow: visible; padding: var(--space-5); }"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "responsive one-viewport tab contract");
@@ -3415,12 +3506,13 @@ function testDashboardOverviewContract()
   [
     'id="dashboardHeaderRegion"',
     'id="filter"',
-    '<option value="today">Today</option>',
-    '<option value="last7days">Last 7 Days</option>',
-    '<option value="currentMonth">Current Month</option>',
+    '<option value="currentMonth">This Month</option>',
     '<option value="previousMonth">Previous Month</option>',
-    '<option value="currentYear" selected>Current Year</option>',
-    '<option value="custom">Custom</option>',
+    '<option value="currentYear" selected>This Year</option>',
+    '<option value="previousYear">Previous Year</option>',
+    '<option value="customMonth">Custom Month</option>',
+    '<option value="customYear">Custom Year</option>',
+    '<option value="custom">Custom Range</option>',
     'id="printReportButton"',
     'id="dateFilterLabel"',
     'id="latestDataLabel"',
@@ -3430,20 +3522,38 @@ function testDashboardOverviewContract()
     assertSourceContains(source, token, "Overview reporting toolbar");
   });
   assertSourceExcludes(source, "Source:", "Overview source label");
+  [
+    'id="dashboardTabInsights"',
+    'Insights &amp; Plans',
+    '#dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important;',
+    'status.classList.toggle(',
+    'state === "loading"',
+    'statusText.classList.add("sr-only");'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "runtime review presentation corrections");
+  });
   scenariosPassed++;
 
   [
     'id="executiveSummarySection"',
-    "Business condition",
-    'id="executiveAlertCard"',
-    "Attention ·",
+    ">Key Summary</h2>",
+    "Highest Revenue",
+    "Average Monthly Revenue",
+    "Total Profit",
+    "Average Profit Margin",
+    ">Quick Actions</h2>",
+    "View Transactions</strong>",
+    "Export Report</strong>",
+    "Print Report</strong>",
+    "Data Summary</strong>",
     'id="businessPriorityRegion"',
     'id="businessPriorityLevel"',
     'id="priorityTitle"',
     'id="priorityReason"',
     'id="priorityMessage"',
     'id="priorityMeta"',
-    ".hf-executive-plane { background: var(--surface-1); border-bottom: 1px solid var(--divider); }",
+    ".hf-summary-action-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 18px; }",
     ".hf-priority-action { border-left: 1px solid var(--divider); }",
     ".hf-priority-action #businessPriorityLevel { border-bottom: 2px solid currentColor; padding-bottom: 2px; }",
     '"text-xs font-semibold " +',
@@ -3453,6 +3563,8 @@ function testDashboardOverviewContract()
   {
     assertSourceContains(source, token, "executive action hierarchy");
   });
+  assertSourceExcludes(source, 'id="executiveAlertCard"', "Overview alert presentation");
+  assertSourceExcludes(source, "Attention ·", "Overview alert strip");
   assertSourceExcludes(
     source.slice(
       source.indexOf('id="businessPriorityRegion"'),
@@ -3488,10 +3600,16 @@ function testDashboardOverviewContract()
   );
   [
     "hf-kpi-strip",
-    ".hf-kpi-card { min-height: 76px; border: 0; border-radius: 0; box-shadow: none; }",
-    ".hf-kpi-card + .hf-kpi-card { border-left: 1px solid var(--divider); }",
+    "hf-kpi-icon",
+    'Revenue: "fa-arrow-trend-up"',
+    'Expense: "fa-wallet"',
+    'Profit: "fa-coins"',
+    '"Profit Margin": "fa-percent"',
+    '"Units Sold": "fa-mug-hot"',
+    ".hf-kpi-card { min-height: 130px; padding: 17px 18px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--card-bg); box-shadow: var(--card-shadow); }",
+    ".hf-kpi-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; background: transparent; }",
     'status === "No Comparison"',
-    "supportingText ?",
+    "hf-kpi-comparison",
     'text-[28px] font-extrabold leading-8 tracking-tight'
   ].forEach(function(token)
   {
@@ -3500,16 +3618,35 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
+    'id="executiveSummaryPeriod"',
+    'currentMonth: "This Month"',
+    'previousYear: "Previous Year"',
+    'custom: "Custom Range"',
+    'periodLabels[res.dateFilter.filter]',
+    'Math.round(averageMonthlyRevenue / 1000) * 1000',
+    'Number(res.insights.profitMargin) < 0 ? negativeClass',
+    'marginStatus === "Down" ? "▼ -"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "shared period and signed KPI state");
+  });
+  scenariosPassed++;
+
+  if (Math.round(2073875 / 1000) * 1000 !== 2074000)
+  {
+    throw new Error("Key Summary nearest-thousand presentation rule changed");
+  }
+  scenariosPassed++;
+
+  [
     'id="overviewEvidenceRow"',
     'id="revenueChartSection"',
     'staging.querySelector("#overviewEvidenceRow")',
-    "grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)",
-    "#dashboardPanelOverview #mainChartWrapper { height: 360px; min-height: 360px; max-height: 360px; }",
-    ".hf-comparison-grid > *:nth-child(even) { border-left: 1px solid var(--divider); }",
-    'id="overviewContextRow" class="hf-overview-context border-l border-slate-200"',
-    "#dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }",
+    "grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr)",
+    "#dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }",
+    'id="overviewContextRow" class="hf-overview-context"',
+    "#dashboardPanelOverview #mainChartWrapper,",
     'id="periodComparisonSection"',
-    'id="periodComparisonMetrics"',
     'id="dataQualityInformation"',
     'id="dataQualityDetailsButton"',
     'aria-expanded="false"',
@@ -3521,10 +3658,250 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
-    "#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 12px 16px; }",
-    "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
+    '"Compared with " +',
+    '" rows · " +',
+    '" excluded"',
+    '#sidebarCollapseButton { width: 100% !important; border: 0 !important;',
+    'resizeVisibleDashboardCharts(activeDashboardTab);'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact evidence and collapse reflow");
+  });
+  scenariosPassed++;
+
+  [
+    'return "N/A";',
+    '<select id="customMonth"',
+    '<select id="customYear"',
+    'Array.isArray(dateFilter.availableMonths)',
+    'Array.isArray(dateFilter.availableYears)',
+    'renderAvailablePeriodOptions(res.dateFilter);',
+    '#dashboardPanelOverview #dataQualityInformation { display: flex !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }',
+    '#printReportButton .hf-action-copy strong { white-space: nowrap; }',
+    'status.classList.add("sr-only");'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "runtime refinement contract");
+  });
+  assertSourceExcludes(source, 'id="customMonth" type="month"', "manual custom month input");
+  assertSourceExcludes(source, 'id="customYear" type="number"', "manual custom year input");
+  scenariosPassed++;
+
+  [
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item > i,',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; padding-left: 0 !important; padding-right: 0 !important; margin-left: 0 !important; margin-right: 0 !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 64px !important; max-width: 64px !important; margin-left: 0 !important; margin-right: 0 !important; justify-content: center !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .numlock-mark { width: 46px !important; height: 46px !important; flex-basis: 46px !important; margin-left: auto !important; margin-right: auto !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }',
+    '#financialModulesDisclosureButton { margin-top: 0; font-size: 14px; font-weight: 400;',
+    '#financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }',
+    'id="dashboardTabInsights"',
+    'white-space: nowrap !important;'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "sidebar and tab refinement contract");
+  });
+  scenariosPassed++;
+
+  [
+    '.hf-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }',
+    '.hf-quick-actions button { display: grid; width: 100%; min-width: 0;',
+    '#printReportButton .hf-action-copy strong { white-space: nowrap; }',
+    'Number(res.summary.averageMonthlyRevenue || 0)',
+    'Math.round(averageMonthlyRevenue / 1000) * 1000'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "final runtime defect contract");
+  });
+  assertSourceExcludes(source, '#printReportButton {\n      width: 132px', "Print Report fixed content width");
+  scenariosPassed++;
+
+  [
+    'class="hf-period-secondary hidden min-w-0 items-center gap-2"',
+    '<select id="customYear" disabled class="ui-form-text hf-period-select',
+    '<select id="customMonth" disabled class="ui-form-text hf-period-select',
+    '#filter,\n      .hf-period-select { width: 148px; min-width: 148px; height: 44px;',
+    'var representedMonths = availableDashboardMonths',
+    'monthKey.slice(0, 4) === selectedYear',
+    'monthKey.slice(5, 7)',
+    'elements.customYear.value + "-" + elements.customMonth.value',
+    'renderAvailableMonthOptions("");',
+    'formatRevenueTooltipPeriod(',
+    'formatDashboardPresentationPeriod(label, granularity)',
+    'formatDashboardPresentationPeriod(comparison.previous.startDate, "day")',
+    'formatDashboardPresentationPeriod(comparison.previous.endDate, "day")',
+    '#dashboardPanelOverview .hf-kpi-card .hf-section-label { font-size: 13px; line-height: 18px; }',
+    'class="hf-data-quality-row"',
+    '#dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: inline-flex !important; align-items: center !important; justify-content: flex-end !important; flex-wrap: nowrap !important; gap: 8px !important; line-height: 16px !important; }',
+    '.hf-top-products-table thead th { color: var(--text-muted); font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold);',
+    '.hf-top-products-table tbody th { font-size: var(--text-caption-size); font-weight: var(--font-weight-normal); line-height: var(--text-label-line); }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "micro-parity and period control contract");
+  });
+  assertSourceExcludes(source, "Current ranking", "obsolete Top Products ranking label");
+  assertSourceExcludes(source, 'scope="col" class="text-right">Units', "right-aligned Top Products Units header");
+  assertSourceExcludes(source, 'scope="col" class="text-right">Revenue', "right-aligned Top Products Revenue header");
+  [
+    '#dashboardSidebar { width: 264px !important; }',
+    '#mainContent { margin-left: 264px !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px !important; }',
+    '#dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap !important; }',
+    '#dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important;',
+    '#dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important;',
+    '#dashboardSidebar #sidebarCollapseButton { min-height: 48px !important; gap: 12px !important; padding: 10px 12px !important; }',
+    'function formatRevenueAxisTick(value)',
+    'typeof value === "number" && value === 0',
+    'callback: formatRevenueAxisTick,',
+    'id="topProductsTitle" class="ui-section-title"',
+    '.hf-top-products-table td { height: 34px; padding: 0 6px; border-bottom: 1px solid var(--divider); text-align: left !important;',
+    '#dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: inline-flex !important; align-items: center !important;',
+    '#dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row > * { margin-top: 0 !important; margin-bottom: 0 !important; line-height: 16px !important; }',
+    'topProducts.slice(0, 10)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "remaining WO-028 runtime correction");
+  });
+  assertSourceExcludes(source, '<td class="text-right tabular-nums">', "right-aligned Top Products quantity cell");
+  assertSourceExcludes(source, '<td class="text-right font-semibold tabular-nums ', "right-aligned Top Products revenue cell");
+  scenariosPassed++;
+
+  [
+    'class="hf-analytics-card-header mb-1 flex-wrap"',
+    'class="hf-analytics-title-icon" aria-hidden="true"><i class="fas fa-chart-area"></i>',
+    'class="hf-analytics-title-icon hf-analytics-title-icon-products" aria-hidden="true"><i class="fas fa-trophy"></i>',
+    'id="revenueChartTitle" class="ui-section-title"',
+    'id="topProductsTitle" class="ui-section-title"',
+    '--section-icon-size: 48px;',
+    '<th scope="col">#</th><th scope="col">Product</th><th scope="col">Units</th><th scope="col">Revenue</th>',
+    '.hf-top-products-table { width: 100%; table-layout: fixed; }',
+    'white-space: nowrap;',
+    '<col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue">',
+    '.hf-top-products-table .hf-col-rank { width: 8%; }',
+    '.hf-top-products-table .hf-col-product { width: 45%; }',
+    '.hf-top-products-table .hf-col-units { width: 18%; }',
+    '.hf-top-products-table .hf-col-revenue { width: 29%; }',
+    'button, input, select, textarea, table { font-family: inherit; }',
+    '.ui-page-heading { font-size: var(--text-display-size);',
+    'id="utilityPageTitle" class="ui-page-title',
+    '.ui-nav-label { font-size: var(--text-body-size);',
+    '.ui-tab-label { font-size: var(--text-label-size);',
+    '.ui-section-title { font-size: var(--text-section-size);',
+    '.ui-card-title { font-size: var(--text-component-size);',
+    '.ui-kpi-label { font-size: var(--text-label-size);',
+    '.ui-table-header { font-size: var(--text-caption-size);',
+    '.ui-table-body { font-size: var(--text-caption-size);',
+    '.ui-form-text { font-family: var(--font-sans);',
+    '.ui-empty-state { font-size: var(--text-body-size);',
+    '<select id="filter" class="ui-form-text',
+    '<select id="customYear" disabled class="ui-form-text hf-period-select',
+    '<select id="customMonth" disabled class="ui-form-text hf-period-select',
+    '--overview-section-gap: 8px;',
+    'gap: var(--overview-section-gap) !important;'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "analytics typography and table parity");
+  });
+  assertSourceExcludes(source, "text-transform: uppercase", "uppercase Top Products table header styling");
+  assertSourceExcludes(source, 'class="truncate text-left font-semibold"', "Top Products product clipping");
+  scenariosPassed++;
+
+  [
+    '#topProductWrapper { margin-top: var(--card-header-content-gap); }',
+    '#dashboardContent { gap: var(--overview-section-gap) !important; }',
+    'let customSelectRegistry = {};',
+    'function initializeCustomSelectSystem()',
+    'enhanceCustomSelect(elements.filter, "Reporting period");',
+    'enhanceCustomSelect(elements.customYear, "Available custom year");',
+    'enhanceCustomSelect(elements.customMonth, "Available custom month");',
+    'trigger.setAttribute("aria-haspopup", "listbox");',
+    'trigger.setAttribute("aria-expanded", "false");',
+    'listbox.setAttribute("role", "listbox");',
+    'option.setAttribute("role", "option");',
+    'option.setAttribute("aria-selected", String(nativeOption.value === state.select.value));',
+    'event.key === "ArrowDown" || event.key === "ArrowUp"',
+    'event.key === "Enter" || event.key === " "',
+    'event.key === "Escape"',
+    'state.select.dispatchEvent(new Event("change", { bubbles: true }));',
+    '.ui-custom-select-option { display: flex; width: 100%; min-width: 150px; min-height: 40px; align-items: center;',
+    '.ui-custom-select-check { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; align-self: center; transform: none;',
+    '.ui-custom-select-option[aria-selected="true"]',
+    '.ui-custom-select-option:focus-visible,',
+    'synchronizeCustomSelect("customYear", true);',
+    'synchronizeCustomSelect("customMonth", true);',
+    'initializeCustomSelectSystem();'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "shared accessible custom dropdown");
+  });
+  scenariosPassed++;
+
+  [
+    'Final runtime visual enforcement II: keep this after legacy component overrides.',
+    ':root { --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; --font-display: var(--font-sans);',
+    'html, body, #appShell, #mainContent, .page, button, input, select, textarea, table { font-family: var(--font-sans) !important;',
+    '#utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important;',
+    '#dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading, #dashboardPanelPerformance h2, #dashboardPanelInsights h2, #transactions h2 { font-size: var(--text-section-size) !important; font-weight: 600 !important;',
+    '#dashboardPanelOverview .hf-analytics-title-icon, #dashboardPanelOverview .hf-summary-title-icon { width: var(--section-icon-size) !important; height: var(--section-icon-size) !important; flex-basis: var(--section-icon-size) !important;',
+    '#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 23px !important; font-weight: 700 !important;',
+    '#dashboardContent { gap: var(--overview-section-gap) !important; }',
+    '#dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important; grid-template-columns: none !important;',
+    '#dashboardTabList [role="tab"], #dashboardTabInsights { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important;',
+    '#dashboardTabList [role="tab"]:hover { background: color-mix(in srgb, var(--hover) 64%, transparent) !important;',
+    '#dashboardTabList [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important;',
+    '.ui-custom-select-option { display: flex !important; height: 40px !important; min-height: 40px !important; align-items: center !important; padding: 0 12px !important; }',
+    '.ui-custom-select-check { display: inline-flex !important; width: 18px !important; height: 18px !important; flex-basis: 18px !important; align-items: center !important; justify-content: center !important; align-self: center !important; transform: none !important; line-height: 18px !important; }',
+    '.ui-custom-select-option[aria-selected="true"]:hover,',
+    '#topProductWrapper { margin-top: var(--card-header-content-gap); }',
+    '#dashboardContent { gap: var(--overview-section-gap) !important; }',
+    '#dashboardPanelInsights #riskOpportunitySection { min-height: 0 !important; overflow-y: auto !important; }',
+    '#dashboardPanelInsights #riskOpportunitySection > div { flex: 0 0 auto !important; overflow-wrap: anywhere; }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "runtime visual enforcement contract");
+  });
+  scenariosPassed++;
+
+  [
+    ':where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important;',
+    '#dashboardPanelOverview .hf-analytics-title-icon > i, #dashboardPanelOverview .hf-summary-title-icon > i { font-size: var(--section-icon-glyph-size) !important; line-height: 1 !important; }',
+    '#dashboardPanelOverview .hf-analytics-title-icon-products > i { font-size: 17px !important; }',
+    '#dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 8px 16px !important; }',
+    '#dashboardPanelOverview #revenueChartSection { padding-left: 4px !important; }',
+    '#dashboardPanelOverview #executiveSummarySection > * { padding: 16px !important; }',
+    '#dashboardPanelOverview #keyMetricsSection { margin: 0 !important; }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "final visual typography and rhythm correction");
+  });
+  assertSourceExcludes(
+    source,
+    'id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-3"',
+    "competing KPI section margin"
+  );
+  scenariosPassed++;
+
+  [
+    '#dashboardPanelOverview:not([hidden]) { gap: 0 !important; }',
+    'grid-template-rows: 126px 0 minmax(320px, 1fr) 8px 42px 8px 190px !important;',
+    '#dashboardPanelOverview #overviewEvidenceRow { grid-row: 3 !important; }',
+    '#dashboardPanelOverview #overviewContextRow { grid-row: 5 !important; }',
+    '#dashboardPanelOverview #executiveSummarySection { grid-row: 7 !important; }',
+    '#dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 12px !important; padding-left: 12px !important; }',
+    '#dashboardPanelOverview .hf-summary-metrics { margin-top: 18px !important; }',
+    '#dashboardPanelOverview .hf-quick-actions button { min-height: 44px !important;'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "one-page Overview vertical budget");
+  });
+  assertSourceExcludes(source, 'id="periodComparisonMetrics"', "obsolete comparison metric card");
+  scenariosPassed++;
+
+  [
+    "#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 20px 24px 12px; }",
+    "#dashboardPanelOverview { height: 100%; overflow: visible; }",
     "@media (max-width: 1023px)",
-    "#contentViewport { overflow: visible; padding: 12px; }",
+    "#contentViewport { overflow: visible; padding: var(--space-5); }",
     "overview-surface",
     ':root[data-theme="dark"] .bg-white',
     "background: var(--print-canvas) !important;"
@@ -3708,10 +4085,10 @@ function testExecutivePresentationContract()
 
   [
     'id="executiveSummaryTitle"',
-    "Executive Summary</h2>",
+    "Key Summary</h2>",
     "Key Metrics</h2>",
     "Business Signals",
-    "Business Performance",
+    "Top Products",
     "Recommended Actions",
     "Decision Support",
     'id="revenueDependencyContainer"',
@@ -3771,7 +4148,6 @@ function testExecutivePresentationContract()
 
   [
     'id="executiveSummary"',
-    'id="executiveAlertCard"',
     'id="priorityTitle"',
     'id="priorityMessage"'
   ].forEach(function(token)
@@ -3784,8 +4160,8 @@ function testExecutivePresentationContract()
   });
 
   [
-    "grid grid-cols-1 lg:grid-cols-12",
-    "hf-kpi-strip grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5",
+    "hf-summary-action-grid",
+    "hf-kpi-strip",
     'id="planningFocusRow" class="grid grid-cols-1 gap-2"'
   ].forEach(function(token)
   {
@@ -4341,7 +4717,7 @@ function testClientRenderPerformanceContract()
     "dashboardSidebar", "sidebarBackdrop", "sidebarMenuButton",
     "sidebarCloseButton", "businessOverview", "mainChartSkeleton",
     "hotColdSkeleton", "expenseSkeleton", "topProductSkeleton", "filter",
-    "customDateRange", "customStart", "customEnd", "dateFilterValidation",
+    "customDateRange", "customMonth", "customYear", "customStart", "customEnd", "dateFilterValidation",
     "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
     "dashboardContent", "tableBody", "printReportButton",
     "printReportHeader", "transactions", "transactionsHeading",
@@ -4351,8 +4727,7 @@ function testClientRenderPerformanceContract()
     "transactionDrilldownSummary", "transactionDrilldownText",
     "transactionsStateAnnouncement", "appShell", "sidebarCollapseButton",
     "mainContent", "topUtilityBar", "utilityPageTitle",
-    "utilityPageContext", "dashboardUtilityControls", "utilityMetadata",
-    "utilityActivePeriod", "utilityLastSync", "settings", "logs",
+    "utilityPageContext", "sidebarDataStatus", "settings", "logs",
     "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
     "sessionLogsInfoCount", "sessionLogsWarningCount",
     "sessionLogsErrorCount", "sessionLogsToolbar",
@@ -4789,7 +5164,7 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   [
-    "hf-secondary-surface", "border-radius: 12px", "box-shadow: none",
+    "hf-secondary-surface", "border-radius: var(--radius-card)", "box-shadow: var(--card-shadow)",
     ":root[data-theme=\"dark\"]", "@media print",
     "#settings.active { height: 100%; overflow: hidden; }",
     "#sessionLogsListRegion { min-height: 0; overflow-y: auto; }",
@@ -5247,7 +5622,7 @@ function testSettingsVisualContract()
     "ui-theme-secondary", "ui-theme-muted",
     '#settings.active { height: 100%; overflow: hidden; }',
     '#settings.active { height: auto; overflow: visible; }',
-    "grid-cols-1", "sm:grid-cols-3", "lg:grid-cols-12"
+    "grid-cols-1", "sm:grid-cols-3", "#settingsSections { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; }"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "Settings theme and responsive containment");
@@ -5651,7 +6026,7 @@ function testBoundedUiRefactorContract()
     "raw template-token assertion"
   );
   [
-    'id="utilityVersion"', 'data-metadata-source="template.version"',
+    'id="sidebarDataStatus"',
     'id="aboutVersion"', 'id="printReportVersion"'
   ].forEach(function(token)
   {
@@ -5756,10 +6131,10 @@ function testBoundedUiRefactorContract()
   scenariosPassed++;
 
   [
-    "#dashboardSidebar { width: 232px;", "#dashboardSidebar { width: 216px;",
+    "#dashboardSidebar { width: 248px;", "#dashboardSidebar { width: 224px;",
     "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar { width: 64px;",
-    "#topUtilityBar { height: 52px;", "#topUtilityBar { height: 48px;",
-    "#dashboardTabList,\n      #transactionsTabList { height: 40px;", "#transactionsTableScroll th { height: 36px;",
+    "#topUtilityBar { height: 76px;", "#topUtilityBar { height: 68px;",
+    "#dashboardTabList { height: 44px;", "#transactionsTabList { height: 40px;", "#transactionsTableScroll th { height: 36px;",
     "#transactionsTableScroll td { height: 40px;"
   ].forEach(function(token)
   {
@@ -6013,7 +6388,7 @@ function testUiFinalStabilizationContract()
     assertSourceContainsOnce(source, 'id="' + id + '"', "unique shell or tablist ID " + id);
   });
   assertSourceOccurrenceCount(source, 'role="tablist"', 2, "scoped tablists");
-  assertSourceOccurrenceCount(source, 'data-dashboard-tab="', 5, "Dashboard tabs");
+  assertSourceOccurrenceCount(source, 'data-dashboard-tab="', 3, "Dashboard tabs");
   assertSourceOccurrenceCount(source, 'data-transactions-tab="', 4, "Transactions tabs");
   scenariosPassed++;
 
@@ -6754,9 +7129,7 @@ function testDashboardHighFidelityCompositionContract()
   var tabs = [
     "overview",
     "performance",
-    "analytics",
-    "intelligence",
-    "planning"
+    "insights"
   ];
 
   tabs.forEach(function(tab)
@@ -6775,32 +7148,40 @@ function testDashboardHighFidelityCompositionContract()
   scenariosPassed++;
 
   var overviewOrder = [
-    "executiveSummarySection",
     "keyMetricsSection",
-    "overviewEvidenceRow"
+    "overviewEvidenceRow",
+    "overviewContextRow",
+    "executiveSummarySection"
   ];
+  var overviewCompositionSource = getSourceRegion(
+    source,
+    "overview: [",
+    "performance: [",
+    "Overview runtime composition"
+  );
   overviewOrder.forEach(function(id, index)
   {
     assertSourceContainsOnce(source, 'id="' + id + '"', "Overview region " + id);
     if (
       index > 0 &&
-      source.indexOf('id="' + overviewOrder[index - 1] + '"') >
-        source.indexOf('id="' + id + '"')
+      overviewCompositionSource.indexOf('querySelector("#' + overviewOrder[index - 1] + '")') >
+        overviewCompositionSource.indexOf('querySelector("#' + id + '")')
     )
     {
       throw new Error("Dashboard Overview high-fidelity order changed");
     }
   });
   [
-    "hf-executive-plane",
-    "hf-executive-fact",
+    "hf-summary-action-grid",
+    "hf-summary-metrics",
+    "hf-quick-actions",
     "hf-priority-action",
     "hf-kpi-card",
     "hf-kpi-strip",
-    "lg:grid-cols-5",
+    "grid-template-columns: repeat(5, minmax(0, 1fr))",
     "hf-overview-evidence",
-    "grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)",
-    "hf-comparison-grid mt-3 grid grid-cols-2"
+    "grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr)",
+    'id="overviewContextRow" class="hf-overview-context"'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "compact Overview composition");
@@ -6815,13 +7196,8 @@ function testDashboardHighFidelityCompositionContract()
   [
     'staging.querySelector("#overviewEvidenceRow")',
     'data-composition-role="hero-chart"',
-    'id="businessPerformanceSection"',
     'id="revenueChartSection"',
-    'id="revenueIntelContainer"',
-    'id="expenseIntelContainer"',
-    'id="profitIntelContainer"',
-    'id="marginIntelContainer"',
-    'id="unitsIntelContainer"',
+    'id="forecastSection"',
     'id="forecastContainer"'
   ].forEach(function(token)
   {
@@ -6837,6 +7213,7 @@ function testDashboardHighFidelityCompositionContract()
     'id="expenseChartSection"',
     'id="topProductsSection"',
     'id="productConcentrationSection"',
+    'staging.querySelector("#forecastSection")',
     "hf-evidence-group"
   ].forEach(function(token)
   {
@@ -6845,6 +7222,8 @@ function testDashboardHighFidelityCompositionContract()
   scenariosPassed++;
 
   [
+    "#dashboardPanelInsights:not([hidden])",
+    'staging.querySelector("#businessPriorityRegion")',
     "grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr)",
     'id="diagnosisSection"',
     'id="recommendationsSection"',
@@ -6906,8 +7285,8 @@ function testDashboardHighFidelityCompositionContract()
 
   [
     "hf-executive-plane",
-    ".overview-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }",
-    ".analytics-surface { background: var(--surface-1); border-color: var(--border-subtle); box-shadow: none; }",
+    ".overview-surface,",
+    ".analytics-surface,",
     '<div class="pr-2">',
     '<div class="border-l border-slate-200 pl-2">'
   ].forEach(function(token)
@@ -6930,13 +7309,13 @@ function testDashboardHighFidelityCompositionContract()
   scenariosPassed++;
 
   [
-    "#dashboardPanelOverview { height: 100%; overflow: hidden; }",
+    "#dashboardPanelOverview { height: 100%; overflow: visible; }",
     ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
-    "#dashboardPanelAnalytics #expenseWrapper { height: calc(100% - 62px); min-height: 180px; }",
+    "#dashboardPanelPerformance #expenseWrapper { height: calc(100% - 58px); min-height: 150px; }",
     "#actionRoadmapCard { grid-column: 2; grid-row: 1 / span 2; min-height: 0; margin: 0; overflow-y: auto; }",
     "@media (min-width: 1024px) and (max-height: 800px)",
     "@media (max-width: 1023px)",
-    "#dashboardPanelPlanning #executiveCenter { display: block; }"
+    "#dashboardPanelInsights #executiveCenter { display: block; }"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "desktop and mobile containment");
@@ -6956,9 +7335,9 @@ function testDashboardHighFidelityCompositionContract()
   scenariosPassed++;
 
   [
-    "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }",
-    "#dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }",
-    "#dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }",
+    "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: visible; }",
+    "#dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }",
+    "#dashboardPanelPerformance #expenseWrapper { height: 220px; min-height: 220px; max-height: 220px; }",
     "revenueChart = destroyChartInstance(revenueChart);",
     "hotColdChart = destroyChartInstance(hotColdChart);",
     "expenseChart = destroyChartInstance(expenseChart);",
@@ -7043,15 +7422,13 @@ function testPerformanceAnalyticsVisualContract()
 
   var ownership = {
     overview: [
-      "overviewEvidenceRow"
+      "overviewEvidenceRow",
+      "topProductsSection"
     ],
     performance: [
-      "businessPerformanceSection"
-    ],
-    analytics: [
+      "forecastSection",
       "hotColdChartSection",
       "expenseChartSection",
-      "topProductsSection",
       "productConcentrationSection"
     ]
   };
@@ -7071,8 +7448,7 @@ function testPerformanceAnalyticsVisualContract()
 
   [
     "#dashboardPanelOverview #revenueChartSection",
-    "grid-template-columns: minmax(0, 8fr) minmax(0, 4fr)",
-    'id="businessPerformanceSection"',
+    "grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr)",
     'id="revenueChartSection"',
     'id="mainChartWrapper"'
   ].forEach(function(token)
@@ -7082,41 +7458,18 @@ function testPerformanceAnalyticsVisualContract()
   scenariosPassed++;
 
   [
+    'id="businessPerformanceSection"',
     'id="revenueIntelContainer"',
     'id="expenseIntelContainer"',
     'id="profitIntelContainer"',
     'id="marginIntelContainer"',
     'id="unitsIntelContainer"',
-    'label:"Revenue"',
-    'label:"Expense"',
-    'label:"Profit"',
-    'label:"Profit Margin"',
-    'label:"Units Sold"',
-    "res.summary.revenue.toLocaleString",
-    "res.summary.expense.toLocaleString",
-    "res.summary.profit.toLocaleString",
-    "res.insights.profitMargin",
-    "res.summary.unitsSold.toLocaleString"
+    "function renderIntelCard("
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "compact five-metric summary");
+    assertSourceExcludes(source, token, "removed duplicate Business Performance composition");
   });
-
-  var performanceStart = source.indexOf('id="businessPerformanceSection"');
-  var performanceEnd = source.indexOf('</section>', performanceStart);
-  var performanceSource = source.slice(performanceStart, performanceEnd);
-  [
-    "overview-kpi-value",
-    "renderOverviewKpiCard(",
-    "sparkline"
-  ].forEach(function(token)
-  {
-    assertSourceExcludes(
-      performanceSource,
-      token,
-      "non-duplicated Overview KPI presentation"
-    );
-  });
+  assertSourceOccurrenceCount(source, 'renderOverviewKpiCard("', 5, "authoritative five KPI cards");
   scenariosPassed++;
 
   [
@@ -7132,7 +7485,7 @@ function testPerformanceAnalyticsVisualContract()
     'labels: ["Hot", "Cold"]',
     "percentage.toFixed(1)",
     "expenseBreakdown.slice()",
-    "labels.map(formatChartMonthLabel)"
+    "formatRevenueAxisLabel(label, granularity)"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "three preserved chart contracts");
@@ -7141,9 +7494,9 @@ function testPerformanceAnalyticsVisualContract()
 
   [
     'id="topProductsSection"',
-    "topProducts .slice(0,5) .map(function(p,index)",
+    "topProducts.slice(0, 10).map(function(p, index)",
     "p.qty",
-    'p.revenue.toLocaleString("id-ID")',
+    'Number(p.revenue || 0).toLocaleString("id-ID")',
     'id="revenueDependencyContainer"',
     "res.revenueConcentration.product",
     "res.revenueConcentration.contribution",
@@ -7165,8 +7518,8 @@ function testPerformanceAnalyticsVisualContract()
     'aria-labelledby="hotColdChartTitle"',
     'aria-labelledby="expenseChartTitle"',
     "shouldReduceMotion() ? false : undefined",
-    "pointHoverRadius: 6",
-    "lineWidth: 0.75",
+    "pointHoverRadius: 7",
+    "lineWidth: 0.6",
     "drawTicks: false",
     "usePointStyle: true",
     "chart.options.plugins.legend.labels.color = palette.axis;",
@@ -7180,10 +7533,10 @@ function testPerformanceAnalyticsVisualContract()
   [
     ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
     "#dashboardPanelPerformance:not([hidden])",
-    "#dashboardPanelAnalytics:not([hidden])",
+    "#dashboardPanelOverview:not([hidden])",
     "overflow: hidden;",
     "@media (max-width: 1023px)",
-    "#dashboardPanelAnalytics { height: auto; overflow: visible; }",
+    "#dashboardPanelPerformance { height: auto; overflow: visible; }",
     "min-width: 0"
   ].forEach(function(token)
   {
@@ -7192,68 +7545,15 @@ function testPerformanceAnalyticsVisualContract()
   scenariosPassed++;
 
   [
-    "#mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: hidden; }",
     "#mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }",
-    "#dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }",
-    "#dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }",
-    "#dashboardPanelOverview #mainChartWrapper { height: 360px; min-height: 360px; max-height: 360px; }",
-    "#dashboardPanelOverview #mainChartWrapper { height: 240px; min-height: 240px; max-height: 240px; }",
-    "#dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }"
+    "#dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }",
+    "#dashboardPanelPerformance #hotColdWrapper,",
+    "#dashboardPanelPerformance #expenseWrapper { height: calc(100% - 58px); min-height: 150px; }",
+    "#dashboardPanelOverview #mainChartWrapper,",
+    "#dashboardPanelPerformance #expenseWrapper { height: 220px; min-height: 220px; max-height: 220px; }"
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "bounded Revenue Trend height");
-  });
-
-  assertSourceExcludes(
-    source,
-    "#dashboardPanelOverview #mainChartWrapper { height: calc(100% - 76px)",
-    "content-derived Revenue Trend height"
-  );
-
-  function resolveRevenueChartHeight(viewportWidth, viewportHeight)
-  {
-    if (viewportWidth < 640)
-    {
-      return 220;
-    }
-
-    if (viewportWidth >= 1024 && viewportHeight >= 1000)
-    {
-      return 360;
-    }
-
-    return viewportHeight <= 800 ? 240 : 288;
-  }
-
-  [
-    { width: 375, height: 667, expected: 220 },
-    { width: 768, height: 900, expected: 288 },
-    { width: 1280, height: 768, expected: 240 },
-    { width: 1440, height: 900, expected: 288 },
-    { width: 1920, height: 1200, expected: 360 }
-  ].forEach(function(viewport)
-  {
-    var firstActivation = resolveRevenueChartHeight(
-      viewport.width,
-      viewport.height
-    );
-    var repeatedActivation = resolveRevenueChartHeight(
-      viewport.width,
-      viewport.height
-    );
-
-    if (
-      firstActivation !== viewport.expected ||
-      repeatedActivation !== firstActivation
-    )
-    {
-      throw new Error(
-        "Revenue Trend height is not stable at " +
-        viewport.width +
-        "x" +
-        viewport.height
-      );
-    }
+    assertSourceContains(source, token, "usable chart containment");
   });
   scenariosPassed++;
 
@@ -7338,7 +7638,7 @@ function testPerformanceAnalyticsVisualContract()
     assertSourceExcludes(
       tabFunctionSource,
       token,
-      "Performance/Analytics tab backend request"
+      "Overview/Performance tab backend request"
     );
   });
 
@@ -7355,7 +7655,7 @@ function testPerformanceAnalyticsVisualContract()
   if (idQueryCount > 72 || selectorQueryCount > 2)
   {
     throw new Error(
-      "Performance/Analytics query budget exceeded: ids=" +
+      "Overview/Performance query budget exceeded: ids=" +
       idQueryCount +
       ", selectors=" +
       selectorQueryCount
@@ -7366,7 +7666,7 @@ function testPerformanceAnalyticsVisualContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    performanceMetrics: 5,
+    duplicatePerformanceMetrics: 0,
     charts: 3,
     backendRequests: 0,
     idQueries: idQueryCount,
@@ -7376,8 +7676,8 @@ function testPerformanceAnalyticsVisualContract()
   Logger.log(
     "PASS: testPerformanceAnalyticsVisualContract | scenarios=" +
     summary.scenarios +
-    " | performanceMetrics=" +
-    summary.performanceMetrics +
+    " | duplicatePerformanceMetrics=" +
+    summary.duplicatePerformanceMetrics +
     " | charts=" +
     summary.charts +
     " | backendRequests=" +
@@ -7400,12 +7700,11 @@ function testIntelligencePlanningVisualContract()
   var scenariosPassed = 0;
 
   var ownership = {
-    intelligence: [
+    insights: [
+      "businessPriorityRegion",
       "diagnosisSection",
       "recommendationsSection",
-      "riskOpportunitySection"
-    ],
-    planning: [
+      "riskOpportunitySection",
       "executiveCenter",
       "kpiTargetReference"
     ]
@@ -7423,7 +7722,7 @@ function testIntelligencePlanningVisualContract()
     });
   });
 
-  var planningOwnershipStart = source.indexOf("planning: [");
+  var planningOwnershipStart = source.indexOf("insights: [");
   var planningOwnershipEnd = source.indexOf("]", planningOwnershipStart);
   var planningOwnershipSource = source.slice(
     planningOwnershipStart,
@@ -7527,7 +7826,6 @@ function testIntelligencePlanningVisualContract()
   var planningMarkupEnd = source.indexOf('id="riskOpportunitySection"', planningMarkupStart);
   var planningMarkupSource = source.slice(planningMarkupStart, planningMarkupEnd);
   [
-    "businessPriorityRegion",
     "priority.evidence",
     "priorityAction.score",
     "contenteditable",
@@ -7566,13 +7864,14 @@ function testIntelligencePlanningVisualContract()
   scenariosPassed++;
 
   [
-    "#dashboardPanelIntelligence:not([hidden])",
+    "#dashboardPanelInsights:not([hidden])",
     "grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr)",
-    "#dashboardPanelPlanning:not([hidden])",
+    "#dashboardPanelInsights #businessPriorityRegion { grid-column: 1 / -1;",
+    "#dashboardPanelInsights #executiveCenter",
     ".dashboard-tab-panel:not(#dashboardPanelOverview) { height: 100%; overflow-y: auto; }",
     "overflow: hidden;",
     "@media (max-width: 1023px)",
-    "#dashboardPanelPlanning { height: auto; overflow: visible; }",
+    "#dashboardPanelInsights { height: auto; overflow: visible; }",
     "analytics-surface",
     "ui-theme-inset",
     ':root[data-theme="dark"] .bg-white'
@@ -7597,13 +7896,13 @@ function testIntelligencePlanningVisualContract()
     assertSourceExcludes(
       tabFunctionSource,
       token,
-      "Intelligence/Planning tab backend request"
+      "Insights tab backend request"
     );
   });
 
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "Intelligence/Planning response mutation");
+    assertSourceExcludes(source, token, "Insights response mutation");
   });
 
   var idQueryCount =
@@ -7614,7 +7913,7 @@ function testIntelligencePlanningVisualContract()
   if (idQueryCount > 72 || selectorQueryCount > 2)
   {
     throw new Error(
-      "Intelligence/Planning query budget exceeded: ids=" +
+      "Insights query budget exceeded: ids=" +
       idQueryCount +
       ", selectors=" +
       selectorQueryCount

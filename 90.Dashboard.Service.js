@@ -43,6 +43,9 @@ function normalizeDashboardDateFilter(filter) {
     currentMonth: true,
     previousMonth: true,
     currentYear: true,
+    previousYear: true,
+    customMonth: true,
+    customYear: true,
     custom: true
   };
 
@@ -200,6 +203,48 @@ function resolveDashboardDateRange(filter, customStart, customEnd, referenceDate
         1
       );
     label = "Previous Month";
+  }
+  else if (normalizedFilter === "previousYear")
+  {
+    startDate = createDashboardDateKey(year - 1, 1, 1);
+    endDate = createDashboardDateKey(year - 1, 12, 31);
+    label = "Previous Year";
+  }
+  else if (normalizedFilter === "customMonth")
+  {
+    var customMonthValue = String(customStart || "").trim();
+
+    if (!/^\d{4}-\d{2}$/.test(customMonthValue))
+    {
+      throw new Error("customStart must be a valid YYYY-MM month");
+    }
+
+    var customMonthParts = customMonthValue.split("-");
+    var customMonthYear = Number(customMonthParts[0]);
+    var customMonthNumber = Number(customMonthParts[1]);
+
+    if (customMonthNumber < 1 || customMonthNumber > 12)
+    {
+      throw new Error("customStart must be a valid YYYY-MM month");
+    }
+
+    startDate = createDashboardDateKey(customMonthYear, customMonthNumber, 1);
+    endDate = getDashboardMonthEndDateKey(customMonthYear, customMonthNumber);
+    label = "Custom Month";
+  }
+  else if (normalizedFilter === "customYear")
+  {
+    var customYearValue = String(customStart || "").trim();
+
+    if (!/^\d{4}$/.test(customYearValue))
+    {
+      throw new Error("customStart must be a valid YYYY year");
+    }
+
+    var customYearNumber = Number(customYearValue);
+    startDate = createDashboardDateKey(customYearNumber, 1, 1);
+    endDate = createDashboardDateKey(customYearNumber, 12, 31);
+    label = "Custom Year";
   }
   else if (normalizedFilter === "custom")
   {
@@ -389,7 +434,10 @@ function resolvePreviousComparisonDateRange(currentRange) {
         endDay
       );
   }
-  else if (filter === "previousMonth")
+  else if (
+    filter === "previousMonth" ||
+    filter === "customMonth"
+  )
   {
     previousEnd =
       shiftDashboardDateKey(
@@ -407,7 +455,11 @@ function resolvePreviousComparisonDateRange(currentRange) {
         1
       );
   }
-  else if (filter === "currentYear")
+  else if (
+    filter === "currentYear" ||
+    filter === "previousYear" ||
+    filter === "customYear"
+  )
   {
     previousStart =
       createDashboardDateKey(
@@ -507,6 +559,11 @@ function buildPeriodComparisonMetrics(data, range) {
   metrics.profit =
     metrics.revenue -
     metrics.expense;
+
+  metrics.profitMargin =
+    metrics.revenue > 0
+      ? Number(((metrics.profit / metrics.revenue) * 100).toFixed(1))
+      : 0;
 
   return metrics;
 }
@@ -621,6 +678,19 @@ function buildPeriodComparison(currentRows, previousRows, currentRange, previous
       false
     );
 
+  if (current.rowCount === 0)
+  {
+    revenue = { percentage: null, status: "No Comparison" };
+    expense = { percentage: null, status: "No Comparison" };
+    profit = { percentage: null, status: "No Comparison" };
+    unitsSold = { percentage: null, status: "No Comparison" };
+  }
+
+  var profitMarginPoints =
+    current.rowCount > 0 && previous.rowCount > 0
+      ? Number((current.profitMargin - previous.profitMargin).toFixed(1))
+      : null;
+
   return {
     current: current,
     previous: previous,
@@ -628,12 +698,21 @@ function buildPeriodComparison(currentRows, previousRows, currentRange, previous
       revenuePercent: revenue.percentage,
       expensePercent: expense.percentage,
       profitPercent: profit.percentage,
+      profitMarginPoints: profitMarginPoints,
       unitsSoldPercent: unitsSold.percentage
     },
     status: {
       revenue: revenue.status,
       expense: expense.status,
       profit: profit.status,
+      profitMargin:
+        profitMarginPoints === null
+          ? "No Comparison"
+          : profitMarginPoints > 0
+            ? "Up"
+            : profitMarginPoints < 0
+              ? "Down"
+              : "Stable",
       unitsSold: unitsSold.status
     },
     label: previousRange.label
@@ -1016,6 +1095,38 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       generatedDate
     );
 
+  var availablePeriodKeys = {};
+  var availableYearKeys = {};
+  var timezone = Session.getScriptTimeZone();
+
+  (processedData || []).forEach(function(row)
+  {
+    var transactionDate = new Date(row && row.date);
+
+    if (isNaN(transactionDate.getTime()))
+    {
+      return;
+    }
+
+    try
+    {
+      var monthKey = Utilities.formatDate(
+        transactionDate,
+        timezone,
+        "yyyy-MM"
+      );
+      availablePeriodKeys[monthKey] = true;
+      availableYearKeys[monthKey.slice(0, 4)] = true;
+    }
+    catch (error)
+    {
+      return;
+    }
+  });
+
+  dateRange.availableMonths = Object.keys(availablePeriodKeys).sort();
+  dateRange.availableYears = Object.keys(availableYearKeys).sort();
+
   var filteredData =
     filterTransactionsByDateRange(
       processedData,
@@ -1059,7 +1170,8 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
   var cache =
   buildAnalyticsCache(
-    filteredData
+    filteredData,
+    dateRange
   );
 
   var businessPriority =
@@ -1232,7 +1344,7 @@ function buildRecentTransactions(data) {
 
 }
 
-function buildAnalyticsCache(data) {
+function buildAnalyticsCache(data, dateRange) {
 
   var cache = {
 
@@ -1258,9 +1370,17 @@ function buildAnalyticsCache(data) {
     buildInsights(cache);
 
   cache.revenueTrend =
-    buildRevenueTrendFromAggregate(
-      cache.aggregate
-    );
+    dateRange && (
+      dateRange.filter === "currentMonth" ||
+      dateRange.filter === "previousMonth" ||
+      dateRange.filter === "customMonth" ||
+      (
+        dateRange.filter === "custom" &&
+        getDashboardDateRangeDuration(dateRange) <= 93
+      )
+    )
+      ? buildDailyRevenueTrendFromAggregate(cache.aggregate, dateRange)
+      : buildRevenueTrendFromAggregate(cache.aggregate);
 
   cache.topProducts =
     buildTopProductsFromAggregate(

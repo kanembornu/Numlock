@@ -20,6 +20,8 @@ function buildAggregate(data)
 
     monthlyRevenue:{},
 
+    dailyRevenue:{},
+
     monthlyExpense:{},
 
     monthlyProfit:{},
@@ -73,6 +75,10 @@ function buildAggregate(data)
         ("0"+d.getDate()).slice(-2);
 
       aggregate.activeDays[dayKey] = true;
+
+        aggregate.dailyRevenue[dayKey] =
+          (aggregate.dailyRevenue[dayKey] || 0)
+          + revenue;
         var monthKey =
           d.getFullYear() +
           "-" +
@@ -187,6 +193,12 @@ function buildAggregate(data)
 function buildSummaryFromAggregate(aggregate) {
   var activeDays =
     aggregate.activeDaysCount || 1;
+  var representedMonths =
+    Object.keys(aggregate.monthlyProfit || {}).length;
+  var averageMonthlyRevenue =
+    representedMonths > 0
+      ? aggregate.revenue / representedMonths
+      : 0;
 
   return {
     revenue: aggregate.revenue,
@@ -202,7 +214,9 @@ function buildSummaryFromAggregate(aggregate) {
       Math.round(
         aggregate.revenue / activeDays
       ),
-    activeDays: activeDays
+    activeDays: activeDays,
+    representedMonths: representedMonths,
+    averageMonthlyRevenue: averageMonthlyRevenue
   };
 }
 
@@ -223,6 +237,41 @@ function buildRevenueTrendFromAggregate(aggregate)
   return {
     labels:labels,
     values:values
+  };
+}
+
+function advanceRevenueDateKey(dateKey)
+{
+  var parts = dateKey.split("-");
+  var date = new Date(Date.UTC(
+    Number(parts[0]),
+    Number(parts[1]) - 1,
+    Number(parts[2]) + 1
+  ));
+
+  return date.getUTCFullYear() +
+    "-" + ("0" + (date.getUTCMonth() + 1)).slice(-2) +
+    "-" + ("0" + date.getUTCDate()).slice(-2);
+}
+
+function buildDailyRevenueTrendFromAggregate(aggregate, dateRange)
+{
+  var labels = [];
+  var cursor = dateRange.startDate;
+
+  while (cursor <= dateRange.endDate)
+  {
+    labels.push(cursor);
+    cursor = advanceRevenueDateKey(cursor);
+  }
+
+  return {
+    labels: labels,
+    values: labels.map(function(label)
+    {
+      return aggregate.dailyRevenue[label] || 0;
+    }),
+    granularity: "day"
   };
 }
 
