@@ -2123,6 +2123,10 @@ function testResponsiveShellContract()
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
     ).getContent();
+  var tokenSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
 
   var fixtures =
     createResponsiveShellContractFixtures();
@@ -2148,6 +2152,183 @@ function testResponsiveShellContract()
     }
   });
 
+  [
+    "@media (max-width:1023px)",
+    "#dashboardTabList{display:flex!important;width:100%!important;max-width:100%!important;overflow-x:auto",
+    "#dashboardPanelOverview:not([hidden]){display:flex;min-width:0;flex-direction:column",
+    "#dashboardPanelOverview #keyMetricsSection{order:1}",
+    "#dashboardPanelOverview #overviewEvidenceRow{order:2}",
+    "#dashboardPanelOverview #overviewContextRow{order:3}",
+    "#dashboardPanelOverview #executiveSummarySection{order:4",
+    "#dashboardPanelOverview #topProductWrapper{max-width:100%;overflow-x:auto",
+    "#customDateRange{width:100%;flex-wrap:wrap}",
+    "@media (max-width:639px)",
+    "#dashboardPanelOverview #mainChartWrapper{height:180px!important;min-height:180px!important;max-height:180px!important;padding-top:6px!important}",
+    "@media (max-width:767px)",
+    "#utilityPageTitle{font-size:28px!important;line-height:34px!important}",
+    "#dashboardTabList{height:54px!important;min-height:54px!important}",
+    "#contentViewport{padding:12px 8px 16px!important}",
+    "#dashboardPanelOverview .hf-kpi-strip{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:12px!important}",
+    "#dashboardPanelOverview .hf-kpi-card{min-height:160px!important;padding:16px!important}",
+    "#dashboardPanelOverview .hf-kpi-card .hf-section-label{font-size:16px!important;line-height:23px!important}",
+    "#dashboardPanelOverview .hf-kpi-card .overview-kpi-value{font-size:32px!important;line-height:39px!important}",
+    "#dashboardPanelOverview .hf-kpi-comparison{font-size:15px!important;line-height:22px!important}",
+    "#dashboardPanelOverview #revenueChartTitle,#dashboardPanelOverview #topProductsTitle,#dashboardPanelOverview .hf-section-heading{font-size:24px!important;line-height:30px!important}",
+    "#dashboardPanelOverview #revenueChartSection,#dashboardPanelOverview #topProductsSection{padding:16px 12px 12px!important}",
+    "#dashboardPanelOverview #mainChartWrapper{height:260px!important;min-height:260px!important;max-height:260px!important",
+    "#dashboardPanelOverview .hf-top-products-table{min-width:560px!important}",
+    "#dashboardPanelOverview .hf-top-products-table thead th{font-size:16px!important;line-height:22px!important}",
+    "#dashboardPanelOverview .hf-top-products-table tbody td,#dashboardPanelOverview .hf-top-products-table tbody th{font-size:18px!important;line-height:26px!important}",
+    "#dashboardPanelOverview .hf-summary-metrics .performance-metric-value{font-size:25px!important;line-height:32px!important}",
+    "#dashboardPanelOverview .hf-action-copy strong{font-size:17px!important;line-height:23px!important}",
+    "#dashboardPanelOverview #executiveSummarySection>.overview-surface,#dashboardPanelOverview #executiveSummarySection>section{padding:14px!important}"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      tokenSource,
+      token,
+      "responsive shell compiled containment"
+    );
+  });
+
+  var mobileRuntimeSource = getSourceRegion(
+    source,
+    "/* WO-029 authoritative mobile runtime:",
+    "</style>",
+    "authoritative mobile runtime CSS"
+  );
+  [
+    "@media (max-width: 767px)",
+    "--mobile-text-section: 1.5rem",
+    "#contentViewport { padding: 12px 8px 16px !important; }",
+    "#utilityPageTitle { font-size: 28px !important; line-height: 34px !important; }",
+    "#dashboardTabList [role=\"tab\"], #dashboardTabInsights { height: 52px !important; padding-right: 10px !important; padding-left: 10px !important; font-size: 16px !important; line-height: 22px !important; }",
+    "#dashboardPanelOverview .hf-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }",
+    "#dashboardPanelOverview #businessOverview > :last-child { grid-column: 1 / -1 !important; }",
+    "#dashboardPanelOverview .hf-kpi-card { min-height: 160px !important; padding: 16px !important; }",
+    "#dashboardPanelOverview .hf-kpi-card .hf-section-label { font-size: 16px !important; line-height: 23px !important; }",
+    "#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 32px !important; line-height: 39px !important; }",
+    "#dashboardPanelOverview .hf-kpi-comparison { font-size: 15px !important; line-height: 22px !important; }",
+    "#dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading { font-size: 24px !important; line-height: 30px !important; }",
+    "#dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 16px 12px 12px !important; }",
+    "#dashboardPanelOverview .hf-analytics-card-header { display: flex !important; flex-flow: row nowrap !important; align-items: center !important; justify-content: space-between !important; }",
+    "#dashboardPanelOverview #dateFilterControls { display: flex !important; width: auto !important; min-width: 108px !important; flex: 0 1 148px !important; flex-wrap: nowrap !important; justify-content: flex-end !important; }",
+    "#dashboardPanelOverview .hf-overview-context { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: auto auto !important;",
+    "#dashboardPanelOverview #periodComparisonSection, #dashboardPanelOverview #dataQualityInformation { display: block !important; width: 100% !important; min-width: 0 !important; }",
+    "#dashboardPanelOverview .hf-top-products-table { min-width: 560px !important; }",
+    "#dashboardPanelOverview .hf-top-products-table thead th { font-size: 16px !important; line-height: 22px !important; }",
+    "#dashboardPanelOverview .hf-top-products-table tbody th, #dashboardPanelOverview .hf-top-products-table tbody td { font-size: 18px !important; line-height: 26px !important; }",
+    "#dashboardPanelOverview .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }",
+    "#dashboardPanelOverview .hf-summary-metrics .performance-metric-value { font-size: 25px !important; line-height: 32px !important; }",
+    "#dashboardPanelOverview #executiveSummarySection > .overview-surface, #dashboardPanelOverview #executiveSummarySection > section { padding: 14px !important; }",
+    "#dashboardPanelOverview .hf-quick-actions { grid-template-columns: minmax(0, 1fr) !important; gap: 10px !important; }",
+    "#dashboardPanelOverview .hf-action-copy strong { font-size: 17px !important; line-height: 23px !important; }",
+    "@media (max-width: 339px)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      mobileRuntimeSource,
+      token,
+      "authoritative mobile runtime ownership"
+    );
+  });
+  assertSourceExcludes(
+    mobileRuntimeSource,
+    "@media (max-width: 1023px)",
+    "tablet typography isolation"
+  );
+  ["zoom:", "initial-scale=1.5", "maximum-scale=1.5", "text-size-adjust"].forEach(function(token)
+  {
+    assertSourceExcludes(mobileRuntimeSource, token, "mobile scaling hack exclusion");
+  });
+  [
+    "@media (min-width: 1024px)",
+    "#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 23px !important;",
+    "#dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 8px 16px !important; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "desktop Overview lock");
+  });
+
+  [
+    'id="revenueHeaderSkeleton"',
+    'id="topProductsHeaderSkeleton"',
+    'id="periodComparisonSkeleton"',
+    'id="dataQualitySkeleton"',
+    'id="quickActionsSkeleton"',
+    'id="keySummarySkeleton"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Overview skeleton coverage");
+  });
+  var skeletonLifecycleSource = getSourceRegion(
+    source,
+    "function showChartSkeleton()",
+    "function setDashboardControlsDisabled",
+    "Overview skeleton lifecycle"
+  );
+  [
+    "elements.revenueHeaderSkeleton.classList.remove(\"hidden\");",
+    "elements.topProductsHeaderSkeleton.classList.remove(\"hidden\");",
+    "elements.periodComparisonSkeleton.classList.remove(\"hidden\");",
+    "elements.dataQualitySkeleton.classList.remove(\"hidden\");",
+    "elements.quickActionsSkeleton.classList.remove(\"hidden\");",
+    "elements.keySummarySkeleton.classList.remove(\"hidden\");",
+    "elements.revenueHeaderSkeleton.classList.add(\"hidden\");",
+    "elements.topProductsHeaderSkeleton.classList.add(\"hidden\");",
+    "elements.periodComparisonSkeleton.classList.add(\"hidden\");",
+    "elements.dataQualitySkeleton.classList.add(\"hidden\");",
+    "elements.quickActionsSkeleton.classList.add(\"hidden\");",
+    "elements.keySummarySkeleton.classList.add(\"hidden\");"
+  ].forEach(function(token)
+  {
+    assertSourceContains(skeletonLifecycleSource, token, "Overview skeleton cleanup");
+  });
+
+  var revenueHeaderSource = getSourceRegion(
+    source,
+    '<div class="hf-analytics-card-header mb-1 flex-wrap">',
+    '<p id="revenueChartSummary"',
+    "Revenue Trend shared header DOM"
+  );
+  assertSourceContains(revenueHeaderSource, 'id="revenueChartTitle"', "Revenue title row ownership");
+  assertSourceContains(revenueHeaderSource, 'id="dateFilterControls"', "Revenue filter row ownership");
+
+  var overviewContextSource = getSourceRegion(
+    source,
+    '<aside id="overviewContextRow"',
+    '<!-- ANALYTICS -->',
+    "Overview context direct row ownership"
+  );
+  assertSourceContainsOnce(overviewContextSource, 'id="periodComparisonSection"', "comparison row owner");
+  assertSourceContainsOnce(overviewContextSource, 'id="dataQualityInformation"', "Data Quality row owner");
+
+  [
+    "function scheduleResponsiveChartResize()",
+    'window.addEventListener("resize", scheduleResponsiveChartResize);',
+    'window.addEventListener("orientationchange", scheduleResponsiveChartResize);',
+    "scheduleResponsiveChartResize();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "responsive chart lifecycle");
+  });
+
+  [
+    "function getResponsiveChartFontSize()",
+    'window.matchMedia("(max-width: 767px)").matches',
+    "? 14",
+    "font: { size: getResponsiveChartFontSize(), weight: \"500\" }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "mobile chart label readability");
+  });
+
+  assertSourceContains(
+    source,
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    "mobile viewport runtime configuration"
+  );
+
   var summary = {
     passed: true,
     scenarios: fixtures.length,
@@ -2165,6 +2346,334 @@ function testResponsiveShellContract()
   );
 
   return summary;
+}
+
+function testMobileViewportDeviceStateContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var phoneStateSource = getSourceRegion(
+    source,
+    "function isNumlockPhoneDevice(screenLike, maxTouchPoints)",
+    "<script>",
+    "early phone device state"
+  );
+  var classifierSource = getSourceRegion(
+    source,
+    "function isNumlockPhoneDevice(screenLike, maxTouchPoints)",
+    "(function applyNumlockPhoneStateBeforeRender()",
+    "phone classifier function"
+  );
+  var classifyPhone = new Function(
+    classifierSource + "\nreturn isNumlockPhoneDevice;"
+  )();
+
+  [
+    { name: "phone touch device state", screen: { width: 390, height: 844 }, touch: 5, expected: true },
+    { name: "desktop device state", screen: { width: 1440, height: 900 }, touch: 0, expected: false },
+    { name: "tablet device state", screen: { width: 768, height: 1024 }, touch: 5, expected: false },
+    { name: "non-touch narrow screen state", screen: { width: 390, height: 844 }, touch: 0, expected: false }
+  ].forEach(function(fixture)
+  {
+    var actual = classifyPhone(fixture.screen, fixture.touch);
+
+    if (actual !== fixture.expected)
+    {
+      throw new Error(
+        fixture.name + ": expected=" + fixture.expected + ", actual=" + actual
+      );
+    }
+  });
+
+  [
+    "Math.min(screenWidth, screenHeight)",
+    "Number(maxTouchPoints) > 0",
+    "shortestScreenSide <= 480",
+    'document.documentElement.classList.toggle(',
+    '"numlock-phone"',
+    "window.screen",
+    "navigator.maxTouchPoints"
+  ].forEach(function(token)
+  {
+    assertSourceContains(phoneStateSource, token, "phone device classification");
+  });
+
+  [
+    "html.numlock-phone { --numlock-phone-scale: 1.6;",
+    "html.numlock-phone #appShell { width: calc(100% / var(--numlock-phone-scale));",
+    "transform: scale(var(--numlock-phone-scale));",
+    "transform-origin: top left;",
+    "html.numlock-phone #mainContent { width: 100% !important;",
+    "overflow-x: clip !important;",
+    "html.numlock-phone #dashboardPanelOverview .hf-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }",
+    "html.numlock-phone #dashboardPanelOverview #businessOverview > :last-child { grid-column: 1 / -1; }",
+    "html.numlock-phone #dashboardPanelOverview .hf-overview-evidence { display: grid; grid-template-columns: minmax(0, 1fr); }",
+    "html.numlock-phone #dashboardPanelOverview #revenueChartSection, html.numlock-phone #dashboardPanelOverview #topProductsSection { width: 100%; min-width: 0; }",
+    "html.numlock-phone #dashboardPanelOverview .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }",
+    "html.numlock-phone #dashboardPanelOverview .hf-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }",
+    '!document.documentElement.classList.contains("numlock-phone") &&'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "phone shell normalization");
+  });
+
+  [
+    "mobileRuntimeDebug",
+    "initializeMobileRuntimeDebug",
+    "updateMobileRuntimeDebug",
+    "width=653"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "temporary probe and fixed viewport removal");
+  });
+
+  assertSourceContains(
+    source,
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+    "adaptive device viewport"
+  );
+
+  Logger.log(
+    "PASS: testMobileViewportDeviceStateContract | phoneThreshold=480 | scale=1.6 | touchRequired=true"
+  );
+
+  return {
+    passed: true,
+    phoneThreshold: 480,
+    phoneScale: 1.6,
+    touchRequired: true
+  };
+}
+
+function testFinalMobileScaleControlAlignmentContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var tokenSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
+
+  [
+    "html.numlock-phone { --numlock-phone-scale: 1.6;",
+    "html.numlock-phone #appShell { width: calc(100% / var(--numlock-phone-scale));",
+    "transform: scale(var(--numlock-phone-scale));",
+    "html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-card-header { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(112px, 140px); align-items: center !important; gap: 12px !important; }",
+    "html.numlock-phone #dashboardPanelOverview #dateFilterControls { display: flex !important; width: 140px !important; min-width: 112px !important; max-width: 140px !important; flex-wrap: wrap !important; justify-content: flex-end !important; justify-self: end; }",
+    "html.numlock-phone #dashboardPanelOverview #customDateRange { width: 100%; justify-content: flex-end; }",
+    "@media (min-width: 1024px)",
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,',
+    "--sidebar-visual-tile-height: 40px;",
+    "height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important;",
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton > i { position: relative; z-index: 1; width: 24px !important; flex-basis: 24px !important; margin: 0 !important; text-align: center !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px !important; }',
+    '<div class="hf-analytics-card-header mb-1 flex-wrap">'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "final mobile scale and control alignment");
+  });
+
+  [
+    "html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-card-header{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(112px,140px);align-items:center!important;gap:12px!important}",
+    "html.numlock-phone #dashboardPanelOverview #dateFilterControls{display:flex!important;width:140px!important;min-width:112px!important;max-width:140px!important;flex-wrap:wrap!important;justify-content:flex-end!important;justify-self:end}",
+    "@media (min-width:1024px)",
+    "--sidebar-visual-tile-height:40px",
+    "height:var(--sidebar-control-height)!important;min-height:var(--sidebar-control-height)!important;max-height:var(--sidebar-control-height)!important"
+  ].forEach(function(token)
+  {
+    assertSourceContains(tokenSource, token, "compiled final control geometry");
+  });
+
+  assertSourceExcludes(
+    source,
+    "--numlock-phone-scale: 1.5",
+    "retired phone scale"
+  );
+
+  Logger.log(
+    "PASS: testFinalMobileScaleControlAlignmentContract | scale=1.6 | filter=right | collapsedTile=40"
+  );
+
+  return {
+    passed: true,
+    phoneScale: 1.6,
+    filterAlignment: "right",
+    collapsedTile: 40
+  };
+}
+
+function testCollapsedSidebarTriggerPolishContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var tokenSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
+
+  [
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important;',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton::before { content: ""; position: absolute; z-index: 0; top: calc((var(--sidebar-control-height) - var(--sidebar-visual-tile-height)) / 2); right: 0; left: 0; height: var(--sidebar-visual-tile-height);',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { border: 1px solid transparent !important; background: transparent !important; color: var(--text-on-dark) !important; outline: none; box-shadow: none !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:hover { background: transparent !important; color: var(--text-primary) !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:active { background: transparent !important; color: var(--text-primary) !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:focus:not(:focus-visible) { outline: none !important; box-shadow: none !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: 2px !important; box-shadow: none !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton > i { position: relative; z-index: 1; width: 24px !important; flex-basis: 24px !important; margin: 0 !important; text-align: center !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px !important; }',
+    'html.numlock-phone #sidebarCollapseButton { display: none !important; }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "collapsed sidebar trigger polish");
+  });
+
+  [
+    "#appShell[data-sidebar-collapsed=true] #dashboardSidebar #sidebarCollapseButton{border:1px solid transparent!important;background:transparent!important;color:var(--text-on-dark)!important;outline:none;box-shadow:none!important}",
+    "#appShell[data-sidebar-collapsed=true] #dashboardSidebar #sidebarCollapseButton:hover{background:transparent!important;color:var(--text-primary)!important}",
+    "#appShell[data-sidebar-collapsed=true] #dashboardSidebar #sidebarCollapseButton:focus-visible{outline:2px solid var(--focus)!important;outline-offset:2px!important;box-shadow:none!important}"
+  ].forEach(function(token)
+  {
+    assertSourceContains(tokenSource, token, "compiled collapsed trigger states");
+  });
+
+  Logger.log(
+    "PASS: testCollapsedSidebarTriggerPolishContract | tile=40 | default=neutral | focusVisible=true"
+  );
+
+  return {
+    passed: true,
+    tile: 40,
+    defaultState: "neutral",
+    focusVisible: true
+  };
+}
+
+function testDesktopCollapsedSidebarSharedGeometryContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var tokenSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
+
+  [
+    "#dashboardSidebar { --sidebar-control-height: 45px; --sidebar-visual-tile-height: 40px; --sidebar-control-radius: 8px; }",
+    "#dashboardSidebar .ui-sidebar-item, #dashboardSidebar .ui-future-module { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; border-radius: var(--sidebar-control-radius) !important; padding-top: 0 !important; padding-bottom: 0 !important; }",
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; max-width: 64px !important; grid-template-columns: 64px !important; justify-items: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div > .space-y-1 { width: 64px !important; max-width: 64px !important; justify-self: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { width: 64px !important; max-width: 64px !important; padding-right: 0 !important; padding-left: 0 !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important;',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton > i { position: relative; z-index: 1; width: 24px !important; flex-basis: 24px !important;',
+    '<p class="ui-page-subtitle ui-theme-muted mt-0.5">Business Intelligence</p>',
+    "#dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }",
+    "#utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important;",
+    '#dashboardSidebar { width: 264px !important; }',
+    "html.numlock-phone { --numlock-phone-scale: 1.6;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "desktop collapsed shared geometry");
+  });
+
+  [
+    "#dashboardSidebar{--sidebar-control-height:45px;--sidebar-visual-tile-height:40px;--sidebar-control-radius:8px}",
+    "#dashboardSidebar .ui-future-module,#dashboardSidebar .ui-sidebar-item{border-radius:var(--sidebar-control-radius)!important;padding-top:0!important;padding-bottom:0!important}",
+    "#dashboardSidebar #financialModulesDisclosureButton,#dashboardSidebar #financialModulesGroup>*,#dashboardSidebar .ui-future-module,#dashboardSidebar .ui-sidebar-item{height:var(--sidebar-control-height)!important;min-height:var(--sidebar-control-height)!important;max-height:var(--sidebar-control-height)!important}",
+    "#appShell[data-sidebar-collapsed=true] #dashboardSidebar>nav+div{width:64px!important;max-width:64px!important;grid-template-columns:64px!important;justify-items:center!important;box-sizing:border-box!important;padding-right:0!important;padding-left:0!important}",
+    "#dashboardSidebar .sidebar-brand p{margin:0!important;font-family:var(--font-sans)!important;font-size:13px!important;font-weight:400!important;line-height:18px!important;color:var(--text-muted)!important}"
+  ].forEach(function(token)
+  {
+    assertSourceContains(tokenSource, token, "compiled desktop sidebar geometry");
+  });
+
+  Logger.log(
+    "PASS: testDesktopCollapsedSidebarSharedGeometryContract | axis=32 | row=45 | collapsedTile=40 | subtitle=13/18"
+  );
+
+  return {
+    passed: true,
+    collapsedAxis: 32,
+    rowHeight: 45,
+    collapsedTile: 40,
+    subtitle: "13/18"
+  };
+}
+
+function testDesktopSidebarContentAlignmentGridContract()
+{
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var tokenSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
+
+  [
+    "#dashboardSidebar { --sidebar-control-height: 45px; --sidebar-visual-tile-height: 40px; --sidebar-control-radius: 8px; }",
+    "#dashboardSidebar > div:first-of-type { height: 96px !important; min-height: 96px !important; max-height: 96px !important; box-sizing: border-box; align-items: center !important; border-bottom: 1px solid transparent; padding-top: 0 !important; padding-bottom: 0 !important; }",
+    "#dashboardSidebar .sidebar-brand > div:first-child > .sidebar-expanded-content { display: flex; flex-direction: column; gap: 2px; justify-content: center; }",
+    "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar .sidebar-brand > div:first-child > .sidebar-expanded-content { display: none !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; overflow: hidden !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }",
+    "#dashboardSidebar .sidebar-brand .text-xl { line-height: 32px !important; }",
+    "#dashboardSidebar > nav { padding-top: 8px !important; }",
+    "#dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) 46px !important; }",
+    "#dashboardSidebar #sidebarCollapseButton { grid-row: 2 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }",
+    "#dashboardSidebar #sidebarCollapseButton + div { grid-row: 3 !important; }",
+    "#dashboardTabList [role=\"tab\"] { display: flex !important; height: 45px !important;",
+    "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar .ui-future-module { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important;",
+    "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important;",
+    "html.numlock-phone { --numlock-phone-scale: 1.6;"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "desktop sidebar content alignment grid");
+  });
+
+  assertSourceExcludes(source, "translateY(-24px)", "legacy sidebar footer translation");
+  assertSourceExcludes(source, "margin-bottom: -24px", "legacy negative sidebar footer margin");
+  assertSourceExcludes(source, "height: 460px", "fixed sidebar footer spacer");
+  assertSourceExcludes(source, "grid-template-rows: auto minmax(0, 1fr) var(--sidebar-control-height)", "flexible spacer between utilities and collapse");
+  assertSourceExcludes(source, ".sidebar-brand .text-xl { position:", "brand title positioning compensation");
+  assertSourceExcludes(source, ".sidebar-brand p { position:", "brand subtitle positioning compensation");
+  assertSourceExcludes(source, ".sidebar-brand .text-xl { transform:", "brand title transform compensation");
+  assertSourceExcludes(source, ".sidebar-brand p { margin-top:", "independent brand subtitle gap");
+
+  [
+    "#dashboardSidebar{--sidebar-control-height:45px;--sidebar-visual-tile-height:40px;--sidebar-control-radius:8px}",
+    "#dashboardSidebar>div:first-of-type{height:96px!important;min-height:96px!important;max-height:96px!important;box-sizing:border-box;align-items:center!important;border-bottom:1px solid transparent;padding-top:0!important;padding-bottom:0!important}",
+    "#dashboardSidebar .sidebar-brand>div:first-child>.sidebar-expanded-content{display:flex;flex-direction:column;gap:2px;justify-content:center}",
+    "#appShell[data-sidebar-collapsed=true] #dashboardSidebar .sidebar-brand>div:first-child>.sidebar-expanded-content{display:none!important;width:0!important;min-width:0!important;max-width:0!important;overflow:hidden!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important}",
+    "#dashboardSidebar .sidebar-brand .text-xl{line-height:32px!important}",
+    "#dashboardSidebar>nav{padding-top:8px!important}",
+    "#dashboardSidebar>nav+div{height:auto!important;margin-top:auto!important;grid-template-rows:auto var(--sidebar-control-height) 46px!important}",
+    "#dashboardSidebar #sidebarCollapseButton{grid-row:2!important;height:var(--sidebar-control-height)!important;min-height:var(--sidebar-control-height)!important;max-height:var(--sidebar-control-height)!important}",
+    "top:calc((var(--sidebar-control-height) - var(--sidebar-visual-tile-height))/2)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(tokenSource, token, "compiled desktop alignment grid");
+  });
+
+  Logger.log(
+    "PASS: testDesktopSidebarContentAlignmentGridContract | header=96 | navInset=8 | sharedRow=45 | visualTile=40 | bottomSpacer=above | statusReserve=46"
+  );
+
+  return {
+    passed: true,
+    headerHeight: 96,
+    navigationInset: 8,
+    expandedRowHeight: 45,
+    collapsedNavigationRowHeight: 45,
+    visualTileHeight: 40,
+    statusReserve: 46
+  };
 }
 
 function testThemeParityTokenContract()
@@ -2344,7 +2853,7 @@ function testThemeParityTokenContract()
   }
   assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase");
   assertSourceExcludes(source, "ResizeObserver", "theme parity ResizeObserver");
-  assertSourceExcludes(source, 'addEventListener("resize"', "theme parity resize listener");
+  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "single responsive resize listener");
   scenariosPassed++;
 
   var summary = {
@@ -3597,6 +4106,24 @@ function testDashboardOverviewContract()
     source,
     "new Array(5)",
     "five-card loading skeleton"
+  );
+  [
+    'id="keySummarySkeleton"',
+    'aria-hidden="true"',
+    'elements.keySummarySkeleton.classList.remove("hidden");',
+    'elements.keySummarySkeleton.classList.add("hidden");',
+    'id="executiveSummary" class="hf-summary-metrics">Loading...</div>',
+    "renderExecutiveSummary(res);",
+    "hideChartSkeleton();"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Key Summary loading skeleton lifecycle");
+  });
+  assertSourceOccurrenceCount(
+    source,
+    'class="space-y-2"><span class="block h-3',
+    4,
+    "four Key Summary skeleton metric blocks"
   );
   [
     "hf-kpi-strip",
@@ -5210,7 +5737,7 @@ function testSecondaryDestinationsHighFidelityContract()
   }
   assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase");
   assertSourceExcludes(source, "ResizeObserver", "secondary destination ResizeObserver");
-  assertSourceExcludes(source, 'addEventListener("resize"', "secondary destination resize listener");
+  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "single responsive resize listener");
   scenariosPassed++;
 
   var summary = {
@@ -6067,10 +6594,8 @@ function testBoundedUiRefactorContract()
   {
     assertSourceContains(source, token, "listener initialization guard");
   });
-  ["ResizeObserver", 'addEventListener("resize"'].forEach(function(token)
-  {
-    assertSourceExcludes(source, token, "orphaned global resize callback");
-  });
+  assertSourceExcludes(source, "ResizeObserver", "orphaned global resize observer");
+  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "guarded responsive resize callback");
   scenariosPassed++;
 
   [
@@ -6292,10 +6817,8 @@ function testUiUx2ClosureContract()
     throw new Error("UI/UX 2.0 closure performance budget exceeded");
   }
   assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "one deferred render phase");
-  ["ResizeObserver", 'addEventListener("resize"'].forEach(function(token)
-  {
-    assertSourceExcludes(source, token, "recurring resize ownership");
-  });
+  assertSourceExcludes(source, "ResizeObserver", "recurring resize ownership");
+  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "single recurring resize owner");
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "response mutation");
@@ -6463,7 +6986,7 @@ function testUiFinalStabilizationContract()
     assertSourceContains(source, token, "bounded Chart.js lifecycle");
   });
   assertSourceExcludes(source, "ResizeObserver", "unbounded resize observer");
-  assertSourceExcludes(source, 'addEventListener("resize"', "unbounded resize listener");
+  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "bounded resize listener");
   scenariosPassed++;
 
   [
@@ -7588,7 +8111,6 @@ function testPerformanceAnalyticsVisualContract()
 
   [
     "new ResizeObserver(",
-    'window.addEventListener("resize"',
     'document.addEventListener("resize"'
   ].forEach(function(token)
   {
@@ -7598,6 +8120,12 @@ function testPerformanceAnalyticsVisualContract()
       "duplicate application resize observer/listener"
     );
   });
+  assertSourceOccurrenceCount(
+    source,
+    'window.addEventListener("resize"',
+    1,
+    "single application resize listener"
+  );
 
   var themeSyncStart =
     source.indexOf("function synchronizeChartTheme(forceLight)");

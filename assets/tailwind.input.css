@@ -562,8 +562,8 @@
 
     #dashboardSidebar > nav + div {
       display: grid !important;
-      height: 460px !important;
-      grid-template-rows: auto minmax(0, 1fr) auto 46px !important;
+      height: auto !important;
+      grid-template-rows: auto auto 46px !important;
       padding: 8px 16px 28px !important;
     }
 
@@ -573,7 +573,7 @@
     }
 
     #dashboardSidebar #sidebarCollapseButton {
-      grid-row: 3 !important;
+      grid-row: 2 !important;
       width: 100% !important;
       min-height: 42px !important;
       gap: 12px !important;
@@ -581,7 +581,7 @@
     }
 
     #dashboardSidebar #sidebarCollapseButton + div {
-      grid-row: 4 !important;
+      grid-row: 3 !important;
       margin-top: 18px !important;
       padding-top: 0 !important;
       border-top: 0 !important;
@@ -1140,4 +1140,150 @@
     flex: 0 0 auto !important;
     overflow-wrap: anywhere;
   }
+}
+
+@layer components {
+  @media (max-width: 1023px) {
+    html,
+    body,
+    #appShell,
+    #mainContent { width: 100%; max-width: 100%; overflow-x: clip; }
+    #topUtilityBar > div:first-child { width: 100%; }
+    #sidebarMenuButton,
+    #sidebarCloseButton { min-width: 44px; min-height: 44px; justify-content: center; }
+    #utilityPageTitle,
+    #utilityPageContext { overflow: visible; white-space: normal; text-overflow: clip; }
+    #dashboardContent,
+    #dashboardTabPanels,
+    .dashboard-tab-panel { width: 100%; min-width: 0; }
+    #dashboardTabList { display: flex !important; width: 100% !important; max-width: 100% !important; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scrollbar-width: thin; }
+    #dashboardTabList [role="tab"] { flex: 0 0 auto !important; white-space: nowrap !important; }
+    #dashboardPanelOverview:not([hidden]) { display: flex; min-width: 0; flex-direction: column; gap: 12px !important; }
+    #dashboardPanelOverview #keyMetricsSection { order: 1; }
+    #dashboardPanelOverview #overviewEvidenceRow { order: 2; }
+    #dashboardPanelOverview #overviewContextRow { order: 3; }
+    #dashboardPanelOverview #executiveSummarySection { order: 4; margin-bottom: 0; }
+    #dashboardPanelOverview #revenueChartSection,
+    #dashboardPanelOverview #topProductsSection { width: 100%; min-width: 0; }
+    #dashboardPanelOverview #topProductWrapper { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
+    #dashboardPanelOverview .hf-top-products-table { min-width: 520px; }
+    #dateFilterControls { width: 100%; justify-content: flex-start; }
+    #dateFilterControls > .ui-custom-select,
+    .hf-period-secondary,
+    .hf-period-secondary .ui-custom-select { max-width: 100%; }
+    .ui-custom-select-listbox { right: 0; left: auto; max-width: min(320px, calc(100vw - 32px)); }
+    #customDateRange { width: 100%; flex-wrap: wrap; }
+    #customStart,
+    #customEnd { min-width: 0; min-height: 44px; flex: 1 1 180px; max-width: 100%; }
+    .hf-summary-metrics > * { min-width: 0; overflow-wrap: anywhere; }
+    .hf-quick-actions button { min-height: 48px; }
+  }
+
+  @media (max-width: 639px) {
+    #dashboardPanelOverview #mainChartWrapper { height: 180px !important; min-height: 180px !important; max-height: 180px !important; padding-top: 6px !important; }
+    #dashboardPanelOverview .hf-summary-metrics > * { padding: 10px 0 !important; }
+    #dashboardPanelOverview .hf-action-copy strong { white-space: nowrap; }
+  }
+
+  @media (max-width: 767px) {
+    :root { --mobile-text-section: 1.5rem; --mobile-text-primary: 1.125rem; --mobile-text-supporting: 0.9375rem; --mobile-line-section: 1.875rem; --mobile-line-primary: 1.625rem; --mobile-line-supporting: 1.375rem; }
+    #topUtilityBar { min-height: 72px !important; padding: 10px 12px !important; }
+    #sidebarMenuButton { width: 52px !important; min-width: 52px !important; min-height: 52px !important; padding: 0 !important; justify-content: center !important; font-size: 20px !important; }
+    #utilityPageTitle { font-size: 28px !important; line-height: 34px !important; }
+    #utilityPageContext { font-size: 16px !important; line-height: 23px !important; }
+    #contentViewport { padding: 12px 8px 16px !important; }
+    #dashboardTabList { height: 54px !important; min-height: 54px !important; }
+    #dashboardTabList [role="tab"],
+    #dashboardTabInsights { height: 52px !important; padding-right: 10px !important; padding-left: 10px !important; font-size: 16px !important; line-height: 22px !important; }
+    #dashboardPanelOverview:not([hidden]) { gap: 16px !important; }
+    #dashboardPanelOverview .hf-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
+    #dashboardPanelOverview #businessOverview > :last-child { grid-column: 1 / -1 !important; }
+    #dashboardPanelOverview .hf-kpi-card { min-height: 160px !important; padding: 16px !important; }
+    #dashboardPanelOverview .hf-kpi-card .hf-section-label { font-size: 16px !important; line-height: 23px !important; }
+    #dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 32px !important; line-height: 39px !important; }
+    #dashboardPanelOverview .hf-kpi-comparison { font-size: 15px !important; line-height: 22px !important; }
+    #dashboardPanelOverview .hf-kpi-icon { width: 48px !important; height: 48px !important; flex-basis: 48px !important; font-size: 20px !important; }
+    #dashboardPanelOverview .hf-analytics-title-icon,
+    #dashboardPanelOverview .hf-summary-title-icon { width: 56px !important; height: 56px !important; flex-basis: 56px !important; font-size: 22px !important; }
+    #dashboardPanelOverview #revenueChartTitle,
+    #dashboardPanelOverview #topProductsTitle,
+    #dashboardPanelOverview .hf-section-heading { font-size: 24px !important; line-height: 30px !important; }
+    #dashboardPanelOverview .ui-custom-select-trigger,
+    #dashboardPanelOverview .ui-custom-select-option { min-height: 48px !important; font-size: 16px !important; line-height: 23px !important; }
+    #dashboardPanelOverview #revenueChartSection,
+    #dashboardPanelOverview #topProductsSection { padding: 16px 12px 12px !important; }
+    #dashboardPanelOverview #revenueChartSection { padding-left: 12px !important; }
+    #dashboardPanelOverview #mainChartWrapper { height: 260px !important; min-height: 260px !important; max-height: 260px !important; padding: 10px 2px 0 !important; }
+    #dashboardPanelOverview .hf-top-products-table { min-width: 560px !important; }
+    #dashboardPanelOverview .hf-top-products-table th,
+    #dashboardPanelOverview .hf-top-products-table td { height: 46px !important; }
+    #dashboardPanelOverview .hf-top-products-table thead th { font-size: 16px !important; line-height: 22px !important; }
+    #dashboardPanelOverview .hf-top-products-table tbody th,
+    #dashboardPanelOverview .hf-top-products-table tbody td { font-size: 18px !important; line-height: 26px !important; }
+    #dashboardPanelOverview .hf-overview-context { gap: 10px !important; padding: 12px 14px !important; }
+    #dashboardPanelOverview #periodComparisonLabel,
+    #dashboardPanelOverview #dataQualityHeading { font-size: 16px !important; line-height: 23px !important; }
+    #dashboardPanelOverview #dataQualityInformation,
+    #dashboardPanelOverview #dataQualityStatusBadge,
+    #dashboardPanelOverview #dataQualityScopeSummary { font-size: 15px !important; line-height: 22px !important; }
+    #dashboardPanelOverview #executiveSummarySection > .overview-surface,
+    #dashboardPanelOverview #executiveSummarySection > section { padding: 14px !important; }
+    #dashboardPanelOverview .hf-summary-metrics .hf-section-label { font-size: 16px !important; line-height: 22px !important; }
+    #dashboardPanelOverview .hf-summary-metrics .performance-metric-value { font-size: 25px !important; line-height: 32px !important; }
+    #dashboardPanelOverview .hf-summary-metrics > * > div:last-child { font-size: 15px !important; line-height: 22px !important; }
+    #dashboardPanelOverview .hf-quick-actions { grid-template-columns: minmax(0, 1fr) !important; gap: 10px !important; }
+    #dashboardPanelOverview .hf-quick-actions button { min-height: 68px !important; padding: 10px 12px !important; }
+    #dashboardPanelOverview .hf-action-copy strong { font-size: 17px !important; line-height: 23px !important; }
+    #dashboardPanelOverview .hf-action-copy span { font-size: 15px !important; line-height: 22px !important; }
+    #dashboardSidebar .ui-sidebar-item,
+    #dashboardSidebar .ui-future-module { font-size: 16px !important; line-height: 23px !important; }
+  }
+
+  html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-card-header { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(112px, 140px); align-items: center !important; gap: 12px !important; }
+  html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-title-group { min-width: 0; justify-self: start; }
+  html.numlock-phone #dashboardPanelOverview #dateFilterControls { display: flex !important; width: 140px !important; min-width: 112px !important; max-width: 140px !important; flex-wrap: wrap !important; justify-content: flex-end !important; justify-self: end; }
+  html.numlock-phone #dashboardPanelOverview #dateFilterControls > .ui-custom-select { width: 100% !important; min-width: 112px !important; max-width: 140px !important; }
+  html.numlock-phone #dashboardPanelOverview #customDateRange { width: 100%; justify-content: flex-end; }
+
+  @media (min-width: 1024px) {
+    #dashboardSidebar { --sidebar-control-height: 45px; --sidebar-visual-tile-height: 40px; --sidebar-control-radius: 8px; }
+    #dashboardSidebar > div:first-of-type { height: 96px !important; min-height: 96px !important; max-height: 96px !important; box-sizing: border-box; align-items: center !important; border-bottom: 1px solid transparent; padding-top: 0 !important; padding-bottom: 0 !important; }
+    #dashboardSidebar .sidebar-brand > div:first-child > .sidebar-expanded-content { display: flex; flex-direction: column; gap: 2px; justify-content: center; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-brand > div:first-child > .sidebar-expanded-content { display: none !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; overflow: hidden !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+    #dashboardSidebar .sidebar-brand .text-xl { line-height: 32px !important; }
+    #dashboardSidebar > nav { padding-top: 8px !important; }
+    #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) 46px !important; }
+    #dashboardSidebar #sidebarCollapseButton { grid-row: 2 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
+    #dashboardSidebar #sidebarCollapseButton + div { grid-row: 3 !important; }
+    #dashboardSidebar .ui-sidebar-item,
+    #dashboardSidebar .ui-future-module { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; border-radius: var(--sidebar-control-radius) !important; padding-top: 0 !important; padding-bottom: 0 !important; }
+    #dashboardSidebar #financialModulesDisclosureButton,
+    #dashboardSidebar #financialModulesGroup > * { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
+    #dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; max-width: 64px !important; grid-template-columns: 64px !important; justify-items: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div > .space-y-1 { width: 64px !important; max-width: 64px !important; justify-self: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { width: 64px !important; max-width: 64px !important; padding-right: 0 !important; padding-left: 0 !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { position: relative; background: transparent !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item::before,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module::before,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton::before { content: ""; position: absolute; z-index: 0; top: calc((var(--sidebar-control-height) - var(--sidebar-visual-tile-height)) / 2); right: 0; left: 0; height: var(--sidebar-visual-tile-height); border-radius: 10px; background: transparent; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item[aria-current="page"]::before { background: var(--selected); }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item:hover::before,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:hover::before { background: var(--sidebar-hover); }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:active::before { background: var(--selected); }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item > i,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module > i,
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton > i { position: relative; z-index: 1; width: 24px !important; flex-basis: 24px !important; margin: 0 !important; text-align: center !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { border: 1px solid transparent !important; background: transparent !important; color: var(--text-on-dark) !important; outline: none; box-shadow: none !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:hover { background: transparent !important; color: var(--text-primary) !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:active { background: transparent !important; color: var(--text-primary) !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:focus:not(:focus-visible) { outline: none !important; box-shadow: none !important; }
+    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: 2px !important; box-shadow: none !important; }
+  }
+
 }
