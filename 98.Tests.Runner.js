@@ -3,6 +3,12 @@ function runAllBackendTests()
   var tests = [
     { name: "getDashboardData", run: getDashboardData },
     { name: "testAggregate", run: testAggregate },
+    { name: "testCanonicalTransactionAdapter", run: testCanonicalTransactionAdapter },
+    { name: "testProductPricingResolution", run: testProductPricingResolution },
+    { name: "testLegacyTransactionSyncService", run: testLegacyTransactionSyncService },
+    { name: "testLegacyTransactionSyncTriggerDelegation", run: testLegacyTransactionSyncTriggerDelegation },
+    { name: "testLegacySyncRuntimeAcceptanceHarness", run: testLegacySyncRuntimeAcceptanceHarness },
+    { name: "testCanonicalHistoricalAndOverlapControls", run: testCanonicalHistoricalAndOverlapControls },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },

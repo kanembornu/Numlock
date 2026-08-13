@@ -3,19 +3,172 @@ function testAggregate()
   var ss =
     SpreadsheetApp.getActiveSpreadsheet();
 
-  var transactions =
-    getTransactionData(ss);
-
-  var priceMap =
-    getPriceMap(ss);
-
-  var processed =
-    processTransactions(
-      transactions,
-      priceMap
-    );
+  var processed = getCanonicalTransactionData(ss).records;
 
   validateAggregate(processed);
+}
+
+function testCanonicalTransactionAdapter()
+{
+  var result = buildCanonicalTransactionData({
+    sales: [
+      { ID_Trx: "S1", Tanggal: new Date(2025, 0, 15), ID_Prod: "P1", Tipe: "Hot",
+        Qty: 3, HPP: 4000, HJ: 10000, Source: "TEST", IsActive: true, sourceRowIndex: 1 },
+      { ID_Trx: "S2", Tanggal: new Date(2025, 0, 16), ID_Prod: "P1", Tipe: "Cold",
+        Qty: 1, HPP: 5000, HJ: 12000, Source: "TEST", IsActive: false, sourceRowIndex: 2 }
+    ],
+    expenses: [
+      { ID_Trx: "E1", Tanggal: new Date(2025, 0, 17), ID_Ops: "O1", Nilai: 75000,
+        Source: "TEST", IsActive: true, sourceRowIndex: 1 }
+    ],
+    products: [
+      { ID_Prod: "P1", Produk: "Retired Product", Kategori: "Coffee", Kind: "Beverage", IsActive: false }
+    ],
+    expenseItems: [
+      { ID_Ops: "O1", Item: "Electricity", Kategori: "Utility", Kind: "Support", Group: "Operating", IsActive: false }
+    ]
+  });
+  var sale = result.records[0], expense = result.records[1];
+  if (result.records.length !== 2 || result.sourceQuality.inactiveLedgerRows !== 1 ||
+      sale.product !== "Retired Product" || sale.productCategory !== "Coffee" || sale.kind !== "Beverage" ||
+      sale.cogs !== 12000 || sale.revenue !== 30000 || sale.margin !== 18000 || sale.year !== 2025 || sale.month !== 1 ||
+      expense.canonicalTransactionType !== "Expense" || expense.transactionType !== "Purchase" ||
+      expense.purchaseCategory !== "Electricity" || expense.category !== "Utility" || expense.kind !== "Support" ||
+      expense.group !== "Operating" || expense.expense !== 75000)
+  {
+    throw new Error("Canonical transaction adapter contract mismatch");
+  }
+  return { passed: true, records: 2, inactiveExcluded: 1 };
+}
+
+function testProductPricingResolution()
+{
+  var index = buildProductPricingIndex([
+    { ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: new Date(2024, 0, 1), EffectiveTo: new Date(2024, 11, 31), HPP: 4, Harga: 10, IsActive: false },
+    { ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: new Date(2025, 0, 1), EffectiveTo: "", HPP: 5, Harga: 12, IsActive: true }
+  ]);
+  var historical = resolveProductPrice(index, "P1", "Hot", new Date(2024, 5, 1), false);
+  var current = resolveProductPrice(index, "P1", "Hot", new Date(2025, 5, 1), true);
+  if (historical.Harga !== 10 || current.HPP !== 5 || current.Harga !== 12) {
+    throw new Error("ProductPricing effective-date resolution mismatch");
+  }
+  assertThrowsMessage(function() {
+    resolveProductPrice(index, "P1", "Cold", new Date(2025, 5, 1), true);
+  }, "ProductPricing expected exactly one effective record for P1|Cold; found 0");
+  return { passed: true, scenarios: 3 };
+}
+
+function testLegacyTransactionSyncService()
+{
+  var context = {
+    productIdsByName: { Coffee: "P1" },
+    expenseIdsByName: { Utility: "O1" },
+    pricingIndex: buildProductPricingIndex([
+      { ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: new Date(2026, 0, 1),
+        EffectiveTo: "", HPP: 4, Harga: 10, IsActive: true }
+    ])
+  };
+  var sale = transformLegacyTransaction(
+    [new Date(2026, 7, 13), "Hot", "Sales", "Coffee", "", 2, ""], 1263, context
+  );
+  var expense = transformLegacyTransaction(
+    [new Date(2026, 7, 13), "", "Purchase", "", "Utility", "", 5000], 1264, context
+  );
+  if (sale.id !== "SAL-GLEG-00001263" || expense.id !== "OPS-GLEG-00001264" ||
+      sale.payload[2] !== "P1" || sale.payload[5] !== 4 || sale.payload[6] !== 10 ||
+      expense.payload[2] !== "O1" || expense.payload[3] !== 5000)
+  {
+    throw new Error("Legacy synchronization transformation/identity mismatch");
+  }
+  var initial = classifyLegacySyncCandidates([sale, expense], {});
+  if (initial.inserts.tabsal.length !== 1 || initial.inserts.tabops.length !== 1) {
+    throw new Error("Legacy synchronization initial insert mismatch");
+  }
+  var existingSale = { ID_Trx: sale.payload[0], Tanggal: sale.payload[1], ID_Prod: sale.payload[2],
+    Tipe: sale.payload[3], Qty: sale.payload[4], HPP: sale.payload[5], HJ: sale.payload[6],
+    Source: sale.payload[7], IsActive: sale.payload[8] };
+  var repeat = classifyLegacySyncCandidates([sale], { "SAL-GLEG-00001263": existingSale });
+  if (repeat.skipped.length !== 1 || repeat.inserts.tabsal.length !== 0) {
+    throw new Error("Legacy synchronization idempotent skip mismatch");
+  }
+  existingSale.Qty = 3;
+  var conflict = classifyLegacySyncCandidates([sale], { "SAL-GLEG-00001263": existingSale });
+  if (conflict.conflicts.length !== 1 || conflict.conflicts[0].sourceRow !== 1263) {
+    throw new Error("Legacy synchronization conflict mismatch");
+  }
+  [
+    [["bad", "Hot", "Sales", "Coffee", "", 1, ""], 1265],
+    [[new Date(2026, 7, 13), "Warm", "Sales", "Coffee", "", 1, ""], 1266],
+    [[new Date(2026, 7, 13), "Hot", "Sales", "Coffee", "", 0, ""], 1267],
+    [[new Date(2026, 7, 13), "", "Purchase", "", "Utility", "", -1], 1268]
+  ].forEach(function(fixture) {
+    var thrown = false;
+    try { transformLegacyTransaction(fixture[0], fixture[1], context); } catch (error) { thrown = true; }
+    if (!thrown) throw new Error("Malformed legacy row was accepted: " + fixture[1]);
+  });
+  return { passed: true, scenarios: 8 };
+}
+
+function testLegacyTransactionSyncTriggerDelegation()
+{
+  var source = syncLegacyTransactionOnFormSubmit.toString();
+  if (source.split("syncLegacyTransactionsToCanonical(").length - 1 !== 1 ||
+      source.indexOf("getSheet().getName() !== \"Transaction\"") === -1 ||
+      source.indexOf("event.range.getRow()") === -1)
+  {
+    throw new Error("Transaction sync trigger must delegate once with absolute source row identity");
+  }
+  return { passed: true, authoritativePaths: 1 };
+}
+
+function testLegacySyncRuntimeAcceptanceHarness()
+{
+  var source = verifyLegacySyncRuntimeAcceptance.toString();
+  assertSourceContains(source, 'var handler = "syncLegacyTransactionOnFormSubmit"', "exact sync trigger handler filter");
+  assertSourceContains(source, "ScriptApp.getProjectTriggers()", "live project trigger inventory");
+  assertSourceContains(source, "triggers.length !== 1", "exactly-one trigger contract");
+  assertSourceContainsOnce(source, "syncLegacyTransactionsToCanonical(", "authoritative sync delegation");
+  assertSourceExcludes(source, ".newTrigger(", "trigger creation");
+  assertSourceExcludes(source, ".deleteTrigger(", "trigger deletion");
+  assertSourceContains(source, "buildLegacySyncAcceptanceSnapshot(ss)", "runtime acceptance snapshots");
+  return { passed: true, scenarios: 7 };
+}
+
+function testCanonicalHistoricalAndOverlapControls()
+{
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var canonical = getCanonicalTransactionData(ss).records;
+  var expectedSales = {
+    2021: [1711, 4411, 20700100, 43760000, 23059900],
+    2022: [2049, 5889, 26243500, 54966000, 28722500],
+    2023: [2151, 5834, 26231600, 54330000, 28098400],
+    2024: [2153, 4782, 22651600, 47077000, 24425400],
+    2025: [1634, 2942, 13512800, 33259000, 19746200],
+    2026: [874, 1268, 6981200, 15997000, 9015800]
+  };
+  var expectedExpense = { 2021: [447, 33257000], 2022: [408, 38937000], 2023: [366, 41174000],
+    2024: [337, 39619000], 2025: [266, 31856000], 2026: [125, 15370000] };
+  var sales = {}, expenses = {}, overlap = { salesRows: 0, expenseRows: 0, qty: 0, cogs: 0, revenue: 0, margin: 0, expense: 0, hot: 0, cold: 0 };
+  canonical.forEach(function(row) {
+    if (row.source === "XLSM" && row.transactionType === "Sales") {
+      sales[row.year] = sales[row.year] || [0, 0, 0, 0, 0];
+      sales[row.year][0]++; sales[row.year][1] += row.qty; sales[row.year][2] += row.cogs;
+      sales[row.year][3] += row.revenue; sales[row.year][4] += row.margin;
+    } else if (row.source === "XLSM") {
+      expenses[row.year] = expenses[row.year] || [0, 0]; expenses[row.year][0]++; expenses[row.year][1] += row.expense;
+    } else if (row.source === "LEGACY_GOOGLE" && row.transactionType === "Sales") {
+      overlap.salesRows++; overlap.qty += row.qty; overlap.cogs += row.cogs; overlap.revenue += row.revenue;
+      overlap.margin += row.margin; overlap[row.category.toLowerCase()] += row.qty;
+    } else if (row.source === "LEGACY_GOOGLE") { overlap.expenseRows++; overlap.expense += row.expense; }
+  });
+  if (JSON.stringify(sales) !== JSON.stringify(expectedSales) || JSON.stringify(expenses) !== JSON.stringify(expectedExpense)) {
+    throw new Error("Canonical Phase 3 historical controls mismatch");
+  }
+  if (JSON.stringify(overlap) !== JSON.stringify({ salesRows: 51, expenseRows: 7, qty: 66,
+    cogs: 343600, revenue: 834000, margin: 490400, expense: 680000, hot: 30, cold: 36 })) {
+    throw new Error("Canonical Phase 4 overlap controls mismatch: " + JSON.stringify(overlap));
+  }
+  return { passed: true, historicalYears: 6, overlapRows: 58 };
 }
 
 function testSummaryFixtures()
@@ -1296,8 +1449,7 @@ function testPeriodComparison()
     getDashboardData.toString();
 
   if (
-    dashboardSource.split("getTransactionData(").length - 1 !== 1 ||
-    dashboardSource.split("processTransactions(").length - 1 !== 1 ||
+    dashboardSource.split("getCanonicalTransactionData(").length - 1 !== 1 ||
     dashboardSource.indexOf("getDashboardData(", 20) !== -1
   )
   {
@@ -6754,7 +6906,7 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    41,
+    47,
     "closure runner membership"
   );
   assertSourceContains(
@@ -8776,18 +8928,16 @@ function testSourceDataQualityPipeline()
   var pipelineSource =
     getDashboardData.toString();
 
-  var readToken = "getTransactionData(ss)";
+  var readToken = "getCanonicalTransactionData(ss)";
   var readIndex = pipelineSource.indexOf(readToken);
-  var inspectIndex =
-    pipelineSource.indexOf("inspectSourceDateQuality");
-  var processIndex =
-    pipelineSource.indexOf("processTransactions");
+  var inspectIndex = pipelineSource.indexOf("sourceQuality");
+  var processIndex = pipelineSource.indexOf("canonicalData.records");
 
   if (
     readIndex === -1 ||
     readIndex !== pipelineSource.lastIndexOf(readToken) ||
-    inspectIndex < readIndex ||
-    processIndex < inspectIndex
+    processIndex < readIndex ||
+    inspectIndex < processIndex
   )
   {
     throw new Error(

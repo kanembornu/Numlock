@@ -4,21 +4,9 @@ function getDashboardData(filter, customStart, customEnd) {
     SpreadsheetApp
       .getActiveSpreadsheet();
 
-  var transactions =
-    getTransactionData(ss);
-
-  var sourceQuality =
-    inspectSourceDateQuality(
-      transactions
-    );
-
-  var priceMap =
-    getPriceMap(ss);
-
-  var processedData =
-    processTransactions(
-      transactions,
-      priceMap);
+  var canonicalData = getCanonicalTransactionData(ss);
+  var processedData = canonicalData.records;
+  var sourceQuality = canonicalData.sourceQuality;
 
   return buildDashboardResponse(
     processedData,
@@ -912,6 +900,21 @@ function buildDataQualityDiagnostics(scopedData, sourceQuality) {
       code: "INVALID_PURCHASE_AMOUNT",
       label: "Invalid Purchase amount",
       severity: "Medium"
+    },
+    {
+      code: "INACTIVE_LEDGER_RECORD",
+      label: "Inactive canonical ledger record",
+      severity: "Medium"
+    },
+    {
+      code: "UNRESOLVED_FOREIGN_KEY",
+      label: "Unresolved canonical master relationship",
+      severity: "High"
+    },
+    {
+      code: "MALFORMED_CANONICAL_RECORD",
+      label: "Malformed canonical ledger record",
+      severity: "High"
     }
   ];
 
@@ -1028,6 +1031,22 @@ function buildDataQualityDiagnostics(scopedData, sourceQuality) {
     counts.INVALID_DATE++;
     issueCount++;
     issueRowKeys["source:" + sourceRowIndex] = true;
+  });
+
+  [
+    ["INACTIVE_LEDGER_RECORD", "inactiveLedgerRows"],
+    ["UNRESOLVED_FOREIGN_KEY", "unresolvedForeignKeys"],
+    ["MALFORMED_CANONICAL_RECORD", "malformedRows"]
+  ].forEach(function(mapping)
+  {
+    var count = Number(sourceInspection && sourceInspection[mapping[1]]) || 0;
+    counts[mapping[0]] += count;
+    issueCount += count;
+
+    for (var index = 0; index < count; index++)
+    {
+      issueRowKeys["canonical:" + mapping[1] + ":" + index] = true;
+    }
   });
 
   var issues =

@@ -2,7 +2,7 @@
 
 ## UI/UX 2.0 Package 022 closure gate
 
-The ordered suite contains 41 entries. Run `testUiUx2ClosureContract()` directly, then the 14 named focused predecessors, then `runAllBackendTests()` and require 41/41. The closure contract protects the 40-entry predecessor, nine destinations, 16 viewport/theme/state combinations, exactly 18 visual criteria, separate functional/visual evidence, theme/chart/print, accessibility, performance, the exact 37-field response, rollback fields, and zero implementation-ready UI backlog.
+The ordered suite contains 47 entries. Run `testCanonicalTransactionAdapter()`, `testProductPricingResolution()`, `testLegacyTransactionSyncService()`, `testLegacyTransactionSyncTriggerDelegation()`, `testLegacySyncRuntimeAcceptanceHarness()`, `testCanonicalHistoricalAndOverlapControls()`, `testUiUx2ClosureContract()`, then the 14 named UI-focused predecessors, and finally `runAllBackendTests()`; require 47/47. The closure contract protects the canonical adapter, pricing, synchronization, trigger delegation and runtime acceptance harness, historical controls, 40-entry UI/UX predecessor, nine destinations, 16 viewport/theme/state combinations, exactly 18 visual criteria, separate functional/visual evidence, theme/chart/print, accessibility, performance, the exact 37-field response, rollback fields, and zero implementation-ready UI backlog.
 
 Local/static PASS does not establish Apps Script live, upload, deployment, browser, screenshot, production-health, or rollback PASS. Visual acceptance requires real deployed-browser captures for Dashboard Overview, Dashboard Performance, Transactions, Settings, and Logs across all 16 required viewport/theme/sidebar-or-drawer states: 80 captures total, each scored exactly 18/18.
 
