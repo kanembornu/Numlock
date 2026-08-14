@@ -37,7 +37,7 @@
           dark: true,
           system: true
         };
-        var preference = "system";
+        var preference = "light";
 
         try
         {
@@ -50,7 +50,7 @@
         }
         catch (error)
         {
-          preference = "system";
+          preference = "light";
         }
 
         var resolvedTheme =
@@ -749,13 +749,14 @@
         #dashboardPanelOverview .hf-quick-actions { margin-top: 12px !important; gap: 8px 12px !important; }
         #dashboardPanelOverview .hf-quick-actions button { min-height: 44px !important; padding-top: 8px !important; padding-bottom: 8px !important; }
       }
-      #dashboardPanelOverview .hf-overview-context { display: flex !important; min-height: 42px !important; align-items: center !important; justify-content: space-between !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
+      #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 42px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
       #dashboardPanelOverview #periodComparisonSection,
       #dashboardPanelOverview #dataQualityInformation { padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
-      #dashboardPanelOverview #dataQualityInformation { display: flex !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }
+      #dashboardPanelOverview #dataQualityInformation { display: flex !important; min-width: max-content !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }
       #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: inline-flex !important; align-items: center !important; justify-content: flex-end !important; flex-wrap: nowrap !important; gap: 8px !important; line-height: 16px !important; }
       #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row > * { margin-top: 0 !important; margin-bottom: 0 !important; line-height: 16px !important; }
       #dashboardPanelOverview #dataQualityStatusBadge { align-self: center; }
+      #dashboardPanelOverview #periodComparisonLabel { display: inline-flex !important; align-items: baseline !important; gap: 4px !important; white-space: nowrap !important; }
       #dashboardPanelOverview #dataQualityDetails:not(.hidden) { flex-basis: 100% !important; white-space: normal !important; }
       #dashboardPanelOverview #mainChartWrapper { height: calc(100% - 48px) !important; min-height: 0 !important; }
       #dashboardContent { gap: var(--overview-section-gap) !important; }
@@ -887,8 +888,10 @@
         #dashboardPanelOverview .hf-overview-context { display: grid !important; grid-template-columns: minmax(0, 1fr) !important; grid-template-rows: auto auto !important; align-items: stretch !important; gap: 10px !important; padding: 12px 14px !important; }
         #dashboardPanelOverview #periodComparisonSection, #dashboardPanelOverview #dataQualityInformation { display: block !important; width: 100% !important; min-width: 0 !important; }
         #dashboardPanelOverview #periodComparisonLabel, #dashboardPanelOverview #dataQualityHeading { font-size: 16px !important; line-height: 23px !important; }
+        #dashboardPanelOverview #periodComparisonLabel { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 0 !important; white-space: normal !important; }
         #dashboardPanelOverview #dataQualityInformation { justify-content: flex-start !important; white-space: normal !important; font-size: 15px !important; line-height: 22px !important; }
-        #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: flex !important; align-items: center !important; justify-content: flex-start !important; flex-wrap: nowrap !important; gap: 8px !important; }
+        #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: grid !important; grid-template-columns: max-content max-content max-content !important; align-items: center !important; justify-content: flex-start !important; gap: 6px 8px !important; }
+        #dashboardPanelOverview #dataQualityScopeSummary { grid-column: 1 / -1 !important; }
         #dashboardPanelOverview #dataQualityStatusBadge, #dashboardPanelOverview #dataQualityScopeSummary { flex: 0 0 auto !important; white-space: nowrap !important; font-size: 15px !important; line-height: 22px !important; }
         #dashboardPanelOverview .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
         #dashboardPanelOverview #executiveSummarySection > .overview-surface, #dashboardPanelOverview #executiveSummarySection > section { padding: 14px !important; }
@@ -1072,7 +1075,7 @@
 
       </nav>
 
-    <div class="p-2">
+    <div id="sidebarUtilityNavigation" class="p-2">
       <div class="space-y-1 pb-2">
         <button type="button" data-page="settings" data-navigation-destination="settings" aria-label="Settings" title="Settings" class="ui-sidebar-item flex w-full items-center text-left transition">
           <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
@@ -1081,6 +1084,9 @@
           <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
         </button>
       </div>
+      <button id="sidebarMobileCloseButton" type="button" class="ui-sidebar-item hidden w-full items-center text-left lg:hidden" aria-label="Close navigation menu" onclick="setSidebarOpen(false, true)">
+        <i class="fas fa-times w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Close Menu</span>
+      </button>
       <button
         id="sidebarCollapseButton"
         type="button"
@@ -1277,7 +1283,7 @@
 
       <aside id="overviewContextRow" class="hf-overview-context" aria-label="Overview comparison and data quality">
         <section id="periodComparisonSection" class="relative min-w-0" role="region" aria-labelledby="periodComparisonLabel">
-          <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700">Loading period comparison...</h3>
+          <h3 id="periodComparisonLabel" class="text-xs font-semibold text-slate-700"><span id="periodComparisonLead">Loading period comparison...</span><span id="periodComparisonPeriod"></span></h3>
           <div id="periodComparisonSkeleton" class="hidden absolute inset-0 skeleton p-2" aria-hidden="true"><span class="block h-4 w-4/5 rounded bg-white/50"></span></div>
         </section>
         <section id="dataQualityInformation" class="relative min-w-0 text-xs text-slate-600" aria-labelledby="dataQualityHeading">
@@ -2827,69 +2833,92 @@
       }
     }
 
-    function synchronizeChartTheme(forceLight)
+    function applyChartThemeTokens(chart, palette, chartKind)
     {
-      var palette = getCurrentThemePalette(forceLight === true);
+      var options = chart.config.options;
+      var dataset = chart.data.datasets[0];
+      var isRevenueChart = chartKind === "revenue";
 
-      if (revenueChart)
+      if (isRevenueChart)
       {
-        revenueChart.data.datasets[0].borderColor = palette.series[0];
-        revenueChart.data.datasets[0].backgroundColor = createRevenueGradient;
-        revenueChart.data.datasets[0].pointBackgroundColor = palette.series[0];
-        revenueChart.data.datasets[0].pointBorderColor = palette.pointStroke;
+        var peakIndex = options.plugins.revenuePeakLabel.index;
+        dataset.borderColor = palette.series[0];
+        dataset.pointBackgroundColor =
+          dataset.data.map(function(value, index)
+          {
+            return index === peakIndex ? palette.series[2] : palette.series[0];
+          });
+        dataset.pointBorderColor = palette.pointStroke;
       }
-
-      if (hotColdChart)
+      else if (chartKind === "hotCold")
       {
-        hotColdChart.data.datasets[0].backgroundColor = [
+        dataset.backgroundColor = [
           palette.series[3],
           palette.series[1]
         ];
       }
-
-      if (expenseChart)
+      else if (chartKind === "expense")
       {
-        expenseChart.data.datasets[0].backgroundColor = palette.series[2];
-        expenseChart.data.datasets[0].borderColor = palette.series[2];
+        dataset.backgroundColor = palette.series[2];
+        dataset.borderColor = palette.series[2];
       }
 
-      [revenueChart, hotColdChart, expenseChart]
-        .forEach(function(chart)
+      options.plugins.tooltip.backgroundColor = palette.tooltipBackground;
+      options.plugins.tooltip.titleColor = palette.tooltipText;
+      options.plugins.tooltip.bodyColor = palette.tooltipText;
+
+      if (options.plugins.legend && options.plugins.legend.labels)
+      {
+        options.plugins.legend.labels.color = palette.axis;
+      }
+
+      Object.keys(options.scales || {})
+        .forEach(function(axisKey)
         {
-          if (!chart)
+          var axis = options.scales[axisKey];
+          axis.ticks = axis.ticks || {};
+          axis.ticks.color = palette.axis;
+          axis.grid = axis.grid || {};
+          axis.border = axis.border || {};
+          axis.border.color = palette.grid;
+
+          if (axis.grid.display !== false)
           {
-            return;
+            axis.grid.color = palette.grid;
+            axis.grid.lineWidth =
+              isRevenueChart && axisKey === "y"
+                ? 0.6
+                : 1;
           }
-
-          chart.options.plugins.tooltip.backgroundColor =
-            palette.tooltipBackground;
-          chart.options.plugins.tooltip.titleColor = palette.tooltipText;
-          chart.options.plugins.tooltip.bodyColor = palette.tooltipText;
-
-          if (
-            chart.options.plugins.legend &&
-            chart.options.plugins.legend.labels
-          )
-          {
-            chart.options.plugins.legend.labels.color = palette.axis;
-          }
-
-          Object.keys(chart.options.scales || {})
-            .forEach(function(axisKey)
-            {
-              var axis = chart.options.scales[axisKey];
-              axis.ticks = axis.ticks || {};
-              axis.ticks.color = palette.axis;
-              axis.grid = axis.grid || {};
-
-              if (axis.grid.display !== false)
-              {
-                axis.grid.color = palette.grid;
-              }
-            });
-
-          chart.update("none");
         });
+
+      if (isRevenueChart && options.plugins.revenuePeakLabel)
+      {
+        var peakTooltip = options.plugins.revenuePeakLabel.tooltip;
+        peakTooltip.backgroundColor = palette.tooltipBackground;
+        peakTooltip.titleColor = palette.tooltipText;
+        peakTooltip.bodyColor = palette.tooltipText;
+        peakTooltip.shadowColor = palette.grid;
+      }
+
+      chart.update("none");
+    }
+
+    function synchronizeChartTheme(forceLight)
+    {
+      var palette = getCurrentThemePalette(forceLight === true);
+
+      [
+        { chart: revenueChart, kind: "revenue" },
+        { chart: hotColdChart, kind: "hotCold" },
+        { chart: expenseChart, kind: "expense" }
+      ].forEach(function(entry)
+      {
+        if (entry.chart)
+        {
+          applyChartThemeTokens(entry.chart, palette, entry.kind);
+        }
+      });
     }
 
     function applyThemePreference(preference, persist, announce)
@@ -2901,7 +2930,7 @@
       };
       var safePreference = allowedThemes[preference]
         ? preference
-        : "system";
+        : "light";
       var resolvedTheme = getResolvedTheme(safePreference);
       var elements = initializeStableDashboardElements();
 
@@ -2968,7 +2997,7 @@
       var initialPreference =
         document.documentElement.getAttribute(
           "data-theme-preference"
-        ) || "system";
+        ) || "light";
       systemThemeQuery = window.matchMedia(
         "(prefers-color-scheme: dark)"
       );
@@ -3694,16 +3723,22 @@
     {
       var comparison =
         periodComparison || null;
+      var label = document.getElementById("periodComparisonLabel");
+      var lead = document.getElementById("periodComparisonLead");
+      var period = document.getElementById("periodComparisonPeriod");
 
       if (
         !comparison ||
         !comparison.changes ||
-        !comparison.status
+        !comparison.status ||
+        !comparison.previous ||
+        !comparison.previous.startDate ||
+        !comparison.previous.endDate
       )
       {
-        throw new Error(
-          "Dashboard period comparison is missing"
-        );
+        lead.innerText = comparison && comparison.message || "Comparison unavailable";
+        period.innerText = "";
+        return;
       }
 
       var previousPeriod =
@@ -3711,10 +3746,60 @@
         " – " +
         formatDashboardPresentationPeriod(comparison.previous.endDate, "day");
 
-      document.getElementById("periodComparisonLabel").innerText =
-        comparison.previous.rowCount > 0
-          ? "Compared with " + previousPeriod
-          : "Comparison unavailable · " + previousPeriod + " has no data";
+      lead.innerText = comparison.previous.rowCount > 0
+        ? "Compared with"
+        : "Comparison unavailable";
+      period.innerText = comparison.previous.rowCount > 0
+        ? previousPeriod
+        : previousPeriod + " has no data";
+    }
+
+    function normalizeOverviewContextResponse(res)
+    {
+      var comparison = res && (res.periodComparison || res.comparison) || null;
+      var quality = res && (res.dataQuality || res.quality) || null;
+      var previous = comparison && (comparison.previous || comparison.period) || null;
+      var comparisonAvailable = Boolean(
+        comparison && previous && previous.startDate && previous.endDate &&
+        comparison.changes && comparison.status
+      );
+
+      return {
+        comparison: comparisonAvailable
+          ? comparison
+          : {
+              available: false,
+              message: comparison && comparison.message || "Comparison unavailable"
+            },
+        quality: quality
+      };
+    }
+
+    function renderOverviewContext(res)
+    {
+      var context = normalizeOverviewContextResponse(res);
+
+      try
+      {
+        renderPeriodComparison(context.comparison);
+      }
+      catch (comparisonError)
+      {
+        console.error("Dashboard comparison render failed", comparisonError);
+        document.getElementById("periodComparisonLead").innerText =
+          context.comparison.message || "Comparison unavailable";
+        document.getElementById("periodComparisonPeriod").innerText = "";
+      }
+
+      try
+      {
+        renderDataQuality({ dataQuality: context.quality });
+      }
+      catch (qualityError)
+      {
+        console.error("Dashboard Data Quality render failed", qualityError);
+        renderDataQuality({ dataQuality: null });
+      }
     }
 
     function toggleKpiTargetDetails()
@@ -3833,9 +3918,12 @@
         !quality.scope
       )
       {
-        throw new Error(
-          "Dashboard data-quality metadata is missing"
-        );
+        document.getElementById("dataQualityStatusBadge").className =
+          "inline-flex items-center rounded-full px-3 py-1 font-semibold bg-slate-100 text-slate-600";
+        document.getElementById("dataQualityStatusBadge").innerText = "Unavailable";
+        document.getElementById("dataQualityScopeSummary").innerText = "· quality metadata unavailable";
+        document.getElementById("dataQualityDetailsButton").classList.add("hidden");
+        return;
       }
 
       var badge =
@@ -3852,6 +3940,12 @@
 
       var details =
         document.getElementById("dataQualityDetails");
+
+      var inactiveCanonicalRows =
+        Number(
+          quality.lifecycle &&
+          quality.lifecycle.inactiveCanonicalRows
+        ) || 0;
 
       var statusClasses = {
         "Good": "bg-emerald-100 text-emerald-700",
@@ -3880,16 +3974,18 @@
         "· " + quality.scope.scopedRows.toLocaleString("id-ID") +
         " rows · " +
         quality.scope.excludedInvalidDateRows.toLocaleString("id-ID") +
-        " excluded";
+        " excluded · " +
+        inactiveCanonicalRows.toLocaleString("id-ID") +
+        " inactive lifecycle";
 
       button.classList.toggle(
         "hidden",
-        quality.issueCount === 0
+        quality.issueCount === 0 && inactiveCanonicalRows === 0
       );
       button.setAttribute("aria-expanded", "false");
 
       details.classList.add("hidden");
-      details.innerHTML =
+      var qualityItems =
         quality.issues
           .map(function(issue)
           {
@@ -3900,6 +3996,14 @@
               "</li>";
           })
           .join("");
+
+      details.innerHTML =
+        '<li><strong>Quality issues</strong></li>' +
+        (qualityItems || "<li>No quality issues.</li>") +
+        '<li><strong>Lifecycle information</strong></li>' +
+        "<li>Inactive canonical records: " +
+        inactiveCanonicalRows.toLocaleString("id-ID") +
+        "</li>";
     }
 
     function loadData()
@@ -4138,6 +4242,7 @@
       }
 
       setDashboardState("loading");
+      var requestStartedAt = performance.now();
 
       google.script.run
         .withSuccessHandler(function(res)
@@ -4152,7 +4257,17 @@
 
           try
           {
+            var responseReceivedAt = performance.now();
             render(res, requestToken);
+            var renderCompletedAt = performance.now();
+            var serverMs = Number(res && res.dashboardPerformance && res.dashboardPerformance.totalMs) || 0;
+            console.info("DashboardTiming", {
+              serverMs: serverMs,
+              transportApproxMs: Math.max(0, Math.round(responseReceivedAt - requestStartedAt - serverMs)),
+              renderMs: Math.round(renderCompletedAt - responseReceivedAt),
+              totalObservedMs: Math.round(renderCompletedAt - requestStartedAt),
+              cacheHit: Boolean(res && res.dashboardPerformance && res.dashboardPerformance.cacheHit)
+            });
 
             var isEmpty =
               res &&
@@ -4556,6 +4671,153 @@
       return gradient;
     }
 
+    function findFirstRevenuePeakIndex(values)
+    {
+      var peakIndex = -1;
+
+      (values || []).forEach(function(value, index)
+      {
+        if (
+          peakIndex === -1 ||
+          Number(value) > Number(values[peakIndex])
+        )
+        {
+          peakIndex = index;
+        }
+      });
+
+      return peakIndex;
+    }
+
+    function getRevenueTooltipContract(palette, labels, granularity, peakIndex)
+    {
+      var fontFamily = getComputedStyle(document.documentElement).getPropertyValue("--font-sans").trim();
+      return {
+        backgroundColor: palette.tooltipBackground,
+        titleColor: palette.tooltipText,
+        bodyColor: palette.tooltipText,
+        padding: 12,
+        cornerRadius: 6,
+        titleFont: { family: fontFamily, size: 12, weight: "600", lineHeight: 1.2 },
+        bodyFont: { family: fontFamily, size: 12, weight: "400", lineHeight: 1.2 },
+        titleSpacing: 2,
+        titleMarginBottom: 6,
+        bodySpacing: 2,
+        boxPadding: 0,
+        shadowColor: palette.grid,
+        shadowBlur: 8,
+        shadowOffsetY: 3,
+        filter: function(tooltipItem)
+        {
+          return tooltipItem.dataIndex !== peakIndex;
+        },
+        callbacks: {
+          title: function(context)
+          {
+            return context.length
+              ? formatRevenueTooltipPeriod(labels[context[0].dataIndex], granularity)
+              : "";
+          },
+          label: function(context)
+          {
+            return "Revenue: " + formatChartCurrency(context.raw);
+          }
+        }
+      };
+    }
+
+    function chartTooltipCanvasFont(font)
+    {
+      return font.weight + " " + font.size + "px/" + font.lineHeight + " " + font.family;
+    }
+
+    function drawRoundedCanvasRect(context, x, y, width, height, radius)
+    {
+      var right = x + width;
+      var bottom = y + height;
+      context.beginPath();
+      context.moveTo(x + radius, y);
+      context.lineTo(right - radius, y);
+      context.quadraticCurveTo(right, y, right, y + radius);
+      context.lineTo(right, bottom - radius);
+      context.quadraticCurveTo(right, bottom, right - radius, bottom);
+      context.lineTo(x + radius, bottom);
+      context.quadraticCurveTo(x, bottom, x, bottom - radius);
+      context.lineTo(x, y + radius);
+      context.quadraticCurveTo(x, y, x + radius, y);
+      context.closePath();
+    }
+
+    function calculatePeakTooltipPosition(chartArea, canvasWidth, canvasHeight, pointX, pointY, width, height, offset)
+    {
+      var maximumX = Math.max(0, canvasWidth - width);
+      var x = Math.max(0, Math.min(pointX - width / 2, maximumX));
+      var aboveY = pointY - height - offset;
+      var belowY = pointY + offset;
+      var fitsAbove = aboveY >= 0;
+      var maximumY = Math.max(0, Math.min(chartArea.bottom, canvasHeight) - height);
+      var y = fitsAbove ? aboveY : belowY;
+
+      return {
+        x: x,
+        y: Math.max(0, Math.min(y, maximumY)),
+        placement: fitsAbove ? "above" : "below"
+      };
+    }
+
+    var revenuePeakLabelPlugin = {
+      id: "revenuePeakLabel",
+      afterDatasetsDraw: function(chart, args, options)
+      {
+        if (!options || options.index < 0) return;
+        var metadata = chart.getDatasetMeta(0);
+        var point = metadata && metadata.data && metadata.data[options.index];
+        if (!point) return;
+
+        var context = chart.ctx;
+        var style = options.tooltip;
+        var title = style.callbacks.title([{ dataIndex: options.index }]);
+        var body = style.callbacks.label({ raw: options.revenue, dataIndex: options.index });
+        context.save();
+        context.font = chartTooltipCanvasFont(style.titleFont);
+        var titleWidth = context.measureText(title).width;
+        context.font = chartTooltipCanvasFont(style.bodyFont);
+        var bodyWidth = context.measureText(body).width;
+        var width = Math.max(titleWidth, bodyWidth) + style.padding * 2;
+        var titleLineHeight = style.titleFont.size * style.titleFont.lineHeight;
+        var bodyLineHeight = style.bodyFont.size * style.bodyFont.lineHeight;
+        var height = style.padding * 2 + titleLineHeight + style.titleMarginBottom + bodyLineHeight;
+        var position = calculatePeakTooltipPosition(
+          chart.chartArea,
+          chart.width,
+          chart.height,
+          point.x,
+          point.y,
+          width,
+          height,
+          10
+        );
+        var x = position.x;
+        var y = position.y;
+        context.fillStyle = style.backgroundColor;
+        context.shadowColor = style.shadowColor;
+        context.shadowBlur = style.shadowBlur;
+        context.shadowOffsetY = style.shadowOffsetY;
+        drawRoundedCanvasRect(context, x, y, width, height, style.cornerRadius);
+        context.fill();
+        context.shadowColor = "transparent";
+        context.fillStyle = style.titleColor;
+        context.textAlign = "left";
+        context.textBaseline = "top";
+        context.font = chartTooltipCanvasFont(style.titleFont);
+        context.fillText(title, x + style.padding, y + style.padding);
+        context.fillStyle = style.bodyColor;
+        context.font = chartTooltipCanvasFont(style.bodyFont);
+        context.fillText(body, x + style.padding, y + style.padding + titleLineHeight + style.titleMarginBottom);
+        context.restore();
+      }
+    };
+
     function renderRevenueChart(revenueTrend)
     {
       var chartPalette = getCurrentThemePalette();
@@ -4564,15 +4826,8 @@
       var granularity = revenueTrend.granularity === "day" ? "day" : "month";
       var isEmpty = values.length === 0;
       var total = values.reduce(function(sum, value) { return sum + Number(value || 0); }, 0);
-      var highestIndex = -1;
-
-      values.forEach(function(value, index)
-      {
-        if (highestIndex === -1 || value > values[highestIndex])
-        {
-          highestIndex = index;
-        }
-      });
+      var highestIndex = findFirstRevenuePeakIndex(values);
+      var tooltipContract = getRevenueTooltipContract(chartPalette, labels, granularity, highestIndex);
 
       var summary = isEmpty
         ? "Revenue trend has no represented periods."
@@ -4612,16 +4867,16 @@
               borderColor: chartPalette.series[0],
               backgroundColor: createRevenueGradient,
               borderWidth: 2.75,
-              pointRadius: values.map(function(value)
+              pointRadius: values.map(function(value, index)
               {
-                return Number(value) === Number(values[highestIndex]) ? 6.5 : 3.5;
+                return index === highestIndex ? 6.5 : 3.5;
               }),
               pointHoverRadius: 7,
               pointHitRadius: 12,
               pointBorderWidth: 1,
-              pointBackgroundColor: values.map(function(value)
+              pointBackgroundColor: values.map(function(value, index)
               {
-                return Number(value) === Number(values[highestIndex]) ? chartPalette.series[2] : chartPalette.series[0];
+                return index === highestIndex ? chartPalette.series[2] : chartPalette.series[0];
               }),
               pointBorderColor: chartPalette.pointStroke,
               fill: true,
@@ -4648,24 +4903,26 @@
             },
             plugins: {
               legend: { display: false },
+              revenuePeakLabel: {
+                index: highestIndex,
+                revenue: Number(values[highestIndex]) || 0,
+                tooltip: tooltipContract
+              },
               tooltip: {
-                backgroundColor: chartPalette.tooltipBackground,
-                titleColor: chartPalette.tooltipText,
-                bodyColor: chartPalette.tooltipText,
+                backgroundColor: tooltipContract.backgroundColor,
+                titleColor: tooltipContract.titleColor,
+                bodyColor: tooltipContract.bodyColor,
                 displayColors: false,
-                padding: 12,
-                callbacks: {
-                  title: function(context)
-                  {
-                    return context.length
-                      ? formatRevenueTooltipPeriod(
-                          labels[context[0].dataIndex],
-                          granularity
-                        )
-                      : "";
-                  },
-                  label: function(context) { return "Revenue: " + formatChartCurrency(context.raw); }
-                }
+                padding: tooltipContract.padding,
+                cornerRadius: tooltipContract.cornerRadius,
+                titleFont: tooltipContract.titleFont,
+                bodyFont: tooltipContract.bodyFont,
+                titleSpacing: tooltipContract.titleSpacing,
+                titleMarginBottom: tooltipContract.titleMarginBottom,
+                bodySpacing: tooltipContract.bodySpacing,
+                boxPadding: tooltipContract.boxPadding,
+                filter: tooltipContract.filter,
+                callbacks: tooltipContract.callbacks
               }
             },
             scales: {
@@ -4685,7 +4942,8 @@
                 }
               }
             }
-          }
+          },
+          plugins: [revenuePeakLabelPlugin]
         }
       );
     }
@@ -5741,6 +5999,8 @@
       if (!lastDashboardRequest) return;
       try
       {
+        activeDashboardRequestToken = ++dashboardRequestSequence;
+        dashboardRequestInFlight = false;
         requestDashboardData(lastDashboardRequest);
       }
       catch (error)
@@ -6482,9 +6742,8 @@
 
       renderBusinessOverview(res);
       renderReportingMetadata(res);
-      renderPeriodComparison(res.periodComparison);
+      renderOverviewContext(res);
       renderKpiTargets(res.kpiTargets);
-      renderDataQuality(res);
       renderCharts(res);
       renderExecutiveSummary(res);
 

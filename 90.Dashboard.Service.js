@@ -1,10 +1,90 @@
+var DASHBOARD_CACHE = Object.freeze({
+  REVISION_PROPERTY: "NUMLOCK_DASHBOARD_CACHE_REVISION",
+  TTL_SECONDS: 300
+});
+
+function getDashboardCacheRevision() {
+  return String(PropertiesService.getScriptProperties().getProperty(DASHBOARD_CACHE.REVISION_PROPERTY) || "0");
+}
+
+function invalidateDashboardCache() {
+  var properties = PropertiesService.getScriptProperties();
+  var revision = Number(properties.getProperty(DASHBOARD_CACHE.REVISION_PROPERTY) || 0) + 1;
+  properties.setProperty(DASHBOARD_CACHE.REVISION_PROPERTY, String(revision));
+  return revision;
+}
+
+function buildDashboardCacheKey(filter, customStart, customEnd, revision) {
+  return ["dashboard-v1", revision, normalizeDashboardDateFilter(filter),
+    String(customStart || ""), String(customEnd || "")].join("|");
+}
+
 function getDashboardData(filter, customStart, customEnd) {
+  var execution = buildDashboardDataExecution(
+    filter,
+    customStart,
+    customEnd
+  );
+  execution.response.dashboardPerformance = execution.performance;
+  return execution.response;
+}
+
+function diagnoseDashboardPerformance(filter, customStart, customEnd) {
+
+  return buildDashboardDataExecution(
+    filter,
+    customStart,
+    customEnd
+  ).performance;
+}
+
+function buildDashboardDataExecution(filter, customStart, customEnd) {
+
+  var performance = {
+    acquisitionMs: 0,
+    salesReadMs: 0,
+    expenseReadMs: 0,
+    productReadMs: 0,
+    expenseItemReadMs: 0,
+    normalizeMs: 0,
+    aggregateMs: 0,
+    summaryMs: 0,
+    revenueTrendMs: 0,
+    topProductsMs: 0,
+    expenseBreakdownMs: 0,
+    qualityMs: 0,
+    recentTransactionsMs: 0,
+    responseAssemblyMs: 0,
+    comparisonMs: 0,
+    lifecycleMs: 0,
+    serializationMs: 0,
+    cacheLookupMs: 0,
+    cacheWriteMs: 0,
+    cacheHit: false,
+    totalMs: 0
+  };
+  var totalStartedAt = Date.now();
+  var cacheStartedAt = Date.now();
+  var revision = getDashboardCacheRevision();
+  var cacheKey = buildDashboardCacheKey(filter, customStart, customEnd, revision);
+  var dashboardCache = CacheService.getScriptCache();
+  var cachedPayload = dashboardCache.get(cacheKey);
+  performance.cacheLookupMs = Date.now() - cacheStartedAt;
+  if (cachedPayload) {
+    performance.cacheHit = true;
+    var cachedResponse = JSON.parse(cachedPayload);
+    performance.totalMs = Date.now() - totalStartedAt;
+    Logger.log("DashboardPerf " + JSON.stringify(performance));
+    return { response: cachedResponse, performance: performance };
+  }
+  var acquisitionStartedAt = Date.now();
 
   var ss =
     SpreadsheetApp
       .getActiveSpreadsheet();
+  performance.acquisitionMs = Date.now() - acquisitionStartedAt;
 
-  var canonicalData = getCanonicalTransactionData(ss);
+  var canonicalData = getCanonicalTransactionData(ss, performance);
   var processedData = canonicalData.records;
   var sourceQuality = canonicalData.sourceQuality;
 
@@ -14,12 +94,28 @@ function getDashboardData(filter, customStart, customEnd) {
     customStart,
     customEnd,
     null,
-    sourceQuality
+    sourceQuality,
+    performance
   );
+  var lifecycleStartedAt = Date.now();
   response.recentLifecycleTransactions = buildRecentLifecycleTransactions(
     filterTransactionsByDateRange(canonicalData.lifecycleRecords || processedData, response.dateFilter)
   );
-  return response;
+  performance.recentTransactionsMs += Date.now() - lifecycleStartedAt;
+  performance.lifecycleMs = Date.now() - lifecycleStartedAt;
+  var serializationStartedAt = Date.now();
+  var serializedResponse = JSON.stringify(response);
+  performance.serializationMs = Date.now() - serializationStartedAt;
+  var cacheWriteStartedAt = Date.now();
+  try {
+    dashboardCache.put(cacheKey, serializedResponse, DASHBOARD_CACHE.TTL_SECONDS);
+  } catch (cacheError) {
+    Logger.log("Dashboard cache skipped: " + String(cacheError && cacheError.message || cacheError));
+  }
+  performance.cacheWriteMs = Date.now() - cacheWriteStartedAt;
+  performance.totalMs = Date.now() - totalStartedAt;
+  Logger.log("DashboardPerf " + JSON.stringify(performance));
+  return { response: response, performance: performance };
 }
 
 function normalizeDashboardDateFilter(filter) {
@@ -286,34 +382,13 @@ function resolveDashboardDateRange(filter, customStart, customEnd, referenceDate
 }
 
 function filterTransactionsByDateRange(data, range) {
-
-  var timezone =
-    Session.getScriptTimeZone();
-
   return (data || []).filter(function(row)
   {
-    var date =
-      new Date(row && row.date);
-
-    if (isNaN(date.getTime()))
-    {
-      return false;
-    }
-
-    var dateKey;
-
-    try
-    {
-      dateKey =
-        Utilities.formatDate(
-          date,
-          timezone,
-          "yyyy-MM-dd"
-        );
-    }
-    catch (error)
-    {
-      return false;
+    var dateKey = row && row.dateKey;
+    if (!dateKey) {
+      var date = new Date(row && row.date);
+      if (isNaN(date.getTime())) return false;
+      dateKey = canonicalDateKey(date);
     }
 
     return dateKey >= range.startDate &&
@@ -906,19 +981,14 @@ function buildDataQualityDiagnostics(scopedData, sourceQuality) {
       severity: "Medium"
     },
     {
-      code: "INACTIVE_LEDGER_RECORD",
-      label: "Inactive canonical ledger record",
-      severity: "Medium"
-    },
-    {
       code: "UNRESOLVED_FOREIGN_KEY",
       label: "Unresolved canonical master relationship",
-      severity: "High"
+      severity: "Medium"
     },
     {
       code: "MALFORMED_CANONICAL_RECORD",
       label: "Malformed canonical ledger record",
-      severity: "High"
+      severity: "Medium"
     }
   ];
 
@@ -1038,7 +1108,6 @@ function buildDataQualityDiagnostics(scopedData, sourceQuality) {
   });
 
   [
-    ["INACTIVE_LEDGER_RECORD", "inactiveLedgerRows"],
     ["UNRESOLVED_FOREIGN_KEY", "unresolvedForeignKeys"],
     ["MALFORMED_CANONICAL_RECORD", "malformedRows"]
   ].forEach(function(mapping)
@@ -1091,6 +1160,10 @@ function buildDataQualityDiagnostics(scopedData, sourceQuality) {
           ? "Critical"
           : "Attention",
     issues: issues,
+    lifecycle: {
+      inactiveCanonicalRows:
+        Number(sourceInspection && sourceInspection.inactiveLedgerRows) || 0
+    },
     scope: {
       sourceRows:
         sourceInspection
@@ -1103,7 +1176,9 @@ function buildDataQualityDiagnostics(scopedData, sourceQuality) {
   };
 }
 
-function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate, sourceQuality) {
+function buildDashboardResponse(processedData, filter, customStart, customEnd, referenceDate, sourceQuality, performance) {
+
+  var responseStartedAt = Date.now();
 
   var generatedDate =
     referenceDate
@@ -1120,31 +1195,12 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
   var availablePeriodKeys = {};
   var availableYearKeys = {};
-  var timezone = Session.getScriptTimeZone();
-
   (processedData || []).forEach(function(row)
   {
-    var transactionDate = new Date(row && row.date);
-
-    if (isNaN(transactionDate.getTime()))
-    {
-      return;
-    }
-
-    try
-    {
-      var monthKey = Utilities.formatDate(
-        transactionDate,
-        timezone,
-        "yyyy-MM"
-      );
-      availablePeriodKeys[monthKey] = true;
-      availableYearKeys[monthKey.slice(0, 4)] = true;
-    }
-    catch (error)
-    {
-      return;
-    }
+    var monthKey = row && row.monthKey;
+    if (!monthKey) return;
+    availablePeriodKeys[monthKey] = true;
+    availableYearKeys[monthKey.slice(0, 4)] = true;
   });
 
   dateRange.availableMonths = Object.keys(availablePeriodKeys).sort();
@@ -1167,6 +1223,7 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       previousRange
     );
 
+  var comparisonStartedAt = Date.now();
   var periodComparison =
     buildPeriodComparison(
       filteredData,
@@ -1174,6 +1231,7 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       dateRange,
       previousRange
     );
+  if (performance) performance.comparisonMs = Date.now() - comparisonStartedAt;
 
   dateRange.rowCount =
     filteredData.length;
@@ -1185,16 +1243,19 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       generatedDate
     );
 
+  var qualityStartedAt = Date.now();
   var dataQuality =
     buildDataQualityDiagnostics(
       filteredData,
       sourceQuality
     );
+  if (performance) performance.qualityMs = Date.now() - qualityStartedAt;
 
   var cache =
   buildAnalyticsCache(
     filteredData,
-    dateRange
+    dateRange,
+    performance
   );
 
   var businessPriority =
@@ -1210,7 +1271,11 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       cache
     );
 
-    return {
+    var recentStartedAt = Date.now();
+    var recentTransactions = buildRecentTransactions(filteredData);
+    if (performance) performance.recentTransactionsMs = Date.now() - recentStartedAt;
+
+    var response = {
       summary:
         cache.summary,
 
@@ -1233,7 +1298,7 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
         cache.expenseBreakdown,
 
       recentTransactions:
-        buildRecentTransactions(filteredData),
+        recentTransactions,
 
       diagnosis:
         buildDiagnosis(filteredData, cache),
@@ -1323,6 +1388,8 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
         kpiTargets,
 
     };
+    if (performance) performance.responseAssemblyMs = Date.now() - responseStartedAt;
+    return response;
 }
 
 function buildRecentTransactions(data) {
@@ -1387,31 +1454,40 @@ function buildRecentLifecycleTransactions(data) {
   });
 }
 
-function buildAnalyticsCache(data, dateRange) {
+function buildAnalyticsCache(data, dateRange, performance) {
+
+  var aggregateStartedAt = Date.now();
+  var aggregate = buildAggregate(data);
+  if (performance) performance.aggregateMs = Date.now() - aggregateStartedAt;
 
   var cache = {
 
     aggregate:
-      buildAggregate(data),
+      aggregate,
 
     financial:
       buildFinancial(data)
 
   };
 
+  var summaryStartedAt = Date.now();
   cache.summary =
     buildSummaryFromAggregate(
       cache.aggregate
     );
+  if (performance) performance.summaryMs = Date.now() - summaryStartedAt;
 
+  var expenseBreakdownStartedAt = Date.now();
   cache.expenseBreakdown =
     buildExpenseBreakdownFromAggregate(
       cache.aggregate
     );
+  if (performance) performance.expenseBreakdownMs = Date.now() - expenseBreakdownStartedAt;
 
   cache.insights =
     buildInsights(cache);
 
+  var revenueTrendStartedAt = Date.now();
   cache.revenueTrend =
     dateRange && (
       dateRange.filter === "currentMonth" ||
@@ -1424,11 +1500,14 @@ function buildAnalyticsCache(data, dateRange) {
     )
       ? buildDailyRevenueTrendFromAggregate(cache.aggregate, dateRange)
       : buildRevenueTrendFromAggregate(cache.aggregate);
+  if (performance) performance.revenueTrendMs = Date.now() - revenueTrendStartedAt;
 
+  var topProductsStartedAt = Date.now();
   cache.topProducts =
     buildTopProductsFromAggregate(
       cache.aggregate
     );
+  if (performance) performance.topProductsMs = Date.now() - topProductsStartedAt;
 
   cache.profitTrend =
     buildProfitTrendFromAggregate(

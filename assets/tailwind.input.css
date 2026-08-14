@@ -180,7 +180,7 @@
     --skeleton-middle: #1A2C45;
     --tooltip-bg: #F8FAFC;
     --tooltip-text: #0F172A;
-    --chart-grid: #243750;
+    --chart-grid: rgba(36, 55, 80, 0.45);
     --chart-axis: #CBD5E1;
     --chart-series-1: #818CF8;
     --chart-series-2: #38BDF8;
@@ -386,7 +386,7 @@
   .ui-custom-select-check { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; align-self: center; transform: none; font-size: 12px; line-height: 1; visibility: hidden; }
   .ui-custom-select-option[aria-selected="true"] .ui-custom-select-check { visibility: visible; }
   .ui-native-select { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; }
-  #dashboardSidebar > nav + div { display: grid; height: auto; margin-top: auto; grid-template-rows: auto auto 46px; border-top: 0; }
+  #dashboardSidebar > nav + div { display: grid; height: auto; margin-top: auto; grid-template-rows: auto auto auto 46px; border-top: 0; }
   #filter,
   .hf-period-select { width: 148px; min-width: 148px; height: 44px; border-radius: 9px; padding-left: 14px; padding-right: 34px; }
   .hf-period-secondary { display: flex; align-items: center; gap: 10px; }
@@ -396,13 +396,14 @@
   #financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }
   #dashboardTabInsights { white-space: nowrap; }
   #dashboardPanelOverview:not([hidden]) { grid-template-rows: auto minmax(300px, 1fr) auto auto; gap: var(--overview-section-gap); }
-  #dashboardPanelOverview .hf-overview-context { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 14px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--card-bg); box-shadow: var(--card-shadow); }
+  #dashboardPanelOverview .hf-overview-context { display: grid; min-height: 42px; grid-template-columns: minmax(0, 1fr) max-content; grid-template-rows: minmax(0, 1fr); align-items: center; gap: 16px; padding: 10px 14px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--card-bg); box-shadow: var(--card-shadow); }
   #dashboardPanelOverview #periodComparisonSection,
   #dashboardPanelOverview #dataQualityInformation { padding: 0; border: 0; background: transparent; box-shadow: none; }
-  #dashboardPanelOverview #dataQualityInformation { display: flex; align-items: center; justify-content: flex-end; white-space: nowrap; }
+  #dashboardPanelOverview #dataQualityInformation { display: flex; min-width: max-content; align-items: center; justify-content: flex-end; white-space: nowrap; }
   #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: inline-flex; align-items: center; justify-content: flex-end; flex-wrap: nowrap; gap: 8px; line-height: 16px; }
   #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row > * { margin-top: 0; margin-bottom: 0; line-height: 16px; }
   #dashboardPanelOverview #dataQualityStatusBadge { align-self: center; }
+  #dashboardPanelOverview #periodComparisonLabel { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
   #dashboardPanelOverview #dataQualityDetails:not(.hidden) { flex-basis: 100%; white-space: normal; }
   .hf-top-products-table { width: 100%; table-layout: fixed; }
   .hf-top-products-table th,
@@ -451,7 +452,7 @@
     #dashboardSidebar #financialModulesGroup { padding-left: 30px !important; }
     #dashboardPanelOverview:not([hidden]) { grid-template-rows: minmax(0, 142fr) minmax(0, 420fr) 42px minmax(0, 225fr) !important; }
     #dashboardPanelOverview #mainChartWrapper { height: calc(100% - 48px) !important; }
-    #dashboardPanelOverview .hf-overview-context { display: flex !important; min-height: 42px !important; padding: 8px 14px !important; }
+    #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 42px !important; grid-template-columns: minmax(0, 1fr) max-content !important; padding: 8px 14px !important; }
     #dashboardPanelOverview #periodComparisonSection,
     #dashboardPanelOverview #dataQualityInformation { padding: 0 !important; border: 0 !important; box-shadow: none !important; }
   }
@@ -1283,6 +1284,9 @@
     #topUtilityBar > div:first-child { width: 100%; }
     #sidebarMenuButton,
     #sidebarCloseButton { min-width: 44px; min-height: 44px; justify-content: center; }
+    #dashboardSidebar > nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+    #sidebarUtilityNavigation { flex: 0 0 auto; margin-top: auto; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+    #sidebarMobileCloseButton { display: flex; min-height: 44px; }
     #utilityPageTitle,
     #utilityPageContext { overflow: visible; white-space: normal; text-overflow: clip; }
     #dashboardContent,
@@ -1355,6 +1359,9 @@
     #dashboardPanelOverview .hf-overview-context { gap: 10px !important; padding: 12px 14px !important; }
     #dashboardPanelOverview #periodComparisonLabel,
     #dashboardPanelOverview #dataQualityHeading { font-size: 16px !important; line-height: 23px !important; }
+    #dashboardPanelOverview #periodComparisonLabel { display: flex; flex-direction: column; align-items: flex-start; gap: 0; white-space: normal; }
+    #dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: grid !important; grid-template-columns: max-content max-content max-content; align-items: center !important; justify-content: flex-start !important; gap: 6px 8px !important; }
+    #dashboardPanelOverview #dataQualityScopeSummary { grid-column: 1 / -1; }
     #dashboardPanelOverview #dataQualityInformation,
     #dashboardPanelOverview #dataQualityStatusBadge,
     #dashboardPanelOverview #dataQualityScopeSummary { font-size: 15px !important; line-height: 22px !important; }
@@ -1372,6 +1379,12 @@
   }
 
   html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-card-header { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(112px, 140px); align-items: center !important; gap: 12px !important; }
+  html.numlock-phone #dashboardSidebar > nav { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  html.numlock-phone #sidebarUtilityNavigation { flex: 0 0 auto; margin-top: auto; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); }
+  html.numlock-phone #sidebarMobileCloseButton { display: flex !important; min-height: 44px; }
+  html.numlock-phone #dashboardSidebar { height: calc(100vh / var(--numlock-phone-scale)) !important; max-height: calc(100vh / var(--numlock-phone-scale)) !important; }
+  html.numlock-phone #sidebarUtilityNavigation { display: block !important; min-height: 0; overflow: visible; }
+  html.numlock-phone #sidebarUtilityNavigation > .space-y-1 { display: block !important; }
   html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-title-group { min-width: 0; justify-self: start; }
   html.numlock-phone #dashboardPanelOverview #dateFilterControls { display: flex !important; width: 140px !important; min-width: 112px !important; max-width: 140px !important; flex-wrap: wrap !important; justify-content: flex-end !important; justify-self: end; }
   html.numlock-phone #dashboardPanelOverview #dateFilterControls > .ui-custom-select { width: 100% !important; min-width: 112px !important; max-width: 140px !important; }

@@ -38,7 +38,77 @@ function testCanonicalTransactionAdapter()
   {
     throw new Error("Canonical transaction adapter contract mismatch");
   }
-  return { passed: true, records: 2, inactiveExcluded: 1 };
+
+  var readCounts = {};
+  var tables = {
+    tabsal: [["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"],
+      ["S1", new Date(2025, 0, 15), "P1", "Hot", 3, 4000, 10000, "TEST", true]],
+    tabops: [["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"],
+      ["E1", new Date(2025, 0, 17), "O1", 75000, "TEST", true]],
+    Products: [["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"],
+      ["P1", "Product", "Coffee", "Beverage", true]],
+    ExpenseItems: [["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"],
+      ["O1", "Electricity", "Utility", "Support", "Operating", true]]
+  };
+  var mockSpreadsheet = {
+    getSheetByName: function(name) {
+      return {
+        getDataRange: function() {
+          return {
+            getValues: function() {
+              readCounts[name] = (readCounts[name] || 0) + 1;
+              return tables[name];
+            }
+          };
+        }
+      };
+    }
+  };
+  var performance = {};
+  var timedResult = getCanonicalTransactionData(mockSpreadsheet, performance);
+  ["tabsal", "tabops", "Products", "ExpenseItems"].forEach(function(name) {
+    if (readCounts[name] !== 1) throw new Error(name + " was not read exactly once");
+  });
+  ["salesReadMs", "expenseReadMs", "productReadMs", "expenseItemReadMs", "normalizeMs"]
+    .forEach(function(key) {
+      if (typeof performance[key] !== "number" || performance[key] < 0) {
+        throw new Error("Missing canonical performance timing: " + key);
+      }
+    });
+  if (timedResult.records.length !== 2) throw new Error("Timed canonical adapter result mismatch");
+  if (timedResult.records[0].dateKey !== "2025-01-15" || timedResult.records[0].monthKey !== "2025-01") {
+    throw new Error("Canonical date normalization was not retained once");
+  }
+
+  var filterSource = filterTransactionsByDateRange.toString();
+  var aggregateSource = buildAggregate.toString();
+  if (filterSource.indexOf("Utilities.formatDate") !== -1 || aggregateSource.indexOf("Utilities.formatDate") !== -1) {
+    throw new Error("Dashboard row loops retained Apps Script date-format service calls");
+  }
+
+  var cacheKeys = [
+    buildDashboardCacheKey("currentYear", "", "", "4"),
+    buildDashboardCacheKey("custom", "2026-01-01", "2026-01-31", "4"),
+    buildDashboardCacheKey("custom", "2026-02-01", "2026-02-28", "4"),
+    buildDashboardCacheKey("currentYear", "", "", "5")
+  ];
+  if (Object.keys(cacheKeys.reduce(function(index, key) { index[key] = true; return index; }, {})).length !== 4) {
+    throw new Error("Dashboard cache key does not isolate filter contexts and revisions");
+  }
+  var dashboardExecutionSource = buildDashboardDataExecution.toString();
+  if (dashboardExecutionSource.indexOf("dashboardCache.put(cacheKey, serializedResponse") <
+      dashboardExecutionSource.indexOf("var response = buildDashboardResponse")) {
+    throw new Error("Dashboard cache could store a partial or failed response");
+  }
+  [submitCanonicalTransaction, voidCanonicalTransaction, correctCanonicalTransaction,
+    syncLegacyTransactionsToCanonical].forEach(function(mutation) {
+    if (mutation.toString().indexOf("invalidateDashboardCache()") === -1) {
+      throw new Error("Dashboard cache invalidation missing from " + mutation.name);
+    }
+  });
+
+  return { passed: true, records: 2, inactiveExcluded: 1, singleReadSheets: 4,
+    normalizedDateKeys: true, cacheContexts: 4, mutationInvalidators: 4 };
 }
 
 function testProductPricingResolution()
@@ -1846,7 +1916,7 @@ function testPeriodComparison()
   scenariosPassed++;
 
   var dashboardSource =
-    getDashboardData.toString();
+    buildDashboardDataExecution.toString();
 
   if (
     dashboardSource.split("getCanonicalTransactionData(").length - 1 !== 1 ||
@@ -2401,6 +2471,20 @@ function testKpiTargetContract()
     }
 
     scenariosPassed++;
+  });
+
+  ['id="sidebarUtilityNavigation"', 'aria-label="Settings"', 'aria-label="Logs"',
+    'id="sidebarMobileCloseButton"', '>Close Menu</span>',
+    'onclick="setSidebarOpen(false, true)"'].forEach(function(token)
+  {
+    assertSourceContains(source, token, "mobile utility navigation");
+  });
+  ['#dashboardSidebar>nav{flex:1 1 auto;min-height:0;overflow-y:auto}',
+    '#sidebarUtilityNavigation{flex:0 0 auto;margin-top:auto;padding:8px 8px calc(8px + env(safe-area-inset-bottom))}',
+    '#sidebarMobileCloseButton{display:flex;min-height:44px}',
+    'html.numlock-phone #sidebarMobileCloseButton{display:flex!important;min-height:44px}'].forEach(function(token)
+  {
+    assertSourceContains(tokenSource, token, "mobile utility drawer containment");
   });
 
   [
@@ -3289,7 +3373,7 @@ function testThemeParityTokenContract()
   scenariosPassed++;
 
   [
-    "allowedThemes[preference]", ': "system";',
+    "allowedThemes[preference]", ': "light";',
     "function applyStoredThemeBeforeRender()", "initializeThemeFoundation();",
     "applyThemePreference(initialPreference, false, false);"
   ].forEach(function(token)
@@ -3321,11 +3405,11 @@ function testThemeParityTokenContract()
 
   var syncSource = getSourceRegion(
     source,
-    "function synchronizeChartTheme(forceLight)",
+    "function applyChartThemeTokens(chart, palette, chartKind)",
     "function applyThemePreference",
     "chart instance theme synchronization"
   );
-  ["revenueChart", "hotColdChart", "expenseChart", 'chart.update("none");'].forEach(function(token)
+  ["chart.config.options", "revenueChart", "hotColdChart", "expenseChart", 'chart.update("none");'].forEach(function(token)
   {
     assertSourceContains(syncSource, token, "existing chart instance update");
   });
@@ -3430,6 +3514,147 @@ function testThemeParityTokenContract()
   return summary;
 }
 
+function testChartRuntimeThemeSynchronizationContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var helperSource = getSourceRegion(
+    source,
+    "function applyChartThemeTokens(chart, palette, chartKind)",
+    "function synchronizeChartTheme(forceLight)",
+    "runtime chart theme helper"
+  );
+  var applyTokens = new Function("return (" + helperSource.trim() + ");")();
+  var scenariosPassed = 0;
+  var light = {
+    series: ["light-line", "light-two", "light-peak", "light-four"],
+    grid: "light-grid",
+    axis: "light-axis",
+    tooltipBackground: "light-tooltip",
+    tooltipText: "light-tooltip-text",
+    pointStroke: "light-stroke"
+  };
+  var dark = {
+    series: ["dark-line", "dark-two", "dark-peak", "dark-four"],
+    grid: "dark-grid",
+    axis: "dark-axis",
+    tooltipBackground: "dark-tooltip",
+    tooltipText: "dark-tooltip-text",
+    pointStroke: "dark-stroke"
+  };
+  var peakFilter = function(tooltipItem) { return tooltipItem.dataIndex !== 1; };
+  var chart = {
+    data: { datasets: [{ data: [10, 20, 15] }] },
+    config: {
+      options: {
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "initial",
+            titleColor: "initial",
+            bodyColor: "initial",
+            filter: peakFilter
+          },
+          revenuePeakLabel: {
+            index: 1,
+            tooltip: {
+              backgroundColor: "initial",
+              titleColor: "initial",
+              bodyColor: "initial",
+              shadowColor: "initial"
+            }
+          }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: {}, border: {} },
+          y: { grid: { display: true, lineWidth: 0.6 }, ticks: {}, border: {} }
+        }
+      }
+    },
+    options: { staleResolvedView: true },
+    updates: 0,
+    update: function(mode)
+    {
+      if (mode !== "none") throw new Error("Runtime theme update must disable animation");
+      this.updates++;
+    }
+  };
+  var originalChart = chart;
+  var peakPluginOptions = chart.config.options.plugins.revenuePeakLabel;
+
+  applyTokens(chart, light, "revenue");
+  if (chart.config.options.plugins.tooltip.backgroundColor !== light.tooltipBackground)
+    throw new Error("Initial Light tooltip tokens were not applied");
+  scenariosPassed++;
+
+  applyTokens(chart, dark, "revenue");
+  if (chart.config.options.plugins.tooltip.backgroundColor !== dark.tooltipBackground)
+    throw new Error("Light to Dark did not update the authoritative config");
+  scenariosPassed++;
+
+  applyTokens(chart, light, "revenue");
+  if (chart.config.options.plugins.tooltip.backgroundColor !== light.tooltipBackground)
+    throw new Error("Dark to Light did not update the authoritative config");
+  scenariosPassed++;
+
+  [dark, light, dark, light].forEach(function(palette)
+  {
+    applyTokens(chart, palette, "revenue");
+  });
+  if (chart.config.options.plugins.tooltip.backgroundColor !== light.tooltipBackground)
+    throw new Error("Repeated theme sequence retained a stale token");
+  scenariosPassed++;
+
+  if (chart !== originalChart) throw new Error("Chart instance identity changed");
+  scenariosPassed++;
+  if (chart.config.options.scales.y.grid.color !== light.grid || chart.config.options.scales.y.grid.lineWidth !== 0.6)
+    throw new Error("Revenue grid token or accepted line width changed");
+  scenariosPassed++;
+  if (chart.config.options.scales.x.ticks.color !== light.axis || chart.config.options.scales.y.ticks.color !== light.axis)
+    throw new Error("Axis label tokens did not synchronize");
+  scenariosPassed++;
+  if (peakPluginOptions.tooltip.backgroundColor !== light.tooltipBackground)
+    throw new Error("Persistent peak background did not synchronize");
+  scenariosPassed++;
+  if (peakPluginOptions.tooltip.titleColor !== light.tooltipText || peakPluginOptions.tooltip.bodyColor !== light.tooltipText)
+    throw new Error("Persistent peak text did not synchronize");
+  scenariosPassed++;
+  if (chart.config.options.plugins.tooltip.titleColor !== light.tooltipText || chart.config.options.plugins.tooltip.bodyColor !== light.tooltipText)
+    throw new Error("Native hover tooltip did not synchronize");
+  scenariosPassed++;
+  if (chart.config.options.plugins.tooltip.filter !== peakFilter || peakFilter({ dataIndex: 1 }) !== false || peakFilter({ dataIndex: 0 }) !== true)
+    throw new Error("Peak hover suppression contract changed");
+  scenariosPassed++;
+  if (chart.config.options.plugins.revenuePeakLabel !== peakPluginOptions)
+    throw new Error("Peak plugin options were duplicated");
+  assertSourceExcludes(helperSource, "new Chart(", "runtime chart recreation");
+  scenariosPassed++;
+
+  var systemSource = getSourceRegion(
+    source,
+    "function handleSystemThemeChange()",
+    "function applyChartThemeTokens(chart, palette, chartKind)",
+    "System effective-theme path"
+  );
+  assertSourceContains(systemSource, 'applyThemePreference("system", false, false);', "System shared theme path");
+  assertSourceContains(source, "synchronizeChartTheme();", "application theme chart synchronization");
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    chartIdentityPreserved: chart === originalChart,
+    updates: chart.updates,
+    duplicatePlugins: false
+  };
+  Logger.log(
+    "PASS: testChartRuntimeThemeSynchronizationContract | scenarios=" +
+    summary.scenarios + " | chartIdentityPreserved=" +
+    summary.chartIdentityPreserved + " | updates=" + summary.updates +
+    " | duplicatePlugins=" + summary.duplicatePlugins
+  );
+  return summary;
+}
+
 function testUiShellThemeContract()
 {
   var source =
@@ -3519,13 +3744,13 @@ function testUiShellThemeContract()
   scenariosPassed++;
 
   [
-    'var preference = "system";',
+    'var preference = "light";',
     'preference === "system"',
     '"(prefers-color-scheme: dark)"',
     'data-theme-preference'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "System theme fallback");
+    assertSourceContains(source, token, "Light default and optional System theme");
   });
   scenariosPassed++;
 
@@ -4740,7 +4965,7 @@ function testDashboardOverviewContract()
   [
     '"Compared with " +',
     '" rows · " +',
-    '" excluded"',
+    '" excluded · "',
     '#sidebarCollapseButton { width: 100% !important; border: 0 !important;',
     'resizeVisibleDashboardCharts(activeDashboardTab);'
   ].forEach(function(token)
@@ -4756,7 +4981,7 @@ function testDashboardOverviewContract()
     'Array.isArray(dateFilter.availableMonths)',
     'Array.isArray(dateFilter.availableYears)',
     'renderAvailablePeriodOptions(res.dateFilter);',
-    '#dashboardPanelOverview #dataQualityInformation { display: flex !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }',
+    '#dashboardPanelOverview #dataQualityInformation { display: flex !important; min-width: max-content !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }',
     '#printReportButton .hf-action-copy strong { white-space: nowrap; }',
     'status.classList.add("sr-only");'
   ].forEach(function(token)
@@ -5761,9 +5986,8 @@ function testClientRenderPerformanceContract()
   [
     "renderBusinessOverview(res);",
     "renderReportingMetadata(res);",
-    "renderPeriodComparison(res.periodComparison);",
+    "renderOverviewContext(res);",
     "renderKpiTargets(res.kpiTargets);",
-    "renderDataQuality(res);",
     "renderExecutiveSummary(res);"
   ].forEach(function(token)
   {
@@ -6471,7 +6695,8 @@ function testTransactionLifecycleUiContract()
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
   var css = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
   var dataSource = buildCanonicalTransactionData.toString();
-  var dashboardSource = getDashboardData.toString() + buildDashboardResponse.toString() + buildRecentLifecycleTransactions.toString();
+  var dashboardSource = getDashboardData.toString() + buildDashboardDataExecution.toString() +
+    buildDashboardResponse.toString() + buildRecentLifecycleTransactions.toString();
   var scenarios = 0;
 
   ['data-transaction-id="${escapeUiHtml(r.id)}"', 'aria-label="Actions for transaction ${escapeUiHtml(r.id)}"',
@@ -6589,9 +6814,35 @@ function testTransactionLifecycleUiContract()
   });
   scenarios++;
 
+  var lifecycleRefreshRegion = getSourceRegion(
+    source,
+    "function refreshTransactionEntryAfterSuccess()",
+    "function showTransactionEntrySuccess",
+    "authoritative lifecycle refresh"
+  );
+  ['activeDashboardRequestToken = ++dashboardRequestSequence;',
+    'dashboardRequestInFlight = false;', 'requestDashboardData(lastDashboardRequest);',
+    'console.error("Post-save dashboard refresh failed", error);'].forEach(function(token) {
+    assertSourceContains(lifecycleRefreshRegion, token, "post-success history and Dashboard refresh");
+  });
+  ['showTransactionEntryApiError', 'Transaction could not be corrected',
+    'Transaction could not be voided', 'state.submissionComplete = false'].forEach(function(token) {
+    assertSourceExcludes(lifecycleRefreshRegion, token, "refresh cannot reverse mutation success");
+  });
+  scenarios++;
+
   ['id="transactionVoidReason"', 'reason.value.trim().length >= 3', 'Impact on active reporting',
     'remain in the audit history', 'active financial reporting', '.voidCanonicalTransaction({ transactionId: transactionLifecycleState.detail.id, reason: reason });'].forEach(function(token) {
     assertSourceContains(source, token, "void confirmation and payload");
+  });
+  scenarios++;
+
+  ['if (state.submitting || entry.submit.disabled) return;',
+    'state.submissionComplete = true;',
+    'if (transactionLifecycleState.submitting || !transactionLifecycleState.detail) return;',
+    'transactionLifecycleState.submitting = true;',
+    'lifecycle.footer.innerHTML = \'<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>\';'].forEach(function(token) {
+    assertSourceContains(source, token, "duplicate lifecycle mutation prevention");
   });
   scenarios++;
 
@@ -6913,7 +7164,7 @@ function testSettingsVisualContract()
   scenariosPassed++;
 
   [
-    'var preference = "system";',
+    'var preference = "light";',
     'preference === "system"',
     '"(prefers-color-scheme: dark)"',
     'systemThemeQuery.addEventListener(',
@@ -6921,11 +7172,11 @@ function testSettingsVisualContract()
     'applyThemePreference("system", false, false);'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "System media-query behavior");
+    assertSourceContains(source, token, "Light default and System opt-in behavior");
   });
   scenariosPassed++;
 
-  var themeStart = source.indexOf("function synchronizeChartTheme(forceLight)");
+  var themeStart = source.indexOf("function applyChartThemeTokens(chart, palette, chartKind)");
   var themeEnd = source.indexOf("function renderSessionClientLogs", themeStart);
   var themeSource = source.slice(themeStart, themeEnd);
 
@@ -8389,6 +8640,72 @@ function testDataQualityDiagnostics()
   var scopedRowsJson =
     JSON.stringify(fixture.scoped.rows);
 
+  var inactiveOnly = buildDataQualityDiagnostics([], {
+    sourceRows: 2,
+    invalidDateRowIndexes: [],
+    inactiveLedgerRows: 2,
+    malformedRows: 0,
+    unresolvedForeignKeys: 0
+  });
+
+  if (
+    inactiveOnly.status !== "Good" ||
+    inactiveOnly.issueCount !== 0 ||
+    inactiveOnly.issues.length !== 0 ||
+    inactiveOnly.lifecycle.inactiveCanonicalRows !== 2
+  )
+  {
+    throw new Error("Valid inactive lifecycle rows changed data quality severity");
+  }
+  scenariosPassed++;
+
+  var correctedLifecycle = buildDataQualityDiagnostics(
+    fixture.cases[0].rows,
+    {
+      sourceRows: 2,
+      invalidDateRowIndexes: [],
+      inactiveLedgerRows: 1,
+      malformedRows: 0,
+      unresolvedForeignKeys: 0
+    }
+  );
+
+  if (
+    correctedLifecycle.status !== "Good" ||
+    correctedLifecycle.issueCount !== 0 ||
+    correctedLifecycle.lifecycle.inactiveCanonicalRows !== 1
+  )
+  {
+    throw new Error("Valid corrected lifecycle chain changed data quality severity");
+  }
+  scenariosPassed++;
+
+  var malformedCanonical = buildDataQualityDiagnostics([], {
+    sourceRows: 1,
+    invalidDateRowIndexes: [],
+    inactiveLedgerRows: 0,
+    malformedRows: 1,
+    unresolvedForeignKeys: 0
+  });
+  var unresolvedForeignKey = buildDataQualityDiagnostics([], {
+    sourceRows: 1,
+    invalidDateRowIndexes: [],
+    inactiveLedgerRows: 0,
+    malformedRows: 0,
+    unresolvedForeignKeys: 1
+  });
+
+  if (
+    malformedCanonical.status !== "Attention" ||
+    malformedCanonical.issueCount !== 1 ||
+    unresolvedForeignKey.status !== "Attention" ||
+    unresolvedForeignKey.issueCount !== 1
+  )
+  {
+    throw new Error("Canonical anomaly severity mismatch");
+  }
+  scenariosPassed++;
+
   var scopedResponse =
     buildDashboardResponse(
       fixture.scoped.rows,
@@ -8490,6 +8807,122 @@ function testDataQualityDiagnostics()
     );
   });
 
+  scenariosPassed++;
+
+  ["Quality issues", "Lifecycle information", "Inactive canonical records:",
+    "quality.issueCount === 0 && inactiveCanonicalRows === 0",
+    '" inactive lifecycle"'].forEach(function(token)
+  {
+    assertSourceContains(source, token, "lifecycle quality presentation");
+  });
+  scenariosPassed++;
+
+  var toggleQualityRegion = getSourceRegion(
+    source,
+    "function toggleDataQualityDetails()",
+    "function renderDataQuality(res)",
+    "Data Quality disclosure scope"
+  );
+  var renderQualityRegion = getSourceRegion(
+    source,
+    "function renderDataQuality(res)",
+    "function loadData()",
+    "Data Quality render scope"
+  );
+  assertSourceExcludes(toggleQualityRegion, "inactiveCanonicalRows", "disclosure-only scope");
+  assertSourceContains(renderQualityRegion, "var inactiveCanonicalRows =", "render-owned lifecycle count");
+
+  var qualityElements = {};
+  ["dataQualityStatusBadge", "dataQualityIssueCount", "dataQualityScopeSummary",
+    "dataQualityDetailsButton", "dataQualityDetails"].forEach(function(id)
+  {
+    qualityElements[id] = {
+      className: "",
+      innerText: "",
+      innerHTML: "",
+      classList: { toggle: function() {}, add: function() {} },
+      setAttribute: function() {}
+    };
+  });
+  var renderQuality = new Function(
+    "document",
+    renderQualityRegion + "; return renderDataQuality;"
+  )({
+    getElementById: function(id) { return qualityElements[id]; }
+  });
+  renderQuality({
+    dataQuality: {
+      status: "Good",
+      issueCount: 0,
+      issues: [],
+      lifecycle: { inactiveCanonicalRows: 2 },
+      scope: { scopedRows: 10, excludedInvalidDateRows: 0 }
+    }
+  });
+  if (
+    qualityElements.dataQualityStatusBadge.innerText !== "Good" ||
+    qualityElements.dataQualityScopeSummary.innerText.indexOf("2 inactive lifecycle") === -1
+  )
+  {
+    throw new Error("Data Quality lifecycle render mismatch");
+  }
+  scenariosPassed++;
+
+  var comparisonRegion = getSourceRegion(
+    source,
+    "function renderPeriodComparison(periodComparison)",
+    "function toggleKpiTargetDetails()",
+    "period comparison render"
+  );
+  var comparisonElements = {
+    periodComparisonLabel: { innerText: "" },
+    periodComparisonLead: { innerText: "" },
+    periodComparisonPeriod: { innerText: "" }
+  };
+  var renderComparison = new Function(
+    "document", "formatDashboardPresentationPeriod",
+    comparisonRegion + "; return renderPeriodComparison;"
+  )({ getElementById: function(id) { return comparisonElements[id]; } }, function(value) { return value; });
+  renderComparison({ previous: { startDate: "2026-01-01", endDate: "2026-01-31", rowCount: 1 }, changes: {}, status: {} });
+  if (comparisonElements.periodComparisonLead.innerText !== "Compared with" ||
+      comparisonElements.periodComparisonPeriod.innerText.indexOf("2026-01-01") === -1) {
+    throw new Error("Available comparison did not render visible text");
+  }
+  renderComparison(null);
+  if (comparisonElements.periodComparisonLead.innerText !== "Comparison unavailable" ||
+      comparisonElements.periodComparisonPeriod.innerText !== "") {
+    throw new Error("Unavailable comparison did not render a visible fallback");
+  }
+  scenariosPassed++;
+
+  var normalizationRegion = getSourceRegion(
+    source,
+    "function normalizeOverviewContextResponse(res)",
+    "function renderOverviewContext(res)",
+    "overview context normalization"
+  );
+  var normalizeOverview = new Function(normalizationRegion + "; return normalizeOverviewContextResponse;")();
+  var normalizedComparisonOnly = normalizeOverview({ periodComparison: {
+    previous: { startDate: "2026-01-01", endDate: "2026-01-31" }, changes: {}, status: {}
+  } });
+  var normalizedQualityOnly = normalizeOverview({ dataQuality: {
+    status: "Good", issueCount: 0, issues: [], lifecycle: { inactiveCanonicalRows: 2 }, scope: {}
+  } });
+  if (!normalizedComparisonOnly.comparison.previous || normalizedComparisonOnly.quality !== null ||
+      normalizedQualityOnly.comparison.available !== false || normalizedQualityOnly.quality.status !== "Good") {
+    throw new Error("Comparison and Data Quality are not independently normalized");
+  }
+  scenariosPassed++;
+
+  [
+    "grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important;",
+    "#dashboardPanelOverview #periodComparisonLabel { display: inline-flex !important; align-items: baseline !important; gap: 4px !important; white-space: nowrap !important; }",
+    "#dashboardPanelOverview #periodComparisonLabel { display: flex !important; flex-direction: column !important; align-items: flex-start !important; gap: 0 !important; white-space: normal !important; }",
+    "grid-template-columns: max-content max-content max-content !important;",
+    "#dashboardPanelOverview #dataQualityScopeSummary { grid-column: 1 / -1 !important; }"
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "responsive comparison and Data Quality structure");
+  });
   scenariosPassed++;
 
   if (
@@ -8895,6 +9328,58 @@ function testPerformanceAnalyticsVisualContract()
   });
   scenariosPassed++;
 
+  var peakRegion = getSourceRegion(
+    source,
+    "function findFirstRevenuePeakIndex(values)",
+    "var revenuePeakLabelPlugin",
+    "Revenue peak selector"
+  );
+  var findPeak = new Function(
+    peakRegion + "\nreturn findFirstRevenuePeakIndex;"
+  )();
+  if (
+    findPeak([]) !== -1 ||
+    findPeak([4, 9, 9, 3]) !== 1 ||
+    findPeak([12, 5, 7]) !== 0
+  )
+  {
+    throw new Error("Revenue peak selection or first-tie policy mismatch");
+  }
+  [
+    'id: "revenuePeakLabel"',
+    "afterDatasetsDraw: function(chart, args, options)",
+    "plugins: [revenuePeakLabelPlugin]",
+    "tooltip: tooltipContract",
+    "revenue: Number(values[highestIndex]) || 0",
+    "callbacks: tooltipContract.callbacks",
+    "return tooltipItem.dataIndex !== peakIndex;",
+    "style.callbacks.title([{ dataIndex: options.index }])",
+    "style.callbacks.label({ raw: options.revenue, dataIndex: options.index })"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "persistent peak and normal hover tooltip");
+  });
+  scenariosPassed++;
+
+  var positionRegion = getSourceRegion(
+    source,
+    "function calculatePeakTooltipPosition(",
+    "var revenuePeakLabelPlugin",
+    "peak tooltip positioning"
+  );
+  var positionPeak = new Function(positionRegion + "; return calculatePeakTooltipPosition;")();
+  var area = { top: 20, bottom: 180 };
+  var above = positionPeak(area, 300, 200, 150, 120, 100, 40, 10);
+  var below = positionPeak(area, 300, 200, 150, 49, 100, 40, 10);
+  var left = positionPeak(area, 300, 200, 5, 120, 100, 40, 10);
+  var right = positionPeak(area, 300, 200, 295, 120, 100, 40, 10);
+  var narrow = positionPeak({ top: 10, bottom: 150 }, 140, 160, 70, 45, 130, 50, 8);
+  if (above.placement !== "above" || below.placement !== "below" || left.x !== 0 ||
+      right.x !== 200 || narrow.x < 0 || narrow.x + 130 > 140 || narrow.y < 0 || narrow.y + 50 > 160) {
+    throw new Error("Adaptive peak tooltip containment mismatch");
+  }
+  scenariosPassed++;
+
   [
     'id="topProductsSection"',
     "topProducts.slice(0, 10).map(function(p, index)",
@@ -8925,7 +9410,7 @@ function testPerformanceAnalyticsVisualContract()
     "lineWidth: 0.6",
     "drawTicks: false",
     "usePointStyle: true",
-    "chart.options.plugins.legend.labels.color = palette.axis;",
+    "options.plugins.legend.labels.color = palette.axis;",
     "synchronizeChartTheme(false);"
   ].forEach(function(token)
   {
@@ -9008,10 +9493,30 @@ function testPerformanceAnalyticsVisualContract()
   );
 
   var themeSyncStart =
-    source.indexOf("function synchronizeChartTheme(forceLight)");
+    source.indexOf("function applyChartThemeTokens(chart, palette, chartKind)");
   var themeSyncEnd =
     source.indexOf("function applyThemePreference", themeSyncStart);
   var themeSyncSource = source.slice(themeSyncStart, themeSyncEnd);
+
+  [
+    'var options = chart.config.options;',
+    'isRevenueChart && axisKey === "y"',
+    "? 0.6",
+    ": 1;",
+    "var peakTooltip = options.plugins.revenuePeakLabel.tooltip;",
+    "peakTooltip.backgroundColor = palette.tooltipBackground;",
+    "peakTooltip.titleColor = palette.tooltipText;",
+    'chart.update("none");'
+  ].forEach(function(token)
+  {
+    assertSourceContains(themeSyncSource, token, "idempotent chart theme values");
+  });
+  ["lineWidth +=", "lineWidth = axis.grid.lineWidth", "new Chart(", "revenuePeakLabelPlugin ="]
+    .forEach(function(token)
+    {
+      assertSourceExcludes(themeSyncSource, token, "theme accumulation and duplication");
+    });
+  scenariosPassed++;
 
   [
     "chart.resize(",
@@ -9654,9 +10159,9 @@ function testSourceDataQualityPipeline()
   scenariosPassed++;
 
   var pipelineSource =
-    getDashboardData.toString();
+    buildDashboardDataExecution.toString();
 
-  var readToken = "getCanonicalTransactionData(ss)";
+  var readToken = "getCanonicalTransactionData(ss, performance)";
   var readIndex = pipelineSource.indexOf(readToken);
   var inspectIndex = pipelineSource.indexOf("sourceQuality");
   var processIndex = pipelineSource.indexOf("canonicalData.records");

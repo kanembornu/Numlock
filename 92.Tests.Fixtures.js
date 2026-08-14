@@ -1128,6 +1128,9 @@ function createDataQualityDiagnosticsFixtures()
           issueCount: 0,
           status: "Good",
           issues: [],
+          lifecycle: {
+            inactiveCanonicalRows: 0
+          },
           scope: {
             sourceRows: 0,
             scopedRows: 0,
@@ -1145,6 +1148,9 @@ function createDataQualityDiagnosticsFixtures()
           issueCount: 0,
           status: "Good",
           issues: [],
+          lifecycle: {
+            inactiveCanonicalRows: 0
+          },
           scope: {
             sourceRows: 2,
             scopedRows: 2,
@@ -1327,7 +1333,7 @@ function createSourceDataQualityPipelineFixtures()
       'quality.scope.scopedRows.toLocaleString("id-ID")',
       '" rows · "',
       'quality.scope.excludedInvalidDateRows.toLocaleString("id-ID")',
-      '" excluded"'
+      '" excluded · "'
     ]
   };
 }
