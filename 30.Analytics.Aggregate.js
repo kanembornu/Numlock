@@ -64,25 +64,14 @@ function buildAggregate(data)
 
     if(revenue > 0)
     {
-      var d =
-        new Date(row.date);
-
-      var dayKey =
-        d.getFullYear() +
-        "-" +
-        ("0"+(d.getMonth()+1)).slice(-2) +
-        "-" +
-        ("0"+d.getDate()).slice(-2);
+      var dayKey = row.dateKey || canonicalDateKey(new Date(row.date));
 
       aggregate.activeDays[dayKey] = true;
 
         aggregate.dailyRevenue[dayKey] =
           (aggregate.dailyRevenue[dayKey] || 0)
           + revenue;
-        var monthKey =
-          d.getFullYear() +
-          "-" +
-          ("0"+(d.getMonth()+1)).slice(-2);
+        var monthKey = row.monthKey || dayKey.slice(0, 7);
 
         aggregate.monthlyRevenue[monthKey] =
           (aggregate.monthlyRevenue[monthKey] || 0)
@@ -114,12 +103,7 @@ function buildAggregate(data)
         + expense;
     }
 
-    var profitMonthKey =
-      Utilities.formatDate(
-        new Date(row.date),
-        Session.getScriptTimeZone(),
-        "yyyy-MM"
-      );
+    var profitMonthKey = row.monthKey || canonicalDateKey(new Date(row.date)).slice(0, 7);
 
     aggregate.monthlyProfit[profitMonthKey] =
       (aggregate.monthlyProfit[profitMonthKey] || 0)

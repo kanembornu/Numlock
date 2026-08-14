@@ -31,6 +31,7 @@ function runAllBackendTests()
     { name: "testClientRenderPerformanceContract", run: testClientRenderPerformanceContract },
     { name: "testResponsiveShellContract", run: testResponsiveShellContract },
     { name: "testThemeParityTokenContract", run: testThemeParityTokenContract },
+    { name: "testChartRuntimeThemeSynchronizationContract", run: testChartRuntimeThemeSynchronizationContract },
     { name: "testUiShellThemeContract", run: testUiShellThemeContract },
     { name: "testNineDestinationNavigationContract", run: testNineDestinationNavigationContract },
     { name: "testFullShellVisualContract", run: testFullShellVisualContract },

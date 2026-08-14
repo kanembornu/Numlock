@@ -44,6 +44,12 @@ function canonicalDate(value) {
   return isNaN(date.getTime()) ? null : date;
 }
 
+function canonicalDateKey(date) {
+  return date.getFullYear() + "-" +
+    ("0" + (date.getMonth() + 1)).slice(-2) + "-" +
+    ("0" + date.getDate()).slice(-2);
+}
+
 function buildProductPricingIndex(rows) {
   var index = {};
   rows.forEach(function(row) {
@@ -109,7 +115,9 @@ function buildCanonicalTransactionData(source) {
     if (!master) { quality.unresolvedForeignKeys++; return; }
     if (!isFinite(qty) || !isFinite(hpp) || !isFinite(price)) { quality.malformedRows++; return; }
     var revenue = qty * price, cogs = qty * hpp;
-    var salesRecord = { id: String(row.ID_Trx || ""), timestamp: date, date: date,
+    var dateKey = canonicalDateKey(date);
+    var salesRecord = { id: String(row.ID_Trx || ""), timestamp: date, date: date, dateKey: dateKey,
+      monthKey: dateKey.slice(0, 7),
       year: date.getFullYear(), month: date.getMonth() + 1,
       transactionType: "Sales", canonicalTransactionType: "Sales", type: String(row.Tipe || "").trim(),
       productId: id, product: String(master.Produk || "").trim(),
@@ -133,7 +141,9 @@ function buildCanonicalTransactionData(source) {
     if (!date) { quality.invalidDateRowIndexes.push("tabops:" + row.sourceRowIndex); return; }
     if (!master) { quality.unresolvedForeignKeys++; return; }
     if (!isFinite(amount)) { quality.malformedRows++; return; }
-    var expenseRecord = { id: String(row.ID_Trx || ""), timestamp: date, date: date,
+    var dateKey = canonicalDateKey(date);
+    var expenseRecord = { id: String(row.ID_Trx || ""), timestamp: date, date: date, dateKey: dateKey,
+      monthKey: dateKey.slice(0, 7),
       year: date.getFullYear(), month: date.getMonth() + 1,
       transactionType: "Purchase", canonicalTransactionType: "Expense", type: "Expense",
       productId: null, product: "", productCategory: "", category: String(master.Kategori || "").trim(),
@@ -155,13 +165,24 @@ function buildCanonicalTransactionData(source) {
   return { records: records, lifecycleRecords: lifecycleRecords, sourceQuality: quality };
 }
 
-function getCanonicalTransactionData(ss) {
-  return buildCanonicalTransactionData({
-    sales: readCanonicalTable(ss, "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"]),
-    expenses: readCanonicalTable(ss, "tabops", ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"]),
-    products: readCanonicalTable(ss, "Products", ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]),
-    expenseItems: readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"])
-  });
+function getCanonicalTransactionData(ss, performance) {
+  function timedRead(key, name, required) {
+    var startedAt = Date.now();
+    var rows = readCanonicalTable(ss, name, required);
+    if (performance) performance[key] = Date.now() - startedAt;
+    return rows;
+  }
+
+  var source = {
+    sales: timedRead("salesReadMs", "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"]),
+    expenses: timedRead("expenseReadMs", "tabops", ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"]),
+    products: timedRead("productReadMs", "Products", ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]),
+    expenseItems: timedRead("expenseItemReadMs", "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"])
+  };
+  var normalizeStartedAt = Date.now();
+  var canonicalData = buildCanonicalTransactionData(source);
+  if (performance) performance.normalizeMs = Date.now() - normalizeStartedAt;
+  return canonicalData;
 }
 
 var CANONICAL_ENTRY = Object.freeze({
@@ -414,6 +435,7 @@ function submitCanonicalTransaction(payload) {
     persistCanonicalEntry(ss, { sheetName: sheetName,
       headers: type === "SALES" ? CANONICAL_ENTRY.SALES_HEADERS : CANONICAL_ENTRY.EXPENSE_HEADERS,
       values: values, timestamp: timestamp, id: id, action: type === "SALES" ? "CREATE_SALES" : "CREATE_EXPENSE" });
+    invalidateDashboardCache();
     entry.id = id;
     entry.timestamp = Utilities.formatDate(timestamp, CANONICAL_ENTRY.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
     return { success: true, data: entry };
@@ -622,6 +644,7 @@ function voidCanonicalTransaction(payload) {
     requireMutableLifecycleRecord(original);
     var timestamp = new Date(), runtime = { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };
     persistCanonicalVoid(ss, original, reason, timestamp, runtime);
+    invalidateDashboardCache();
     return canonicalLifecycleSuccess(normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, payload.transactionId), ss));
   } catch (error) { return canonicalEntryFailure(error); }
   finally { if (acquired) lock.releaseLock(); }
@@ -676,6 +699,7 @@ function correctCanonicalTransaction(payload) {
     var timestamp = new Date(), replacement = buildLifecycleReplacement(payload, original, ss, timestamp);
     var runtime = { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };
     var replacementId = persistCanonicalCorrection(ss, original, replacement, reason, timestamp, runtime);
+    invalidateDashboardCache();
     return canonicalLifecycleSuccess({ original: normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, payload.transactionId), ss),
       replacement: normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, replacementId), ss) });
   } catch (error) { return canonicalEntryFailure(error); }
@@ -832,6 +856,7 @@ function syncLegacyTransactionsToCanonical(options) {
       lastTimestamp: allDates.length ? allDates[allDates.length - 1].toISOString() : null,
       rejectedDetails: rejected, sourceRow: settings.sourceRow || null,
       targetId: candidates.length === 1 ? candidates[0].id : null };
+    if (result.inserted > 0) invalidateDashboardCache();
     if (!settings.suppressLog) appendLegacySyncLog(ss, result, settings.action || "SYNC");
     return result;
   } finally {
