@@ -333,7 +333,7 @@
         #actionRoadmapCard { grid-column: 2; grid-row: 1 / span 2; min-height: 0; margin: 0; overflow-y: auto; }
         #planningSupportRow { grid-column: 1; grid-row: 2; }
         #dashboardPanelInsights > #kpiTargetReference { grid-column: 3; grid-row: 3; margin: 0; padding: 12px; border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--surface-1); }
-        #transactions.active { display: grid; height: 100%; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; overflow: hidden; }
+        #transactions.active { display: grid; height: 100%; grid-template-rows: 40px 44px minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #transactionsTabList { margin: 0; }
         #transactionsPanelGroup { min-height: 0; height: auto; }
         .transactions-tab-panel:not([hidden]) { display: flex; min-height: 0; height: 100%; flex-direction: column; }
@@ -1480,6 +1480,13 @@
         <button id="transactionsTabPurchases" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelPurchases" tabindex="-1" data-transactions-tab="purchases" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Purchases</button>
       </div>
 
+      <div id="transactionsEntryActionRow" class="flex justify-end">
+        <button id="newTransactionButton" type="button" class="transaction-entry-primary" onclick="openTransactionEntry()">
+          <i class="fas fa-plus" aria-hidden="true"></i>
+          <span>New Transaction</span>
+        </button>
+      </div>
+
       <div id="transactionsPanelGroup">
         <section id="transactionsPanelRecent" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabRecent" data-transactions-panel="recent">
           <div id="transactionsEvidenceRegion" class="flex min-h-0 flex-1 flex-col" aria-labelledby="transactionsResultHeading">
@@ -1518,6 +1525,122 @@
         <section id="transactionsPanelSales" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabSales" data-transactions-panel="sales" hidden></section>
         <section id="transactionsPanelExpenses" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabExpenses" data-transactions-panel="expenses" hidden></section>
         <section id="transactionsPanelPurchases" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabPurchases" data-transactions-panel="purchases" hidden></section>
+      </div>
+
+      <div id="transactionEntryOverlay" class="transaction-entry-overlay" hidden>
+        <section id="transactionEntryDialog" class="transaction-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="transactionEntryTitle" aria-describedby="transactionEntryDescription" tabindex="-1">
+          <header class="transaction-entry-header">
+            <div>
+              <p class="hf-section-label">Operational entry</p>
+              <h2 id="transactionEntryTitle" class="ui-theme-primary">New Transaction</h2>
+              <p id="transactionEntryDescription" class="ui-theme-secondary">Choose a transaction type to begin.</p>
+            </div>
+            <button id="closeTransactionEntryButton" type="button" class="transaction-entry-icon-button" aria-label="Close transaction entry" onclick="closeTransactionEntry()">
+              <i class="fas fa-xmark" aria-hidden="true"></i>
+            </button>
+          </header>
+
+          <div id="transactionEntryScroll" class="transaction-entry-scroll">
+            <fieldset id="transactionTypeFieldset" class="transaction-entry-fieldset">
+              <legend>Transaction type</legend>
+              <div class="transaction-entry-segments">
+                <button id="transactionTypeSales" type="button" role="radio" aria-checked="false" data-entry-type="SALES" onclick="setTransactionEntryType('SALES')">
+                  <i class="fas fa-receipt" aria-hidden="true"></i><span>Sales</span>
+                </button>
+                <button id="transactionTypeExpense" type="button" role="radio" aria-checked="false" data-entry-type="EXPENSE" onclick="setTransactionEntryType('EXPENSE')">
+                  <i class="fas fa-wallet" aria-hidden="true"></i><span>Expense</span>
+                </button>
+              </div>
+            </fieldset>
+
+            <div id="transactionEntryOptionsState" class="transaction-entry-local-state" role="status" aria-live="polite">Select Sales or Expense.</div>
+
+            <form id="transactionEntryForm" novalidate onsubmit="submitTransactionEntry(event)">
+              <section id="salesEntryFields" class="transaction-entry-fields" aria-labelledby="salesEntryHeading" hidden>
+                <h3 id="salesEntryHeading"><i class="fas fa-receipt" aria-hidden="true"></i> Sales details</h3>
+                <div class="transaction-entry-control">
+                  <label for="productEntrySearch">Product</label>
+                  <div class="transaction-entry-combobox">
+                    <input id="productEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="productEntryListbox" aria-describedby="productEntryError" placeholder="Search products" oninput="filterTransactionEntryOptions('product')" onkeydown="handleEntryComboboxKeydown(event, 'product')">
+                    <div id="productEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Products" hidden></div>
+                  </div>
+                  <p id="productEntryMeta" class="transaction-entry-meta"></p>
+                  <p id="productEntryError" class="transaction-entry-error" role="alert"></p>
+                </div>
+
+                <fieldset class="transaction-entry-fieldset">
+                  <legend>Serving type</legend>
+                  <div class="transaction-entry-segments">
+                    <button id="salesTypeHot" type="button" role="radio" aria-checked="false" data-sales-type="Hot" onclick="setSalesEntryType('Hot')">Hot</button>
+                    <button id="salesTypeCold" type="button" role="radio" aria-checked="false" data-sales-type="Cold" onclick="setSalesEntryType('Cold')">Cold</button>
+                  </div>
+                  <p id="salesTypeError" class="transaction-entry-error" role="alert"></p>
+                </fieldset>
+
+                <div class="transaction-entry-control">
+                  <label for="salesEntryQty">Quantity</label>
+                  <div class="transaction-entry-quantity">
+                    <button type="button" aria-label="Decrease quantity" onclick="adjustSalesEntryQty(-1)"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                    <input id="salesEntryQty" type="number" inputmode="numeric" min="1" step="1" value="1" aria-describedby="salesEntryQtyError" oninput="updateSalesEntryQty()">
+                    <button type="button" aria-label="Increase quantity" onclick="adjustSalesEntryQty(1)"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                  </div>
+                  <p id="salesEntryQtyError" class="transaction-entry-error" role="alert"></p>
+                </div>
+
+                <section id="salesPricingPreview" class="transaction-entry-preview" aria-labelledby="salesPricingHeading" aria-busy="false">
+                  <div class="transaction-entry-preview-heading">
+                    <h4 id="salesPricingHeading">Price preview</h4>
+                    <span id="salesPricingState" role="status" aria-live="polite">Select product and type.</span>
+                  </div>
+                  <dl>
+                    <div><dt>Selling Price</dt><dd id="salesPreviewPrice">—</dd></div>
+                    <div><dt>HPP</dt><dd id="salesPreviewHpp">—</dd></div>
+                    <div><dt>Unit Margin</dt><dd id="salesPreviewUnitMargin">—</dd></div>
+                    <div><dt>Qty</dt><dd id="salesPreviewQty">×1</dd></div>
+                    <div class="transaction-entry-preview-total"><dt>Revenue</dt><dd id="salesPreviewRevenue">—</dd></div>
+                    <div><dt>COGS</dt><dd id="salesPreviewCogs">—</dd></div>
+                    <div><dt>Total Margin</dt><dd id="salesPreviewMargin">—</dd></div>
+                  </dl>
+                </section>
+              </section>
+
+              <section id="expenseEntryFields" class="transaction-entry-fields" aria-labelledby="expenseEntryHeading" hidden>
+                <h3 id="expenseEntryHeading"><i class="fas fa-wallet" aria-hidden="true"></i> Expense details</h3>
+                <div class="transaction-entry-control">
+                  <label for="expenseEntrySearch">Expense item</label>
+                  <div class="transaction-entry-combobox">
+                    <input id="expenseEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="expenseEntryListbox" aria-describedby="expenseEntryError" placeholder="Search expense items" oninput="filterTransactionEntryOptions('expense')" onkeydown="handleEntryComboboxKeydown(event, 'expense')">
+                    <div id="expenseEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Expense items" hidden></div>
+                  </div>
+                  <p id="expenseEntryMeta" class="transaction-entry-meta"></p>
+                  <p id="expenseEntryError" class="transaction-entry-error" role="alert"></p>
+                </div>
+                <div class="transaction-entry-control">
+                  <label for="expenseEntryAmount">Amount (IDR)</label>
+                  <div class="transaction-entry-money"><span aria-hidden="true">Rp</span><input id="expenseEntryAmount" type="text" inputmode="numeric" autocomplete="off" aria-describedby="expenseEntryAmountError" placeholder="0" oninput="updateExpenseEntryAmount()"></div>
+                  <p id="expenseEntryAmountError" class="transaction-entry-error" role="alert"></p>
+                </div>
+              </section>
+
+            </form>
+
+            <section id="transactionEntrySuccess" class="transaction-entry-success" role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden>
+              <i class="fas fa-circle-check" aria-hidden="true"></i>
+              <h3>Transaction saved</h3>
+              <dl id="transactionEntrySuccessDetails"></dl>
+              <div class="transaction-entry-success-actions">
+                <button type="button" class="transaction-entry-primary" onclick="resetTransactionEntryForAnother()">Add Another</button>
+                <button type="button" class="transaction-entry-secondary" onclick="closeTransactionEntry()">Close</button>
+              </div>
+            </section>
+          </div>
+          <div id="transactionEntrySubmitRegion" class="transaction-entry-submit-region">
+            <p id="transactionEntryGeneralError" class="transaction-entry-error transaction-entry-general-error" role="alert"></p>
+            <button id="submitTransactionEntryButton" type="submit" form="transactionEntryForm" class="transaction-entry-submit" disabled aria-describedby="transactionEntryGeneralError">
+              <span id="transactionEntrySubmitLabel">Save Transaction</span>
+            </button>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -1653,6 +1776,8 @@
   let activeDashboardTab = "overview";
   let transactionsTabsInitialized = false;
   let activeTransactionsTab = "recent";
+  let transactionEntryState = createInitialTransactionEntryState();
+  let transactionEntryLastFocus = null;
   let availableDashboardMonths = [];
   let availableDashboardYears = [];
   let customSelectRegistry = {};
@@ -1951,7 +2076,18 @@
         "clearSessionLogsButton", "sessionLogsAnnouncement",
         "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
         "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
-        "dashboardSectionStaging"
+        "dashboardSectionStaging", "newTransactionButton",
+        "transactionEntryOverlay", "transactionEntryDialog", "closeTransactionEntryButton",
+        "transactionEntryOptionsState", "transactionEntryForm", "salesEntryFields",
+        "expenseEntryFields", "transactionTypeSales", "transactionTypeExpense",
+        "productEntrySearch", "productEntryListbox", "productEntryMeta", "productEntryError",
+        "expenseEntrySearch", "expenseEntryListbox", "expenseEntryMeta", "expenseEntryError",
+        "salesTypeHot", "salesTypeCold", "salesTypeError", "salesEntryQty",
+        "salesEntryQtyError", "salesPricingPreview", "salesPricingState",
+        "salesPreviewPrice", "salesPreviewHpp", "salesPreviewUnitMargin", "salesPreviewQty",
+        "salesPreviewRevenue", "salesPreviewCogs", "salesPreviewMargin", "expenseEntryAmount",
+        "expenseEntryAmountError", "transactionEntrySubmitRegion", "transactionEntryGeneralError", "submitTransactionEntryButton",
+        "transactionEntrySubmitLabel", "transactionEntrySuccess", "transactionEntrySuccessDetails"
       ];
       var required = {};
 
@@ -2036,6 +2172,30 @@
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging
+      };
+
+      elements.transactionEntry = {
+        trigger: required.newTransactionButton, overlay: required.transactionEntryOverlay,
+        dialog: required.transactionEntryDialog, closeButton: required.closeTransactionEntryButton,
+        optionsState: required.transactionEntryOptionsState, form: required.transactionEntryForm,
+        salesFields: required.salesEntryFields, expenseFields: required.expenseEntryFields,
+        typeSales: required.transactionTypeSales, typeExpense: required.transactionTypeExpense,
+        productSearch: required.productEntrySearch, productListbox: required.productEntryListbox,
+        productMeta: required.productEntryMeta, productError: required.productEntryError,
+        expenseSearch: required.expenseEntrySearch, expenseListbox: required.expenseEntryListbox,
+        expenseMeta: required.expenseEntryMeta, expenseError: required.expenseEntryError,
+        typeHot: required.salesTypeHot, typeCold: required.salesTypeCold,
+        salesTypeError: required.salesTypeError, qty: required.salesEntryQty,
+        qtyError: required.salesEntryQtyError, pricingPreview: required.salesPricingPreview,
+        pricingState: required.salesPricingState, previewPrice: required.salesPreviewPrice,
+        previewHpp: required.salesPreviewHpp, previewUnitMargin: required.salesPreviewUnitMargin,
+        previewQty: required.salesPreviewQty, previewRevenue: required.salesPreviewRevenue,
+        previewCogs: required.salesPreviewCogs, previewMargin: required.salesPreviewMargin,
+        amount: required.expenseEntryAmount, amountError: required.expenseEntryAmountError,
+        submitRegion: required.transactionEntrySubmitRegion,
+        generalError: required.transactionEntryGeneralError, submit: required.submitTransactionEntryButton,
+        submitLabel: required.transactionEntrySubmitLabel, success: required.transactionEntrySuccess,
+        successDetails: required.transactionEntrySuccessDetails
       };
 
       elements.themeControls =
@@ -2346,6 +2506,29 @@
 
       document.addEventListener("keydown", function(event)
       {
+        var transactionEntry = elements.transactionEntry;
+        if (!transactionEntry.overlay.hidden)
+        {
+          if (event.key === "Escape")
+          {
+            event.preventDefault();
+            closeTransactionEntry();
+            return;
+          }
+
+          if (event.key === "Tab")
+          {
+            var focusable = Array.prototype.filter.call(
+              transactionEntry.dialog.querySelectorAll('button:not([disabled]), input:not([disabled]), [tabindex="0"]'),
+              function(control) { return !control.closest("[hidden]"); }
+            );
+            var first = focusable[0];
+            var last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+          }
+        }
+
         if (
           event.key === "Escape" &&
           elements.sidebarMenuButton
@@ -2354,6 +2537,11 @@
         {
           setSidebarOpen(false, true);
         }
+      });
+
+      elements.transactionEntry.overlay.addEventListener("click", function(event)
+      {
+        if (event.target === elements.transactionEntry.overlay) closeTransactionEntry();
       });
 
       elements.pageButtons
@@ -4908,6 +5096,455 @@
           .map(renderTimelineItem)
           .join("");
       }
+    }
+
+    function createInitialTransactionEntryState()
+    {
+      return {
+        transactionType: null, entryOptions: null, selectedProduct: null,
+        selectedExpense: null, selectedType: null, qty: 1, amount: null,
+        pricing: null, loadingOptions: false, loadingPricing: false,
+        submitting: false, optionsLoaded: false, pricingRequestVersion: 0,
+        activeOptionIndex: { product: -1, expense: -1 }, successResult: null,
+        submissionComplete: false
+      };
+    }
+
+    function formatEntryCurrency(value)
+    {
+      return "Rp " + Number(value || 0).toLocaleString("id-ID");
+    }
+
+    function normalizeEntryInteger(value)
+    {
+      var digits = String(value || "").replace(/[^0-9]/g, "");
+      return digits ? Number(digits) : null;
+    }
+
+    function setEntryError(element, message)
+    {
+      element.innerText = message || "";
+      var control = element.previousElementSibling;
+      if (control && control.tagName === "INPUT") control.setAttribute("aria-invalid", String(Boolean(message)));
+    }
+
+    function updateTransactionEntrySubmitState()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var state = transactionEntryState;
+      var validSales = state.transactionType === "SALES" && state.selectedProduct &&
+        state.selectedType && Number.isInteger(state.qty) && state.qty >= 1 && state.pricing;
+      var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
+        Number.isInteger(state.amount) && state.amount > 0;
+      entry.submit.disabled = state.submitting || state.submissionComplete || state.loadingOptions || !(validSales || validExpense);
+      entry.submit.setAttribute("aria-busy", String(state.submitting));
+      entry.submitLabel.innerText = state.submitting ? "Saving…" : "Save Transaction";
+    }
+
+    function openTransactionEntry()
+    {
+      var elements = initializeStableDashboardElements();
+      var entry = elements.transactionEntry;
+      transactionEntryLastFocus = document.activeElement;
+      document.body.appendChild(entry.overlay);
+      entry.overlay.hidden = false;
+      elements.appShell.inert = true;
+      document.body.classList.add("overflow-hidden");
+      entry.dialog.focus();
+      if (!transactionEntryState.optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
+    }
+
+    function closeTransactionEntry()
+    {
+      var elements = initializeStableDashboardElements();
+      var entry = elements.transactionEntry;
+      entry.overlay.hidden = true;
+      elements.appShell.inert = false;
+      document.body.classList.remove("overflow-hidden");
+      closeEntryCombobox("product");
+      closeEntryCombobox("expense");
+      if (transactionEntryLastFocus && typeof transactionEntryLastFocus.focus === "function") transactionEntryLastFocus.focus();
+    }
+
+    function loadTransactionEntryOptions()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.loadingOptions = true;
+      entry.optionsState.innerText = "Loading products and expense items…";
+      updateTransactionEntrySubmitState();
+      google.script.run
+        .withSuccessHandler(function(response)
+        {
+          transactionEntryState.loadingOptions = false;
+          if (!response || response.success !== true || !response.data ||
+              !Array.isArray(response.data.sales) || !Array.isArray(response.data.expenses)) {
+            showTransactionEntryOptionsFailure(); return;
+          }
+          transactionEntryState.entryOptions = {
+            sales: response.data.sales.slice(), expenses: response.data.expenses.slice()
+          };
+          transactionEntryState.optionsLoaded = true;
+          entry.optionsState.innerText = response.data.sales.length || response.data.expenses.length
+            ? "Entry options ready." : "No active entry options are available.";
+          updateTransactionEntrySubmitState();
+        })
+        .withFailureHandler(function(error)
+        {
+          console.error("Transaction entry options failed", error);
+          showTransactionEntryOptionsFailure();
+        })
+        .getTransactionEntryOptions();
+    }
+
+    function showTransactionEntryOptionsFailure()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.loadingOptions = false;
+      transactionEntryState.optionsLoaded = false;
+      entry.optionsState.innerHTML = 'Entry options could not be loaded. <button type="button" class="font-semibold underline" onclick="loadTransactionEntryOptions()">Retry</button>';
+      updateTransactionEntrySubmitState();
+    }
+
+    function setTransactionEntryType(type)
+    {
+      if (type !== "SALES" && type !== "EXPENSE") return;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.transactionType = type;
+      entry.typeSales.setAttribute("aria-checked", String(type === "SALES"));
+      entry.typeExpense.setAttribute("aria-checked", String(type === "EXPENSE"));
+      entry.salesFields.hidden = type !== "SALES";
+      entry.expenseFields.hidden = type !== "EXPENSE";
+      entry.generalError.innerText = "";
+      entry.optionsState.innerText = transactionEntryState.optionsLoaded ? "Entry options ready." : entry.optionsState.innerText;
+      closeEntryCombobox(type === "SALES" ? "expense" : "product");
+      updateTransactionEntrySubmitState();
+    }
+
+    function getEntryCombobox(type)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      return type === "product"
+        ? { input: entry.productSearch, listbox: entry.productListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.sales : [] }
+        : { input: entry.expenseSearch, listbox: entry.expenseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.expenses : [] };
+    }
+
+    function getFilteredEntryOptions(type)
+    {
+      var combo = getEntryCombobox(type);
+      var query = combo.input.value.trim().toLocaleLowerCase();
+      return combo.options.filter(function(option)
+      {
+        var text = type === "product"
+          ? [option.product, option.category, option.kind].join(" ")
+          : [option.item, option.category, option.group, option.kind].join(" ");
+        return !query || text.toLocaleLowerCase().indexOf(query) !== -1;
+      }).slice(0, 30);
+    }
+
+    function renderEntryOptionList(type)
+    {
+      var combo = getEntryCombobox(type);
+      var options = getFilteredEntryOptions(type);
+      combo.listbox.innerHTML = "";
+      options.forEach(function(option, index)
+      {
+        var button = document.createElement("button");
+        var selectedId = type === "product"
+          ? transactionEntryState.selectedProduct && transactionEntryState.selectedProduct.productId
+          : transactionEntryState.selectedExpense && transactionEntryState.selectedExpense.expenseItemId;
+        var optionId = type === "product" ? option.productId : option.expenseItemId;
+        button.type = "button";
+        button.className = "transaction-entry-option";
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", String(selectedId === optionId));
+        button.setAttribute("data-active", String(transactionEntryState.activeOptionIndex[type] === index));
+        button.innerText = type === "product" ? option.product : option.item;
+        var meta = document.createElement("span");
+        meta.innerText = type === "product"
+          ? [option.category, option.kind].filter(Boolean).join(" · ")
+          : [option.category, option.group].filter(Boolean).join(" · ");
+        button.appendChild(meta);
+        button.addEventListener("click", function() { selectTransactionEntryOption(type, option); });
+        combo.listbox.appendChild(button);
+      });
+      if (!options.length) {
+        var empty = document.createElement("p");
+        empty.className = "p-3 text-sm ui-theme-muted";
+        empty.innerText = "No matching options.";
+        combo.listbox.appendChild(empty);
+      }
+      combo.listbox.hidden = false;
+      combo.input.setAttribute("aria-expanded", "true");
+    }
+
+    function filterTransactionEntryOptions(type)
+    {
+      if (!transactionEntryState.optionsLoaded) return;
+      transactionEntryState.activeOptionIndex[type] = -1;
+      if (type === "product") transactionEntryState.selectedProduct = null;
+      else transactionEntryState.selectedExpense = null;
+      renderEntryOptionList(type);
+      if (type === "product") requestTransactionEntryPricing();
+      updateTransactionEntrySubmitState();
+    }
+
+    function closeEntryCombobox(type)
+    {
+      var combo = getEntryCombobox(type);
+      combo.listbox.hidden = true;
+      combo.input.setAttribute("aria-expanded", "false");
+      transactionEntryState.activeOptionIndex[type] = -1;
+    }
+
+    function handleEntryComboboxKeydown(event, type)
+    {
+      if (["ArrowDown", "ArrowUp", "Enter", "Escape"].indexOf(event.key) === -1) return;
+      if (event.key === "Escape") { closeEntryCombobox(type); return; }
+      event.preventDefault();
+      var options = getFilteredEntryOptions(type);
+      if (!options.length) return;
+      if (event.key === "Enter" && transactionEntryState.activeOptionIndex[type] >= 0) {
+        selectTransactionEntryOption(type, options[transactionEntryState.activeOptionIndex[type]]); return;
+      }
+      var direction = event.key === "ArrowUp" ? -1 : 1;
+      var current = transactionEntryState.activeOptionIndex[type];
+      transactionEntryState.activeOptionIndex[type] = (current + direction + options.length) % options.length;
+      renderEntryOptionList(type);
+    }
+
+    function selectTransactionEntryOption(type, option)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      if (type === "product") {
+        transactionEntryState.selectedProduct = option;
+        entry.productSearch.value = option.product;
+        entry.productMeta.innerText = [option.category, option.kind].filter(Boolean).join(" · ");
+        entry.productError.innerText = "";
+        requestTransactionEntryPricing();
+      } else {
+        transactionEntryState.selectedExpense = option;
+        entry.expenseSearch.value = option.item;
+        entry.expenseMeta.innerText = [option.category, option.group].filter(Boolean).join(" · ");
+        entry.expenseError.innerText = "";
+      }
+      closeEntryCombobox(type);
+      updateTransactionEntrySubmitState();
+    }
+
+    function setSalesEntryType(type)
+    {
+      if (type !== "Hot" && type !== "Cold") return;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.selectedType = type;
+      entry.typeHot.setAttribute("aria-checked", String(type === "Hot"));
+      entry.typeCold.setAttribute("aria-checked", String(type === "Cold"));
+      entry.salesTypeError.innerText = "";
+      requestTransactionEntryPricing();
+    }
+
+    function requestTransactionEntryPricing()
+    {
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var version = ++state.pricingRequestVersion;
+      state.pricing = null;
+      renderTransactionEntryPricing();
+      if (!state.selectedProduct || !state.selectedType) { updateTransactionEntrySubmitState(); return; }
+      state.loadingPricing = true;
+      entry.pricingPreview.setAttribute("aria-busy", "true");
+      entry.pricingState.innerText = "Loading pricing…";
+      updateTransactionEntrySubmitState();
+      google.script.run
+        .withSuccessHandler(function(response)
+        {
+          if (version !== transactionEntryState.pricingRequestVersion) return;
+          state.loadingPricing = false;
+          entry.pricingPreview.setAttribute("aria-busy", "false");
+          if (!response || response.success !== true) {
+            showTransactionEntryApiError(response && response.error, "pricing"); return;
+          }
+          state.pricing = response.data;
+          entry.pricingState.innerText = "Pricing ready.";
+          renderTransactionEntryPricing();
+          updateTransactionEntrySubmitState();
+        })
+        .withFailureHandler(function(error)
+        {
+          if (version !== transactionEntryState.pricingRequestVersion) return;
+          console.error("Transaction pricing failed", error);
+          state.loadingPricing = false;
+          entry.pricingPreview.setAttribute("aria-busy", "false");
+          entry.pricingState.innerText = "Pricing could not be loaded.";
+          updateTransactionEntrySubmitState();
+        })
+        .getProductEntryPricing(state.selectedProduct.productId, state.selectedType);
+    }
+
+    function renderTransactionEntryPricing()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var pricing = transactionEntryState.pricing;
+      var qty = transactionEntryState.qty;
+      entry.previewQty.innerText = "×" + qty;
+      entry.previewPrice.innerText = pricing ? formatEntryCurrency(pricing.price) : "—";
+      entry.previewHpp.innerText = pricing ? formatEntryCurrency(pricing.hpp) : "—";
+      entry.previewUnitMargin.innerText = pricing ? formatEntryCurrency(pricing.unitMargin) : "—";
+      entry.previewRevenue.innerText = pricing ? formatEntryCurrency(pricing.price * qty) : "—";
+      entry.previewCogs.innerText = pricing ? formatEntryCurrency(pricing.hpp * qty) : "—";
+      entry.previewMargin.innerText = pricing ? formatEntryCurrency(pricing.unitMargin * qty) : "—";
+    }
+
+    function adjustSalesEntryQty(delta)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var current = normalizeEntryInteger(entry.qty.value) || 1;
+      entry.qty.value = Math.max(1, current + delta);
+      updateSalesEntryQty();
+    }
+
+    function updateSalesEntryQty()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var qty = Number(entry.qty.value);
+      var valid = Number.isInteger(qty) && qty >= 1;
+      transactionEntryState.qty = valid ? qty : null;
+      entry.qtyError.innerText = valid ? "" : "Quantity must be a whole number of at least 1.";
+      entry.qty.setAttribute("aria-invalid", String(!valid));
+      renderTransactionEntryPricing();
+      updateTransactionEntrySubmitState();
+    }
+
+    function updateExpenseEntryAmount()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var amount = normalizeEntryInteger(entry.amount.value);
+      transactionEntryState.amount = amount;
+      entry.amount.value = amount ? amount.toLocaleString("id-ID") : "";
+      entry.amountError.innerText = amount && amount > 0 ? "" : "Amount must be greater than 0.";
+      entry.amount.setAttribute("aria-invalid", String(!(amount && amount > 0)));
+      updateTransactionEntrySubmitState();
+    }
+
+    function transactionEntryErrorMessage(code)
+    {
+      return {
+        PRODUCT_INACTIVE: "Product is no longer available.",
+        PRODUCT_NOT_FOUND: "Product is no longer available.",
+        PRICE_NOT_FOUND: "Price is not available for this product/type.",
+        PRICE_AMBIGUOUS: "Pricing configuration needs attention.",
+        INVALID_QTY: "Quantity must be a whole number of at least 1.",
+        EXPENSE_ITEM_INACTIVE: "Expense item is no longer available.",
+        EXPENSE_ITEM_NOT_FOUND: "Expense item is no longer available.",
+        INVALID_AMOUNT: "Amount must be greater than 0.",
+        WRITE_FAILED: "Transaction could not be saved. Please try again."
+      }[code] || "Transaction could not be saved. Please try again.";
+    }
+
+    function showTransactionEntryApiError(error, context)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var code = error && error.code ? error.code : "WRITE_FAILED";
+      var message = transactionEntryErrorMessage(code);
+      if (code === "INVALID_QTY") entry.qtyError.innerText = message;
+      else if (code === "INVALID_AMOUNT") entry.amountError.innerText = message;
+      else if (code.indexOf("PRODUCT_") === 0) entry.productError.innerText = message;
+      else if (code.indexOf("EXPENSE_ITEM_") === 0) entry.expenseError.innerText = message;
+      else if (context === "pricing") entry.pricingState.innerText = message;
+      else entry.generalError.innerText = message;
+      updateTransactionEntrySubmitState();
+    }
+
+    function submitTransactionEntry(event)
+    {
+      event.preventDefault();
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      if (state.submitting || entry.submit.disabled) return;
+      var payload = state.transactionType === "SALES"
+        ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty }
+        : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount };
+      state.submitting = true;
+      entry.generalError.innerText = "";
+      updateTransactionEntrySubmitState();
+      google.script.run
+        .withSuccessHandler(function(response)
+        {
+          state.submitting = false;
+          if (!response || response.success !== true) {
+            showTransactionEntryApiError(response && response.error, "submit"); return;
+          }
+          state.submissionComplete = true;
+          state.successResult = response.data;
+          showTransactionEntrySuccess(response.data);
+          refreshTransactionEntryAfterSuccess();
+        })
+        .withFailureHandler(function(error)
+        {
+          console.error("Canonical transaction submission failed", error);
+          state.submitting = false;
+          entry.generalError.innerText = "Transaction could not be saved. Please try again.";
+          updateTransactionEntrySubmitState();
+        })
+        .submitCanonicalTransaction(payload);
+    }
+
+    function refreshTransactionEntryAfterSuccess()
+    {
+      if (!lastDashboardRequest) return;
+      try
+      {
+        requestDashboardData(lastDashboardRequest);
+      }
+      catch (error)
+      {
+        console.error("Post-save dashboard refresh failed", error);
+      }
+    }
+
+    function showTransactionEntrySuccess(result)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var state = transactionEntryState;
+      var rows = state.transactionType === "SALES"
+        ? [["Product", result.product], ["Type", result.type], ["Qty", result.qty], ["Revenue", formatEntryCurrency(result.revenue)], ["Transaction ID", result.id]]
+        : [["Item", result.item], ["Amount", formatEntryCurrency(result.amount)], ["Transaction ID", result.id]];
+      entry.form.hidden = true;
+      entry.submitRegion.hidden = true;
+      entry.successDetails.innerHTML = "";
+      rows.forEach(function(row) {
+        var wrapper = document.createElement("div"), term = document.createElement("dt"), detail = document.createElement("dd");
+        term.innerText = row[0]; detail.innerText = row[1]; wrapper.appendChild(term); wrapper.appendChild(detail); entry.successDetails.appendChild(wrapper);
+      });
+      entry.success.hidden = false;
+      entry.success.focus();
+    }
+
+    function resetTransactionEntryForAnother()
+    {
+      var cachedOptions = transactionEntryState.entryOptions;
+      var optionsLoaded = transactionEntryState.optionsLoaded;
+      transactionEntryState = createInitialTransactionEntryState();
+      transactionEntryState.entryOptions = cachedOptions;
+      transactionEntryState.optionsLoaded = optionsLoaded;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      entry.form.reset();
+      entry.form.hidden = false;
+      entry.submitRegion.hidden = false;
+      entry.success.hidden = true;
+      entry.salesFields.hidden = true;
+      entry.expenseFields.hidden = true;
+      entry.typeSales.setAttribute("aria-checked", "false");
+      entry.typeExpense.setAttribute("aria-checked", "false");
+      entry.typeHot.setAttribute("aria-checked", "false");
+      entry.typeCold.setAttribute("aria-checked", "false");
+      entry.productMeta.innerText = ""; entry.expenseMeta.innerText = "";
+      entry.productError.innerText = ""; entry.expenseError.innerText = "";
+      entry.salesTypeError.innerText = ""; entry.qtyError.innerText = "";
+      entry.amountError.innerText = ""; entry.generalError.innerText = "";
+      entry.optionsState.innerText = optionsLoaded ? "Entry options ready." : "Select Sales or Expense.";
+      renderTransactionEntryPricing();
+      updateTransactionEntrySubmitState();
+      entry.typeSales.focus();
     }
 
     //--------------------------------------------------

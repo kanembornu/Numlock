@@ -58,6 +58,185 @@ function testProductPricingResolution()
   return { passed: true, scenarios: 3 };
 }
 
+function testCanonicalTransactionEntryService()
+{
+  var timestamp = new Date(2026, 7, 13, 10, 30, 0, 0);
+  var context = {
+    timestamp: timestamp,
+    products: [
+      { ID_Prod: "P1", Produk: "Espresso", Kategori: "Coffee", Kind: "Beverage", IsActive: true },
+      { ID_Prod: "P2", Produk: "Retired", Kategori: "Coffee", Kind: "Beverage", IsActive: false }
+    ],
+    pricing: [
+      { ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: new Date(2026, 0, 1), EffectiveTo: "", HPP: 4000, Harga: 10000, IsActive: true },
+      { ID_Prod: "P1", Tipe: "Cold", EffectiveFrom: new Date(2026, 0, 1), EffectiveTo: "", HPP: 5000, Harga: 12000, IsActive: true }
+    ],
+    expenseItems: [
+      { ID_Ops: "O1", Item: "Electricity", Kategori: "Utility", Kind: "Operating", Group: "Overhead", AccountCode: "6100", IsActive: true },
+      { ID_Ops: "O2", Item: "Retired", Kategori: "Utility", Kind: "Operating", Group: "Overhead", AccountCode: "6100", IsActive: false },
+      { ID_Ops: "O3", Item: "Orphan", Kategori: "Utility", Kind: "Operating", Group: "Overhead", AccountCode: "9999", IsActive: true },
+      { ID_Ops: "O4", Item: "Inactive Account", Kategori: "Utility", Kind: "Operating", Group: "Overhead", AccountCode: "6200", IsActive: true }
+    ],
+    accounts: [
+      { AccountCode: "6100", IsActive: true },
+      { AccountCode: "6200", IsActive: false }
+    ]
+  };
+  var scenarios = 0;
+  function expectCode(callback, code) {
+    var actual = null;
+    try { callback(); } catch (error) { actual = error.entryCode; }
+    if (actual !== code) throw new Error("Expected entry error " + code + "; got " + actual);
+    scenarios++;
+  }
+
+  var hot = prepareCanonicalSalesEntry({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 3,
+    HPP: 1, HJ: 2, ID_Trx: "FAKE", Source: "FAKE" }, context);
+  if (hot.product !== "Espresso" || hot.unitHPP !== 4000 || hot.unitPrice !== 10000 ||
+      hot.cogs !== 12000 || hot.revenue !== 30000 || hot.margin !== 18000 || hot.id || hot.Source) {
+    throw new Error("Valid Hot entry or protected-field contract mismatch");
+  }
+  scenarios += 7;
+  var cold = prepareCanonicalSalesEntry({ productId: "P1", type: "Cold", qty: 2 }, context);
+  if (cold.unitHPP !== 5000 || cold.unitPrice !== 12000 || cold.margin !== 14000) {
+    throw new Error("Valid Cold pricing contract mismatch");
+  }
+  scenarios += 3;
+  expectCode(function() { prepareCanonicalSalesEntry({ productId: "missing", type: "Hot", qty: 1 }, context); }, "PRODUCT_NOT_FOUND");
+  expectCode(function() { prepareCanonicalSalesEntry({ productId: "P2", type: "Hot", qty: 1 }, context); }, "PRODUCT_INACTIVE");
+  expectCode(function() { prepareCanonicalSalesEntry({ productId: "P1", type: "Warm", qty: 1 }, context); }, "INVALID_SALES_TYPE");
+  [0, -1, "2", 1.5].forEach(function(qty) {
+    expectCode(function() { prepareCanonicalSalesEntry({ productId: "P1", type: "Hot", qty: qty }, context); }, "INVALID_QTY");
+  });
+  expectCode(function() { prepareCanonicalSalesEntry({ productId: "P1", type: "Hot", qty: 1 },
+    { timestamp: timestamp, products: context.products, pricing: [], expenseItems: [], accounts: [] }); }, "PRICE_NOT_FOUND");
+  var overlapping = context.pricing.concat([{ ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: new Date(2026, 0, 1),
+    EffectiveTo: "", HPP: 4100, Harga: 10100, IsActive: true }]);
+  expectCode(function() { prepareCanonicalSalesEntry({ productId: "P1", type: "Hot", qty: 1 },
+    { timestamp: timestamp, products: context.products, pricing: overlapping, expenseItems: [], accounts: [] }); }, "PRICE_AMBIGUOUS");
+
+  var expense = prepareCanonicalExpenseEntry({ transactionType: "EXPENSE", expenseItemId: "O1", amount: 75000,
+    ID_Trx: "FAKE", Source: "FAKE" }, context);
+  if (expense.item !== "Electricity" || expense.category !== "Utility" || expense.group !== "Overhead" ||
+      expense.amount !== 75000 || expense.id || expense.Source) {
+    throw new Error("Valid Expense or protected-field contract mismatch");
+  }
+  scenarios += 5;
+  expectCode(function() { prepareCanonicalExpenseEntry({ expenseItemId: "missing", amount: 1 }, context); }, "EXPENSE_ITEM_NOT_FOUND");
+  expectCode(function() { prepareCanonicalExpenseEntry({ expenseItemId: "O2", amount: 1 }, context); }, "EXPENSE_ITEM_INACTIVE");
+  expectCode(function() { prepareCanonicalExpenseEntry({ expenseItemId: "O3", amount: 1 }, context); }, "ACCOUNT_NOT_FOUND");
+  expectCode(function() { prepareCanonicalExpenseEntry({ expenseItemId: "O4", amount: 1 }, context); }, "ACCOUNT_INACTIVE");
+  [0, -1, "1000", NaN].forEach(function(amount) {
+    expectCode(function() { prepareCanonicalExpenseEntry({ expenseItemId: "O1", amount: amount }, context); }, "INVALID_AMOUNT");
+  });
+
+  var uuids = ["AAAAAAAA-AAAA-AAAA-AAAA-AAAAAAAAAAAA", "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBBB"];
+  var collisionChecks = 0;
+  var salesId = generateCanonicalEntryId("SAL-APP-", timestamp, function() { return uuids.shift(); }, function(id) {
+    collisionChecks++;
+    return id.indexOf("AAAAAAAAAAAA") !== -1;
+  });
+  var expenseId = generateCanonicalEntryId("OPS-APP-", timestamp,
+    function() { return "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC"; }, function() { return false; });
+  if (salesId !== "SAL-APP-20260813-BBBBBBBBBBBB" || expenseId !== "OPS-APP-20260813-CCCCCCCCCCCC" || collisionChecks !== 2) {
+    throw new Error("APP_ENTRY ID prefix, uniqueness, or collision retry mismatch");
+  }
+  scenarios += 3;
+
+  function memorySheet(headers, corruptReadback) {
+    var rows = [headers.slice()];
+    return {
+      rows: rows,
+      getLastColumn: function() { return rows[0].length; },
+      getLastRow: function() { return rows.length; },
+      deleteRow: function(row) { rows.splice(row - 1, 1); },
+      getRange: function(row, column, rowCount, columnCount) {
+        return {
+          setValues: function(values) { rows[row - 1] = values[0].slice(); },
+          getValues: function() {
+            var value = rows[row - 1].slice(column - 1, column - 1 + columnCount);
+            if (corruptReadback && row > 1) value[0] = "CORRUPT";
+            return [value];
+          },
+          getValue: function() { return rows[row - 1] ? rows[row - 1][column - 1] : ""; }
+        };
+      }
+    };
+  }
+  var ledger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS), logs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS);
+  var memorySpreadsheet = { getSheetByName: function(name) { return name === "tabsal" ? ledger : name === "Logs" ? logs : null; } };
+  var persistedValues = [salesId, timestamp, "P1", "Hot", 3, 4000, 10000, "APP_ENTRY", true,
+    timestamp, "SYSTEM_APP_ENTRY", "", ""];
+  var flushes = 0;
+  persistCanonicalEntry(memorySpreadsheet, { sheetName: "tabsal", headers: CANONICAL_ENTRY.SALES_HEADERS,
+    values: persistedValues, timestamp: timestamp, id: salesId, action: "CREATE_SALES" },
+    { flush: function() { flushes++; }, uuid: function() { return "AUDIT-UUID"; } });
+  if (ledger.rows.length !== 2 || logs.rows.length !== 2 || flushes !== 2 ||
+      ledger.rows[1][7] !== "APP_ENTRY" || ledger.rows[1][8] !== true ||
+      ledger.rows[1][10] !== "SYSTEM_APP_ENTRY" || logs.rows[1][3] !== "TransactionEntry" ||
+      logs.rows[1][4] !== "CREATE_SALES" || logs.rows[1][5] !== salesId) {
+    throw new Error("Canonical write/verify/audit persistence contract mismatch");
+  }
+  scenarios += 10;
+  var corruptLedger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS, true);
+  var rollbackLogs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS);
+  var rollbackSpreadsheet = { getSheetByName: function(name) { return name === "tabsal" ? corruptLedger : rollbackLogs; } };
+  expectCode(function() {
+    persistCanonicalEntry(rollbackSpreadsheet, { sheetName: "tabsal", headers: CANONICAL_ENTRY.SALES_HEADERS,
+      values: persistedValues, timestamp: timestamp, id: salesId, action: "CREATE_SALES" },
+      { flush: function() {}, uuid: function() { return "AUDIT-UUID"; } });
+  }, "WRITE_FAILED");
+  if (corruptLedger.rows.length !== 1 || rollbackLogs.rows.length !== 1) {
+    throw new Error("Unverified canonical write was not rolled back");
+  }
+  scenarios += 2;
+
+  var submitSource = submitCanonicalTransaction.toString();
+  var persistSource = persistCanonicalEntry.toString();
+  ["LockService.getScriptLock()", "lock.waitLock(30000)", "prepareCanonicalSalesEntry(payload, context)",
+    "prepareCanonicalExpenseEntry(payload, context)", "persistCanonicalEntry(ss", '"CREATE_SALES"',
+    '"CREATE_EXPENSE"', "lock.releaseLock()",
+    'Utilities.formatDate(timestamp, CANONICAL_ENTRY.TIMEZONE, "yyyy-MM-dd\'T\'HH:mm:ssXXX")'].forEach(function(token) {
+    assertSourceContains(submitSource, token, "entry concurrency/write contract"); scenarios++;
+  });
+  assertSourceExcludes(submitSource, "entry.timestamp = timestamp", "serializable entry response contract");
+  scenarios++;
+  ["SpreadsheetApp.flush()", "canonicalEntryRowMatches(", "TransactionEntry", "deleteRow("].forEach(function(token) {
+    assertSourceContains(persistSource, token, "write verify audit/rollback contract"); scenarios++;
+  });
+  [submitSource, persistSource, prepareCanonicalSalesEntry.toString(), prepareCanonicalExpenseEntry.toString()].forEach(function(source) {
+    assertSourceExcludes(source, 'getSheetByName("Transaction")', "Transaction protection");
+    assertSourceExcludes(source, 'getSheetByName("Helper")', "Helper protection");
+  });
+  scenarios += 8;
+
+  var adapter = buildCanonicalTransactionData({
+    sales: [{ ID_Trx: salesId, Tanggal: timestamp, ID_Prod: "P1", Tipe: "Hot", Qty: 3,
+      HPP: 4000, HJ: 10000, Source: "APP_ENTRY", IsActive: true, sourceRowIndex: 1 }],
+    expenses: [{ ID_Trx: expenseId, Tanggal: timestamp, ID_Ops: "O1", Nilai: 75000,
+      Source: "APP_ENTRY", IsActive: true, sourceRowIndex: 1 }],
+    products: context.products,
+    expenseItems: context.expenseItems
+  });
+  if (adapter.records.length !== 2 || adapter.records[0].source !== "APP_ENTRY" || adapter.records[1].source !== "APP_ENTRY") {
+    throw new Error("APP_ENTRY canonical adapter compatibility mismatch");
+  }
+  scenarios += 2;
+  var options = buildTransactionEntryOptions(
+    context.products.concat([{ ID_Prod: "P0", Produk: "Americano", Kategori: "Coffee", Kind: "Beverage", IsActive: true, Notes: "private" }]),
+    context.expenseItems
+  );
+  if (options.sales.length !== 2 || options.sales[0].productId !== "P0" ||
+      Object.prototype.hasOwnProperty.call(options.sales[0], "Notes") ||
+      options.expenses.length !== 3 || options.expenses[0].item !== "Electricity" ||
+      Object.prototype.hasOwnProperty.call(options.expenses[0], "AccountCode")) {
+    throw new Error("Active projected entry options contract mismatch");
+  }
+  scenarios += 6;
+  Logger.log("PASS: testCanonicalTransactionEntryService | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function testLegacyTransactionSyncService()
 {
   var context = {
@@ -3615,6 +3794,7 @@ function testFullShellVisualContract()
     'id="mainContent"',
     "sidebar metadata exclusion"
   );
+  var shellChromeSource = utilitySource + sidebarSource + showPageSource;
   var scenariosPassed = 0;
 
   assertSourceContainsOnce(source, 'id="topUtilityBar"', "one utility row");
@@ -3736,7 +3916,7 @@ function testFullShellVisualContract()
     "command palette"
   ].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "forbidden SaaS feature");
+    assertSourceExcludes(shellChromeSource, token, "forbidden SaaS feature");
   });
   scenariosPassed++;
 
@@ -5915,6 +6095,156 @@ function testSecondaryDestinationsHighFidelityContract()
   return summary;
 }
 
+function testTransactionEntryUiContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var tokenSource = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
+  var region = getSourceRegion(source, 'id="transactionEntryOverlay"', 'id="settings"', "Transaction entry UI");
+  var scenarios = 0;
+
+  ['id="newTransactionButton"', 'id="transactionEntryDialog"', 'role="dialog"', 'aria-modal="true"',
+    'onclick="openTransactionEntry()"', 'onclick="closeTransactionEntry()"'].forEach(function(token) {
+    assertSourceContains(source, token, "entry trigger/dialog");
+  });
+  scenarios++;
+
+  ['data-entry-type="SALES"', 'data-entry-type="EXPENSE"', 'role="radio"', 'aria-checked="false"',
+    "setTransactionEntryType('SALES')", "setTransactionEntryType('EXPENSE')",
+    'entry.salesFields.hidden = type !== "SALES";', 'entry.expenseFields.hidden = type !== "EXPENSE";'].forEach(function(token) {
+    assertSourceContains(source, token, "Sales/Expense mode switching");
+  });
+  scenarios++;
+
+  ['id="productEntrySearch"', 'role="combobox"', 'aria-autocomplete="list"',
+    'id="productEntryListbox"', 'role="listbox"', 'role", "option"',
+    'option.productId', 'option.product', 'option.category', 'option.kind'].forEach(function(token) {
+    assertSourceContains(source, token, "accessible product selector");
+  });
+  scenarios++;
+
+  ['id="salesTypeHot"', 'id="salesTypeCold"', 'data-sales-type="Hot"', 'data-sales-type="Cold"',
+    'id="salesEntryQty"', 'type="number" inputmode="numeric" min="1" step="1" value="1"',
+    'Math.max(1, current + delta)', 'Number.isInteger(qty) && qty >= 1'].forEach(function(token) {
+    assertSourceContains(source, token, "Sales controls");
+  });
+  scenarios++;
+
+  ['getProductEntryPricing(state.selectedProduct.productId, state.selectedType)',
+    'var version = ++state.pricingRequestVersion;',
+    'if (version !== transactionEntryState.pricingRequestVersion) return;',
+    'id="salesPreviewPrice"', 'id="salesPreviewHpp"', 'id="salesPreviewUnitMargin"',
+    'id="salesPreviewRevenue"', 'id="salesPreviewCogs"', 'id="salesPreviewMargin"'].forEach(function(token) {
+    assertSourceContains(source, token, "pricing preview and stale response protection");
+  });
+  scenarios++;
+
+  ['id="expenseEntrySearch"', 'option.expenseItemId', 'option.item', 'option.group',
+    'id="expenseEntryAmount" type="text" inputmode="numeric"',
+    'String(value || "").replace(/[^0-9]/g, "")', 'Number.isInteger(state.amount) && state.amount > 0'].forEach(function(token) {
+    assertSourceContains(source, token, "Expense controls and normalized amount");
+  });
+  scenarios++;
+
+  ['getTransactionEntryOptions()', 'transactionEntryState.optionsLoaded',
+    'transactionEntryState.entryOptions = {', 'sales: response.data.sales.slice()',
+    'expenses: response.data.expenses.slice()', 'loadTransactionEntryOptions()">Retry'].forEach(function(token) {
+    assertSourceContains(source, token, "cached options and retry state");
+  });
+  scenarios++;
+
+  ['{ transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty }',
+    '{ transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount }',
+    '.submitCanonicalTransaction(payload);', 'if (state.submitting || entry.submit.disabled) return;',
+    'state.submitting = true;', 'state.submissionComplete = true;',
+    'state.submitting || state.submissionComplete || state.loadingOptions',
+    'entry.submit.setAttribute("aria-busy", String(state.submitting));'].forEach(function(token) {
+    assertSourceContains(source, token, "payload and duplicate-submit contract");
+  });
+  ["HPP:", "HJ:", "Revenue:", "COGS:", "Margin:", "Source:", "CreatedBy:", "IsActive:"].forEach(function(token) {
+    assertSourceExcludes(getSourceRegion(source, "function submitTransactionEntry(event)", "function showTransactionEntrySuccess", "entry submit"), token, "protected payload field");
+  });
+  scenarios++;
+
+  ['PRODUCT_INACTIVE: "Product is no longer available."',
+    'PRICE_NOT_FOUND: "Price is not available for this product/type."',
+    'PRICE_AMBIGUOUS: "Pricing configuration needs attention."',
+    'EXPENSE_ITEM_INACTIVE: "Expense item is no longer available."',
+    'WRITE_FAILED: "Transaction could not be saved. Please try again."',
+    'console.error("Canonical transaction submission failed", error)'].forEach(function(token) {
+    assertSourceContains(source, token, "safe error mapping");
+  });
+  scenarios++;
+
+  ['id="transactionEntrySuccess"', 'aria-live="polite" aria-atomic="true"',
+    'Product", result.product', 'Revenue", formatEntryCurrency(result.revenue)',
+    'Item", result.item', 'Transaction ID", result.id', 'resetTransactionEntryForAnother()',
+    'transactionEntryState = createInitialTransactionEntryState();',
+    'refreshTransactionEntryAfterSuccess();'].forEach(function(token) {
+    assertSourceContains(source, token, "success, reset, and targeted refresh");
+  });
+  scenarios++;
+
+  var submitRegion = getSourceRegion(source, "function submitTransactionEntry(event)",
+    "function refreshTransactionEntryAfterSuccess", "authoritative submit boundary");
+  var refreshRegion = getSourceRegion(source, "function refreshTransactionEntryAfterSuccess",
+    "function showTransactionEntrySuccess", "post-save refresh boundary");
+  assertSourceContains(submitRegion, "showTransactionEntrySuccess(response.data);", "success before refresh");
+  assertSourceContains(submitRegion, "refreshTransactionEntryAfterSuccess();", "separate post-save refresh");
+  assertSourceContains(refreshRegion, "requestDashboardData(lastDashboardRequest);", "dashboard refresh target");
+  assertSourceContains(refreshRegion, 'console.error("Post-save dashboard refresh failed", error);', "refresh-only failure");
+  assertSourceExcludes(refreshRegion, "showTransactionEntryApiError", "refresh cannot become save error");
+  assertSourceExcludes(refreshRegion, "transactionEntryGeneralError", "refresh cannot show save failure");
+  assertSourceOccurrenceCount(submitRegion, ".submitCanonicalTransaction(payload);", 1, "one submit per Save action");
+  scenarios += 8;
+
+  ['aria-describedby="productEntryError"', 'aria-describedby="expenseEntryError"',
+    'aria-describedby="salesEntryQtyError"', 'aria-describedby="expenseEntryAmountError"',
+    'if (event.key === "Tab")', 'if (event.key === "Escape")',
+    'transactionEntryLastFocus.focus()', 'document.body.classList.add("overflow-hidden")'].forEach(function(token) {
+    assertSourceContains(source, token, "entry accessibility and focus behavior");
+  });
+  scenarios++;
+
+  assertSourceContains(source,
+    '#transactions.active { display: grid; height: 100%; grid-template-rows: 40px 44px minmax(0, 1fr); gap: 12px; overflow: hidden; }',
+    "desktop Transactions CTA grid track");
+  ['document.body.appendChild(entry.overlay);', 'elements.appShell.inert = true;',
+    'elements.appShell.inert = false;'].forEach(function(token) {
+    assertSourceContains(source, token, "mobile viewport portal and background isolation");
+  });
+  assertSourceOccurrenceCount(region, '>Save Transaction</span>', 1, "single Save Transaction action");
+  ['id="transactionEntrySubmitRegion"', 'form="transactionEntryForm"',
+    'entry.submitRegion.hidden = true;', 'entry.submitRegion.hidden = false;'].forEach(function(token) {
+    assertSourceContains(source, token, "separate persistent action footer");
+  });
+  ['#transactionsEntryActionRow{min-height:44px;align-items:center}',
+    '#transactionsEntryActionRow .transaction-entry-primary{width:-moz-max-content;width:max-content;height:44px;min-height:44px;flex:0 0 auto;align-self:center}',
+    '.transaction-entry-dialog{display:flex;width:min(100%,620px)',
+    'max-height:min(820px,calc(100dvh - 48px))',
+    'min-height:44px', 'env(safe-area-inset-bottom)', '@media (max-width:639px)',
+    '.transaction-entry-overlay{position:fixed;align-items:stretch;justify-content:stretch;padding:0}',
+    '.transaction-entry-dialog,.transaction-entry-overlay{inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0}',
+    '.transaction-entry-dialog{position:absolute;transform:none;border:0;border-radius:0}',
+    '.transaction-entry-header{position:relative;top:auto',
+    '.transaction-entry-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:16px}',
+    '.transaction-entry-fields{gap:13px}',
+    '.transaction-entry-submit-region{position:relative;z-index:2;margin:0;border-top:1px solid var(--divider);padding:10px 16px calc(10px + env(safe-area-inset-bottom))',
+    '.transaction-entry-submit{min-height:52px;margin-top:0;box-shadow:none',
+    'html.numlock-phone .transaction-entry-overlay{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;align-items:stretch;justify-content:stretch;margin:0;padding:0}',
+    'html.numlock-phone .transaction-entry-dialog{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;transform:none;border:0;border-radius:0;box-shadow:none}'].forEach(function(token) {
+    assertSourceContains(tokenSource, token, "responsive entry containment");
+  });
+  scenarios++;
+
+  ['getSheetByName(', 'SpreadsheetApp', 'Transaction"', 'Helper"', 'syncLegacyTransaction'].forEach(function(token) {
+    assertSourceExcludes(region, token, "frontend and legacy protection");
+  });
+  scenarios++;
+
+  Logger.log("PASS: testTransactionEntryUiContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios, writes: 0 };
+}
+
 function testTransactionsVisualContract()
 {
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
@@ -6077,7 +6407,7 @@ function testTransactionsVisualContract()
   [
     'role="status"', 'No visible transactions in this bounded view',
     ':root[data-theme="dark"] .bg-white',
-    '#transactions.active { display: grid; height: 100%; grid-template-rows: 40px minmax(0, 1fr); gap: 12px; overflow: hidden; }',
+    '#transactions.active { display: grid; height: 100%; grid-template-rows: 40px 44px minmax(0, 1fr); gap: 12px; overflow: hidden; }',
     '#transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }',
     '#transactionsTableScroll { overflow-x: auto; }',
     '@media (max-width: 1023px)', '@media (prefers-reduced-motion: reduce)'
@@ -6906,7 +7236,7 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    47,
+    49,
     "closure runner membership"
   );
   assertSourceContains(
@@ -7001,7 +7331,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 41,
+    runnerTotal: 49,
     packagesComplete: packages.length,
     destinations: 9,
     viewportStates: viewportMatrix.length,
@@ -7149,7 +7479,7 @@ function testUiFinalStabilizationContract()
   {
     assertSourceContains(source, token, "truthful Settings and Logs scope");
   });
-  ["Search", "Notifications", "Customize widgets", "Welcome back"].forEach(function(token)
+  ["Notifications", "Customize widgets", "Welcome back"].forEach(function(token)
   {
     assertSourceExcludes(source, token, "forbidden SaaS decoration");
   });

@@ -235,6 +235,91 @@
   .ui-action-label { font-size: var(--text-label-size); font-weight: var(--font-weight-semibold); line-height: var(--text-label-line); }
   .ui-form-text { font-family: var(--font-sans); font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
   .ui-empty-state { font-size: var(--text-body-size); font-weight: var(--font-weight-normal); line-height: var(--text-body-line); color: var(--text-muted); }
+  .transaction-entry-primary,
+  .transaction-entry-secondary,
+  .transaction-entry-icon-button,
+  .transaction-entry-submit { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; gap: 8px; border-radius: var(--radius-control); padding: 10px 16px; font-size: 14px; font-weight: var(--font-weight-semibold); }
+  .transaction-entry-primary,
+  .transaction-entry-submit { border: 1px solid var(--brand); background: var(--brand); color: #fff; }
+  .transaction-entry-secondary,
+  .transaction-entry-icon-button { border: 1px solid var(--card-border); background: var(--surface-1); color: var(--text-secondary); }
+  .transaction-entry-submit { width: 100%; margin-top: 20px; }
+  .transaction-entry-submit:disabled { border-color: var(--disabled-bg); background: var(--disabled-bg); color: var(--disabled-text); cursor: not-allowed; }
+  .transaction-entry-overlay { position: fixed; z-index: 100; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--overlay); }
+  .transaction-entry-overlay[hidden] { display: none; }
+  #transactionsEntryActionRow { min-height: 44px; align-items: center; }
+  #transactionsEntryActionRow .transaction-entry-primary { width: max-content; height: 44px; min-height: 44px; flex: 0 0 auto; align-self: center; }
+  .transaction-entry-dialog { display: flex; width: min(100%, 620px); max-height: min(820px, calc(100dvh - 48px)); flex-direction: column; overflow: hidden; border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-2); }
+  .transaction-entry-header { position: sticky; z-index: 2; top: 0; display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--divider); padding: 20px 22px; background: var(--surface-1); }
+  .transaction-entry-header h2 { margin-top: 4px; font-size: 24px; font-weight: var(--font-weight-bold); line-height: 30px; }
+  .transaction-entry-header p:last-child { margin-top: 4px; font-size: 13px; line-height: 18px; }
+  .transaction-entry-icon-button { width: 44px; flex: 0 0 44px; padding: 0; }
+  .transaction-entry-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 22px calc(22px + env(safe-area-inset-bottom)); }
+  .transaction-entry-fieldset > legend,
+  .transaction-entry-control > label { display: block; margin-bottom: 8px; color: var(--text-primary); font-size: 14px; font-weight: var(--font-weight-semibold); line-height: 20px; }
+  .transaction-entry-segments { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .transaction-entry-segments button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-secondary); font-weight: var(--font-weight-semibold); }
+  .transaction-entry-segments button[aria-checked="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
+  .transaction-entry-local-state { margin: 14px 0; min-height: 20px; color: var(--text-muted); font-size: 13px; line-height: 20px; }
+  .transaction-entry-fields { display: grid; gap: 18px; }
+  .transaction-entry-fields[hidden] { display: none; }
+  .transaction-entry-fields h3 { display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 18px; font-weight: var(--font-weight-bold); }
+  .transaction-entry-fields h3 i { color: var(--brand); }
+  .transaction-entry-control input { width: 100%; min-height: 48px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-primary); padding: 10px 12px; font-size: 16px; }
+  .transaction-entry-combobox { position: relative; }
+  .transaction-entry-listbox { position: absolute; z-index: 4; top: calc(100% + 4px); right: 0; left: 0; max-height: 250px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-control); padding: 4px; background: var(--surface-1); box-shadow: var(--shadow-2); }
+  .transaction-entry-option { display: flex; width: 100%; min-height: 52px; flex-direction: column; justify-content: center; border-radius: 7px; padding: 7px 10px; color: var(--text-primary); text-align: left; }
+  .transaction-entry-option span { margin-top: 2px; color: var(--text-muted); font-size: 12px; }
+  .transaction-entry-option[aria-selected="true"],
+  .transaction-entry-option[data-active="true"] { background: var(--brand-soft); color: var(--brand); }
+  .transaction-entry-meta { min-height: 18px; margin-top: 5px; color: var(--text-muted); font-size: 12px; }
+  .transaction-entry-error { min-height: 18px; margin-top: 4px; color: var(--critical); font-size: 12px; line-height: 18px; }
+  .transaction-entry-general-error:empty { display: none; }
+  .transaction-entry-submit-region { flex: 0 0 auto; background: var(--surface-1); padding: 0 22px 22px; }
+  .transaction-entry-submit-region[hidden] { display: none; }
+  .transaction-entry-quantity { display: grid; grid-template-columns: 48px minmax(72px, 100px) 48px; align-items: center; gap: 8px; }
+  .transaction-entry-quantity button { min-height: 48px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-2); color: var(--text-primary); }
+  .transaction-entry-quantity input { padding-right: 4px; padding-left: 4px; text-align: center; font-weight: var(--font-weight-bold); }
+  .transaction-entry-money { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); }
+  .transaction-entry-money span { padding-left: 12px; color: var(--text-secondary); font-weight: var(--font-weight-semibold); }
+  .transaction-entry-money input { border: 0; background: transparent; }
+  .transaction-entry-preview { border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-2); padding: 14px; }
+  .transaction-entry-preview-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .transaction-entry-preview-heading h4 { color: var(--text-primary); font-size: 14px; font-weight: var(--font-weight-bold); }
+  .transaction-entry-preview-heading span { color: var(--text-muted); font-size: 12px; }
+  .transaction-entry-preview dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+  .transaction-entry-preview dl div { min-width: 0; }
+  .transaction-entry-preview dt { color: var(--text-muted); font-size: 11px; line-height: 16px; }
+  .transaction-entry-preview dd { margin-top: 2px; color: var(--text-primary); font-size: 15px; font-weight: var(--font-weight-semibold); font-variant-numeric: tabular-nums; }
+  .transaction-entry-preview .transaction-entry-preview-total dd { color: var(--success); font-size: 18px; }
+  .transaction-entry-success { padding: 16px 0 4px; text-align: center; }
+  .transaction-entry-success > i { color: var(--success); font-size: 36px; }
+  .transaction-entry-success h3 { margin-top: 8px; color: var(--text-primary); font-size: 20px; font-weight: var(--font-weight-bold); }
+  .transaction-entry-success dl { display: grid; gap: 8px; margin-top: 16px; border-radius: var(--radius-card); background: var(--surface-2); padding: 14px; text-align: left; }
+  .transaction-entry-success dl div { display: flex; justify-content: space-between; gap: 16px; }
+  .transaction-entry-success dt { color: var(--text-muted); }
+  .transaction-entry-success dd { color: var(--text-primary); font-weight: var(--font-weight-semibold); text-align: right; }
+  .transaction-entry-success-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+  .transaction-entry-primary:focus-visible,
+  .transaction-entry-secondary:focus-visible,
+  .transaction-entry-icon-button:focus-visible,
+  .transaction-entry-submit:focus-visible,
+  .transaction-entry-segments button:focus-visible,
+  .transaction-entry-option:focus-visible,
+  .transaction-entry-quantity button:focus-visible,
+  .transaction-entry-control input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  @media (max-width: 639px) {
+    .transaction-entry-overlay { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; align-items: stretch; justify-content: stretch; margin: 0; padding: 0; }
+    .transaction-entry-dialog { position: absolute; inset: 0; width: 100%; max-width: none; height: 100%; max-height: none; margin: 0; transform: none; border: 0; border-radius: 0; }
+    .transaction-entry-header { position: relative; top: auto; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; }
+    .transaction-entry-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px; }
+    .transaction-entry-fields { gap: 13px; }
+    .transaction-entry-submit-region { position: relative; z-index: 2; margin: 0; border-top: 1px solid var(--divider); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 16px var(--surface-1); }
+    .transaction-entry-submit { min-height: 52px; margin-top: 0; box-shadow: none; }
+  }
+  html.numlock-phone .transaction-entry-overlay { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; align-items: stretch; justify-content: stretch; margin: 0; padding: 0; }
+  html.numlock-phone .transaction-entry-dialog { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; transform: none; border: 0; border-radius: 0; box-shadow: none; }
   .hf-analytics-card-header { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: var(--space-5); }
   .hf-analytics-title-group { display: inline-flex; min-width: 0; align-items: center; gap: var(--space-5); }
   .hf-analytics-title-icon { display: inline-flex; width: 44px; height: 44px; flex: 0 0 44px; align-items: center; justify-content: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 17px; }
