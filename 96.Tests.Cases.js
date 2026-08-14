@@ -237,6 +237,227 @@ function testCanonicalTransactionEntryService()
   return { passed: true, scenarios: scenarios };
 }
 
+function testCanonicalTransactionLifecycleService()
+{
+  var timestamp = new Date(2026, 7, 14, 10, 0, 0), scenarios = 0;
+  function expectCode(callback, code) {
+    var actual = null;
+    try { callback(); } catch (error) { actual = error.entryCode; }
+    if (actual !== code) throw new Error("Expected lifecycle error " + code + "; got " + actual);
+    scenarios++;
+  }
+  function memorySheet(headers, initialRows, corruptAudit) {
+    var rows = [headers.slice()].concat((initialRows || []).map(function(row) { return row.slice(); }));
+    var readCount = 0;
+    return {
+      rows: rows,
+      getLastColumn: function() { return rows[0].length; },
+      getLastRow: function() { return rows.length; },
+      deleteRow: function(row) { rows.splice(row - 1, 1); },
+      getDataRange: function() { return { getValues: function() { return rows.map(function(row) { return row.slice(); }); } }; },
+      getRange: function(row, column, rowCount, columnCount) {
+        return {
+          setValues: function(values) { rows[row - 1] = values[0].slice(); },
+          getValues: function() {
+            var values = (rows[row - 1] || []).slice(column - 1, column - 1 + columnCount);
+            readCount++;
+            if ((typeof corruptAudit === "function" && corruptAudit(row, readCount)) || (corruptAudit === true && row > 1)) values[0] = "CORRUPT";
+            return [values];
+          },
+          getValue: function() { return rows[row - 1] ? rows[row - 1][column - 1] : ""; },
+          createTextFinder: function(value) {
+            return { matchEntireCell: function() { return this; }, findNext: function() {
+              for (var index = 1; index < rows.length; index++) if (String(rows[index][column - 1]) === String(value)) return {};
+              return null;
+            } };
+          }
+        };
+      }
+    };
+  }
+  var salesRow = ["SAL-APP-20260814-AAAAAAAAAAAA", timestamp, "P1", "Hot", 2, 4000, 10000,
+    "APP_ENTRY", true, timestamp, "SYSTEM_APP_ENTRY", "", ""];
+  var legacyRow = salesRow.slice(); legacyRow[0] = "SAL-GLEG-00000002"; legacyRow[7] = "LEGACY_GOOGLE";
+  var xlsmRow = salesRow.slice(); xlsmRow[0] = "SAL-XLSM-00000001"; xlsmRow[7] = "XLSM";
+  var active = canonicalLifecycleMutability({ spec: { type: "SALES" }, values: salesRow });
+  if (!active.canCorrect || !active.canVoid || active.immutableReason !== null) throw new Error("APP_ENTRY mutability mismatch");
+  scenarios += 3;
+  var legacy = canonicalLifecycleMutability({ spec: { type: "SALES" }, values: legacyRow });
+  var historical = canonicalLifecycleMutability({ spec: { type: "SALES" }, values: xlsmRow });
+  if (legacy.canCorrect || legacy.canVoid || legacy.immutableReason !== "LEGACY_TRANSACTION" ||
+      historical.canCorrect || historical.canVoid || historical.immutableReason !== "HISTORICAL_TRANSACTION") {
+    throw new Error("Historical source immutability mismatch");
+  }
+  scenarios += 6;
+  var voidedRow = salesRow.slice(); voidedRow[8] = false;
+  var voided = canonicalLifecycleMutability({ spec: { type: "SALES" }, values: voidedRow });
+  if (voided.canCorrect || voided.canVoid || voided.immutableReason !== "ALREADY_VOIDED") throw new Error("Voided mutability mismatch");
+  scenarios += 3;
+  expectCode(function() { requireMutableLifecycleRecord({ spec: { type: "SALES" }, values: legacyRow }); }, "TRANSACTION_READ_ONLY");
+  expectCode(function() { requireMutableLifecycleRecord({ spec: { type: "SALES" }, values: xlsmRow }); }, "TRANSACTION_READ_ONLY");
+  expectCode(function() { requireMutableLifecycleRecord({ spec: { type: "SALES" }, values: voidedRow }); }, "TRANSACTION_ALREADY_VOIDED");
+  ["", "  ", "--", new Array(502).join("x")].forEach(function(reason) {
+    expectCode(function() { requireLifecycleReason(reason); }, "INVALID_VOID_REASON");
+  });
+  if (requireLifecycleReason("  duplicate sale entered  ") !== "duplicate sale entered") throw new Error("Lifecycle reason trim mismatch");
+  scenarios++;
+
+  var ledger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS, [salesRow]);
+  var logs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS, []);
+  var ss = { getSheetByName: function(name) { return name === "tabsal" ? ledger : name === "Logs" ? logs : null; } };
+  var original = findCanonicalLifecycleRecord(ss, salesRow[0]), flushes = 0, uuidIndex = 0;
+  var runtime = { flush: function() { flushes++; }, uuid: function() { uuidIndex++; return "BBBBBBBB-BBBB-BBBB-BBBB-BBBBBBBBBBB" + uuidIndex; } };
+  persistCanonicalVoid(ss, original, "duplicate", timestamp, runtime);
+  if (ledger.rows[1][8] !== false || ledger.rows[1][11] !== timestamp || ledger.rows[1][12] !== CANONICAL_ENTRY.USER ||
+      logs.rows[1][3] !== TRANSACTION_LIFECYCLE.MODULE || logs.rows[1][4] !== "VOID_SALES" || flushes !== 2) {
+    throw new Error("Sales void write/audit mismatch");
+  }
+  scenarios += 6;
+
+  var expenseRow = ["OPS-APP-20260814-AAAAAAAAAAAA", timestamp, "O1", 50000, "APP_ENTRY", true,
+    timestamp, CANONICAL_ENTRY.USER, "", ""];
+  var expenseLedger = memorySheet(CANONICAL_ENTRY.EXPENSE_HEADERS, [expenseRow]);
+  var expenseLogs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS, []);
+  var expenseSs = { getSheetByName: function(name) { return name === "tabops" ? expenseLedger : name === "Logs" ? expenseLogs : null; } };
+  persistCanonicalVoid(expenseSs, findCanonicalLifecycleRecord(expenseSs, expenseRow[0]), "wrong amount", timestamp,
+    { flush: function() {}, uuid: function() { return "EXPENSE-AUDIT"; } });
+  if (expenseLedger.rows[1][5] !== false || expenseLogs.rows[1][4] !== "VOID_EXPENSE") throw new Error("Expense void mismatch");
+  scenarios += 2;
+
+  var correctionLedger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS, [salesRow]);
+  var correctionLogs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS, []), correctionUuids = 0;
+  var correctionSs = { getSheetByName: function(name) { return name === "tabsal" ? correctionLedger : name === "Logs" ? correctionLogs : null; } };
+  var replacement = { productId: "P1", type: "Cold", qty: 3, unitHPP: 5000, unitPrice: 12000 };
+  var replacementId = persistCanonicalCorrection(correctionSs, findCanonicalLifecycleRecord(correctionSs, salesRow[0]),
+    replacement, "wrong drink type", timestamp, { flush: function() {}, uuid: function() {
+      correctionUuids++; return correctionUuids === 1 ? "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC" : "AUDIT-" + correctionUuids;
+    } });
+  if (replacementId !== "SAL-APP-20260814-CCCCCCCCCCCC" || correctionLedger.rows.length !== 3 ||
+      correctionLedger.rows[1][8] !== false || correctionLedger.rows[2][8] !== true || correctionLedger.rows[2][3] !== "Cold" ||
+      correctionLedger.rows[2][5] !== 5000 || correctionLogs.rows.length !== 3) throw new Error("Sales correction lifecycle mismatch");
+  var voidMetadata = JSON.parse(correctionLogs.rows[1][8]), createMetadata = JSON.parse(correctionLogs.rows[2][8]);
+  if (voidMetadata.replacementId !== replacementId || createMetadata.originalId !== salesRow[0]) throw new Error("Correction audit relation mismatch");
+  scenarios += 9;
+  var adapter = buildCanonicalTransactionData({
+    sales: correctionLedger.rows.slice(1).map(function(row, index) { return { ID_Trx: row[0], Tanggal: row[1],
+      ID_Prod: row[2], Tipe: row[3], Qty: row[4], HPP: row[5], HJ: row[6], Source: row[7],
+      IsActive: row[8], sourceRowIndex: index + 1 }; }),
+    expenses: [], products: [{ ID_Prod: "P1", Produk: "Espresso", Kategori: "Coffee", Kind: "Beverage", IsActive: true }],
+    expenseItems: []
+  });
+  if (adapter.records.length !== 1 || adapter.records[0].id !== replacementId || adapter.sourceQuality.inactiveLedgerRows !== 1) {
+    throw new Error("Dashboard adapter did not exclude corrected voided original");
+  }
+  scenarios += 3;
+
+  var failedLedger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS, [salesRow]);
+  var failedLogs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS, [], true);
+  var failedSs = { getSheetByName: function(name) { return name === "tabsal" ? failedLedger : name === "Logs" ? failedLogs : null; } };
+  expectCode(function() {
+    persistCanonicalCorrection(failedSs, findCanonicalLifecycleRecord(failedSs, salesRow[0]), replacement, "wrong type", timestamp,
+      { flush: function() {}, uuid: function() { return "DDDDDDDD-DDDD-DDDD-DDDD-DDDDDDDDDDDD"; } });
+  }, "WRITE_FAILED");
+  if (failedLedger.rows.length !== 2 || failedLedger.rows[1][8] !== true || failedLogs.rows.length !== 1) {
+    throw new Error("Correction audit-failure rollback left partial lifecycle state");
+  }
+  scenarios += 3;
+
+  [{ name: "replacement verification", row: 3 }, { name: "original void verification", row: 2 }]
+    .forEach(function(failure) {
+      var corrupted = false;
+      var atomicLedger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS, [salesRow], function(row) {
+        if (!corrupted && row === failure.row) { corrupted = true; return true; }
+        return false;
+      });
+      var atomicLogs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS, []);
+      var atomicSs = { getSheetByName: function(name) { return name === "tabsal" ? atomicLedger : name === "Logs" ? atomicLogs : null; } };
+      expectCode(function() {
+        persistCanonicalCorrection(atomicSs, findCanonicalLifecycleRecord(atomicSs, salesRow[0]), replacement,
+          failure.name, timestamp, { flush: function() {}, uuid: function() { return "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE"; } });
+      }, "WRITE_FAILED");
+      if (atomicLedger.rows.length !== 2 || atomicLedger.rows[1][8] !== true || atomicLogs.rows.length !== 1) {
+        throw new Error(failure.name + " rollback left partial lifecycle state");
+      }
+      scenarios += 3;
+    });
+
+  var voidFailureLedger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS, [salesRow]);
+  var voidFailureLogs = memorySheet(CANONICAL_ENTRY.LOG_HEADERS, [], true);
+  var voidFailureSs = { getSheetByName: function(name) { return name === "tabsal" ? voidFailureLedger : name === "Logs" ? voidFailureLogs : null; } };
+  expectCode(function() {
+    persistCanonicalVoid(voidFailureSs, findCanonicalLifecycleRecord(voidFailureSs, salesRow[0]), "void audit failure", timestamp,
+      { flush: function() {}, uuid: function() { return "VOID-FAIL"; } });
+  }, "WRITE_FAILED");
+  if (voidFailureLedger.rows[1][8] !== true || voidFailureLogs.rows.length !== 1) {
+    throw new Error("Void audit-failure rollback left an inactive original");
+  }
+  scenarios += 2;
+
+  var sources = [getCanonicalTransactionDetail, previewCanonicalTransactionCorrection, voidCanonicalTransaction,
+    correctCanonicalTransaction, persistCanonicalVoid, persistCanonicalCorrection].map(function(fn) { return fn.toString(); }).join("\n");
+  ["LockService.getScriptLock()", "lock.waitLock(30000)", "findCanonicalLifecycleRecord(ss", "requireMutableLifecycleRecord(original)",
+    "appendLifecycleAudit(", "canonicalEntryRowMatches(", "deleteRow(replacementRow)"].forEach(function(token) {
+    assertSourceContains(sources, token, "lifecycle service contract"); scenarios++;
+  });
+  ["deleteRows(", "clearContent(", 'getSheetByName("Transaction")', 'getSheetByName("Helper")'].forEach(function(token) {
+    assertSourceExcludes(sources, token, "protected lifecycle operation"); scenarios++;
+  });
+  Logger.log("PASS: testCanonicalTransactionLifecycleService | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testCanonicalLifecycleTransportSerialization()
+{
+  var timestamp = new Date(Date.UTC(2026, 7, 14, 3, 30, 0));
+  var fixtures = [
+    { name: "Sales detail containing Date fields", payload: { id: "SAL-APP-1", date: timestamp,
+      createdAt: timestamp, updatedAt: null, product: "Espresso", revenue: 12000 } },
+    { name: "Expense detail containing Date fields", payload: { id: "OPS-APP-1", date: timestamp,
+      createdAt: timestamp, updatedAt: null, item: "Electricity", amount: 75000 } },
+    { name: "Voided detail with UpdatedAt", payload: { id: "SAL-APP-2", status: "VOIDED",
+      date: timestamp, createdAt: timestamp, updatedAt: new Date(timestamp.getTime() + 60000) } },
+    { name: "Correction relation containing nested timestamps", payload: { originalId: "SAL-APP-1",
+      replacementId: "SAL-APP-2", relation: { createdAt: timestamp, audit: [{ timestamp: timestamp }] } } },
+    { name: "Preview response", payload: { before: { date: timestamp, createdAt: timestamp },
+      after: { timestamp: timestamp }, delta: { revenue: -12000 } } },
+    { name: "Void success response", payload: { id: "SAL-APP-1", date: timestamp,
+      createdAt: timestamp, updatedAt: timestamp, status: "VOIDED" } },
+    { name: "Correct success response", payload: { original: { date: timestamp, updatedAt: timestamp },
+      replacement: { date: timestamp, createdAt: timestamp }, unsupported: undefined } }
+  ];
+  var scenarios = 0;
+
+  function assertTransportSafe(value, path) {
+    if (value instanceof Date || typeof value === "undefined" ||
+        (typeof value === "number" && !isFinite(value))) {
+      throw new Error("Lifecycle transport contains unsupported value at " + path);
+    }
+    if (Array.isArray(value)) {
+      value.forEach(function(item, index) { assertTransportSafe(item, path + "[" + index + "]"); });
+    } else if (value && typeof value === "object") {
+      Object.keys(value).forEach(function(key) { assertTransportSafe(value[key], path + "." + key); });
+    }
+  }
+
+  fixtures.forEach(function(fixture) {
+    var response = canonicalLifecycleSuccess(fixture.payload);
+    assertTransportSafe(response, fixture.name);
+    JSON.stringify(response);
+    if (response.success !== true || typeof response.data !== "object") {
+      throw new Error(fixture.name + " lifecycle response shape mismatch");
+    }
+    scenarios++;
+  });
+
+  var publicSources = [getCanonicalTransactionDetail, previewCanonicalTransactionCorrection,
+    voidCanonicalTransaction, correctCanonicalTransaction].map(function(fn) { return fn.toString(); }).join("\n");
+  assertSourceOccurrenceCount(publicSources, "canonicalLifecycleSuccess(", 4, "public lifecycle serialization boundary");
+  scenarios += 4;
+
+  Logger.log("PASS: testCanonicalLifecycleTransportSerialization | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios, writes: 0 };
+}
+
 function testLegacyTransactionSyncService()
 {
   var context = {
@@ -5899,9 +6120,9 @@ function testSecondaryDestinationsHighFidelityContract()
 {
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
   var scenariosPassed = 0;
-  var transactionsRegion = getSourceRegion(source, 'id="transactions"', 'id="settings"', "high-fidelity Transactions");
-  var settingsRegion = getSourceRegion(source, 'id="settings"', 'id="logs"', "high-fidelity Settings");
-  var logsRegion = getSourceRegion(source, 'id="logs"', "</main>", "high-fidelity Logs");
+  var transactionsRegion = getSourceRegion(source, '<section id="transactions"', '<section id="settings"', "high-fidelity Transactions");
+  var settingsRegion = getSourceRegion(source, '<section id="settings"', '<section id="logs"', "high-fidelity Settings");
+  var logsRegion = getSourceRegion(source, '<section id="logs"', "</main>", "high-fidelity Logs");
 
   [transactionsRegion, settingsRegion, logsRegion].forEach(function(region, index)
   {
@@ -5913,7 +6134,7 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   assertSourceOccurrenceCount(transactionsRegion, 'data-transactions-tab="', 4, "four Transactions tabs");
-  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 5, "five visible table columns");
+  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 6, "five data columns plus lifecycle actions");
   [">Date</th>", ">Type</th>", ">Item</th>", ">Qty</th>", ">Amount</th>"].forEach(function(token)
   {
     assertSourceContains(transactionsRegion, token, "authoritative Transactions column");
@@ -6245,6 +6466,180 @@ function testTransactionEntryUiContract()
   return { passed: true, scenarios: scenarios, writes: 0 };
 }
 
+function testTransactionLifecycleUiContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var css = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
+  var dataSource = buildCanonicalTransactionData.toString();
+  var dashboardSource = getDashboardData.toString() + buildDashboardResponse.toString() + buildRecentLifecycleTransactions.toString();
+  var scenarios = 0;
+
+  ['data-transaction-id="${escapeUiHtml(r.id)}"', 'aria-label="Actions for transaction ${escapeUiHtml(r.id)}"',
+    'class="transaction-row-action"', 'role="menu"', 'View Details', 'Correct Transaction', 'Void Transaction'].forEach(function(token) {
+    assertSourceContains(source, token, "row action ownership");
+  });
+  scenarios++;
+
+  ['transactionId: transaction.id', 'source: transaction.source',
+    'isActive: transaction.isActive !== false',
+    'transactionActionState.source === "APP_ENTRY" && transactionActionState.isActive',
+    'items.innerHTML = \'<button type="button" role="menuitem"',
+    'closeTransactionActionMenu(true)', 'event.key === "ArrowDown"', 'event.key === "ArrowUp"'].forEach(function(token) {
+    assertSourceContains(source, token, "action availability and keyboard menu");
+  });
+  scenarios++;
+
+  var actionOpenRegion = getSourceRegion(source, "function openTransactionActionMenu(trigger)", "function closeTransactionActionMenu", "action row binding");
+  ['closeTransactionActionMenu(false);', 'trigger.getAttribute("data-transaction-id")',
+    'findLifecycleTransaction(transactionId)', 'transactionActionState = {',
+    'overlay.hidden = false;', 'overlay.setAttribute("aria-hidden", "false")'].forEach(function(token) {
+    assertSourceContains(actionOpenRegion, token, "fresh action row binding");
+  });
+  assertSourceExcludes(actionOpenRegion, 'transaction: transaction', "mutable selected transaction object");
+  scenarios++;
+
+  var actionCloseRegion = getSourceRegion(source, "function closeTransactionActionMenu(restoreFocus)", "function selectTransactionAction", "action dismissal");
+  ['overlay.hidden = true;', 'overlay.setAttribute("aria-hidden", "true")',
+    'lifecycle.actionItems.innerHTML = "";', 'elements.appShell.inert = false;',
+    'document.body.classList.remove("overflow-hidden");',
+    'transactionActionState = { transactionId: "", source: "", isActive: false, trigger: null };',
+    'trigger.setAttribute("aria-expanded", "false")', 'if (restoreFocus) trigger.focus()'].forEach(function(token) {
+    assertSourceContains(actionCloseRegion, token, "complete action dismissal");
+  });
+  assertSourceExcludes(actionCloseRegion, 'if (!overlay || overlay.hidden) return;', "early dismissal exit");
+  scenarios++;
+
+  var actionSelectRegion = getSourceRegion(source, "function selectTransactionAction(action)", "function openTransactionDetail", "action destination transition");
+  ['var transactionId = transactionActionState.transactionId;', 'closeTransactionActionMenu(false);',
+    'if (!transactionId) return;', 'openTransactionDetail(transactionId)',
+    'loadTransactionForMutation(transactionId, action)'].forEach(function(token) {
+    assertSourceContains(actionSelectRegion, token, "action destination transition");
+  });
+  scenarios++;
+
+  ['id="transactionActionOverlay"', 'id="transactionActionMenu"', 'Transaction Actions',
+    '@media (max-width:639px)',
+    '.transaction-action-overlay{position:fixed;inset:0;display:flex;width:100%;height:100%;align-items:flex-end;justify-content:stretch;background:var(--overlay)}',
+    '.transaction-action-menu{position:fixed;top:auto!important;right:0;bottom:0;left:0;width:100%;max-width:none;margin:0;transform:none',
+    'html.numlock-phone .transaction-action-overlay{position:fixed;inset:0;display:flex;width:100%;height:100%;align-items:flex-end;justify-content:stretch;background:var(--overlay)}',
+    'html.numlock-phone .transaction-action-menu{position:fixed;top:auto!important;right:0;bottom:0;left:0;width:100%;max-width:none;margin:0;transform:none',
+    '.transaction-action-overlay[hidden]{display:none!important}',
+    'env(safe-area-inset-bottom)', 'min-height:52px'].forEach(function(token) {
+    assertSourceContains(token.indexOf(".") === 0 || token.indexOf("html.") === 0 || token.indexOf("@media") === 0 || token.indexOf("safe-area") !== -1 || token === "min-height:52px" ? css : source, token, "responsive action menu");
+  });
+  ['initializeStableDashboardElements().appShell.inert = true;',
+    'document.body.classList.add("overflow-hidden");',
+    'elements.appShell.inert = false;',
+    'document.body.classList.remove("overflow-hidden");'].forEach(function(token) {
+    assertSourceContains(source, token, "action sheet background isolation");
+  });
+  scenarios++;
+
+  ['getCanonicalTransactionDetail(transactionId)', 'function renderTransactionDetail(detail)',
+    '"Status", detail.status', '"Transaction ID", detail.id', 'sourceDisplayLabel(detail.source)',
+    '"CreatedAt"', '"UpdatedAt"', '"Original transaction"', '"Replacement transaction"'].forEach(function(token) {
+    assertSourceContains(source, token, "canonical detail rendering");
+  });
+  assertSourceExcludes(getSourceRegion(source, "function renderTransactionDetail(detail)", "function renderTransactionVoidConfirmation", "detail renderer"), "sourceRow", "raw sheet row");
+  var detailErrorRegion = getSourceRegion(source, "function renderLifecycleLoadError(error)", "function sourceDisplayLabel(source)", "detail error ownership");
+  assertSourceContains(detailErrorRegion, "Transaction details could not be loaded. Please try again.", "lifecycle detail failure message");
+  assertSourceContains(detailErrorRegion, "Transaction could not be found.", "lifecycle not-found message");
+  assertSourceExcludes(detailErrorRegion, "Transaction could not be saved", "creation failure message excluded from detail");
+  scenarios++;
+
+  ['"Product", detail.product', '"Serving Type", detail.type', '"Unit HPP"', '"Unit Price"',
+    '"COGS"', '"Revenue"', '"Margin"', '"Expense Item", detail.item', '"Group", detail.group', '"Amount"'].forEach(function(token) {
+    assertSourceContains(source, token, "Sales and Expense detail content");
+  });
+  scenarios++;
+
+  ['id="showVoidedTransactions"', 'showVoidedTransactions || transaction.isActive !== false',
+    'transaction-status-badge', '>Voided</span>', 'transaction-row-voided'].forEach(function(token) {
+    assertSourceContains(source, token, "voided history presentation");
+  });
+  scenarios++;
+
+  ['mode: "create"', 'transactionEntryState.mode = "correction"', 'entry.typeFieldset.hidden = true;',
+    'entry.typeSales.disabled = true', 'entry.typeExpense.disabled = true', 'transactionEntryState.originalDetail = detail'].forEach(function(token) {
+    assertSourceContains(source, token, "correction mode and locked type");
+  });
+  scenarios++;
+
+  ['id="transactionCorrectionReason"', 'state.correctionReason.trim().length >= 3',
+    'payload.reason = state.correctionReason.trim()', 'payload.transactionId = state.originalDetail.id'].forEach(function(token) {
+    assertSourceContains(source, token, "required correction reason and immutable ID");
+  });
+  scenarios++;
+
+  ['.previewCanonicalTransactionCorrection(payload);', 'preview.before', 'preview.after', 'preview.delta',
+    'summary("BEFORE", preview.before)', 'summary("AFTER", preview.after)', '<h4>DELTA</h4>', 'formatSignedCurrency'].forEach(function(token) {
+    assertSourceContains(source, token, "authoritative correction preview");
+  });
+  scenarios++;
+
+  ['The original transaction will be voided', 'corrected replacement will be created',
+    'Confirm Correction', '.correctCanonicalTransaction(payload);'].forEach(function(token) {
+    assertSourceContains(source, token, "correction confirmation and submit");
+  });
+  scenarios++;
+
+  ['Transaction corrected', 'result.original.id', 'result.replacement.id', 'View Replacement',
+    'showTransactionCorrectionSuccess(response.data);', 'refreshTransactionEntryAfterSuccess();'].forEach(function(token) {
+    assertSourceContains(source, token, "correction success");
+  });
+  scenarios++;
+
+  ['id="transactionVoidReason"', 'reason.value.trim().length >= 3', 'Impact on active reporting',
+    'remain in the audit history', 'active financial reporting', '.voidCanonicalTransaction({ transactionId: transactionLifecycleState.detail.id, reason: reason });'].forEach(function(token) {
+    assertSourceContains(source, token, "void confirmation and payload");
+  });
+  scenarios++;
+
+  ['TRANSACTION_NOT_FOUND: "Transaction could not be found."',
+    'TRANSACTION_READ_ONLY: "Historical transactions cannot be changed."',
+    'TRANSACTION_ALREADY_VOIDED: "This transaction has already been voided."',
+    'INVALID_VOID_REASON: "Enter a meaningful reason."', 'PRODUCT_INACTIVE', 'PRICE_NOT_FOUND', 'PRICE_AMBIGUOUS'].forEach(function(token) {
+    assertSourceContains(source, token, "structured lifecycle errors");
+  });
+  scenarios++;
+
+  ['This transaction changed after you opened it. Refreshing the current status.',
+    'loadCanonicalTransactionDetail(transactionLifecycleState.detail.id, renderTransactionDetail)',
+    'refreshTransactionEntryAfterSuccess();'].forEach(function(token) {
+    assertSourceContains(source, token, "concurrency refresh");
+  });
+  scenarios++;
+
+  ['APP_ENTRY: "App Entry"', 'LEGACY_GOOGLE: "Legacy Form"', 'XLSM: "Historical Import"',
+    'canonicalData.lifecycleRecords', 'recentLifecycleTransactions'].forEach(function(token) {
+    assertSourceContains(token === 'canonicalData.lifecycleRecords' || token === 'recentLifecycleTransactions' ? dashboardSource : source, token, "protected source presentation");
+  });
+  scenarios++;
+
+  ['lifecycleRecords.push(salesRecord)', 'lifecycleRecords.push(expenseRecord)',
+    'if (active) records.push(salesRecord)', 'if (active) records.push(expenseRecord)', 'isActive: active'].forEach(function(token) {
+    assertSourceContains(dataSource, token, "inactive history isolated from active analytics");
+  });
+  scenarios++;
+
+  ['aria-modal="true"', 'aria-describedby="transactionVoidReasonError"',
+    'aria-live="polite"', 'trapDialogFocus(event', 'closeTransactionActionMenu(true)',
+    'transactionLifecycleState.trigger.focus()'].forEach(function(token) {
+    assertSourceContains(source, token, "lifecycle accessibility");
+  });
+  scenarios++;
+
+  ['document.body.appendChild(entry.overlay);', 'transaction-entry-dialog',
+    'html.numlock-phone .transaction-entry-dialog', '.transaction-lifecycle-dialog{display:flex;width:min(100%,620px)',
+    '#transactionLifecycleOverlay{align-items:flex-end;padding:0}'].forEach(function(token) {
+    assertSourceContains(token.indexOf(".") === 0 || token.indexOf("#") === 0 || token.indexOf("html") === 0 ? css : source, token, "responsive correction and void surfaces");
+  });
+  scenarios++;
+
+  Logger.log("PASS: testTransactionLifecycleUiContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios, writes: 0 };
+}
+
 function testTransactionsVisualContract()
 {
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
@@ -6361,11 +6756,11 @@ function testTransactionsVisualContract()
 
   [
     '>Date</th>', '>Type</th>', '>Item</th>', '>Qty</th>', '>Amount</th>',
-    'class="transactions-table-row border-b"', 'class="transactions-number',
+    'class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}"', 'class="transactions-number',
     'id="transactionsTableScroll"', 'overflow-x-auto', 'min-w-[680px]'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "five-column compact table");
+    assertSourceContains(source, token, "compact lifecycle table");
   });
   scenariosPassed++;
 
@@ -7005,8 +7400,8 @@ function testBoundedUiRefactorContract()
   assertSourceOccurrenceCount(
     source,
     "updateTransactionsViewPresentation(transactions);",
-    2,
-    "authoritative Transactions presentation call"
+    3,
+    "authoritative Transactions presentation calls including voided filter"
   );
   assertSourceContainsOnce(
     source,
@@ -7236,7 +7631,7 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    49,
+    52,
     "closure runner membership"
   );
   assertSourceContains(
@@ -7331,7 +7726,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 49,
+    runnerTotal: 52,
     packagesComplete: packages.length,
     destinations: 9,
     viewportStates: viewportMatrix.length,
@@ -8281,10 +8676,13 @@ function testDashboardHighFidelityCompositionContract()
   {
     assertSourceContains(source, token, "roadmap and Target Reference preservation");
   });
+  var planningContractStart = source.indexOf('id="executiveCenter"');
+  var planningContractEnd = source.indexOf('id="riskOpportunitySection"', planningContractStart);
+  var planningContractSource = source.slice(planningContractStart, planningContractEnd);
   ["contenteditable", 'type="checkbox"', "drag", "reorder"]
     .forEach(function(token)
     {
-      assertSourceExcludes(source, token, "Planning task-management behavior");
+      assertSourceExcludes(planningContractSource, token, "Planning task-management behavior");
     });
   scenariosPassed++;
 

@@ -8,7 +8,7 @@ function getDashboardData(filter, customStart, customEnd) {
   var processedData = canonicalData.records;
   var sourceQuality = canonicalData.sourceQuality;
 
-  return buildDashboardResponse(
+  var response = buildDashboardResponse(
     processedData,
     filter,
     customStart,
@@ -16,6 +16,10 @@ function getDashboardData(filter, customStart, customEnd) {
     null,
     sourceQuality
   );
+  response.recentLifecycleTransactions = buildRecentLifecycleTransactions(
+    filterTransactionsByDateRange(canonicalData.lifecycleRecords || processedData, response.dateFilter)
+  );
+  return response;
 }
 
 function normalizeDashboardDateFilter(filter) {
@@ -1361,6 +1365,26 @@ function buildRecentTransactions(data) {
 
   });
 
+}
+
+function buildRecentLifecycleTransactions(data) {
+  var recent = data.slice(-20);
+  recent.reverse();
+  return recent.map(function(row) {
+    return {
+      id: row.id,
+      date: Utilities.formatDate(new Date(row.date), Session.getScriptTimeZone(), "yyyy-MM-dd"),
+      transactionType: row.transactionType,
+      canonicalTransactionType: row.canonicalTransactionType,
+      product: row.product,
+      purchaseCategory: row.purchaseCategory,
+      qty: row.qty,
+      revenue: row.revenue,
+      expense: row.expense,
+      source: row.source,
+      isActive: row.isActive !== false
+    };
+  });
 }
 
 function buildAnalyticsCache(data, dateRange) {

@@ -965,7 +965,7 @@ function createAccessibilityContractFixtures()
     { name: "invalid control state", tokens: ['function setDateFilterValidation(message)', '"aria-invalid",', 'String(hasError)'] },
     { name: "accessible validation message", tokens: ['id="dateFilterValidation"', 'aria-describedby="dateFilterValidation"', 'setDateFilterValidation("Select both custom dates");'] },
     { name: "active navigation semantics", tokens: ['aria-current="page"', 'button.setAttribute("aria-current", "page");', 'button.removeAttribute("aria-current");'] },
-    { name: "table accessible name and empty state", tokens: ['<caption class="sr-only">Visible bounded transactions for the selected Transactions tab</caption>', 'colspan="5" class="p-8 text-center text-sm ui-theme-muted">No visible transactions in this bounded view for the selected period.</td>'] },
+    { name: "table accessible name and empty state", tokens: ['<caption class="sr-only">Visible bounded transactions for the selected Transactions tab</caption>', 'colspan="6" class="p-8 text-center text-sm ui-theme-muted">No visible transactions in this bounded view for the selected period.</td>'] },
     { name: "scoped table headers", tokens: ['<th scope="col" class="px-4 text-left">Date</th>', '<th scope="col" class="px-4 text-right">Amount</th>'] },
     { name: "dynamic status regions", tokens: ['id="dashboardStatus"', 'id="reportingInformation"', 'role="status"', 'aria-live="polite"'] },
     { name: "visible keyboard focus", tokens: ['button:focus-visible,', 'select:focus-visible,', 'input:focus-visible,', 'outline: 3px solid var(--focus);'] },
