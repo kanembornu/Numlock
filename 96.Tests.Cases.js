@@ -4788,6 +4788,11 @@ function testDashboardOverviewContract()
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
     ).getContent();
+  var compiledSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
+  var layoutDebugDoGetSource = String(doGet);
   var scenariosPassed = 0;
 
   [
@@ -4963,7 +4968,7 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
-    '"Compared with " +',
+    '? "Compared with"',
     '" rows · " +',
     '" excluded · "',
     '#sidebarCollapseButton { width: 100% !important; border: 0 !important;',
@@ -5184,6 +5189,116 @@ function testDashboardOverviewContract()
     'id="keyMetricsSection" aria-labelledby="keyMetricsTitle" class="mb-3"',
     "competing KPI section margin"
   );
+  scenariosPassed++;
+
+  [
+    'id="layoutDebugGrid" aria-hidden="true"',
+    'id="layoutDebugIconGuide" class="layout-debug-guide"',
+    'id="layoutDebugTitleGuide" class="layout-debug-guide"',
+    'id="layoutDebugBadge" aria-hidden="true">LAYOUT DEBUG</div>',
+    'id="layoutDebugPanel" aria-hidden="true"',
+    'function getLayoutDebugRect(element, textOnly)',
+    'rect = element.getBoundingClientRect();',
+    'rect = range.getBoundingClientRect();',
+    'function refreshLayoutDebugMeasurements()',
+    'function scheduleLayoutDebugMeasurement()',
+    'function setLayoutDebugEnabled(enabled)',
+    'data-layout-debug-enabled="<?= layoutDebugEnabled ? \'true\' : \'false\' ?>"',
+    'var serverLayoutDebugEnabled =',
+    'document.documentElement.getAttribute("data-layout-debug-enabled") === "true";',
+    'serverLayoutDebugEnabled || clientLayoutDebugFallback',
+    'new URLSearchParams(window.location.search).get("debugLayout") === "1"',
+    'document.documentElement.setAttribute("data-layout-debug", String(layoutDebugEnabled));',
+    'window.requestAnimationFrame(function()',
+    'window.addEventListener("resize", scheduleLayoutDebugMeasurement);',
+    'document.getElementById("sidebarCollapseButton").addEventListener("click", scheduleLayoutDebugMeasurement);',
+    'document.getElementById("dashboardTabOverview").addEventListener("click", scheduleLayoutDebugMeasurement);',
+    'element.classList.add("layout-debug-target");',
+    'STATE sidebar: ',
+    '"icon.right: " + formatLayoutDebugNumber(kpiIcon.right)',
+    '"icon.width: " + formatLayoutDebugNumber(kpiIcon.width)',
+    'var kpiGap = kpiTitle.left - kpiIcon.right;',
+    'var revenueGap = revenueTitle.left - revenueIcon.right;',
+    'var summaryGap = summaryTitle.left - summaryIcon.right;',
+    '"icon.left: " + formatLayoutDebugNumber(delta(revenueIcon.left, kpiIcon.left))',
+    '"icon.right: " + formatLayoutDebugNumber(delta(revenueIcon.right, kpiIcon.right))',
+    '"icon.width: " + formatLayoutDebugNumber(delta(revenueIcon.width, kpiIcon.width))',
+    '"icon.centerX: " + formatLayoutDebugNumber(delta(revenueIcon.centerX, kpiIcon.centerX))',
+    '"title.left: " + formatLayoutDebugNumber(delta(revenueTitle.left, kpiTitle.left))',
+    '"icon-title.gap: " + formatLayoutDebugNumber(delta(revenueGap, kpiGap))',
+    '"icon.left: " + formatLayoutDebugNumber(delta(summaryIcon.left, kpiIcon.left))',
+    '"icon.right: " + formatLayoutDebugNumber(delta(summaryIcon.right, kpiIcon.right))',
+    '"icon.width: " + formatLayoutDebugNumber(delta(summaryIcon.width, kpiIcon.width))',
+    '"icon.centerX: " + formatLayoutDebugNumber(delta(summaryIcon.centerX, kpiIcon.centerX))',
+    '"title.left: " + formatLayoutDebugNumber(delta(summaryTitle.left, kpiTitle.left))',
+    '"icon-title.gap: " + formatLayoutDebugNumber(delta(summaryGap, kpiGap))',
+    'CONTENT',
+    'revenue.card.left: ',
+    'summary.card.left: ',
+    'Number(value).toFixed(2)',
+    'id="dashboardTabPerformance"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Phase 7B.2 precision debug contract");
+  });
+  [
+    'function doGet(e)',
+    'template.layoutDebugEnabled =',
+    'normalizeLayoutDebugParameter(e);'
+  ].forEach(function(token)
+  {
+    assertSourceContains(layoutDebugDoGetSource, token, "server-authoritative layout debug propagation");
+  });
+  if (
+    normalizeLayoutDebugParameter({ parameter: { debugLayout: "1" } }) !== true ||
+    normalizeLayoutDebugParameter({ parameter: { debugLayout: "0" } }) !== false ||
+    normalizeLayoutDebugParameter({ parameter: { debugLayout: "anything" } }) !== false ||
+    normalizeLayoutDebugParameter({ parameter: {} }) !== false ||
+    normalizeLayoutDebugParameter() !== false
+  )
+  {
+    throw new Error("Layout debug server parameter normalization changed");
+  }
+  [
+    'pointer-events:none',
+    '#layoutDebugGrid,.layout-debug-guide{display:none;position:fixed;pointer-events:none}',
+    '#layoutDebugBadge,#layoutDebugPanel{display:none;position:fixed;pointer-events:none}',
+    'html[data-layout-debug=true] .layout-debug-target{outline:2px solid #facc15!important'
+  ].forEach(function(token)
+  {
+    assertSourceContains(compiledSource, token, "Phase 7B.2 precision debug styling contract");
+  });
+  [
+    '--overview-header-anchor:',
+    '--overview-reference-icon-size:',
+    '--overview-reference-title-gap:',
+    '#revenueChartSection>.hf-analytics-card-header{transform:',
+    '#revenueChartSection>.hf-analytics-card-header{margin-left:-',
+    '#executiveSummarySection>.overview-surface>.hf-summary-card-header{transform:',
+    '#executiveSummarySection>.overview-surface>.hf-summary-card-header{margin-left:-'
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(compiledSource, token, "Phase 7B.2 magic offset exclusion");
+  });
+  [
+    '--overview-kpi-header-inset:20px',
+    '--overview-kpi-icon-width:50px',
+    '--overview-kpi-title-gap:20px',
+    '#dashboardPanelOverview #executiveSummarySection>.overview-surface>.hf-summary-card-header,#dashboardPanelOverview #revenueChartSection .hf-analytics-title-group{gap:var(--overview-kpi-title-gap)!important}',
+    '#dashboardPanelOverview #revenueChartSection .hf-analytics-title-group{padding-left:calc(var(--overview-kpi-header-inset) - 4px)!important}',
+    '#dashboardPanelOverview #executiveSummarySection>.overview-surface>.hf-summary-card-header{padding-left:calc(var(--overview-kpi-header-inset) - 16px)!important}',
+    '#dashboardPanelOverview #executiveSummarySection>.overview-surface>.hf-summary-card-header>.hf-summary-title-icon,#dashboardPanelOverview #revenueChartSection .hf-analytics-title-icon{width:var(--overview-kpi-icon-width)!important;flex-basis:var(--overview-kpi-icon-width)!important}'
+  ].forEach(function(token)
+  {
+    assertSourceContains(compiledSource, token, "Phase 7B.2 measured header alignment");
+  });
+  [
+    '[data-sidebar-collapsed=true] #dashboardPanelOverview #revenueChartSection',
+    '[data-sidebar-collapsed=true] #dashboardPanelOverview #executiveSummarySection'
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(compiledSource, token, "Phase 7B.2 state-independent structural alignment");
+  });
   scenariosPassed++;
 
   [

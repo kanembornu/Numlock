@@ -1,4 +1,14 @@
-function doGet() {
+function normalizeLayoutDebugParameter(event) {
+
+  return String(
+    event && event.parameter
+      ? event.parameter.debugLayout || ""
+      : ""
+  ) === "1";
+
+}
+
+function doGet(e) {
 
   var template =
     HtmlService.createTemplateFromFile("190.View.Index");
@@ -7,6 +17,8 @@ function doGet() {
   template.version = PROJECT_CONFIG.VERSION;
   template.releaseLabel = PROJECT_CONFIG.RELEASE_LABEL;
   template.environment = PROJECT_CONFIG.ENVIRONMENT;
+  template.layoutDebugEnabled =
+    normalizeLayoutDebugParameter(e);
 
   return template
     .evaluate()

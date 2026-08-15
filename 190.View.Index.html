@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-layout-debug-enabled="<?= layoutDebugEnabled ? 'true' : 'false' ?>">
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -974,6 +974,11 @@
   </head>
 
 <body class="text-slate-800 overflow-x-hidden">
+  <div id="layoutDebugGrid" aria-hidden="true"></div>
+  <div id="layoutDebugIconGuide" class="layout-debug-guide" aria-hidden="true"></div>
+  <div id="layoutDebugTitleGuide" class="layout-debug-guide" aria-hidden="true"></div>
+  <div id="layoutDebugBadge" aria-hidden="true">LAYOUT DEBUG</div>
+  <output id="layoutDebugPanel" aria-hidden="true"></output>
 <div id="appShell" class="flex min-h-screen min-w-0" data-sidebar-collapsed="false">
 
   <!-- ==================================================
@@ -4398,6 +4403,7 @@
         renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : ""),
         renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", formatPeriodComparisonValue(comparison.changes.unitsSoldPercent, comparison.status.unitsSold), comparison.status.unitsSold, res.summary.unitsSold < 0 ? negativeClass : "")
       ].join("");
+      scheduleLayoutDebugMeasurement();
     }
 
     //--------------------------------------------------
@@ -6899,6 +6905,165 @@
     hideChartSkeleton();
     }
 
+    var layoutDebugEnabled = false;
+    var layoutDebugAnimationFrame = null;
+    var layoutDebugListenersInitialized = false;
+
+    function getLayoutDebugRect(element, textOnly)
+    {
+      if (!element)
+      {
+        return null;
+      }
+
+      var rect;
+      if (textOnly)
+      {
+        var range = document.createRange();
+        range.selectNodeContents(element);
+        rect = range.getBoundingClientRect();
+      }
+      else
+      {
+        rect = element.getBoundingClientRect();
+      }
+
+      return {
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2
+      };
+    }
+
+    function formatLayoutDebugNumber(value)
+    {
+      return Number(value).toFixed(2);
+    }
+
+    function scheduleLayoutDebugMeasurement()
+    {
+      if (!layoutDebugEnabled)
+      {
+        return;
+      }
+
+      if (layoutDebugAnimationFrame)
+      {
+        window.cancelAnimationFrame(layoutDebugAnimationFrame);
+      }
+
+      layoutDebugAnimationFrame = window.requestAnimationFrame(function()
+      {
+        layoutDebugAnimationFrame = null;
+        refreshLayoutDebugMeasurements();
+      });
+    }
+
+    function refreshLayoutDebugMeasurements()
+    {
+      if (!layoutDebugEnabled)
+      {
+        return;
+      }
+
+      var kpiCard = document.getElementById("businessOverview").firstElementChild;
+      var kpiIconElement = kpiCard && kpiCard.getElementsByClassName("hf-kpi-icon")[0];
+      var kpiTitleElement = kpiCard && kpiCard.getElementsByClassName("hf-section-label")[0];
+      var revenueIconElement = document.getElementById("revenueChartSection").getElementsByClassName("hf-analytics-title-icon")[0];
+      var revenueTitleElement = document.getElementById("revenueChartTitle");
+      var summaryIconElement = document.getElementById("executiveSummarySection").getElementsByClassName("hf-summary-title-icon")[0];
+      var summaryTitleElement = document.getElementById("executiveSummaryTitle");
+      var kpiIcon = getLayoutDebugRect(kpiIconElement, false);
+      var kpiTitle = getLayoutDebugRect(kpiTitleElement, false);
+      var revenueIcon = getLayoutDebugRect(revenueIconElement, false);
+      var revenueTitle = getLayoutDebugRect(revenueTitleElement, false);
+      var summaryIcon = getLayoutDebugRect(summaryIconElement, false);
+      var summaryTitle = getLayoutDebugRect(summaryTitleElement, false);
+
+      if (!kpiIcon || !kpiTitle || !revenueIcon || !revenueTitle || !summaryIcon || !summaryTitle)
+      {
+        document.getElementById("layoutDebugPanel").textContent = "LAYOUT DEBUG\nWaiting for Overview geometry...";
+        return;
+      }
+
+      var mainRect = document.getElementById("mainContent").getBoundingClientRect();
+      var kpiCardRect = kpiCard.getBoundingClientRect();
+      var revenueCardRect = document.getElementById("revenueChartSection").getBoundingClientRect();
+      var summaryCardRect = summaryIconElement.closest(".overview-surface").getBoundingClientRect();
+      var panel = document.getElementById("layoutDebugPanel");
+      var sidebarState = document.getElementById("appShell").getAttribute("data-sidebar-collapsed") === "true" ? "COLLAPSED" : "EXPANDED";
+      var delta = function(value, reference) { return value - reference; };
+      var kpiGap = kpiTitle.left - kpiIcon.right;
+      var revenueGap = revenueTitle.left - revenueIcon.right;
+      var summaryGap = summaryTitle.left - summaryIcon.right;
+
+      [kpiIconElement, kpiTitleElement, revenueIconElement, revenueTitleElement, summaryIconElement, summaryTitleElement].forEach(function(element)
+      {
+        element.classList.add("layout-debug-target");
+      });
+
+      document.getElementById("layoutDebugIconGuide").style.left = kpiIcon.left + "px";
+      document.getElementById("layoutDebugTitleGuide").style.left = kpiTitle.left + "px";
+      panel.textContent = [
+        "LAYOUT DEBUG",
+        "STATE sidebar: " + sidebarState,
+        "viewport.width: " + formatLayoutDebugNumber(window.innerWidth),
+        "",
+        "KPI REFERENCE",
+        "icon.left: " + formatLayoutDebugNumber(kpiIcon.left),
+        "icon.right: " + formatLayoutDebugNumber(kpiIcon.right),
+        "icon.width: " + formatLayoutDebugNumber(kpiIcon.width),
+        "icon.centerX: " + formatLayoutDebugNumber(kpiIcon.centerX),
+        "title.left: " + formatLayoutDebugNumber(kpiTitle.left),
+        "icon-title.gap: " + formatLayoutDebugNumber(kpiGap),
+        "",
+        "REVENUE DELTA",
+        "icon.left: " + formatLayoutDebugNumber(delta(revenueIcon.left, kpiIcon.left)),
+        "icon.right: " + formatLayoutDebugNumber(delta(revenueIcon.right, kpiIcon.right)),
+        "icon.width: " + formatLayoutDebugNumber(delta(revenueIcon.width, kpiIcon.width)),
+        "icon.centerX: " + formatLayoutDebugNumber(delta(revenueIcon.centerX, kpiIcon.centerX)),
+        "title.left: " + formatLayoutDebugNumber(delta(revenueTitle.left, kpiTitle.left)),
+        "icon-title.gap: " + formatLayoutDebugNumber(delta(revenueGap, kpiGap)),
+        "",
+        "KEY SUMMARY DELTA",
+        "icon.left: " + formatLayoutDebugNumber(delta(summaryIcon.left, kpiIcon.left)),
+        "icon.right: " + formatLayoutDebugNumber(delta(summaryIcon.right, kpiIcon.right)),
+        "icon.width: " + formatLayoutDebugNumber(delta(summaryIcon.width, kpiIcon.width)),
+        "icon.centerX: " + formatLayoutDebugNumber(delta(summaryIcon.centerX, kpiIcon.centerX)),
+        "title.left: " + formatLayoutDebugNumber(delta(summaryTitle.left, kpiTitle.left)),
+        "icon-title.gap: " + formatLayoutDebugNumber(delta(summaryGap, kpiGap)),
+        "",
+        "CONTENT",
+        "main.left: " + formatLayoutDebugNumber(mainRect.left),
+        "kpi.card.left: " + formatLayoutDebugNumber(kpiCardRect.left),
+        "revenue.card.left: " + formatLayoutDebugNumber(revenueCardRect.left),
+        "summary.card.left: " + formatLayoutDebugNumber(summaryCardRect.left)
+      ].join("\n");
+    }
+
+    function setLayoutDebugEnabled(enabled)
+    {
+      layoutDebugEnabled = Boolean(enabled);
+      document.documentElement.setAttribute("data-layout-debug", String(layoutDebugEnabled));
+
+      if (layoutDebugEnabled)
+      {
+        if (!layoutDebugListenersInitialized)
+        {
+          window.addEventListener("resize", scheduleLayoutDebugMeasurement);
+          document.getElementById("sidebarCollapseButton").addEventListener("click", scheduleLayoutDebugMeasurement);
+          document.getElementById("dashboardTabOverview").addEventListener("click", scheduleLayoutDebugMeasurement);
+          layoutDebugListenersInitialized = true;
+        }
+        scheduleLayoutDebugMeasurement();
+      }
+    }
+
 window.onload = function()
 {
   initializeThemeFoundation();
@@ -6907,6 +7072,13 @@ window.onload = function()
   initializeTransactionsTabs();
   initializeCustomSelectSystem();
   updateCustomDateVisibility();
+  var serverLayoutDebugEnabled =
+    document.documentElement.getAttribute("data-layout-debug-enabled") === "true";
+  var clientLayoutDebugFallback =
+    new URLSearchParams(window.location.search).get("debugLayout") === "1";
+  setLayoutDebugEnabled(
+    serverLayoutDebugEnabled || clientLayoutDebugFallback
+  );
   loadData();
 };
 
