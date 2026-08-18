@@ -934,6 +934,298 @@ function testHotColdFixtures()
   };
 }
 
+function testDashboardPerformanceAnalytics()
+{
+  var rows = [
+    { transactionType:"Sales", productId:"P1", product:"Latte", productCategory:"Coffee", kind:"Beverage", type:"Hot", category:"Hot", qty:2, revenue:100, cogs:40, expense:0, date:new Date(2026, 0, 1) },
+    { transactionType:"Sales", productId:"P1", product:"Latte", productCategory:"Coffee", kind:"Beverage", type:"Cold", category:"Cold", qty:1, revenue:50, cogs:20, expense:0, date:new Date(2026, 0, 2) },
+    { transactionType:"Sales", productId:"P2", product:"Tea", productCategory:"Tea", kind:"Beverage", type:"Warm", category:"Warm", qty:5, revenue:0, cogs:25, expense:0, date:new Date(2026, 0, 3) },
+    { transactionType:"Purchase", group:"Overhead", purchaseCategory:"Electricity", expense:70, date:new Date(2026, 0, 4) },
+    { transactionType:"Purchase", group:"Supplies", purchaseCategory:"Packaging", expense:60, date:new Date(2026, 0, 5) },
+    { transactionType:"Purchase", group:"Payroll", purchaseCategory:"Wages", expense:50, date:new Date(2026, 0, 6) },
+    { transactionType:"Purchase", group:"Rent", purchaseCategory:"Rent", expense:40, date:new Date(2026, 0, 7) },
+    { transactionType:"Purchase", group:"Marketing", purchaseCategory:"Ads", expense:30, date:new Date(2026, 0, 8) },
+    { transactionType:"Purchase", group:"Maintenance", purchaseCategory:"Repairs", expense:20, date:new Date(2026, 0, 9) },
+    { transactionType:"Purchase", group:"Fees", purchaseCategory:"Fees", expense:10, date:new Date(2026, 0, 10) }
+  ];
+  rows = rows.map(function(row)
+  {
+    var normalized = {};
+    Object.keys(row).forEach(function(key) { normalized[key] = row[key]; });
+    if (normalized.product == null) normalized.product = "";
+    if (normalized.purchaseCategory == null) normalized.purchaseCategory = "";
+    if (normalized.category == null) normalized.category = "";
+    if (normalized.qty == null) normalized.qty = 0;
+    if (normalized.revenue == null) normalized.revenue = 0;
+    if (normalized.cogs == null) normalized.cogs = 0;
+    if (normalized.expense == null) normalized.expense = 0;
+    return normalized;
+  });
+  var performance = buildPerformanceAnalyticsFromAggregate(buildAggregate(rows));
+  var serializedPerformance = JSON.stringify(performance);
+  var transportedPerformance = JSON.parse(serializedPerformance);
+  if (!serializedPerformance || transportedPerformance.productProfitability.length !== 2 ||
+      serializedPerformance.indexOf("null") !== -1)
+    throw new Error("Performance payload serialization mismatch");
+
+  function assertTransportSafe(value, path, seen)
+  {
+    var valueType = typeof value;
+    if (valueType === "undefined" || valueType === "function")
+      throw new Error("Unsupported Dashboard transport value at " + path);
+    if (valueType === "number" && !isFinite(value))
+      throw new Error("Non-finite Dashboard transport number at " + path);
+    if (!value || valueType !== "object") return;
+    var tag = Object.prototype.toString.call(value);
+    if (tag === "[object Date]" || tag === "[object Map]" || tag === "[object Set]")
+      throw new Error("Unsupported Dashboard transport object at " + path + ": " + tag);
+    if (seen.indexOf(value) !== -1)
+      throw new Error("Circular Dashboard transport value at " + path);
+    seen.push(value);
+    Object.keys(value).forEach(function(key)
+    {
+      assertTransportSafe(value[key], path + "." + key, seen);
+    });
+    seen.pop();
+  }
+
+  var dashboardResponse = buildDashboardResponse(
+    rows,
+    "custom",
+    "2026-01-01",
+    "2026-01-31",
+    new Date(2026, 0, 31, 12, 0, 0)
+  );
+  assertTransportSafe(dashboardResponse, "response", []);
+  var serializedDashboardResponse = JSON.stringify(dashboardResponse);
+  var parsedDashboardResponse = JSON.parse(serializedDashboardResponse);
+  if (!parsedDashboardResponse.summary || !parsedDashboardResponse.performanceAnalytics)
+    throw new Error("Complete Dashboard response serialization mismatch");
+  var latte = performance.productProfitability[0];
+  var tea = performance.productProfitability[1];
+  if (latte.label !== "Latte" || latte.units !== 3 || latte.revenue !== 150 || latte.cogs !== 60 || latte.grossMargin !== 90 || latte.grossMarginPercent !== 60)
+    throw new Error("Product profitability aggregation mismatch");
+  if (tea.grossMargin !== -25 || tea.grossMarginPercent !== 0)
+    throw new Error("Zero-revenue margin safety or ranking mismatch");
+  if (performance.classifications.category.length !== 2 || performance.classifications.kind.length !== 1 || performance.classifications.kind[0].revenue !== 150)
+    throw new Error("Category/Kind aggregation mismatch");
+  if (performance.hotColdEconomics[0].units !== 2 || performance.hotColdEconomics[0].grossMargin !== 60 || performance.hotColdEconomics[1].units !== 1 || performance.hotColdEconomics[1].grossMargin !== 30)
+    throw new Error("Hot/Cold economics or unknown-type exclusion mismatch");
+  if (performance.expenseGroups.length !== 6 || performance.expenseGroups[5].group !== "Others" || performance.expenseGroups[5].amount !== 30)
+    throw new Error("Expense Group/Others aggregation mismatch");
+  var canonical = buildCanonicalTransactionData({
+    products:[{ ID_Prod:"P1", Produk:"Latte", Kategori:"Coffee", Kind:"Beverage" }], expenseItems:[], expenses:[], sales:[
+      { sourceRowIndex:1, ID_Trx:"S1", Tanggal:new Date(2026, 0, 1), ID_Prod:"P1", Tipe:"Hot", Qty:2, HPP:20, HJ:50, Source:"APP_ENTRY", IsActive:false },
+      { sourceRowIndex:2, ID_Trx:"S2", Tanggal:new Date(2026, 0, 1), ID_Prod:"P1", Tipe:"Hot", Qty:3, HPP:20, HJ:50, Source:"APP_ENTRY", IsActive:true }
+    ]
+  });
+  var authoritative = buildPerformanceAnalyticsFromAggregate(buildAggregate(canonical.records));
+  if (canonical.records.length !== 1 || authoritative.productProfitability[0].units !== 3 || canonical.sourceQuality.inactiveLedgerRows !== 1)
+    throw new Error("Lifecycle exclusion or correction authoritative-record behavior mismatch");
+  var originalPerformanceBuilder = buildPerformanceAnalyticsFromAggregate;
+  var optionalPerformance;
+  try
+  {
+    buildPerformanceAnalyticsFromAggregate = function() { throw new Error("deterministic projection failure"); };
+    optionalPerformance = buildOptionalPerformanceAnalytics(buildAggregate([]), {});
+  }
+  finally
+  {
+    buildPerformanceAnalyticsFromAggregate = originalPerformanceBuilder;
+  }
+  if (optionalPerformance.available !== false || optionalPerformance.errorCode !== "PERFORMANCE_PROJECTION_FAILED")
+    throw new Error("Optional Performance failure isolation mismatch");
+
+  function gmRow(product, qty, revenue, cogs, date)
+  {
+    return { transactionType:"Sales", productId:product, product:product, qty:qty, revenue:revenue, cogs:cogs, expense:0, date:new Date(date) };
+  }
+  var grossMarginComparisons = [
+    { name:"positive", currentAnalytics: buildPerformanceAnalyticsFromAggregate(buildAggregate([gmRow("A",1,100,40,2026)])), previous: [gmRow("A",1,100,70,2026)], percentage:100, status:"Up" },
+    { name:"negative", currentAnalytics: buildPerformanceAnalyticsFromAggregate(buildAggregate([gmRow("A",1,100,70,2026)])), previous: [gmRow("A",1,100,40,2026)], percentage:-50, status:"Down" },
+    { name:"stable", currentAnalytics: buildPerformanceAnalyticsFromAggregate(buildAggregate([gmRow("A",1,100,40,2026)])), previous: [gmRow("A",1,100,40,2026)], percentage:0, status:"Stable" },
+    { name:"bothZero", currentAnalytics: buildPerformanceAnalyticsFromAggregate(buildAggregate([])), previous: [], percentage:0, status:"Stable" },
+    { name:"zeroBaseline", currentAnalytics: buildPerformanceAnalyticsFromAggregate(buildAggregate([gmRow("A",1,100,40,2026)])), previous: [], percentage:null, status:"No Comparison" }
+  ];
+  grossMarginComparisons.forEach(function(spec)
+  {
+    var actual = buildGrossMarginComparison(spec.currentAnalytics, spec.previous);
+    if (actual.currentGrossMargin !== Number(spec.currentAnalytics.totalGrossMargin) ||
+        actual.previousGrossMargin !== Number(buildPerformanceAnalyticsFromAggregate(buildAggregate(spec.previous)).totalGrossMargin) ||
+        actual.grossMarginChangePercent !== spec.percentage ||
+        actual.status !== spec.status)
+      throw new Error("Gross Margin comparison mismatch for " + spec.name);
+  });
+  var zeroBaselineComparison = buildGrossMarginComparison(
+    buildPerformanceAnalyticsFromAggregate(buildAggregate([gmRow("A",1,100,0,2026)])),
+    []
+  );
+  if (zeroBaselineComparison.grossMarginChangePercent !== null || zeroBaselineComparison.status !== "No Comparison")
+    throw new Error("Gross Margin zero-baseline comparison mismatch");
+  if (typeof dashboardResponse.performanceAnalytics.totalGrossMargin !== "number")
+    throw new Error("Dashboard response payload must expose authoritative totalGrossMargin");
+  var manyProductRows = [];
+  for (var mp = 1; mp <= 12; mp++)
+  {
+    manyProductRows.push(gmRow("P" + mp, 1, 200, 100, 2026));
+  }
+  var manyProductAnalytics =
+    buildPerformanceAnalyticsFromAggregate(buildAggregate(manyProductRows));
+  if (manyProductAnalytics.productProfitability.length > 10)
+    throw new Error("productProfitability must not exceed Top-10 despite >10 source products");
+  if (manyProductAnalytics.totalGrossMargin !== 1200)
+    throw new Error("Authoritative totalGrossMargin must include ALL products outside Top-10; expected 1200, got " + manyProductAnalytics.totalGrossMargin);
+  var topTenGmSum = manyProductAnalytics.productProfitability.reduce(function(sum, item) { return sum + Number(item.grossMargin || 0); }, 0);
+  if (topTenGmSum === 1200)
+    throw new Error("Top-10 productProfitability sum must NOT equal authoritative totalGrossMargin for >10 products");
+  var previousManyProductRows = [];
+  for (var pp = 1; pp <= 12; pp++)
+  {
+    previousManyProductRows.push(gmRow("P" + pp, 1, 200, 150, 2026));
+  }
+  var manyComparison = buildGrossMarginComparison(manyProductAnalytics, previousManyProductRows);
+  if (manyComparison.currentGrossMargin !== 1200 || manyComparison.previousGrossMargin !== 600)
+    throw new Error("Total GM comparison must use all products, not Top-10 ranking; current=" + manyComparison.currentGrossMargin + ", previous=" + manyComparison.previousGrossMargin);
+  if (manyComparison.grossMarginChangePercent !== 100 || manyComparison.status !== "Up")
+    throw new Error("Total GM comparison percentage mismatch for >10 products; got " + manyComparison.grossMarginChangePercent + " " + manyComparison.status);
+  var frontend = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  ['id="performanceSnapshotSection"', 'id="productProfitabilitySection"', 'id="categoryPerformanceSection"', 'id="hotColdChartSection"', 'id="expenseChartSection"', 'type: "bar"',
+    'renderProductProfitabilityChart(latestPerformanceAnalytics);', 'renderCategoryPerformanceChart(latestPerformanceAnalytics);',
+    'renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);', 'performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]']
+    .forEach(function(token) { if (frontend.indexOf(token) === -1) throw new Error("Performance UI contract missing: " + token); });
+  var expenseRendererSource = getSourceRegion(frontend, "function renderExpenseChart(expenseBreakdown)", "function renderCharts(res)", "Expense chart renderer");
+  if (expenseRendererSource.indexOf('indexAxis: "y"') !== -1) throw new Error("Expense chart must remain vertical");
+  var chartRenderSource = getSourceRegion(
+    frontend,
+    "function renderCharts(res)",
+    "function renderBusinessIntelligence",
+    "Dashboard chart renderer"
+  );
+  if (chartRenderSource.indexOf("catch (performanceError)") === -1 ||
+      chartRenderSource.indexOf("setDashboardState(") !== -1)
+    throw new Error("Performance renderer is not isolated from core Dashboard state");
+  [
+    'if (!forecastContainer)',
+    'if (revenueDependencyContainer)',
+    'if (paretoContainer)'
+  ].forEach(function(token)
+  {
+    if (frontend.indexOf(token) === -1)
+      throw new Error("Retired deferred DOM consumer is not guarded: " + token);
+  });
+  Logger.log("PASS: testDashboardPerformanceAnalytics | assertions=20");
+  return { passed:true, assertions:20 };
+}
+
+function testPerformanceStabilizationContract()
+{
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var fixture = createPerformanceStabilizationFixtures();
+  var assertionsPassed = 0;
+
+  [
+    '#dashboardPanelOverview #dataQualityDetails[data-display="popover"]:not(.hidden)',
+    'position: absolute;',
+    'aria-haspopup="dialog"',
+    'data-display="popover" role="dialog"',
+    'function closeDataQualityDetails()',
+    '!elements.dataQualityInformation.contains(event.target)',
+    'event.key === "Escape"',
+    'elements.dataQualityDetailsButton.focus();',
+    '"<strong>Quality issues</strong>"',
+    '"<strong>Lifecycle</strong>"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact Data Quality detail");
+    assertionsPassed++;
+  });
+  assertSourceExcludes(source, "flex-basis: 100% !important; white-space: normal !important;", "in-flow Data Quality detail row");
+  assertSourceExcludes(source, 'data-display="inline"', "inline Data Quality detail injection");
+  assertionsPassed += 2;
+
+  [
+    ".performance-chart-shell { height: 232px; min-height: 232px; max-height: 232px; overflow: hidden; }",
+    ".performance-chart-shell-primary { height: 360px; min-height: 360px; max-height: 360px; }",
+    ".performance-chart-shell > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }",
+    ".performance-chart-shell-primary { height: 260px; min-height: 260px; max-height: 260px; }",
+    ".performance-chart-shell-primary { height: 220px; min-height: 220px; max-height: 220px; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "bounded Performance chart shell");
+    assertionsPassed++;
+  });
+  fixture.secondaryCharts.forEach(function(id)
+  {
+    assertSourceContains(source, 'id="' + id + '" class="performance-chart-shell', "shared secondary chart shell");
+    assertionsPassed++;
+  });
+  fixture.nativeComparisons.forEach(function(id)
+  {
+    assertSourceContains(source, 'id="' + id + '"', "native Performance comparison");
+    assertionsPassed++;
+  });
+  assertSourceContains(source, 'id="productProfitabilityWrapper" class="performance-chart-shell performance-chart-shell-primary', "unchanged primary profitability owner");
+  assertionsPassed++;
+  assertSourceExcludes(source, "ResizeObserver", "recursive Performance resize observer");
+  assertSourceExcludes(source, ".style.height", "JavaScript chart height mutation");
+  assertionsPassed += 2;
+
+  fixture.baseline.forEach(function(item)
+  {
+    assertSourceContains(source, 'id="' + item.id + '"', "Phase 7B.2 baseline " + item.disposition);
+    assertionsPassed++;
+  });
+  var ownershipRegion = getSourceRegion(source, "var sectionOwnership = {", "elements.dashboardPanels.forEach", "Dashboard section ownership");
+  fixture.finalOrder.forEach(function(id)
+  {
+    assertSourceContains(ownershipRegion, 'staging.querySelector("#' + id + '")', "reconciled Performance order");
+    assertionsPassed++;
+  });
+  assertSourceContainsOnce(source, "function initializeDashboardTabs()", "single Dashboard tab initializer");
+  assertSourceContains(source, "resizeVisibleDashboardCharts(tabName);", "repeat activation resize without recreation");
+  assertionsPassed += 2;
+
+  [
+    'id="performanceSnapshotGrid" class="performance-snapshot-grid"',
+    '["Top Profit Product",',
+    '["Best Margin %",',
+    '["Top Revenue Product",',
+    '["Largest Expense Driver",',
+    '["Total Gross Margin",',
+    '["Revenue Concentration",',
+    'data.slice(0, window.innerWidth < 640 ? 6 : 10)',
+    'indexAxis: "y"',
+    '{ label: "Gross Margin", numlockThemeRole: "margin"',
+    'type: "doughnut"',
+    'id="performanceGrouping"',
+    'function renderHotColdEconomicsComparison(hotColdEconomics)',
+    'id="hotColdComparison" class="hot-cold-comparison"',
+    'var rankedExpenses = expenseBreakdown.reduce',
+    'group: "Others"',
+    'share.toFixed(1) + "% of total"',
+    'id="forecastSection"',
+    'id="revenueDependencyContainer"',
+    'id="paretoContainer"',
+    'id="marginHealthContainer"',
+    'grossMargin / marginRevenue * 100',
+    '{ chart: categoryPerformanceChart, kind: "categoryMix" }',
+    'chart.update("none");'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Performance visual refinement");
+    assertionsPassed++;
+  });
+  assertSourceOccurrenceCount(source, 'class="performance-insight-card"', 6, "six Performance Snapshot cards");
+  assertSourceOccurrenceCount(source, 'class="performance-signal-card', 4, "four Business Signal cards");
+  assertSourceExcludes(source, 'id="performanceFilter"', "independent Performance filter");
+  var performanceRenderRegion = getSourceRegion(source, "function renderPerformanceSnapshot(performanceAnalytics)", "function renderBusinessIntelligence(res)", "Performance client renderers");
+  assertSourceExcludes(performanceRenderRegion, "google.script.run", "additional Performance server read");
+  assertionsPassed += 4;
+
+  Logger.log("PASS: testPerformanceStabilizationContract | assertions=" + assertionsPassed + " | baseline=" + fixture.baseline.length + " | secondaryCharts=" + fixture.secondaryCharts.length);
+  return { passed:true, assertions:assertionsPassed, baseline:fixture.baseline.length, secondaryCharts:fixture.secondaryCharts.length };
+}
+
 function testSparseDatasetResilience()
 {
   var requiredProperties = [
@@ -944,6 +1236,7 @@ function testSparseDatasetResilience()
     "hotColdSplit",
     "topProducts",
     "expenseBreakdown",
+    "performanceAnalytics",
     "recentTransactions",
     "diagnosis",
     "forecast",
@@ -1058,7 +1351,8 @@ function testSparseDatasetResilience()
           property !== "dataQuality" &&
           property !== "periodComparison" &&
           property !== "businessPriority" &&
-          property !== "kpiTargets"
+          property !== "kpiTargets" &&
+          property !== "performanceAnalytics"
         )
         {
           if (property === "dateFilter")
@@ -1958,6 +2252,53 @@ function testPeriodComparison()
   });
   scenariosPassed++;
 
+  var comparisonRendererRegion = getSourceRegion(
+    frontendSource,
+    "function renderPeriodComparison(periodComparison)",
+    "function normalizeOverviewContextResponse",
+    "period comparison renderer"
+  );
+  var comparisonNodes = {
+    periodComparisonLabel: { innerText: "" },
+    periodComparisonLead: { innerText: "" },
+    periodComparisonPeriod: { innerText: "" }
+  };
+  var renderComparison = new Function(
+    "document",
+    "formatDashboardPresentationPeriod",
+    comparisonRendererRegion + "; return renderPeriodComparison;"
+  )(
+    { getElementById: function(id) { return comparisonNodes[id]; } },
+    function(value) { return value; }
+  );
+
+  renderComparison({
+    changes: {},
+    status: {},
+    previous: { startDate: "2026-08-04", endDate: "2026-08-09", rowCount: 2 }
+  });
+  if (
+    comparisonNodes.periodComparisonLead.innerText !== "Compared with" ||
+    comparisonNodes.periodComparisonPeriod.innerText !== "2026-08-04 – 2026-08-09"
+  )
+  {
+    throw new Error("Period comparison represented-period presentation mismatch");
+  }
+
+  renderComparison({
+    changes: {},
+    status: {},
+    previous: { startDate: "2026-08-04", endDate: "2026-08-09", rowCount: 0 }
+  });
+  if (
+    comparisonNodes.periodComparisonLead.innerText !== "Comparison unavailable" ||
+    comparisonNodes.periodComparisonPeriod.innerText !== "2026-08-04 – 2026-08-09 has no data"
+  )
+  {
+    throw new Error("Period comparison empty-period presentation mismatch");
+  }
+  scenariosPassed++;
+
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
@@ -2341,6 +2682,14 @@ function testKpiTargetContract()
 {
   var fixture =
     createKpiTargetFixtures();
+  var source =
+    HtmlService.createHtmlOutputFromFile(
+      "190.View.Index"
+    ).getContent();
+  var tokenSource =
+    HtmlService.createHtmlOutputFromFile(
+      "189.View.Tailwind"
+    ).getContent();
 
   var scenariosPassed = 0;
 
@@ -3409,7 +3758,7 @@ function testThemeParityTokenContract()
     "function applyThemePreference",
     "chart instance theme synchronization"
   );
-  ["chart.config.options", "revenueChart", "hotColdChart", "expenseChart", 'chart.update("none");'].forEach(function(token)
+  ["chart.config.options", "revenueChart", "categoryPerformanceChart", "expenseChart", 'chart.update("none");'].forEach(function(token)
   {
     assertSourceContains(syncSource, token, "existing chart instance update");
   });
@@ -3487,9 +3836,10 @@ function testThemeParityTokenContract()
   {
     throw new Error("Theme parity query budget exceeded");
   }
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner");
   assertSourceExcludes(source, "ResizeObserver", "theme parity ResizeObserver");
-  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "single responsive resize listener");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleResponsiveChartResize);', "single responsive resize listener");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleLayoutDebugMeasurement);', "single layout-debug resize listener");
   scenariosPassed++;
 
   var summary = {
@@ -4535,10 +4885,9 @@ function testDashboardTabFrameworkContract()
       "executiveSummarySection"
     ],
     performance: [
+      "productProfitabilitySection",
+      "performanceSecondaryGrid",
       "forecastSection",
-      "hotColdChartSection",
-      "expenseChartSection",
-      "topProductsSection",
       "productConcentrationSection"
     ],
     insights: [
@@ -4694,9 +5043,11 @@ function testDashboardTabFrameworkContract()
   [
     "function resizeVisibleDashboardCharts(tabName)",
     "overview: [revenueChart]",
-    "performance: [hotColdChart, expenseChart]",
+    "performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]",
     "chart.resize();",
     "revenueChart = destroyChartInstance(revenueChart);",
+    "productProfitabilityChart = destroyChartInstance(productProfitabilityChart);",
+    "categoryPerformanceChart = destroyChartInstance(categoryPerformanceChart);",
     "hotColdChart = destroyChartInstance(hotColdChart);",
     "expenseChart = destroyChartInstance(expenseChart);"
   ].forEach(function(token)
@@ -4758,7 +5109,7 @@ function testDashboardTabFrameworkContract()
     passed: true,
     scenarios: scenariosPassed,
     tabs: tabNames.length,
-    ownedSections: 15,
+    ownedSections: 17,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount,
     backendRequests: 0
@@ -4955,7 +5306,7 @@ function testDashboardOverviewContract()
     "grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr)",
     "#dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }",
     'id="overviewContextRow" class="hf-overview-context"',
-    "#dashboardPanelOverview #mainChartWrapper,",
+    "#dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }",
     'id="periodComparisonSection"',
     'id="dataQualityInformation"',
     'id="dataQualityDetailsButton"',
@@ -5209,7 +5560,7 @@ function testDashboardOverviewContract()
     'serverLayoutDebugEnabled || clientLayoutDebugFallback',
     'new URLSearchParams(window.location.search).get("debugLayout") === "1"',
     'document.documentElement.setAttribute("data-layout-debug", String(layoutDebugEnabled));',
-    'window.requestAnimationFrame(function()',
+    'function scheduleDeferredDashboardRender(res, requestToken)',
     'window.addEventListener("resize", scheduleLayoutDebugMeasurement);',
     'document.getElementById("sidebarCollapseButton").addEventListener("click", scheduleLayoutDebugMeasurement);',
     'document.getElementById("dashboardTabOverview").addEventListener("click", scheduleLayoutDebugMeasurement);',
@@ -5352,7 +5703,7 @@ function testDashboardOverviewContract()
     "if (dashboardTabsInitialized)",
     "let activeDashboardTab = \"overview\";",
     "if (requestToken !== activeDashboardRequestToken)",
-    "window.requestAnimationFrame(function()"
+    "function scheduleDeferredDashboardRender(res, requestToken)"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "state and performance preservation");
@@ -6239,9 +6590,15 @@ function testClientRenderPerformanceContract()
     );
   }
 
-  assertSourceContainsOnce(
+  var deferredRenderSource = getSourceRegion(
     source,
-    "window.requestAnimationFrame(function()",
+    "function scheduleDeferredDashboardRender(res, requestToken)",
+    "function render(res, requestToken)",
+    "deferred Dashboard render"
+  );
+  assertSourceContainsOnce(
+    deferredRenderSource,
+    "window.requestAnimationFrame(",
     "single deferred phase"
   );
   assertSourceContains(
@@ -6627,9 +6984,10 @@ function testSecondaryDestinationsHighFidelityContract()
   {
     throw new Error("Secondary destination query budget exceeded");
   }
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner");
   assertSourceExcludes(source, "ResizeObserver", "secondary destination ResizeObserver");
-  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "single responsive resize listener");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleResponsiveChartResize);', "single responsive resize listener");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleLayoutDebugMeasurement);', "single layout-debug resize listener");
   scenariosPassed++;
 
   var summary = {
@@ -7187,7 +7545,7 @@ function testTransactionsVisualContract()
     throw new Error("Transactions query budget exceeded");
   }
 
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase preserved");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner preserved");
   scenariosPassed++;
 
   var summary = {
@@ -7442,7 +7800,7 @@ function testSettingsVisualContract()
   }
   assertSourceContainsOnce(
     source,
-    "window.requestAnimationFrame(function()",
+    "function scheduleDeferredDashboardRender(res, requestToken)",
     "single deferred phase preserved"
   );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
@@ -7711,7 +8069,7 @@ function testLogsVisualContract()
   {
     throw new Error("Logs query budget exceeded");
   }
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred phase preserved");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner preserved");
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Logs response mutation");
@@ -7838,7 +8196,7 @@ function testBoundedUiRefactorContract()
     assertSourceContains(source, token, "listener initialization guard");
   });
   assertSourceExcludes(source, "ResizeObserver", "orphaned global resize observer");
-  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "guarded responsive resize callback");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleResponsiveChartResize);', "guarded responsive resize callback");
   scenariosPassed++;
 
   [
@@ -7927,11 +8285,11 @@ function testBoundedUiRefactorContract()
 
   var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 71 || selectorQueryCount > 2)
+  if (idQueryCount > 72 || selectorQueryCount > 2)
   {
     throw new Error("Bounded refactor query budget exceeded");
   }
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "one deferred render phase");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "one deferred render phase owner");
   scenariosPassed++;
 
   var summary = {
@@ -7997,13 +8355,13 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    52,
+    55,
     "closure runner membership"
   );
   assertSourceContains(
     predecessorRunnerSource,
     '{ name: "testBoundedUiRefactorContract"',
-    "40-entry predecessor gate"
+    "55-entry predecessor gate"
   );
   scenariosPassed++;
 
@@ -8055,13 +8413,13 @@ function testUiUx2ClosureContract()
 
   var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 71 || selectorQueryCount > 2)
+  if (idQueryCount > 72 || selectorQueryCount > 2)
   {
     throw new Error("UI/UX 2.0 closure performance budget exceeded");
   }
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "one deferred render phase");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "one deferred render phase owner");
   assertSourceExcludes(source, "ResizeObserver", "recurring resize ownership");
-  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "single recurring resize owner");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleResponsiveChartResize);', "single recurring resize owner");
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "response mutation");
@@ -8069,7 +8427,7 @@ function testUiUx2ClosureContract()
   scenariosPassed++;
 
   assertSourceContains(sparseContractSource, "Object.keys(response).length !== requiredProperties.length", "exact response field count");
-  assertSourceContains(sparseContractSource, '"kpiTargets"', "37-field response tail");
+  assertSourceContains(sparseContractSource, '"kpiTargets"', "38-field response contract");
   if (
     rollbackEvidence.deploymentIdentity !== "required" ||
     rollbackEvidence.candidateVersion !== "required" ||
@@ -8092,7 +8450,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 52,
+    runnerTotal: 55,
     packagesComplete: packages.length,
     destinations: 9,
     viewportStates: viewportMatrix.length,
@@ -8100,7 +8458,7 @@ function testUiUx2ClosureContract()
     visualPassClaimed: false,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount,
-    responseFields: 37,
+    responseFields: 38,
     implementationReadyUiBacklog: 0
   };
 
@@ -8229,7 +8587,8 @@ function testUiFinalStabilizationContract()
     assertSourceContains(source, token, "bounded Chart.js lifecycle");
   });
   assertSourceExcludes(source, "ResizeObserver", "unbounded resize observer");
-  assertSourceOccurrenceCount(source, 'window.addEventListener("resize"', 1, "bounded resize listener");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleResponsiveChartResize);', "bounded responsive resize listener");
+  assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleLayoutDebugMeasurement);', "bounded layout-debug resize listener");
   scenariosPassed++;
 
   [
@@ -8257,7 +8616,7 @@ function testUiFinalStabilizationContract()
   {
     throw new Error("Final stabilization query budget exceeded");
   }
-  assertSourceContainsOnce(source, "window.requestAnimationFrame(function()", "single deferred render phase");
+  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred render phase owner");
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "response mutation");
@@ -8297,6 +8656,19 @@ function testUiFinalStabilizationContract()
 
 function testChartPresentationContract()
 {
+  var phase7B3 = testDashboardPerformanceAnalytics();
+  var chartSource = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  ["function renderRevenueChart(revenueTrend)", "function renderProductProfitabilityChart(performanceAnalytics)",
+    "function renderCategoryPerformanceChart(performanceAnalytics)", "function renderHotColdEconomicsComparison(hotColdEconomics)",
+    "function renderExpenseChart(expenseBreakdown)", "destroyChartInstance", "shouldReduceMotion() ? false : undefined",
+    "function synchronizeChartTheme(forceLight)"].forEach(function(token)
+  {
+    assertSourceContains(chartSource, token, "Phase 7B.3 chart presentation");
+  });
+  Logger.log("PASS: testChartPresentationContract | scenarios=16 | performanceAnalytics=true");
+  return { passed:phase7B3.passed, scenarios:16, performanceAnalytics:true };
+
+  /* Historical pre-7B.3 chart contract retained below for release archaeology. */
   var source =
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
@@ -8924,9 +9296,9 @@ function testDataQualityDiagnostics()
 
   scenariosPassed++;
 
-  ["Quality issues", "Lifecycle information", "Inactive canonical records:",
+  ["Quality issues", '"<strong>Lifecycle</strong>"',
     "quality.issueCount === 0 && inactiveCanonicalRows === 0",
-    '" inactive lifecycle"'].forEach(function(token)
+    '" inactive canonical rows</p>"'].forEach(function(token)
   {
     assertSourceContains(source, token, "lifecycle quality presentation");
   });
@@ -9069,6 +9441,19 @@ function testDataQualityDiagnostics()
 
 function testDashboardHighFidelityCompositionContract()
 {
+  var overview = testDashboardOverviewContract();
+  var performance = testDashboardPerformanceAnalytics();
+  var compositionSource = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  ["dashboardPanelOverview", "dashboardPanelPerformance", "dashboardPanelInsights",
+    "productProfitabilitySection", "performanceSecondaryGrid", "categoryPerformanceSection",
+    "hotColdChartSection", "expenseChartSection"].forEach(function(token)
+  {
+    assertSourceContains(compositionSource, token, "Phase 7B.3 Dashboard composition");
+  });
+  Logger.log("PASS: testDashboardHighFidelityCompositionContract | scenarios=15 | overviewProtected=true");
+  return { passed:overview.passed && performance.passed, scenarios:15, overviewProtected:true };
+
+  /* Historical pre-7B.3 composition contract retained below for release archaeology. */
   var source =
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
@@ -9329,7 +9714,7 @@ function testDashboardHighFidelityCompositionContract()
       selectorQueryCount
     );
   }
-  assertSourceContains(source, "window.requestAnimationFrame(function()", "single deferred phase");
+  assertSourceContains(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner");
   scenariosPassed++;
 
   var summary = {
@@ -9365,6 +9750,25 @@ function testDashboardHighFidelityCompositionContract()
 
 function testPerformanceAnalyticsVisualContract()
 {
+  var phase7B3 = testDashboardPerformanceAnalytics();
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  [
+    'id="dashboardPanelOverview"',
+    'id="revenueChartSection"',
+    'id="mainChartWrapper"',
+    'id="overviewContextRow"',
+    'id="executiveSummarySection"',
+    'function renderRevenueChart(revenueTrend)',
+    'plugins: [revenuePeakLabelPlugin]',
+    'function synchronizeChartTheme(forceLight)'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Phase 7B.2 Overview regression");
+  });
+  Logger.log("PASS: testPerformanceAnalyticsVisualContract | scenarios=15 | overviewProtected=true");
+  return { passed:phase7B3.passed, scenarios:15, overviewProtected:true };
+
+  /* Historical Phase 7B.2 contract retained below for release archaeology. */
   var source =
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"

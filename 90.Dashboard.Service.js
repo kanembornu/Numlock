@@ -29,6 +29,64 @@ function getDashboardData(filter, customStart, customEnd) {
   return execution.response;
 }
 
+function buildOptionalPerformanceAnalytics(aggregate, performance) {
+  var startedAt = Date.now();
+  try {
+    return buildPerformanceAnalyticsFromAggregate(aggregate);
+  } catch (error) {
+    Logger.log("PerformanceProjectionError " + String(error && error.message || error));
+    return {
+      available: false,
+      errorCode: "PERFORMANCE_PROJECTION_FAILED",
+      productProfitability: [],
+      totalGrossMargin: 0,
+      classifications: { category: [], kind: [] },
+      hotColdEconomics: [],
+      expenseGroups: [],
+      expenseGrouping: "Group"
+    };
+  } finally {
+    if (performance) performance.performanceAnalyticsMs = Date.now() - startedAt;
+  }
+}
+
+function buildGrossMarginComparison(currentPerformanceAnalytics, previousData) {
+  var currentGrossMargin =
+    Number(
+      currentPerformanceAnalytics &&
+      currentPerformanceAnalytics.totalGrossMargin != null
+        ? currentPerformanceAnalytics.totalGrossMargin
+        : 0
+    );
+
+  var previousPerformanceAnalytics =
+    buildPerformanceAnalyticsFromAggregate(
+      buildAggregate(previousData || [])
+    );
+
+  var previousGrossMargin =
+    Number(
+      previousPerformanceAnalytics &&
+      previousPerformanceAnalytics.totalGrossMargin != null
+        ? previousPerformanceAnalytics.totalGrossMargin
+        : 0
+    );
+
+  var comparison =
+    calculateFiniteComparison(
+      currentGrossMargin,
+      previousGrossMargin,
+      true
+    );
+
+  return {
+    currentGrossMargin: currentGrossMargin,
+    previousGrossMargin: previousGrossMargin,
+    grossMarginChangePercent: comparison.percentage,
+    status: comparison.status
+  };
+}
+
 function diagnoseDashboardPerformance(filter, customStart, customEnd) {
 
   return buildDashboardDataExecution(
@@ -52,6 +110,7 @@ function buildDashboardDataExecution(filter, customStart, customEnd) {
     revenueTrendMs: 0,
     topProductsMs: 0,
     expenseBreakdownMs: 0,
+    performanceAnalyticsMs: 0,
     qualityMs: 0,
     recentTransactionsMs: 0,
     responseAssemblyMs: 0,
@@ -1258,6 +1317,12 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
     performance
   );
 
+  cache.performanceAnalytics.grossMarginComparison =
+    buildGrossMarginComparison(
+      cache.performanceAnalytics,
+      previousData
+    );
+
   var businessPriority =
     buildBusinessPriority(
       cache,
@@ -1297,6 +1362,9 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
       expenseBreakdown:
         cache.expenseBreakdown,
 
+      performanceAnalytics:
+        cache.performanceAnalytics,
+
       recentTransactions:
         recentTransactions,
 
@@ -1305,7 +1373,7 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       forecast:
         cache.forecast,
-      
+
       businessScore:
         cache.businessScore,
 
@@ -1356,7 +1424,7 @@ function buildDashboardResponse(processedData, filter, customStart, customEnd, r
 
       executiveAlert:
         cache.executiveAlert,
-      
+
       actionRoadmap:
         cache.actionRoadmap,
 
@@ -1484,6 +1552,12 @@ function buildAnalyticsCache(data, dateRange, performance) {
     );
   if (performance) performance.expenseBreakdownMs = Date.now() - expenseBreakdownStartedAt;
 
+  cache.performanceAnalytics =
+    buildOptionalPerformanceAnalytics(
+      cache.aggregate,
+      performance
+    );
+
   cache.insights =
     buildInsights(cache);
 
@@ -1544,8 +1618,8 @@ function buildAnalyticsCache(data, dateRange, performance) {
     buildProfitIntelligence(cache);
 
   cache.businessScore =
-    buildBusinessScore(cache);  
-  
+    buildBusinessScore(cache);
+
   cache.executiveSummary =
     buildExecutiveSummary(cache);
 
