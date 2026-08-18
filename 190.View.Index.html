@@ -315,7 +315,12 @@
         #dashboardPanelPerformance > div { min-height: 0; height: auto; margin: 0; }
         #dashboardPanelPerformance #performanceSnapshotSection { grid-column: 1 / -1; }
         #dashboardPanelPerformance #performanceSnapshotSection > .mb-2 { display: none; }
-        #dashboardPanelPerformance #productProfitabilitySection { grid-column: span 9; display: grid; min-height: 0; }
+        #dashboardPanelPerformance #productProfitabilitySection { grid-column: span 9; display: grid; grid-template-rows: max-content minmax(0, 1fr) max-content; align-content: stretch; gap: 6px; min-height: 0; }
+        #dashboardPanelPerformance #productProfitabilityWrapper { height: 100%; min-height: 0; max-height: none; }
+        #dashboardPanelPerformance .product-profitability-header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 12px; }
+        #dashboardPanelPerformance .product-profitability-action { flex: 0 0 auto; min-height: 28px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 16px; }
+        #dashboardPanelPerformance .product-profitability-formula { display: flex; min-height: 24px; align-items: center; gap: 6px; border-radius: 7px; padding: 5px 8px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 14px; }
+        #dashboardPanelPerformance .product-profitability-formula i { font-size: 9px; }
         #dashboardPanelPerformance #performanceSecondaryGrid { display: grid; grid-column: span 11; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); align-items: start; align-content: start; min-height: 0; }
         #dashboardPanelPerformance #performanceSecondaryGrid > section { min-width: 0; min-height: 0; height: auto; overflow: hidden; border: 0 !important; background: transparent !important; box-shadow: none !important; display: flex; flex-direction: column; }
         #dashboardPanelPerformance #categoryPerformanceSection { overflow: hidden; }
@@ -1398,13 +1403,21 @@
       </section>
 
       <section id="productProfitabilitySection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="productProfitabilityTitle" data-composition-tier="primary">
-        <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div><h2 id="productProfitabilityTitle" class="text-sm font-bold">Product Profitability</h2><p class="text-xs text-slate-500">Top products ranked by gross margin</p></div>
+        <div class="product-profitability-header">
+          <div>
+            <h2 id="productProfitabilityTitle" class="text-sm font-bold">Product Profitability</h2>
+            <p class="text-xs text-slate-500">Top products ranked by gross margin</p>
+          </div>
+          <button type="button" class="product-profitability-action" onclick="applyTransactionDrilldown('sales', '', 'Sales transactions')">View transactions</button>
         </div>
         <p id="productProfitabilitySummary" class="sr-only"></p>
         <div id="productProfitabilityWrapper" class="performance-chart-shell performance-chart-shell-primary relative h-72 min-w-0 sm:h-96">
           <canvas id="productProfitabilityChart" aria-hidden="true"></canvas>
           <p id="productProfitabilityEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
+        </div>
+        <div class="product-profitability-formula">
+          <i class="fas fa-circle-info" aria-hidden="true"></i>
+          <span>Gross Margin = Revenue − COGS</span>
         </div>
       </section>
 
@@ -5315,11 +5328,14 @@
 
       var productProfitabilityLabelPlugin = {
         id: "productProfitabilityLabels",
-        afterDraw: function(chart)
+        afterDatasetsDraw: function(chart)
         {
           var ctx = chart.ctx;
           var yScale = chart.scales.y;
+          var meta = chart.getDatasetMeta(0);
           var chartLeft = chart.chartArea.left;
+          var chartRight = chart.chartArea.right;
+          var percentageX = chart.width - 10;
 
           ctx.save();
           ctx.textBaseline = "middle";
@@ -5327,27 +5343,41 @@
           displayedProducts.forEach(function(item, index)
           {
             var y = yScale.getPixelForValue(index);
+            var bar = meta.data[index];
+            var valueX = bar ? Math.min(bar.x + 12, chartRight + 12) : chartRight + 12;
 
             ctx.fillStyle = chartPalette.axis;
-            ctx.font = "500 10px Inter, sans-serif";
+            ctx.font = "600 11.5px Inter, sans-serif";
             ctx.textAlign = "left";
-            ctx.fillText((index + 1) + ". " + item.label, chartLeft - 184, y);
+            ctx.fillText((index + 1) + ". " + item.label, chartLeft - 132, y);
 
             ctx.fillStyle = chartPalette.axis;
-            ctx.font = "500 10px Inter, sans-serif";
-            ctx.textAlign = "right";
-            ctx.fillText(formatChartCurrency(item.grossMargin), chartLeft - 44, y);
+            ctx.font = "700 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(formatChartCurrency(item.grossMargin), valueX, y);
 
             ctx.fillStyle = chartPalette.series[2] || chartPalette.axis;
-            ctx.font = "600 10px Inter, sans-serif";
+            ctx.font = "600 11.5px Inter, sans-serif";
             ctx.textAlign = "right";
             ctx.fillText(
               Number(item.grossMarginPercent || 0).toFixed(1) + "%",
-              chartLeft - 4,
+              percentageX,
               y
             );
           });
 
+          ctx.restore();
+        },
+        beforeDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+
+          ctx.save();
+          ctx.fillStyle = chartPalette.axis;
+          ctx.font = "700 10.5px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("Margin %", chart.width - 10, chart.chartArea.top - 2);
           ctx.restore();
         }
       };
@@ -5357,7 +5387,7 @@
         data: {
           labels: displayedProducts.map(function(item) { return item.label; }),
           datasets: [
-            { label: "Gross Margin", numlockThemeRole: "margin", data: displayedProducts.map(function(item) { return item.grossMargin; }), backgroundColor: chartPalette.series[1], borderColor: chartPalette.series[1], borderRadius: 6, barPercentage: 0.68 }
+            { label: "Gross Margin", numlockThemeRole: "margin", data: displayedProducts.map(function(item) { return item.grossMargin; }), backgroundColor: chartPalette.series[1], borderColor: chartPalette.series[1], borderRadius: 5, barPercentage: 0.84, categoryPercentage: 0.80 }
           ]
         },
         plugins: [productProfitabilityLabelPlugin],
@@ -5368,10 +5398,10 @@
           indexAxis: "y",
           layout: {
             padding: {
-              left: 190,
-              right: 8,
-              top: 4,
-              bottom: 0
+              left: 136,
+              right: 132,
+              top: 20,
+              bottom: 2
             }
           },
           plugins: {
@@ -5391,7 +5421,7 @@
             }
           },
           scales: {
-            x: { beginAtZero: true, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, callback: formatRevenueAxisTick } },
+            x: { beginAtZero: true, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, font: { weight: "600" }, callback: formatRevenueAxisTick } },
             y: { grid: { display: false }, ticks: { display: false, autoSkip: false } }
           }
         }
