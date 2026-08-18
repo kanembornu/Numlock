@@ -18,6 +18,8 @@ function runAllBackendTests()
     { name: "testTopProductsFixtures", run: testTopProductsFixtures },
     { name: "testProfitTrendFixtures", run: testProfitTrendFixtures },
     { name: "testHotColdFixtures", run: testHotColdFixtures },
+    { name: "testDashboardPerformanceAnalytics", run: testDashboardPerformanceAnalytics },
+    { name: "testPerformanceStabilizationContract", run: testPerformanceStabilizationContract },
     { name: "testSparseDatasetResilience", run: testSparseDatasetResilience },
     { name: "testDashboardDateFilter", run: testDashboardDateFilter },
     { name: "testPeriodComparison", run: testPeriodComparison },

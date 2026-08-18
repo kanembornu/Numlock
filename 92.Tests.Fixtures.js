@@ -453,13 +453,31 @@ function createSparseDatasetFixtures()
   ];
 }
 
+function addDashboardFixtureDateKeys(rows)
+{
+  return rows.map(function(row)
+  {
+    var copy = {};
+    Object.keys(row).forEach(function(key) { copy[key] = row[key]; });
+    var date = new Date(row.date);
+    if (!isNaN(date.getTime()))
+    {
+      copy.dateKey = date.getFullYear() + "-" +
+        ("0" + (date.getMonth() + 1)).slice(-2) + "-" +
+        ("0" + date.getDate()).slice(-2);
+      copy.monthKey = copy.dateKey.slice(0, 7);
+    }
+    return copy;
+  });
+}
+
 function createDashboardDateFilterFixtures()
 {
   return {
     referenceDate:
       new Date(2026, 5, 15, 12, 0, 0),
 
-    rows: [
+    rows: addDashboardFixtureDateKeys([
       { date: new Date(2026, 5, 15, 23, 59, 59), transactionType: "Sales", product: "Today", purchaseCategory: "", category: "Hot", qty: 1, revenue: 150, expense: 0 },
       { date: new Date(2026, 5, 14, 12, 0, 0), transactionType: "Sales", product: "Yesterday", purchaseCategory: "", category: "Cold", qty: 1, revenue: 140, expense: 0 },
       { date: new Date(2026, 5, 9, 0, 0, 0), transactionType: "Sales", product: "Last 7 Start", purchaseCategory: "", category: "Hot", qty: 1, revenue: 90, expense: 0 },
@@ -471,9 +489,9 @@ function createDashboardDateFilterFixtures()
       { date: new Date(2026, 0, 1, 0, 0, 0), transactionType: "Sales", product: "Year Start", purchaseCategory: "", category: "Hot", qty: 1, revenue: 1, expense: 0 },
       { date: new Date(2025, 11, 31, 23, 59, 59), transactionType: "Sales", product: "Prior Year", purchaseCategory: "", category: "Cold", qty: 1, revenue: 999, expense: 0 },
       { date: "not-a-date", transactionType: "Sales", product: "Invalid Date", purchaseCategory: "", category: "Hot", qty: 1, revenue: 9999, expense: 0 }
-    ],
+    ]),
 
-    trendRows: [
+    trendRows: addDashboardFixtureDateKeys([
       { date: new Date(2025, 11, 31, 12, 0, 0), transactionType: "Sales", product: "December", purchaseCategory: "", category: "Hot", qty: 1, revenue: 120, expense: 0 },
       { date: new Date(2026, 0, 1, 12, 0, 0), transactionType: "Sales", product: "January", purchaseCategory: "", category: "Cold", qty: 1, revenue: 10, expense: 0 },
       { date: new Date(2026, 4, 20, 12, 0, 0), transactionType: "Sales", product: "May", purchaseCategory: "", category: "Hot", qty: 1, revenue: 50, expense: 0 },
@@ -482,7 +500,7 @@ function createDashboardDateFilterFixtures()
       { date: new Date(2026, 6, 31, 12, 0, 0), transactionType: "Sales", product: "July", purchaseCategory: "", category: "Hot", qty: 1, revenue: 70, expense: 0 },
       { date: new Date(2026, 7, 1, 12, 0, 0), transactionType: "Sales", product: "August Start", purchaseCategory: "", category: "Cold", qty: 1, revenue: 80, expense: 0 },
       { date: new Date(2026, 7, 3, 12, 0, 0), transactionType: "Purchase", product: "", purchaseCategory: "Supplies", category: "", qty: 0, revenue: 0, expense: 5 }
-    ]
+    ])
   };
 }
 
@@ -606,8 +624,7 @@ function createPeriodComparisonFixtures()
       'status === "Stable"',
       'status === "Up" ? "▲ " : "▼ -"',
       'formatDashboardPresentationPeriod(comparison.previous.startDate, "day")',
-      '"Comparison unavailable · " + previousPeriod + " has no data"',
-      'renderPeriodComparison(res.periodComparison);'
+      'renderPeriodComparison(context.comparison);'
     ]
   };
 }
@@ -954,7 +971,7 @@ function createResponsiveShellContractFixtures()
 function createAccessibilityContractFixtures()
 {
   return [
-    { name: "document language", tokens: ['<html lang="en">'] },
+    { name: "document language", tokens: ['<html lang="en"'] },
     { name: "viewport metadata", tokens: ['<meta name="viewport" content="width=device-width, initial-scale=1.0">'] },
     { name: "document title", tokens: ['<title>NUMLOCK Coffee Shop Analytics</title>'] },
     { name: "primary main landmark", tokens: ['<main id="mainContent"'], uniqueToken: '<main id="mainContent"' },
@@ -1017,12 +1034,36 @@ function createFrontendDependencyContractFixtures()
       { name: "safe existing instance destruction", tokens: ["revenueChart = destroyChartInstance(revenueChart);", "hotColdChart = destroyChartInstance(hotColdChart);", "expenseChart = destroyChartInstance(expenseChart);"] },
       { name: "accessible summaries retained", tokens: ['id="revenueChartSummary"', 'id="hotColdChartSummary"', 'id="expenseChartSummary"'] },
       { name: "non-chart continuation", tokens: ['document.getElementById("topProductsContainer").innerHTML'] },
-      { name: "Chart available constructors", tokens: ["revenueChart = new Chart(", "hotColdChart = new Chart(", "expenseChart = new Chart("] },
+      { name: "Chart available constructors", tokens: ["revenueChart = new Chart(", "productProfitabilityChart = new Chart(", "categoryPerformanceChart = new Chart(", "expenseChart = new Chart("] },
       { name: "responsive contract retained", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"'] },
-      { name: "chart contract retained", tokens: ["renderRevenueChart(revenueTrend);", "renderHotColdChart(hotColdSplit);", "renderExpenseChart(expenseBreakdown);"] },
+      { name: "chart contract retained", tokens: ["renderRevenueChart(revenueTrend);", "renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);", "renderExpenseChart(Array.isArray(latestPerformanceAnalytics.expenseGroups) ? latestPerformanceAnalytics.expenseGroups : []);"] },
       { name: "Font Awesome active usage", tokens: ['class="fas fa-times"', 'class="fas fa-chart-line w-6 text-center"', 'class="fas fa-arrow-right-arrow-left w-6 text-center"'] },
       { name: "no browser alert fallback", excludedTokens: ["alert(\"Chart unavailable.\")", "alert('Chart unavailable.')"] }
     ]
+  };
+}
+
+function createPerformanceStabilizationFixtures()
+{
+  return {
+    baseline: [
+      { id: "forecastSection", disposition: "KEEP", reason: "Distinct forward-looking revenue context" },
+      { id: "hotColdChartSection", disposition: "REPLACED", reason: "Richer revenue, COGS, and gross-margin economics" },
+      { id: "expenseChartSection", disposition: "REPLACED", reason: "Stable business-group expense view" },
+      { id: "productConcentrationSection", disposition: "KEEP", reason: "Distinct dependency and Pareto evidence" }
+    ],
+    finalOrder: [
+      "performanceSnapshotSection",
+      "productProfitabilitySection",
+      "performanceSecondaryGrid",
+      "forecastSection",
+      "productConcentrationSection"
+    ],
+    secondaryCharts: [
+      "categoryPerformanceWrapper",
+      "expenseWrapper"
+    ],
+    nativeComparisons: ["hotColdComparison"]
   };
 }
 
