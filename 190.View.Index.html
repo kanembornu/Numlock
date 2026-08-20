@@ -387,7 +387,996 @@
         #dashboardPanelPerformance .hot-cold-card { min-width: 0; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
         #dashboardPanelPerformance .hot-cold-meter { height: 8px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: var(--surface-3); }
         #dashboardPanelPerformance .hot-cold-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
-        #dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
+                /* Phase 7B.3 — Row 2B clean reconciliation */
+
+        /* Business Mix header — aligns with Product Profitability title. */
+        #dashboardPanelPerformance #performanceSecondaryGrid .performance-mix-header {
+          display: flex;
+          min-height: 34px;
+          grid-column: 1 / -1;
+          align-items: flex-start;
+          margin: 0;
+          padding: 0;
+          position: relative;
+          top: -2px;
+        }
+
+        #dashboardPanelPerformance #businessMixTitle {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          line-height: 20px;
+          letter-spacing: -.01em;
+        }
+
+        /* Category Mix stays inside the existing Business Mix wrapper. */
+        #dashboardPanelPerformance #categoryPerformanceSection {
+          position: relative;
+          min-width: 0;
+          overflow: hidden;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceSection > .mb-2 {
+          position: relative;
+          z-index: 2;
+          height: 30px;
+          min-height: 30px;
+          margin: 0 !important;
+          align-items: flex-start !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceTitle,
+        #dashboardPanelPerformance #hotColdChartTitle {
+          font-size: 15px;
+          font-weight: 700;
+          line-height: 20px;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceSection > .mb-2 label {
+          display: inline-flex;
+          min-height: 28px;
+          align-items: center;
+          gap: 6px;
+          margin: 0;
+          font-size: 11px;
+          font-weight: 600;
+          line-height: 16px;
+        }
+
+        #dashboardPanelPerformance #performanceGrouping {
+          height: 28px;
+          min-height: 28px;
+          padding-top: 0;
+          padding-bottom: 0;
+          font-size: 11px;
+          font-weight: 600;
+        }
+
+        /*
+         * Reserve enough vertical space for Kind mode.
+         * Category may use only 2 rows; Kind can use up to 4.
+         * The Business Mix card therefore does not resize.
+         */
+
+        /* Hot vs Cold Economics card — internal geometry only. */
+        #dashboardPanelPerformance #hotColdChartSection {
+          position: relative;
+          min-width: 0;
+          overflow: hidden;
+        }
+
+        #dashboardPanelPerformance #hotColdChartSection > .mb-2 {
+          min-height: 30px;
+          margin-bottom: 6px !important;
+          align-items: flex-start !important;
+        }
+
+        #dashboardPanelPerformance #hotColdChartSection > .mb-2 button {
+          min-height: 28px;
+          padding: 4px 9px;
+          font-size: 11px;
+          font-weight: 600;
+          line-height: 16px;
+        }
+
+        /* Global thin focus ring reconciliation */
+        button:focus,
+        input:focus,
+        select:focus,
+        textarea:focus,
+        [role="button"]:focus,
+        [tabindex]:focus {
+          outline: 1px solid var(--focus) !important;
+          outline-offset: 0 !important;
+          box-shadow: none !important;
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible,
+        [role="button"]:focus-visible,
+        [tabindex]:focus-visible {
+          outline: 1px solid var(--focus) !important;
+          outline-offset: 0 !important;
+          box-shadow: none !important;
+        }
+
+        /* Dashboard tab focus reconciliation */
+        #dashboardTabList [role="tab"]:focus {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        #dashboardTabList [role="tab"]:focus-visible {
+          outline: none !important;
+          box-shadow: inset 0 0 0 1px var(--focus) !important;
+        }
+
+        /* Gap between two bordered cards replaces vertical separator. */
+
+        #dashboardPanelPerformance #performanceSecondaryGrid #categoryPerformanceSection,
+        #dashboardPanelPerformance #performanceSecondaryGrid #hotColdChartSection {
+          box-sizing: border-box;
+          height: 100%;
+          min-height: 0;
+          overflow: hidden;
+          border: 1px solid var(--border-subtle) !important;
+          border-radius: 10px;
+          background: var(--surface-2) !important;
+          box-shadow: none !important;
+          padding: 12px !important;
+        }
+
+
+
+        /* Doughnut starts directly under Category Mix title and hugs left. */
+        #dashboardPanelPerformance #categoryPerformanceWrapper {
+          position: absolute;
+          top: 46px;
+          left: 12px;
+          width: 43%;
+          height: 150px;
+          min-height: 150px;
+          max-height: 150px;
+          margin: 0 !important;
+          overflow: hidden;
+        }
+
+        #dashboardPanelPerformance .category-mix-center {
+          width: 82px;
+        }
+
+        #dashboardPanelPerformance .category-mix-center > div {
+          font-size: 8px !important;
+          line-height: 11px !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center strong {
+          margin-top: 1px;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 15px;
+        }
+
+        /* Fixed legend area: enough room for Category or Kind. */
+        #dashboardPanelPerformance #categoryMixLegend {
+          position: absolute;
+          top: 48px;
+          right: 12px;
+          width: 51%;
+          min-height: 152px;
+          margin: 0 !important;
+          padding: 0;
+          align-content: start;
+          gap: 4px;
+          overflow: hidden;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          display: grid;
+          grid-template-columns: minmax(70px, 1fr) 78px 52px;
+          align-items: center;
+          gap: 7px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header {
+          min-height: 20px;
+          padding-bottom: 4px;
+          border-bottom: 1px solid var(--divider);
+          color: var(--text-muted);
+          font-size: 9px;
+          font-weight: 700;
+          line-height: 12px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header > span:nth-child(2),
+        #dashboardPanelPerformance .performance-detail-header > span:nth-child(3) {
+          text-align: right;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          min-height: 22px;
+          color: var(--text-secondary);
+          font-size: 10px;
+          font-weight: 600;
+          line-height: 14px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > span:first-child {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > strong,
+        #dashboardPanelPerformance .performance-detail-row > span:last-child {
+          text-align: right;
+          white-space: nowrap;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > strong {
+          color: var(--text-primary);
+          font-size: 9px;
+          font-weight: 700;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > span:last-child {
+          color: var(--text-secondary);
+          font-size: 9px;
+          font-weight: 600;
+        }
+
+        #dashboardPanelPerformance .performance-detail-dot {
+          width: 7px;
+          height: 7px;
+          margin-right: 5px;
+        }
+
+        /* Phase 7B.3 — Category Mix visual refinement */
+
+        /* Keep Row 2 / Product Profitability geometry untouched. */
+        #dashboardPanelPerformance #categoryPerformanceWrapper {
+          top: 52px;
+          left: 14px;
+          width: 40%;
+          height: 142px;
+          min-height: 142px;
+          max-height: 142px;
+        }
+
+        #dashboardPanelPerformance .category-mix-center {
+          width: 78px;
+        }
+
+        #dashboardPanelPerformance .category-mix-center > div {
+          font-size: 9px !important;
+          font-weight: 500;
+          line-height: 11px !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center strong {
+          display: block;
+          margin-top: 2px;
+          font-size: 12px;
+          font-weight: 800;
+          line-height: 15px;
+          letter-spacing: -0.01em;
+        }
+
+        #dashboardPanelPerformance #categoryMixLegend {
+          top: 50px;
+          right: 12px;
+          width: 55%;
+          min-height: 146px;
+          gap: 5px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          grid-template-columns: minmax(74px, 1fr) 88px 50px;
+          gap: 8px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header {
+          min-height: 22px;
+          padding-bottom: 5px;
+          font-size: 10px;
+          font-weight: 700;
+          line-height: 13px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          min-height: 24px;
+          font-size: 10px;
+          font-weight: 600;
+          line-height: 14px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > strong {
+          font-size: 10px;
+          font-weight: 600;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > span:last-child {
+          font-size: 10px;
+          font-weight: 600;
+        }
+
+        #dashboardPanelPerformance .performance-detail-dot {
+          width: 8px;
+          height: 8px;
+          margin-right: 6px;
+        }
+
+        /* Phase 7B.3 — Category Mix composition correction */
+
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          background: var(--surface-1) !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceTitle {
+          font-size: 12px;
+          line-height: 16px;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceWrapper {
+          top: 42px;
+          left: 0;
+          width: 46%;
+          height: 132px;
+          min-height: 132px;
+          max-height: 132px;
+          margin: 0 !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center {
+          width: 96px;
+          white-space: nowrap;
+        }
+
+        #dashboardPanelPerformance .category-mix-center > div {
+          font-size: 8px !important;
+          line-height: 10px !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center strong {
+          display: block;
+          margin-top: 1px;
+          font-size: 11px;
+          font-weight: 800;
+          line-height: 14px;
+          white-space: nowrap;
+        }
+
+        #dashboardPanelPerformance #categoryMixDataLabels {
+          position: absolute;
+          top: 44px;
+          right: 10px;
+          width: 50%;
+          min-height: 120px;
+          display: grid;
+          grid-template-rows: repeat(4, minmax(0, 1fr));
+          align-content: center;
+          gap: 2px;
+          overflow: hidden;
+        }
+
+        #dashboardPanelPerformance .category-mix-data-label {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 42px 74px;
+          min-width: 0;
+          align-items: center;
+          gap: 5px;
+          color: var(--text-secondary);
+          font-size: 9px;
+          font-weight: 600;
+          line-height: 12px;
+        }
+
+        #dashboardPanelPerformance .category-mix-data-label-name {
+          min-width: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        #dashboardPanelPerformance .category-mix-data-label > strong,
+        #dashboardPanelPerformance .category-mix-data-label > span:last-child {
+          text-align: right;
+          white-space: nowrap;
+        }
+
+        #dashboardPanelPerformance #categoryMixLegend {
+          position: absolute;
+          top: 168px;
+          left: 10px;
+          right: 10px;
+          width: auto;
+          min-height: 0;
+          margin: 0 !important;
+          padding: 0;
+          display: grid;
+          align-content: start;
+          gap: 0;
+          overflow: hidden;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          grid-template-columns: minmax(86px, 1fr) 88px 54px;
+          gap: 6px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header {
+          min-height: 15px;
+          padding: 0 0 3px;
+          border-bottom: 1px solid var(--divider);
+          font-size: 9px;
+          line-height: 11px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          min-height: 13px;
+          padding: 2px 0;
+          border-bottom: 1px solid var(--divider);
+          font-size: 9px;
+          line-height: 11px;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row:last-child {
+          border-bottom: 0;
+        }
+
+        #dashboardPanelPerformance .performance-detail-dot {
+          width: 6px;
+          height: 6px;
+          margin-right: 4px;
+        }
+
+        /* Phase 7B.3 — Category Mix leader-label reconciliation */
+
+        /* Both Row 2B inner surfaces must be true white. */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          background-color: #ffffff !important;
+        }
+
+        /* Category Mix heading reduced for mockup density. */
+        #dashboardPanelPerformance #categoryPerformanceTitle {
+          font-size: 10px !important;
+          font-weight: 700 !important;
+          line-height: 13px !important;
+        }
+
+        /*
+         * Doughnut composition:
+         * full-width canvas so adaptive labels can live on both sides.
+         * Doughnut itself remains centered by Chart.js.
+         */
+        #dashboardPanelPerformance #categoryPerformanceWrapper {
+          position: absolute !important;
+          top: 33px !important;
+          left: 0 !important;
+          right: 0 !important;
+          width: 100% !important;
+          height: 132px !important;
+          min-height: 132px !important;
+          max-height: 132px !important;
+          margin: 0 !important;
+          overflow: visible !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceWrapper canvas {
+          width: 100% !important;
+          height: 132px !important;
+          max-width: 100% !important;
+          max-height: 132px !important;
+        }
+
+        /* Existing DOM side-label layer is retired. */
+        #dashboardPanelPerformance #categoryMixDataLabels {
+          display: none !important;
+        }
+
+        /* Approved inner value: preserve single-line revenue. */
+        #dashboardPanelPerformance .category-mix-center {
+          width: 108px !important;
+          white-space: nowrap !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center > div {
+          font-size: 7px !important;
+          line-height: 9px !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center strong {
+          display: block !important;
+          margin-top: 1px !important;
+          font-size: 10px !important;
+          font-weight: 800 !important;
+          line-height: 13px !important;
+          white-space: nowrap !important;
+        }
+
+        /*
+         * Grid remains below doughnut.
+         * Use almost the full card width and denser vertical rhythm.
+         */
+        #dashboardPanelPerformance #categoryMixLegend {
+          position: absolute !important;
+          top: 166px !important;
+          left: 8px !important;
+          right: 8px !important;
+          width: auto !important;
+          min-height: 0 !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          display: grid !important;
+          align-content: start !important;
+          gap: 0 !important;
+          overflow: hidden !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          display: grid !important;
+          grid-template-columns:
+            minmax(0, 1fr)
+            minmax(92px, .44fr)
+            58px !important;
+          column-gap: 8px !important;
+          align-items: center !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header {
+          min-height: 16px !important;
+          padding: 0 3px 3px !important;
+          border-bottom: 1px solid var(--divider) !important;
+          color: var(--text-muted) !important;
+          font-size: 9px !important;
+          font-weight: 700 !important;
+          line-height: 11px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          min-height: 17px !important;
+          padding: 2px 3px !important;
+          border-bottom: 1px solid var(--divider) !important;
+          color: var(--text-secondary) !important;
+          font-size: 9px !important;
+          font-weight: 600 !important;
+          line-height: 11px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row:last-child {
+          border-bottom: 0 !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > strong,
+        #dashboardPanelPerformance .performance-detail-row > span:last-child,
+        #dashboardPanelPerformance .performance-detail-header > span:nth-child(2),
+        #dashboardPanelPerformance .performance-detail-header > span:nth-child(3) {
+          text-align: right !important;
+          white-space: nowrap !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-dot {
+          width: 6px !important;
+          height: 6px !important;
+          margin-right: 4px !important;
+        }
+
+        /* Phase 7B.3 — Category Mix leader-label fine reconciliation */
+
+        #dashboardPanelPerformance #categoryPerformanceTitle {
+          font-size: 11px !important;
+          line-height: 14px !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceWrapper {
+          top: 30px !important;
+          height: 150px !important;
+          min-height: 150px !important;
+          max-height: 150px !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceWrapper canvas {
+          height: 150px !important;
+          max-height: 150px !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center {
+          width: 112px !important;
+          white-space: nowrap !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center > div {
+          font-size: 8px !important;
+          line-height: 10px !important;
+        }
+
+        #dashboardPanelPerformance .category-mix-center strong {
+          font-size: 11px !important;
+          line-height: 14px !important;
+          white-space: nowrap !important;
+        }
+
+        #dashboardPanelPerformance #categoryMixLegend {
+          top: 181px !important;
+          left: 8px !important;
+          right: 8px !important;
+          width: auto !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          grid-template-columns:
+            minmax(0, 1fr)
+            minmax(96px, .46fr)
+            58px !important;
+          column-gap: 8px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header {
+          min-height: 17px !important;
+          padding: 0 4px 4px !important;
+          border-bottom: 1px solid var(--divider) !important;
+          font-size: 9px !important;
+          font-weight: 700 !important;
+          line-height: 11px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          min-height: 18px !important;
+          padding: 3px 4px !important;
+          border-bottom: 1px solid var(--divider) !important;
+          font-size: 9px !important;
+          line-height: 11px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row:last-child {
+          border-bottom: 0 !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+
+        /* Phase 7B.3 — Category Mix typography and leader cleanup */
+
+        /* Match Business Mix white surface. */
+        #dashboardPanelPerformance #categoryPerformanceSection {
+          background: var(--surface-1) !important;
+          background-color: var(--surface-1) !important;
+        }
+
+        /* Category Mix heading. */
+        #dashboardPanelPerformance #categoryPerformanceTitle {
+          font-size: 16px !important;
+          font-weight: 700 !important;
+          line-height: 25px !important;
+        }
+
+        /* Full-width detail grid below doughnut. */
+        #dashboardPanelPerformance #categoryMixLegend {
+          top: 190px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header {
+          min-height: 20px !important;
+          padding: 0 4px 4px !important;
+          font-size: 14px !important;
+          font-weight: 700 !important;
+          line-height: 16px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          min-height: 20px !important;
+          padding: 2px 4px !important;
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          line-height: 15px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > strong,
+        #dashboardPanelPerformance .performance-detail-row > span:last-child {
+          font-size: 12px !important;
+          line-height: 15px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          grid-template-columns:
+            minmax(0, 1fr)
+            minmax(108px, .46fr)
+            64px !important;
+          column-gap: 10px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row {
+          border-bottom: 1px solid var(--divider) !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row:last-child {
+          border-bottom: 0 !important;
+        }
+
+        /* Phase 7B.3 — Category Mix alignment reconciliation */
+
+        /* Explicit white inner surface, matching Business Mix wrapper. */
+        #dashboardPanelPerformance #performanceSecondaryGrid #categoryPerformanceSection {
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+
+        #dashboardPanelPerformance #categoryPerformanceSection::before,
+        #dashboardPanelPerformance #categoryPerformanceSection::after {
+          background: transparent !important;
+        }
+
+        /* Inner Total Revenue label. */
+        #dashboardPanelPerformance .category-mix-center > div {
+          font-size: 10px !important;
+          font-weight: 500 !important;
+          line-height: 12px !important;
+        }
+
+        /*
+         * Grid starts at approved vertical position.
+         * Three columns are exactly equal.
+         */
+        #dashboardPanelPerformance #categoryMixLegend {
+          top: 190px !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          column-gap: 8px !important;
+        }
+
+        /* Grid header */
+        #dashboardPanelPerformance .performance-detail-header {
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          line-height: 14px !important;
+          text-align: left !important;
+        }
+
+        /* Grid rows */
+        #dashboardPanelPerformance .performance-detail-row {
+          font-size: 12px !important;
+          font-weight: 600 !important;
+          line-height: 15px !important;
+          text-align: left !important;
+        }
+
+        /* Override earlier right alignment on numeric columns. */
+        #dashboardPanelPerformance .performance-detail-header > span,
+        #dashboardPanelPerformance .performance-detail-row > span,
+        #dashboardPanelPerformance .performance-detail-row > strong {
+          min-width: 0 !important;
+          text-align: left !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row > strong,
+        #dashboardPanelPerformance .performance-detail-row > span:last-child {
+          font-size: 12px !important;
+          line-height: 15px !important;
+          white-space: nowrap !important;
+        }
+
+        /* Phase 7B.3 — Category Mix + HotCold final alignment */
+
+        /* White inner surfaces */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+        }
+
+        /* Extend both Row 2B inner cards downward */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          height: calc(100% + 14px) !important;
+          min-height: calc(100% + 14px) !important;
+          align-self: stretch !important;
+        }
+
+        /* Category Mix grid position */
+        #dashboardPanelPerformance #categoryMixLegend {
+          top: 190px !important;
+          left: 8px !important;
+          right: 8px !important;
+          width: auto !important;
+        }
+
+        /* 3 exactly equal columns */
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          display: grid !important;
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          column-gap: 8px !important;
+          align-items: center !important;
+        }
+
+        /* Header */
+        #dashboardPanelPerformance .performance-detail-header {
+          font-size: 12px !important;
+          font-weight: 700 !important;
+          line-height: 15px !important;
+          text-align: left !important;
+          padding: 0 4px 4px !important;
+        }
+
+        /* Rows */
+        #dashboardPanelPerformance .performance-detail-row {
+          font-size: 12px !important;
+          font-weight: 400 !important;
+          line-height: 15px !important;
+          text-align: left !important;
+          padding: 3px 4px !important;
+        }
+
+        /* Force every grid cell left aligned */
+        #dashboardPanelPerformance .performance-detail-header > span,
+        #dashboardPanelPerformance .performance-detail-row > span,
+        #dashboardPanelPerformance .performance-detail-row > strong,
+        #dashboardPanelPerformance .performance-detail-revenue {
+          text-align: left !important;
+          justify-self: stretch !important;
+        }
+
+        /* Revenue must not be bold */
+        #dashboardPanelPerformance .performance-detail-revenue {
+          font-size: 12px !important;
+          font-weight: 400 !important;
+          line-height: 15px !important;
+          white-space: nowrap !important;
+        }
+
+        /* Margin row text */
+        #dashboardPanelPerformance .performance-detail-row > span:last-child {
+          font-size: 12px !important;
+          font-weight: 400 !important;
+          line-height: 15px !important;
+          white-space: nowrap !important;
+        }
+
+        /* Preserve visible row separators */
+        #dashboardPanelPerformance .performance-detail-row {
+          border-bottom: 1px solid var(--divider) !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-row:last-child {
+          border-bottom: 0 !important;
+        }
+
+        /* Phase 7B.3 — Row 2B routing and footer alignment */
+
+        /*
+         * Target bottom alignment:
+         * Product Profitability footer formula, NOT outer card bottom.
+         * Previous +14px extension was visibly too tall.
+         */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          height: calc(100% + 6px) !important;
+          min-height: calc(100% + 6px) !important;
+          align-self: stretch !important;
+
+          background: #ffffff !important;
+          background-color: #ffffff !important;
+          background-image: none !important;
+        }
+
+        /*
+         * Exactly three equal columns.
+         * Header and row content must begin on identical X positions.
+         */
+        #dashboardPanelPerformance .performance-detail-header,
+        #dashboardPanelPerformance .performance-detail-row {
+          display: grid !important;
+          grid-template-columns:
+            repeat(3, minmax(0, 1fr)) !important;
+          column-gap: 8px !important;
+          align-items: center !important;
+        }
+
+        /*
+         * Remove all inherited right-alignment/justify rules.
+         */
+        #dashboardPanelPerformance .performance-detail-header > *,
+        #dashboardPanelPerformance .performance-detail-row > * {
+          width: 100% !important;
+          min-width: 0 !important;
+          justify-self: start !important;
+          justify-content: flex-start !important;
+          text-align: left !important;
+        }
+
+        #dashboardPanelPerformance .performance-detail-header > span:nth-child(2),
+        #dashboardPanelPerformance .performance-detail-header > span:nth-child(3),
+        #dashboardPanelPerformance .performance-detail-row > span:nth-child(2),
+        #dashboardPanelPerformance .performance-detail-row > span:nth-child(3),
+        #dashboardPanelPerformance .performance-detail-revenue {
+          justify-self: start !important;
+          text-align: left !important;
+        }
+
+        /* Revenue stays normal-weight — already approved. */
+        #dashboardPanelPerformance .performance-detail-revenue {
+          font-weight: 400 !important;
+        }
+
+        /* Phase 7B.3 — Category Mix control and leader cleanup */
+
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-header,
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-row {
+          display: grid !important;
+          grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          column-gap: 8px !important;
+          align-items: center !important;
+        }
+
+        /* Category / Kind column */
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-header > span:nth-child(1),
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-row > span:nth-child(1) {
+          width: 100% !important;
+          justify-self: stretch !important;
+          text-align: left !important;
+        }
+
+        /* Revenue column — header and rows share identical start */
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-header > span:nth-child(2),
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-row > span:nth-child(2),
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-revenue {
+          width: 100% !important;
+          justify-self: stretch !important;
+          text-align: left !important;
+        }
+
+        /* Margin % column — centered as one column */
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-header > span:nth-child(3),
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-row > span:nth-child(3) {
+          width: 100% !important;
+          justify-self: stretch !important;
+          text-align: center !important;
+        }
+
+        /* Revenue stays approved normal weight */
+        #dashboardPanelPerformance #categoryMixLegend
+        .performance-detail-revenue {
+          font-weight: 400 !important;
+        }
+
+        /* Phase 7B.3 — Category Mix floating callout labels */
+
+        /*
+         * Floating labels need breathing room around the chart.
+         * Doughnut size, position and grid remain untouched.
+         */
+        #dashboardPanelPerformance #categoryPerformanceWrapper {
+          overflow: visible !important;
+        }
+
+        /* Phase 7B.3 — Category Mix callout spacing and color finalization */
+#dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #dashboardPanelInsights > section,
         #dashboardPanelInsights > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
         #dashboardPanelInsights #diagnosisContainer,
@@ -1423,13 +2412,12 @@
 
       <div id="performanceSecondaryGrid">
         <div class="performance-mix-header">
-          <p class="hf-section-label">Business Mix</p>
-          <h2 id="businessMixTitle" class="text-sm font-bold">Category and product economics</h2>
+          <h2 id="businessMixTitle" class="text-sm font-bold">Business Mix</h2>
         </div>
       <section id="categoryPerformanceSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="categoryPerformanceTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="categoryPerformanceTitle" class="text-sm font-bold">Category Mix</h2>
-          <label class="text-xs font-semibold text-slate-600">Group by <select id="performanceGrouping" class="rounded-lg border border-slate-200 bg-white px-2 py-1" onchange="activePerformanceGrouping=this.value; renderCategoryPerformanceChart(latestPerformanceAnalytics)"><option value="category">Category</option><option value="kind">Kind</option></select></label>
+          <label class="text-xs font-semibold text-slate-600"><select id="performanceGrouping" class="rounded-lg border border-slate-200 bg-white px-2 py-1" onchange="activePerformanceGrouping=this.value; renderCategoryPerformanceChart(latestPerformanceAnalytics)"><option value="category">Category</option><option value="kind">Kind</option></select></label>
         </div>
         <p id="categoryPerformanceSummary" class="sr-only"></p>
         <div id="categoryPerformanceWrapper" class="performance-chart-shell relative h-72 min-w-0 sm:h-96">
@@ -1437,7 +2425,8 @@
           <div id="categoryMixCenter" class="category-mix-center" aria-hidden="true"></div>
           <p id="categoryPerformanceEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
         </div>
-        <div id="categoryMixLegend" class="performance-detail-list"></div>
+        <div id="categoryMixDataLabels" aria-hidden="true"></div>
+          <div id="categoryMixLegend" class="performance-detail-list"></div>
       </section>
 
       <section id="hotColdChartSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="hotColdChartTitle">
@@ -5450,24 +6439,242 @@
       if (!chartAvailable || !groups.length) return;
 
       var totalRevenue = groups.reduce(function(sum, item) { return sum + Number(item.revenue || 0); }, 0);
-      var categoryColors = groups.map(function(item, index) { return chartPalette.series[index % chartPalette.series.length]; });
-      categoryElements.categoryMixCenter.innerHTML = '<div class="text-[10px] text-slate-500">Total Revenue</div><strong>' + formatChartCurrency(totalRevenue) + '</strong>';
-      categoryElements.categoryMixLegend.innerHTML = groups.map(function(item, index)
+      /*
+       * Category Mix needs four visually distinct primary colors.
+       * Keep the first, third and fourth colors theme-aware while
+       * forcing the second series to a clear purple accent.
+       */
+      var categoryColorOrder = [0, 2, 3, 5, 6, 7, 1];
+
+      var categoryColors = groups.map(function(item, index)
       {
-        var share = totalRevenue > 0 ? Number(item.revenue || 0) / totalRevenue * 100 : 0;
-        return '<div class="performance-detail-row"><span><i class="performance-detail-dot" style="background:var(--chart-series-' + (index % 8 + 1) + ')"></i>' + escapeUiHtml(item.label) + '</span><strong>' + share.toFixed(1) + '%</strong><span>' + Number(item.grossMarginPercent || 0).toFixed(1) + '% margin</span></div>';
-      }).join("");
+        if (index === 1)
+        {
+          return "#8b5cf6";
+        }
+
+        var paletteIndex = categoryColorOrder[
+          (index > 1 ? index - 1 : index) % categoryColorOrder.length
+        ] % chartPalette.series.length;
+
+        return chartPalette.series[paletteIndex];
+      });
+      categoryElements.categoryMixCenter.innerHTML = '<div class="text-[10px] text-slate-500">Total Revenue</div><strong>' + formatChartCurrency(totalRevenue) + '</strong>';
+      categoryElements.categoryMixLegend.innerHTML =
+        '<div class="performance-detail-header">' +
+          '<span>' + (grouping === "kind" ? "Kind" : "Category") + '</span>' +
+          '<span>Revenue</span>' +
+          '<span>Margin %</span>' +
+        '</div>' +
+        groups.map(function(item, index)
+        {
+          return '<div class="performance-detail-row">' +
+            '<span><i class="performance-detail-dot" style="background:var(--chart-series-' + (index % 8 + 1) + ')"></i>' +
+              escapeUiHtml(item.label) +
+            '</span>' +
+            '<span class="performance-detail-revenue">' + formatChartCurrency(item.revenue) + '</span>' +
+            '<span>' + Number(item.grossMarginPercent || 0).toFixed(1) + '%</span>' +
+          '</div>';
+        }).join("");
+      var categoryMixLeaderLabelPlugin = {
+        id: "categoryMixLeaderLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var meta = chart.getDatasetMeta(0);
+
+          if (!meta || !meta.data || !meta.data.length) return;
+
+          var leftLabels = [];
+          var rightLabels = [];
+          var minimumGap = 30;
+
+          meta.data.forEach(function(arc, index)
+          {
+            var item = groups[index];
+            var revenue = Number(item.revenue || 0);
+            var share = totalRevenue > 0 ? revenue / totalRevenue * 100 : 0;
+            var angle = (arc.startAngle + arc.endAngle) / 2;
+            /*
+             * Major slices retain their natural geometric side.
+             * Small slices prefer the less crowded side.
+             *
+             * Because callouts no longer use connector lines,
+             * this redistribution cannot cross the doughnut.
+             */
+            var side = Math.cos(angle) >= 0 ? 1 : -1;
+
+            if (share < 20)
+            {
+              var leftLoad = leftLabels.length;
+              var rightLoad = rightLabels.length;
+
+              if (rightLoad > leftLoad)
+              {
+                side = -1;
+              }
+              else if (leftLoad > rightLoad)
+              {
+                side = 1;
+              }
+            }
+
+            var point = {
+              index: index,
+              item: item,
+              revenue: revenue,
+              share: share,
+              angle: angle,
+              side: side,
+              startX: arc.x + Math.cos(angle) * (arc.outerRadius + 2),
+              startY: arc.y + Math.sin(angle) * (arc.outerRadius + 2),
+              desiredY: arc.y + Math.sin(angle) * (arc.outerRadius + 14)
+            };
+
+            (side > 0 ? rightLabels : leftLabels).push(point);
+          });
+
+          function distribute(items)
+          {
+            if (!items.length) return;
+
+            items.sort(function(a, b)
+            {
+              return a.desiredY - b.desiredY;
+            });
+
+            /*
+             * Protected annotation area around the doughnut.
+             * Keep clear of title/dropdown above and grid below.
+             */
+            var topLimit = chart.chartArea.top + 16;
+            var bottomLimit = chart.chartArea.bottom - 18;
+
+            if (items.length === 1)
+            {
+              items[0].labelY = Math.max(
+                topLimit,
+                Math.min(bottomLimit, items[0].desiredY)
+              );
+              return;
+            }
+
+            /*
+             * Two callouts are the normal Kind-side case.
+             * Give them deliberate upper/lower positions rather
+             * than letting them cluster around their slice angles.
+             */
+            if (items.length === 2)
+            {
+              var usableHeight = bottomLimit - topLimit;
+
+              items[0].labelY = topLimit + usableHeight * 0.25;
+              items[1].labelY = topLimit + usableHeight * 0.75;
+              return;
+            }
+
+            /*
+             * Fallback for future classifications with >2 labels
+             * on the same side.
+             */
+            var availableHeight = Math.max(
+              0,
+              bottomLimit - topLimit
+            );
+
+            var slotGap = availableHeight / (items.length + 1);
+
+            items.forEach(function(item, index)
+            {
+              item.labelY = topLimit + slotGap * (index + 1);
+            });
+          }
+
+          distribute(leftLabels);
+          distribute(rightLabels);
+
+          ctx.save();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = chartPalette.axis;
+          ctx.fillStyle = chartPalette.axis;
+
+          leftLabels.concat(rightLabels).forEach(function(label)
+          {
+            var isRight = label.side > 0;
+            var arc = meta.data[label.index];
+
+            /*
+             * Floating callout:
+             * no connector line, therefore no possibility of crossing
+             * the doughnut or visually attaching to the wrong slice.
+             */
+            var textX = arc.x +
+              label.side * (arc.outerRadius + 58);
+
+            var dotX = textX +
+              (isRight ? -10 : 10);
+
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = categoryColors[
+              label.index % categoryColors.length
+            ];
+
+            ctx.beginPath();
+            ctx.arc(
+              dotX,
+              label.labelY - 6,
+              3,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.globalAlpha = 1;
+            ctx.textBaseline = "middle";
+            ctx.textAlign = isRight ? "left" : "right";
+
+            ctx.font = "700 12px Inter, sans-serif";
+            ctx.fillText(
+              label.item.label,
+              textX,
+              label.labelY - 7
+            );
+
+            ctx.font = "600 12px Inter, sans-serif";
+            ctx.fillText(
+              label.share.toFixed(1) + "%",
+              textX,
+              label.labelY + 8
+            );
+          });
+
+          ctx.restore();
+        }
+      };
+
       categoryPerformanceChart = new Chart(document.getElementById("categoryPerformanceChart").getContext("2d"), {
         type: "doughnut",
         data: {
           labels: groups.map(function(item) { return item.label; }),
-          datasets: [{ label: "Revenue Share", data: groups.map(function(item) { return item.revenue; }), backgroundColor: categoryColors, borderColor: chartPalette.pointStroke, borderWidth: 2 }]
+          datasets: [{ label: "Revenue Share", data: groups.map(function(item) { return item.revenue; }), backgroundColor: categoryColors, borderColor: "transparent", borderWidth: 0 }]
         },
+        plugins: [categoryMixLeaderLabelPlugin],
         options: {
           animation: shouldReduceMotion() ? false : undefined,
           responsive: true,
           maintainAspectRatio: false,
+          rotation: -210,
+          radius: "98%",
           cutout: "64%",
+          layout: {
+            padding: {
+              left: 54,
+              right: 54,
+              top: 0,
+              bottom: 0
+            }
+          },
           plugins: { legend: { display: false }, tooltip: { backgroundColor: chartPalette.tooltipBackground, titleColor: chartPalette.tooltipText, bodyColor: chartPalette.tooltipText,
             callbacks: { label: function(context) { var item = groups[context.dataIndex]; var share = totalRevenue > 0 ? Number(item.revenue || 0) / totalRevenue * 100 : 0; return "Revenue: " + formatChartCurrency(item.revenue) + " · " + share.toFixed(1) + "% · Margin " + Number(item.grossMarginPercent || 0).toFixed(1) + "%"; } } } }
         }
