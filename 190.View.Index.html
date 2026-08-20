@@ -1376,6 +1376,137 @@
         }
 
         /* Phase 7B.3 — Category Mix callout spacing and color finalization */
+        /* Phase 7B.3 — Minor dashboard reconciliation */
+
+        /* Dashboard tabs: subtle accessible focus */
+        #dashboardTabList [role="tab"]:focus,
+        #dashboardTabList [role="tab"]:focus-visible {
+          outline: none !important;
+          outline-offset: 0 !important;
+          box-shadow: inset 0 0 0 1px var(--focus) !important;
+        }
+
+        #dashboardTabList [role="tab"]:focus-visible::before,
+        #dashboardTabList [role="tab"]:focus-visible::after {
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        /*
+         * Row 2B bordered wrappers only.
+         * Frozen Category Mix internals remain untouched.
+         */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          height: calc(100% + 10px) !important;
+          min-height: calc(100% + 10px) !important;
+          align-self: stretch !important;
+        }
+
+        /* Phase 7B.3 — Tab focus and Row 2B upward extension */
+
+        /* --------------------------------------------------
+           Dashboard tab focus — one clean 1px perimeter only
+        -------------------------------------------------- */
+        #dashboardTabList [role="tab"]:focus,
+        #dashboardTabList [role="tab"]:focus-visible {
+          outline: none !important;
+          outline-offset: 0 !important;
+          box-shadow: none !important;
+          border-width: 1px !important;
+          border-style: solid !important;
+          border-color: var(--focus) !important;
+        }
+
+        #dashboardTabList [role="tab"]:focus-visible::before,
+        #dashboardTabList [role="tab"]:focus-visible::after {
+          content: none !important;
+          outline: none !important;
+          box-shadow: none !important;
+        }
+
+        /*
+         * Prevent inherited Tailwind/browser accessibility rings
+         * from stacking another perimeter around dashboard tabs.
+         */
+        #dashboardTabList [role="tab"].ring-1,
+        #dashboardTabList [role="tab"].ring-2,
+        #dashboardTabList [role="tab"].ring,
+        #dashboardTabList [role="tab"]:focus-visible {
+          --tw-ring-offset-width: 0px !important;
+          --tw-ring-offset-shadow: 0 0 #0000 !important;
+          --tw-ring-shadow: 0 0 #0000 !important;
+        }
+
+        /* --------------------------------------------------
+           Performance Row 2B
+           
+           IMPORTANT:
+           +10px height is added UPWARD, not downward.
+           
+           height +10px
+           translateY(-10px)
+           
+           Therefore:
+           - top border moves upward 10px
+           - bottom returns to its original approved position
+           - Product Profitability footer alignment is restored
+        -------------------------------------------------- */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          height: calc(100% + 10px) !important;
+          min-height: calc(100% + 10px) !important;
+          transform: translateY(-10px) !important;
+          align-self: stretch !important;
+        }
+
+        /*
+         * The Category Mix grid is frozen.
+         *
+         * Because its parent moves upward 10px, compensate its
+         * internal top position by +10px:
+         *
+         * previous approved top: 190px
+         * compensated top:     200px
+         *
+         * Net screen position remains unchanged.
+         *
+         * Doughnut/title/dropdown DO move upward with the wrapper,
+         * creating the requested breathing room above the grid.
+         */
+        #dashboardPanelPerformance #categoryMixLegend {
+          top: 200px !important;
+        }
+
+        /* Phase 7B.3 — Row 2B final bottom alignment */
+
+        /*
+         * TOP POSITION IS APPROVED / FROZEN.
+         *
+         * Keep translateY(-10px) exactly as-is.
+         * Extend only the bottom edge by an additional 12px.
+         *
+         * Previous:
+         *   height = 100% + 10px
+         *
+         * Final:
+         *   height = 100% + 22px
+         *
+         * Net result:
+         * - top unchanged
+         * - chart/header unchanged
+         * - Category Mix grid screen position unchanged
+         * - bottom moves down 12px to align with
+         *   Product Profitability formula footer
+         */
+        #dashboardPanelPerformance #categoryPerformanceSection,
+        #dashboardPanelPerformance #hotColdChartSection {
+          height: calc(100% + 14px) !important;
+          min-height: calc(100% + 14px) !important;
+          transform: translateY(-10px) !important;
+          align-self: stretch !important;
+        }
+
 #dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
         #dashboardPanelInsights > section,
         #dashboardPanelInsights > div { min-height: 0; height: 100%; margin: 0; overflow: hidden; }
@@ -2564,7 +2695,7 @@
       <div id="actionRoadmapCard" class="border-l border-slate-200 p-3">Loading Action Roadmap...</div>
     <div id="planningSupportRow" class="grid grid-cols-1 gap-2">
       <div id="kpiAchievementCard">Loading KPI Achievement...</div>
-      <div id="businessMaturityCard" class="border-t border-slate-200 pt-2">Loading Business Maturity...</div>
+      <div id="businessMaturityCard" class="hidden" aria-hidden="true"></div>
     </div>
     </div>
 
@@ -7118,14 +7249,11 @@
 
         document.getElementById("growthScore").className = "text-xl font-bold " + color;
 
-        growthMessageElement.parentElement.nextElementSibling.innerHTML =
-          '<div class="grid grid-cols-2 gap-2">' +
-          '<div><div class="text-[10px] font-bold uppercase text-slate-500">Revenue Intelligence</div>' +
-          '<div class="mt-1 text-xs font-semibold">' + res.revenueIntelligence.direction +
-          ' · ' + res.revenueIntelligence.growthRate + '%</div></div>' +
-          '<div><div class="text-[10px] font-bold uppercase text-slate-500">Profit Intelligence</div>' +
-          '<div class="mt-1 text-xs font-semibold">' + res.profitIntelligence.direction +
-          ' · ' + res.profitIntelligence.status + '</div></div></div>';
+        /*
+         * Business Maturity owns this Growth Opportunity support area.
+         * Revenue / Profit Intelligence presentation removed.
+         */
+        growthMessageElement.parentElement.nextElementSibling.innerHTML = "";
       }
 
       if (res.revenueConcentration)
@@ -8574,7 +8702,7 @@
               maturityColor = "text-amber-600";
             }
 
-        document.getElementById( "businessMaturityCard" ).innerHTML = `
+        document.getElementById( "intelligenceDirectionContext" ).innerHTML = `
         <div class="h-full py-1">
           <div class="hf-section-label">Business Maturity</div>
           <div class="mt-2 flex items-start gap-3">
