@@ -315,13 +315,13 @@
         #dashboardPanelPerformance > div { min-height: 0; height: auto; margin: 0; }
         #dashboardPanelPerformance #performanceSnapshotSection { grid-column: 1 / -1; }
         #dashboardPanelPerformance #performanceSnapshotSection > .mb-2 { display: none; }
-        #dashboardPanelPerformance #productProfitabilitySection { grid-column: span 9; display: grid; grid-template-rows: max-content minmax(0, 1fr) max-content; align-content: stretch; gap: 6px; min-height: 0; }
+        #dashboardPanelPerformance #productProfitabilitySection { grid-column: span 9; display: grid; grid-template-rows: max-content minmax(0, 1fr) max-content; align-content: stretch; align-self: start; gap: 6px; min-height: 395px; height: 395px; max-height: 395px; }
         #dashboardPanelPerformance #productProfitabilityWrapper { height: 100%; min-height: 0; max-height: none; }
         #dashboardPanelPerformance .product-profitability-header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 12px; }
         #dashboardPanelPerformance .product-profitability-action { flex: 0 0 auto; min-height: 28px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 16px; }
         #dashboardPanelPerformance .product-profitability-formula { display: flex; min-height: 24px; align-items: center; gap: 6px; border-radius: 7px; padding: 5px 8px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 14px; }
         #dashboardPanelPerformance .product-profitability-formula i { font-size: 9px; }
-        #dashboardPanelPerformance #performanceSecondaryGrid { display: grid; grid-column: span 11; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); align-items: start; align-content: start; min-height: 0; }
+        #dashboardPanelPerformance #performanceSecondaryGrid { display: grid; grid-column: span 11; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); align-items: start; align-content: start; min-height: 0; contain: size; }
         #dashboardPanelPerformance #performanceSecondaryGrid > section { min-width: 0; min-height: 0; height: auto; overflow: hidden; border: 0 !important; background: transparent !important; box-shadow: none !important; display: flex; flex-direction: column; }
         #dashboardPanelPerformance #categoryPerformanceSection { overflow: hidden; }
         #dashboardPanelPerformance #hotColdChartSection { overflow: hidden; }
@@ -383,10 +383,34 @@
         #dashboardPanelPerformance .performance-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 11px; }
         #dashboardPanelPerformance .performance-detail-dot { display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 999px; }
         #dashboardPanelPerformance .performance-comparison-shell { min-height: 232px; }
-        #dashboardPanelPerformance .hot-cold-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-        #dashboardPanelPerformance .hot-cold-card { min-width: 0; padding: 14px; border: 1px solid var(--border-subtle); border-radius: 10px; background: var(--surface-2); }
-        #dashboardPanelPerformance .hot-cold-meter { height: 8px; margin-top: 12px; overflow: hidden; border-radius: 999px; background: var(--surface-3); }
-        #dashboardPanelPerformance .hot-cold-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+        #dashboardPanelPerformance #hotColdWrapper { position: relative; display: flex; min-height: 0; flex: 1 1 auto; overflow: hidden; }
+        #dashboardPanelPerformance .hot-cold-comparison { box-sizing: border-box; display: flex; width: 100%; min-height: 0; flex: 1 1 auto; flex-direction: column; gap: 10px; }
+        #dashboardPanelPerformance .hot-cold-card-grid { display: grid; height: 215px; min-height: 215px; max-height: 215px; flex: 0 0 215px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: stretch; }
+        #dashboardPanelPerformance .hot-cold-card { box-sizing: border-box; display: flex; height: 100%; min-width: 0; min-height: 0; flex-direction: column; border: 1px solid var(--border-subtle); border-radius: 8px; background: transparent; }
+        #dashboardPanelPerformance .hot-cold-card .hot-cold-label { display: flex; min-height: 30px; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 12px; font-weight: 600; line-height: 16px; }
+        #dashboardPanelPerformance .serving-type-card-body { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: minmax(0, 1fr) 6px; row-gap: 12px; padding: 4px 10px 12px; }
+        #dashboardPanelPerformance .serving-type-card-metrics { display: grid; height: 100%; min-height: 0; grid-template-rows: repeat(3, auto); align-content: space-between; row-gap: 8px; }
+        #dashboardPanelPerformance .serving-type-metric { display: grid; min-width: 0; row-gap: 1px; }
+        #dashboardPanelPerformance .serving-type-metric-value { overflow: hidden; color: var(--text-primary); font-size: 14px; font-weight: 600; line-height: 20px; text-overflow: ellipsis; white-space: nowrap; }
+        #dashboardPanelPerformance .serving-type-revenue-value { font-size: 16px; font-weight: 700; line-height: 22px; }
+        #dashboardPanelPerformance .serving-type-gross-margin-value,
+        #dashboardPanelPerformance .serving-type-margin-value { font-size: 16px; }
+        #dashboardPanelPerformance .serving-type-margin-value { line-height: 20px; }
+        #dashboardPanelPerformance .serving-type-metric-label { color: var(--text-muted); font-size: 11px; font-weight: 500; line-height: 14px; }
+        #dashboardPanelPerformance .hot-cold-card:nth-child(1) .hot-cold-label { background: #fff7ed; color: #ea580c; }
+        #dashboardPanelPerformance .hot-cold-card:nth-child(2) .hot-cold-label { background: #eff6ff; color: #2563eb; }
+        #dashboardPanelPerformance .hot-cold-meter { width: 100%; height: 6px; margin: 0; align-self: end; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
+        #dashboardPanelPerformance .serving-type-meter-slot { display: flex; height: 6px; align-items: flex-end; }
+        #dashboardPanelPerformance .hot-cold-meter > span { display: block; height: 100%; border-radius: inherit; background: #2563eb; }
+        #dashboardPanelPerformance .hot-cold-card:nth-child(1) .hot-cold-meter > span { background: #f97316; }
+        #dashboardPanelPerformance .hot-cold-performance { height: 42px; min-height: 42px; max-height: 42px; flex: 0 0 42px; }
+        #dashboardPanelPerformance .hot-cold-performance-grid { box-sizing: border-box; display: grid; height: 42px; min-height: 42px; max-height: 42px; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-1); }
+        #dashboardPanelPerformance .serving-comparison-item { display: grid; min-width: 0; grid-template-rows: repeat(2, 16px); align-content: center; padding: 1px 10px; }
+        #dashboardPanelPerformance .serving-comparison-item + .serving-comparison-item { border-left: 1px solid var(--border-subtle); }
+        #dashboardPanelPerformance .serving-comparison-label { color: var(--text-muted); font-size: 11px; font-weight: 500; line-height: 16px; }
+        #dashboardPanelPerformance .serving-comparison-result { display: flex; min-width: 0; align-items: baseline; justify-content: space-between; gap: 8px; }
+        #dashboardPanelPerformance .serving-comparison-leader { overflow: hidden; color: var(--text-primary); font-size: 14px; font-weight: 600; line-height: 16px; text-overflow: ellipsis; white-space: nowrap; }
+        #dashboardPanelPerformance .serving-comparison-value { flex: 0 0 auto; color: var(--success); font-size: 11px; font-weight: 500; line-height: 16px; text-align: right; white-space: nowrap; }
                 /* Phase 7B.3 — Row 2B clean reconciliation */
 
         /* Business Mix header — aligns with Product Profitability title. */
@@ -1475,7 +1499,7 @@
          * creating the requested breathing room above the grid.
          */
         #dashboardPanelPerformance #categoryMixLegend {
-          top: 200px !important;
+          top: 215px !important;
         }
 
         /* Phase 7B.3 — Row 2B final bottom alignment */
@@ -1501,10 +1525,38 @@
          */
         #dashboardPanelPerformance #categoryPerformanceSection,
         #dashboardPanelPerformance #hotColdChartSection {
-          height: calc(100% + 14px) !important;
-          min-height: calc(100% + 14px) !important;
+          height: calc(316px + 14px) !important;
+          min-height: calc(316px + 14px) !important;
           transform: translateY(-10px) !important;
           align-self: stretch !important;
+        }
+
+        #dashboardPanelPerformance #performanceSecondaryGrid #categoryPerformanceSection,
+        #dashboardPanelPerformance #performanceSecondaryGrid #hotColdChartSection {
+          background: transparent !important;
+          background-color: transparent !important;
+        }
+
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(2),
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2),
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-revenue {
+          width: 100% !important;
+          justify-self: stretch !important;
+          text-align: center !important;
+        }
+
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(3),
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(3) {
+          width: 100% !important;
+          justify-self: stretch !important;
+          text-align: right !important;
+        }
+
+        #dashboardPanelPerformance #hotColdChartTitle {
+          color: var(--text-primary);
+          font-size: 16px !important;
+          font-weight: 700 !important;
+          line-height: 25px !important;
         }
 
 #dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 5fr) minmax(0, 3fr); grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); gap: 12px; overflow: hidden; }
@@ -2548,7 +2600,7 @@
       <section id="categoryPerformanceSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="categoryPerformanceTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <h2 id="categoryPerformanceTitle" class="text-sm font-bold">Category Mix</h2>
-          <label class="text-xs font-semibold text-slate-600"><select id="performanceGrouping" class="rounded-lg border border-slate-200 bg-white px-2 py-1" onchange="activePerformanceGrouping=this.value; renderCategoryPerformanceChart(latestPerformanceAnalytics)"><option value="category">Category</option><option value="kind">Kind</option></select></label>
+          <div class="text-xs font-semibold text-slate-600"><label for="performanceGrouping" class="sr-only">Category grouping</label><select id="performanceGrouping" class="rounded-lg border border-slate-200 bg-white px-2 py-1" onchange="activePerformanceGrouping=this.value; renderCategoryPerformanceChart(latestPerformanceAnalytics)"><option value="category">Category</option><option value="kind">Kind</option></select></div>
         </div>
         <p id="categoryPerformanceSummary" class="sr-only"></p>
         <div id="categoryPerformanceWrapper" class="performance-chart-shell relative h-72 min-w-0 sm:h-96">
@@ -2562,12 +2614,12 @@
 
       <section id="hotColdChartSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="hotColdChartTitle">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 id="hotColdChartTitle" class="text-sm font-bold">Hot vs Cold Economics</h2>
+          <h2 id="hotColdChartTitle" class="text-sm font-bold">Serving Type Performance</h2>
           <button type="button" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-700" onclick="applyTransactionDrilldown('sales', '', 'Product distribution transactions')">View transactions</button>
         </div>
         <p id="hotColdChartSummary" class="sr-only"></p>
         <div id="hotColdWrapper" class="performance-comparison-shell relative min-w-0">
-            <div id="hotColdComparison" class="hot-cold-comparison" role="group" aria-label="Hot and Cold economics comparison"></div>
+            <div id="hotColdComparison" class="hot-cold-comparison" role="group" aria-label="Serving Type Performance comparison"></div>
             <p id="hotColdChartEmpty" class="hidden p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="hotColdSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
         </div>
@@ -3353,6 +3405,7 @@
 
       var elements = initializeStableDashboardElements();
       enhanceCustomSelect(elements.filter, "Reporting period");
+      enhanceCustomSelect(elements.performanceGrouping, "Category grouping");
       enhanceCustomSelect(elements.customYear, "Available custom year");
       enhanceCustomSelect(elements.customMonth, "Available custom month");
       document.addEventListener("click", function(event)
@@ -3382,7 +3435,7 @@
         "sidebarCloseButton", "businessOverview", "mainChartSkeleton",
         "hotColdSkeleton", "expenseSkeleton", "topProductSkeleton", "keySummarySkeleton",
         "revenueHeaderSkeleton", "topProductsHeaderSkeleton", "periodComparisonSkeleton",
-        "dataQualitySkeleton", "dataQualityInformation", "dataQualityDetailsButton", "dataQualityDetails", "quickActionsSkeleton", "filter",
+        "dataQualitySkeleton", "dataQualityInformation", "dataQualityDetailsButton", "dataQualityDetails", "quickActionsSkeleton", "filter", "performanceGrouping",
         "customDateRange", "customMonth", "customYear", "customStart", "customEnd", "dateFilterValidation",
         "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
         "dashboardContent", "tableBody", "printReportButton",
@@ -3507,7 +3560,8 @@
         dashboardHeaderRegion: required.dashboardHeaderRegion,
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
-        dashboardSectionStaging: required.dashboardSectionStaging
+        dashboardSectionStaging: required.dashboardSectionStaging,
+        performanceGrouping: required.performanceGrouping
       };
       elements.performance = {
         snapshotCards: [required.snapshotTopProfit, required.snapshotBestMargin, required.snapshotTopRevenue, required.snapshotExpenseDriver, required.snapshotTotalMargin, required.snapshotConcentration],
@@ -6830,15 +6884,35 @@
         hotColdElements.hotColdComparison.innerHTML = "";
         return;
       }
+
       var maximumRevenue = Math.max.apply(null, economics.map(function(item) { return Number(item.revenue || 0); }));
-      hotColdElements.hotColdComparison.innerHTML = economics.map(function(item)
+      var revenueLeader = economics.reduce(function(leader, item)
+      {
+        return !leader || Number(item.revenue || 0) > Number(leader.revenue || 0) ? item : leader;
+      }, null);
+      var marginLeader = economics.reduce(function(leader, item)
+      {
+        return !leader || Number(item.grossMarginPercent || 0) > Number(leader.grossMarginPercent || 0) ? item : leader;
+      }, null);
+      var revenueDifference = economics.length > 1 ? Math.abs(Number(economics[0].revenue || 0) - Number(economics[1].revenue || 0)) : 0;
+      var marginDifference = economics.length > 1 ? Math.abs(Number(economics[0].grossMarginPercent || 0) - Number(economics[1].grossMarginPercent || 0)) : 0;
+      var cards = economics.map(function(item)
       {
         var width = maximumRevenue > 0 ? Number(item.revenue || 0) / maximumRevenue * 100 : 0;
-        return '<article class="hot-cold-card"><div class="performance-insight-label">' + escapeUiHtml(item.label) + '</div>' +
-          '<div class="performance-insight-value">' + formatChartCurrency(item.revenue) + '</div><div class="performance-insight-meta">Revenue</div>' +
-          '<div class="mt-3 text-sm font-bold">' + formatChartCurrency(item.grossMargin) + '</div><div class="performance-insight-meta">Gross Margin · ' + Number(item.grossMarginPercent || 0).toFixed(1) + '%</div>' +
-          '<div class="hot-cold-meter" title="COGS ' + formatChartCurrency(item.cogs) + '"><span style="width:' + width.toFixed(1) + '%"></span></div></article>';
+        return '<article class="hot-cold-card"><div class="hot-cold-label">' + escapeUiHtml(item.label) + '</div>' +
+          '<div class="serving-type-card-body"><div class="serving-type-card-metrics">' +
+          '<div class="serving-type-metric"><div class="serving-type-metric-label">Revenue</div><div class="serving-type-metric-value serving-type-revenue-value">' + formatChartCurrency(item.revenue) + '</div></div>' +
+          '<div class="serving-type-metric"><div class="serving-type-metric-label">Gross Margin</div><div class="serving-type-metric-value serving-type-gross-margin-value">' + formatChartCurrency(item.grossMargin) + '</div></div>' +
+          '<div class="serving-type-metric"><div class="serving-type-metric-label">Margin</div><div class="serving-type-metric-value serving-type-margin-value">' + Number(item.grossMarginPercent || 0).toFixed(1) + '%</div></div></div>' +
+          '<div class="serving-type-meter-slot"><div class="hot-cold-meter" title="COGS ' + formatChartCurrency(item.cogs) + '"><span style="width:' + width.toFixed(1) + '%"></span></div></div></div></article>';
       }).join("");
+
+      hotColdElements.hotColdComparison.innerHTML =
+        '<div class="hot-cold-card-grid">' + cards + '</div>' +
+        '<section class="hot-cold-performance" aria-label="Performance comparison"><div class="hot-cold-performance-grid">' +
+        '<div class="serving-comparison-item"><div class="serving-comparison-label">Revenue Leader</div><div class="serving-comparison-result"><div class="serving-comparison-leader">' + escapeUiHtml(revenueLeader ? revenueLeader.label : "—") + '</div><div class="serving-comparison-value">+' + formatChartCurrency(revenueDifference) + '</div></div></div>' +
+        '<div class="serving-comparison-item"><div class="serving-comparison-label">Margin Leader</div><div class="serving-comparison-result"><div class="serving-comparison-leader">' + escapeUiHtml(marginLeader ? marginLeader.label : "—") + '</div><div class="serving-comparison-value">+' + marginDifference.toFixed(1) + ' pts</div></div></div>' +
+        '</div></section>';
     }
 
     function renderExpenseChart(expenseBreakdown)
