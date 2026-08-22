@@ -310,7 +310,7 @@
         #dashboardPanelOverview #executiveSummarySection { grid-row: 4; margin: 0; }
         #dashboardPanelOverview #revenueChartSection { height: 100%; }
         #dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }
-        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); grid-template-rows: max-content max-content max-content max-content; align-content: start; gap: 15px; overflow-y: auto; }
+        #dashboardPanelPerformance:not([hidden]) { display: grid; grid-template-columns: repeat(20, minmax(0, 1fr)); grid-template-rows: max-content max-content minmax(0, 1fr); align-content: stretch; column-gap: 15px; row-gap: 6px; overflow-y: auto; }
         #dashboardPanelPerformance > section,
         #dashboardPanelPerformance > div { min-height: 0; height: auto; margin: 0; }
         #dashboardPanelPerformance #performanceSnapshotSection { grid-column: 1 / -1; }
@@ -326,19 +326,52 @@
         #dashboardPanelPerformance #categoryPerformanceSection { overflow: hidden; }
         #dashboardPanelPerformance #hotColdChartSection { overflow: hidden; }
         #dashboardPanelPerformance #performanceSecondaryGrid .performance-mix-header { grid-column: 1 / -1; }
-        #dashboardPanelPerformance #expenseChartSection { grid-column: 1 / -1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
-        #dashboardPanelPerformance #expenseChartSection > .performance-expense-layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); gap: 12px; align-items: stretch; min-height: 0; }
-        #dashboardPanelPerformance #expenseSummaryBox { min-width: 0; border-radius: 10px; background: var(--surface-2); padding: 14px; }
+        #dashboardPanelPerformance #performanceDecisionRow { display: grid; height: 100%; min-height: 0; max-height: none; grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; align-items: stretch; }
+        #dashboardPanelPerformance #performanceDecisionRow > section { min-width: 0; min-height: 0; height: 100%; margin: 0; }
+        #dashboardPanelPerformance #expenseChartSection { min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 12px; }
+        #dashboardPanelPerformance #expenseChartSection > .mb-2 { min-height: 40px; flex: 0 0 40px; margin-bottom: 15px; }
+        #dashboardPanelPerformance #expenseChartTitle { color: var(--text-primary); font-size: 18px !important; font-weight: 600 !important; line-height: 24px !important; }
+        #dashboardPanelPerformance #expenseChartSection > .mb-2 p { margin-top: 0; color: var(--text-secondary); font-size: 12px; font-weight: 400; line-height: 16px; }
+        #dashboardPanelPerformance #expenseChartSection > .performance-expense-layout { display: grid; min-height: 0; flex: 1 1 auto; grid-template-columns: minmax(0, 7fr) minmax(0, 3fr); gap: 10px; align-items: stretch; }
+        #dashboardPanelPerformance #expenseSummaryBox { box-sizing: border-box; display: flex; min-width: 0; height: 100%; flex-direction: column; gap: 8px; border-radius: 10px; background: transparent; background-color: transparent; padding: 2px 0; }
+        #dashboardPanelPerformance .expense-summary-block { min-width: 0; flex: 0 0 auto; }
+        #dashboardPanelPerformance .expense-summary-block:last-child { display: flex; min-height: 0; flex: 1 1 auto; flex-direction: column; }
+        #dashboardPanelPerformance .expense-summary-block + .expense-summary-block { border-top: 1px solid var(--border-subtle); padding-top: 6px; }
+        #dashboardPanelPerformance .expense-summary-heading { color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 13px; }
+        #dashboardPanelPerformance .expense-summary-total { margin-top: 4px; color: var(--text-primary); font-size: 14px; font-weight: 700; line-height: 18px; }
+        #dashboardPanelPerformance .expense-summary-label { margin-top: 4px; color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 13px; }
+        #dashboardPanelPerformance .expense-summary-largest { margin-top: 4px; overflow: hidden; color: var(--text-primary); font-size: 14px; font-weight: 700; line-height: 18px; text-overflow: ellipsis; white-space: nowrap; }
+        #dashboardPanelPerformance .expense-summary-share { margin-top: 4px; color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 13px; }
+        #dashboardPanelPerformance .expense-driver-list { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: repeat(3, 13px); align-content: space-evenly; margin-top: 3px; gap: 6px; }
+        #dashboardPanelPerformance .expense-driver-row { display: grid; min-width: 0; grid-template-columns: 92px minmax(0, 1fr) 42px; align-items: center; gap: 5px; }
+        #dashboardPanelPerformance .expense-driver-label { color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 13px; white-space: nowrap; }
+        #dashboardPanelPerformance .expense-driver-meter { height: 4px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
+        #dashboardPanelPerformance .expense-driver-fill { display: block; height: 100%; border-radius: inherit; background: var(--success); }
+        #dashboardPanelPerformance .expense-driver-share { color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 13px; text-align: right; }
+        #dashboardPanelPerformance #performanceInsightsPanel { display: flex; min-height: 0; flex-direction: column; padding: 0; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); overflow: hidden; }
+        #dashboardPanelPerformance .performance-insights-header { flex: 0 0 auto; margin-bottom: 8px; padding: 0 8px; }
+        #dashboardPanelPerformance #performanceInsightsTitle { font-size: 16px !important; font-weight: 700 !important; line-height: 20px !important; }
+        #dashboardPanelPerformance .performance-insights-header p { margin-top: 0; color: var(--text-muted); font-size: 10px; line-height: 13px; }
+        #dashboardPanelPerformance #performanceSignalGrid { display: grid; min-height: 0; height: 100%; flex: 1 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; }
         #dashboardPanelPerformance .performance-chart-shell { height: 135px; min-height: 135px; max-height: 135px; overflow: hidden; }
-        #dashboardPanelPerformance #expenseWrapper { height: 85px; min-height: 85px; max-height: 85px; }
+        #dashboardPanelPerformance #expenseWrapper { height: 100%; min-height: 0; max-height: none; }
         #dashboardPanelPerformance .performance-chart-shell-primary { height: 175px; min-height: 175px; max-height: 175px; }
         #dashboardPanelPerformance .performance-chart-shell > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }
-        #dashboardPanelPerformance #forecastSection { grid-column: span 5; }
+        #dashboardPanelPerformance #forecastSection { grid-column: auto; }
         #dashboardPanelPerformance #productConcentrationSection { display: contents; }
-        #dashboardPanelPerformance #productConcentrationSection > .performance-signal-card { grid-column: span 5; }
-        #dashboardPanelPerformance .performance-signal-card { min-width: 0; min-height: 75px; padding: 8px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); }
-        #dashboardPanelPerformance .performance-signal-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: .05em; }
-        #dashboardPanelPerformance .performance-signal-heading i { color: var(--brand); font-size: 13px; }
+        #dashboardPanelPerformance #productConcentrationSection > .performance-signal-card { grid-column: auto; }
+        #dashboardPanelPerformance #performanceSignalGrid .performance-signal-card { box-sizing: border-box; min-width: 0; min-height: 0; height: 100%; padding: 10px 12px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); overflow: hidden; }
+        #dashboardPanelPerformance #performanceSignalGrid .performance-insight-value,
+        #dashboardPanelPerformance #performanceSignalGrid .performance-metric-value { order: 1; margin: 0 0 4px; font-size: 18px; font-weight: 700; line-height: 22px; }
+        #dashboardPanelPerformance #performanceSignalGrid .mt-2.text-sm,
+        #dashboardPanelPerformance #performanceSignalGrid .text-xs.font-semibold { order: 2; margin: 0 0 4px; font-size: 10px; font-weight: 600; line-height: 13px; }
+        #dashboardPanelPerformance #performanceSignalGrid .performance-insight-meta,
+        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 > .text-base,
+        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 > .text-xs:not(.font-semibold) { order: 3; margin: 0; overflow: hidden; font-size: 9px; font-weight: 400; line-height: 11px; text-overflow: ellipsis; white-space: nowrap; }
+        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 { display: flex; flex-direction: column; }
+        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0; }
+        #dashboardPanelPerformance .performance-signal-heading { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; color: var(--text-muted); font-size: 10px; font-weight: 600; line-height: 12px; letter-spacing: .04em; }
+        #dashboardPanelPerformance .performance-signal-heading i { color: var(--brand); font-size: 11px; }
         #dashboardPanelPerformance .performance-snapshot-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
         #dashboardPanelPerformance .performance-insight-card { min-width: 0; min-height: 80px; padding: 10px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); display: flex; flex-direction: column; justify-content: space-between; }
         #dashboardPanelPerformance .performance-insight-label { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; }
@@ -1629,7 +1662,9 @@
         #dashboardPanelPerformance #productProfitabilitySection,
         #dashboardPanelPerformance #performanceSecondaryGrid { grid-column: 1 / -1; }
         #dashboardPanelPerformance #performanceSecondaryGrid { grid-template-columns: minmax(0, 1fr); }
+        #dashboardPanelPerformance #performanceDecisionRow { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); }
         #dashboardPanelPerformance #expenseChartSection > .performance-expense-layout { grid-template-columns: minmax(0, 1fr); }
+        #dashboardPanelPerformance #performanceSignalGrid { grid-template-rows: none; }
         #dashboardPanelPerformance .performance-snapshot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .hf-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .hf-overview-evidence { display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -1673,6 +1708,7 @@
         #dashboardPanelPerformance .performance-snapshot-grid,
         #dashboardPanelPerformance .hot-cold-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         #dashboardPanelPerformance .performance-snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #dashboardPanelPerformance #performanceSignalGrid { grid-template-columns: minmax(0, 1fr); }
       }
 
       :root[data-theme="dark"] .bg-white,
@@ -2644,6 +2680,7 @@
         </div>
       </section>
 
+      <div id="performanceDecisionRow">
       <section id="expenseChartSection" class="analytics-surface min-w-0 rounded-xl border p-3" role="region" aria-labelledby="expenseChartTitle" data-composition-tier="primary">
         <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div><h2 id="expenseChartTitle" class="text-sm font-bold">Expense Structure</h2><p class="text-xs text-slate-500">Where operating spending goes</p></div>
@@ -2655,12 +2692,19 @@
             <p id="expenseChartEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
             <div id="expenseSkeleton" class="hidden absolute inset-0 skeleton rounded-2xl"></div>
           </div>
-          <aside id="expenseSummaryBox" aria-label="Expense summary">
-            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Expense Summary</p>
-            <p id="expenseChartSummary" class="mt-2 text-xs text-slate-500"></p>
-          </aside>
+          <p id="expenseChartSummary" class="sr-only"></p>
+          <aside id="expenseSummaryBox" aria-label="Expense summary"></aside>
         </div>
       </section>
+
+      <section id="performanceInsightsPanel" aria-labelledby="performanceInsightsTitle">
+        <header class="performance-insights-header">
+          <h2 id="performanceInsightsTitle" class="text-sm font-bold">Performance Insights &amp; Plans</h2>
+          <p>Key insights and strategic actions to drive better results</p>
+        </header>
+        <div id="performanceSignalGrid"></div>
+      </section>
+      </div>
 
     <!-- ==================================================
         DASHBOARD INTELLIGENCE
@@ -3701,8 +3745,13 @@
       var staging = elements.dashboardSectionStaging;
       var overviewEvidenceRow = staging.querySelector("#overviewEvidenceRow");
       var topProductsSection = staging.querySelector("#topProductsSection");
+      var performanceSignalGrid = staging.querySelector("#performanceSignalGrid");
+      var forecastSection = staging.querySelector("#forecastSection");
+      var productConcentrationSection = staging.querySelector("#productConcentrationSection");
 
       overviewEvidenceRow.appendChild(topProductsSection);
+      performanceSignalGrid.appendChild(forecastSection);
+      performanceSignalGrid.appendChild(productConcentrationSection);
       var sectionOwnership = {
         overview: [
           elements.dashboardHeaderRegion,
@@ -3715,9 +3764,7 @@
           staging.querySelector("#performanceSnapshotSection"),
           staging.querySelector("#productProfitabilitySection"),
           staging.querySelector("#performanceSecondaryGrid"),
-          staging.querySelector("#expenseChartSection"),
-          staging.querySelector("#forecastSection"),
-          staging.querySelector("#productConcentrationSection")
+          staging.querySelector("#performanceDecisionRow")
         ],
         insights: [
           staging.querySelector("#businessPriorityRegion"),
@@ -6932,13 +6979,21 @@
         return ranked.slice(0, insertAt).concat([item], ranked.slice(insertAt));
       }, []);
       var total = rankedExpenses.reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0);
-      var expenseData = rankedExpenses.slice(0, 6);
-      if (rankedExpenses.length > 6)
+      var driverShares = [1, 2, 3].map(function(count)
       {
-        expenseData = rankedExpenses.slice(0, 5);
+        var cumulativeAmount = rankedExpenses.slice(0, count).reduce(function(sum, item)
+        {
+          return sum + Number(item.amount || 0);
+        }, 0);
+        return total > 0 ? cumulativeAmount / total * 100 : 0;
+      });
+      var expenseData = rankedExpenses.slice(0, 4);
+      if (rankedExpenses.length > 4)
+      {
+        expenseData = rankedExpenses.slice(0, 3);
         expenseData.push({
           group: "Others",
-          amount: rankedExpenses.slice(5).reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0)
+          amount: rankedExpenses.slice(3).reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0)
         });
       }
       var isEmpty = expenseData.length === 0;
@@ -6970,10 +7025,75 @@
         summary
       );
 
+      var expenseSummaryBox = document.getElementById("expenseSummaryBox");
+      expenseSummaryBox.innerHTML = isEmpty
+        ? '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Summary</p><p class="expense-summary-label">No expense data for the selected period.</p></div>'
+        : '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Summary</p>' +
+          '<p class="expense-summary-total">' + formatChartCurrency(total) + '</p>' +
+          '<p class="expense-summary-label">Total Operating Expense</p></div>' +
+          '<div class="expense-summary-block"><p class="expense-summary-label">Largest Expense</p>' +
+          '<p class="expense-summary-largest">' + escapeUiHtml(largest.group) + '</p>' +
+          '<p class="expense-summary-share">' + formatChartCurrency(largest.amount) + ' (' + driverShares[0].toFixed(1) + '%)</p></div>' +
+          '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Drivers</p>' +
+          '<div class="expense-driver-list">' +
+          driverShares.map(function(share, index)
+          {
+            var label = index === 0 ? "Top 1 Expense" : "Top " + (index + 1) + " Expenses";
+            return '<div class="expense-driver-row"><span class="expense-driver-label">' + label + '</span>' +
+              '<span class="expense-driver-meter"><span class="expense-driver-fill" style="width:' + Math.min(share, 100).toFixed(1) + '%"></span></span>' +
+              '<span class="expense-driver-share">' + share.toFixed(1) + '%</span></div>';
+          }).join("") + '</div></div>';
+
       if (!chartAvailable || isEmpty)
       {
         return;
       }
+
+      var expenseBarLabelPlugin = {
+        id: "expenseBarLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var meta = chart.getDatasetMeta(0);
+
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          meta.data.forEach(function(bar, index)
+          {
+            var amount = Number(expenseData[index].amount || 0);
+            var share = total > 0 ? amount / total * 100 : 0;
+            var labelY = Math.max(chart.chartArea.top + 20, bar.y - 4);
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "600 11px Inter, sans-serif";
+            ctx.fillText(formatChartCurrency(amount), bar.x, labelY - 11);
+            ctx.font = "500 10px Inter, sans-serif";
+            ctx.fillText("(" + share.toFixed(1) + "%)", bar.x, labelY);
+          });
+          ctx.restore();
+        }
+      };
+
+      var expenseYAxisLabelPlugin = {
+        id: "expenseYAxisLabels",
+        afterDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var yScale = chart.scales.y;
+
+          ctx.save();
+          ctx.fillStyle = chartPalette.axis;
+          ctx.font = "600 10px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.textBaseline = "middle";
+          yScale.ticks.forEach(function(tick, index)
+          {
+            ctx.fillText(tick.label, yScale.right - 8, yScale.getPixelForTick(index));
+          });
+          ctx.restore();
+        }
+      };
 
       expenseChart = new Chart(
         document.getElementById("expenseChart").getContext("2d"),
@@ -6985,9 +7105,14 @@
               label: "Expense",
               data: expenseData.map(function(item) { return item.amount; }),
               backgroundColor: chartPalette.series[2],
-              borderColor: chartPalette.series[2]
+              borderColor: chartPalette.series[2],
+              borderRadius: { topLeft: 9, topRight: 9, bottomLeft: 0, bottomRight: 0 },
+              borderSkipped: false,
+              barPercentage: 0.72,
+              categoryPercentage: 0.8
             }]
           },
+          plugins: [expenseBarLabelPlugin, expenseYAxisLabelPlugin],
           options: {
             animation: shouldReduceMotion() ? false : undefined,
             responsive: true,
@@ -6999,7 +7124,7 @@
                 applyTransactionDrilldown("purchase", "", "Expense transactions");
               }
             },
-            layout: { padding: { right: 8 } },
+            layout: { padding: { top: 4, right: 4, bottom: 0, left: 0 } },
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -7017,8 +7142,15 @@
               }
             },
             scales: {
-              x: { grid: { display: false }, ticks: { autoSkip: false, color: chartPalette.axis, maxRotation: 0, minRotation: 0 } },
-              y: { beginAtZero: true, min: 0, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, callback: formatRevenueAxisTick } }
+              x: { grid: { display: false }, ticks: { autoSkip: false, color: chartPalette.axis, font: { weight: 600 }, maxRotation: 0, minRotation: 0 } },
+              y: {
+                beginAtZero: true,
+                min: 0,
+                grace: "24%",
+                grid: { color: chartPalette.grid, drawOnChartArea: true, drawTicks: false },
+                border: { display: true },
+                ticks: { color: "rgba(0, 0, 0, 0)", stepSize: 2000000, font: { size: 10, weight: 600 }, callback: formatRevenueAxisTick }
+              }
             }
           }
         }
