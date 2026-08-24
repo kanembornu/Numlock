@@ -179,7 +179,7 @@
       .hf-analytics-title-icon-products { background: var(--warning-soft); color: var(--warning); }
       #topProductWrapper { margin-top: var(--card-header-content-gap); }
       .ui-custom-select { position: relative; width: 148px; min-width: 148px; font-family: var(--font-sans); }
-      .ui-custom-select-trigger { display: flex; width: 100%; height: 44px; align-items: center; justify-content: space-between; gap: var(--space-4); border: 1px solid var(--card-border); border-radius: 9px; padding: 0 12px 0 14px; background: var(--surface-1); color: var(--text-primary); text-align: left; }
+      .ui-custom-select-trigger { display: flex; width: 100%; height: 30px; align-items: center; justify-content: space-between; gap: var(--space-4); border: 1px solid var(--card-border); border-radius: 9px; padding: 0 12px 0 14px; background: var(--surface-1); color: var(--text-primary); text-align: left; }
       .ui-custom-select-listbox { position: absolute; z-index: 80; top: calc(100% + var(--space-3)); left: 0; width: max-content; min-width: 100%; max-height: 280px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-control); padding: var(--space-3); background: var(--surface-1); box-shadow: var(--shadow-2); }
       .ui-custom-select-option { display: flex; width: 100%; min-width: 150px; min-height: 40px; align-items: center; gap: var(--space-4); border-radius: 6px; padding: 0 12px; color: var(--text-secondary); text-align: left; white-space: nowrap; }
       .ui-custom-select-option:hover,
@@ -318,7 +318,7 @@
         #dashboardPanelPerformance #productProfitabilitySection { grid-column: span 9; display: grid; grid-template-rows: max-content minmax(0, 1fr) max-content; align-content: stretch; align-self: start; gap: 6px; min-height: 395px; height: 395px; max-height: 395px; }
         #dashboardPanelPerformance #productProfitabilityWrapper { height: 100%; min-height: 0; max-height: none; }
         #dashboardPanelPerformance .product-profitability-header { display: flex; min-width: 0; align-items: flex-start; justify-content: space-between; gap: 12px; }
-        #dashboardPanelPerformance .product-profitability-action { flex: 0 0 auto; min-height: 28px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 16px; }
+        #dashboardPanelPerformance .product-profitability-action { flex: 0 0 auto; min-height: 28px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-secondary); font-size: 12px; font-weight: 600; line-height: 16px; }
         #dashboardPanelPerformance .product-profitability-formula { display: flex; min-height: 24px; align-items: center; gap: 6px; border-radius: 7px; padding: 5px 8px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 14px; }
         #dashboardPanelPerformance .product-profitability-formula i { font-size: 9px; }
         #dashboardPanelPerformance #performanceSecondaryGrid { display: grid; grid-column: span 11; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); align-items: start; align-content: start; min-height: 0; contain: size; }
@@ -348,11 +348,11 @@
         #dashboardPanelPerformance .expense-driver-meter { height: 4px; overflow: hidden; border-radius: 999px; background: var(--surface-2); }
         #dashboardPanelPerformance .expense-driver-fill { display: block; height: 100%; border-radius: inherit; background: var(--success); }
         #dashboardPanelPerformance .expense-driver-share { color: var(--text-secondary); font-size: 11px; font-weight: 600; line-height: 13px; text-align: right; }
-        #dashboardPanelPerformance #performanceInsightsPanel { display: flex; min-height: 0; flex-direction: column; padding: 0; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); overflow: hidden; }
-        #dashboardPanelPerformance .performance-insights-header { flex: 0 0 auto; margin-bottom: 8px; padding: 0 8px; }
-        #dashboardPanelPerformance #performanceInsightsTitle { font-size: 16px !important; font-weight: 700 !important; line-height: 20px !important; }
-        #dashboardPanelPerformance .performance-insights-header p { margin-top: 0; color: var(--text-muted); font-size: 10px; line-height: 13px; }
-        #dashboardPanelPerformance #performanceSignalGrid { display: grid; min-height: 0; height: 100%; flex: 1 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        #dashboardPanelPerformance #performanceInsightsPanel { display: flex; min-height: 0; flex-direction: column; padding: 12px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-1); box-shadow: var(--card-shadow); overflow: hidden; }
+        #dashboardPanelPerformance .performance-insights-header { display: flex; min-height: 40px; flex: 0 0 40px; flex-direction: column; gap: 0; margin-bottom: 12px; }
+        #dashboardPanelPerformance #performanceInsightsTitle { flex: 0 0 auto; color: var(--text-primary); font-size: 18px !important; font-weight: 600 !important; line-height: 24px !important; white-space: nowrap; }
+        #dashboardPanelPerformance .performance-insights-header p { min-width: 0; margin: 0; color: var(--text-secondary); font-size: 12px; font-weight: 400; line-height: 16px; white-space: nowrap; }
+        #dashboardPanelPerformance #performanceSignalGrid { display: grid; min-height: 0; height: 100%; flex: 1 1 auto; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); row-gap: 6px; column-gap: 8px; }
         #dashboardPanelPerformance .performance-chart-shell { height: 135px; min-height: 135px; max-height: 135px; overflow: hidden; }
         #dashboardPanelPerformance #expenseWrapper { height: 100%; min-height: 0; max-height: none; }
         #dashboardPanelPerformance .performance-chart-shell-primary { height: 175px; min-height: 175px; max-height: 175px; }
@@ -360,18 +360,20 @@
         #dashboardPanelPerformance #forecastSection { grid-column: auto; }
         #dashboardPanelPerformance #productConcentrationSection { display: contents; }
         #dashboardPanelPerformance #productConcentrationSection > .performance-signal-card { grid-column: auto; }
-        #dashboardPanelPerformance #performanceSignalGrid .performance-signal-card { box-sizing: border-box; min-width: 0; min-height: 0; height: 100%; padding: 10px 12px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); overflow: hidden; }
-        #dashboardPanelPerformance #performanceSignalGrid .performance-insight-value,
-        #dashboardPanelPerformance #performanceSignalGrid .performance-metric-value { order: 1; margin: 0 0 4px; font-size: 18px; font-weight: 700; line-height: 22px; }
-        #dashboardPanelPerformance #performanceSignalGrid .mt-2.text-sm,
-        #dashboardPanelPerformance #performanceSignalGrid .text-xs.font-semibold { order: 2; margin: 0 0 4px; font-size: 10px; font-weight: 600; line-height: 13px; }
-        #dashboardPanelPerformance #performanceSignalGrid .performance-insight-meta,
-        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 > .text-base,
-        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 > .text-xs:not(.font-semibold) { order: 3; margin: 0; overflow: hidden; font-size: 9px; font-weight: 400; line-height: 11px; text-overflow: ellipsis; white-space: nowrap; }
-        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 { display: flex; flex-direction: column; }
-        #dashboardPanelPerformance #performanceSignalGrid .space-y-1 > :not([hidden]) ~ :not([hidden]) { margin-top: 0; }
-        #dashboardPanelPerformance .performance-signal-heading { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; color: var(--text-muted); font-size: 10px; font-weight: 600; line-height: 12px; letter-spacing: .04em; }
-        #dashboardPanelPerformance .performance-signal-heading i { color: var(--brand); font-size: 11px; }
+        #dashboardPanelPerformance #performanceSignalGrid .performance-signal-card { box-sizing: border-box; display: grid; min-width: 0; min-height: 0; height: auto; grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; align-items: start; padding: 12px 12px 4px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-1); box-shadow: 0 1px 3px rgba(15, 23, 42, .05); overflow: hidden; }
+        #dashboardPanelPerformance .performance-signal-icon { display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center; border-radius: 10px; }
+        #dashboardPanelPerformance .performance-signal-icon i { font-size: 18px; line-height: 1; }
+        #dashboardPanelPerformance .performance-signal-icon--forecast { color: #188038; background: #e6f4ea; }
+        #dashboardPanelPerformance .performance-signal-icon--dependency { color: #9333ea; background: #f3e8fd; }
+        #dashboardPanelPerformance .performance-signal-icon--concentration { color: #ea6b10; background: #feefe3; }
+        #dashboardPanelPerformance .performance-signal-icon--margin { color: #1a73e8; background: #e8f0fe; }
+        #dashboardPanelPerformance .performance-signal-content { display: flex; width: 100%; min-width: 0; min-height: 0; height: 100%; flex-direction: column; align-self: stretch; }
+        #dashboardPanelPerformance .performance-signal-top,
+        #dashboardPanelPerformance .performance-signal-bottom { display: contents; }
+        #dashboardPanelPerformance .performance-signal-label { min-width: 0; width: 100%; margin: 0; color: var(--text-muted); font-size: 12px; font-weight: 600; line-height: 13px; letter-spacing: 0; white-space: nowrap; }
+        #dashboardPanelPerformance #performanceSignalGrid .performance-signal-primary { min-width: 0; margin: 7px 0 0; font-size: 18px; font-weight: 700; line-height: 20px; letter-spacing: -.01em; white-space: nowrap; }
+        #dashboardPanelPerformance .performance-signal-status { min-width: 0; margin: 7px 0 0; font-size: 12px; font-weight: 600; line-height: 12px; white-space: nowrap; }
+        #dashboardPanelPerformance .performance-signal-meta { min-width: 0; margin: 7px 0 0; color: var(--text-muted); font-size: 12px; font-weight: 500; line-height: 12px; white-space: nowrap; }
         #dashboardPanelPerformance .performance-snapshot-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
         #dashboardPanelPerformance .performance-insight-card { min-width: 0; min-height: 80px; padding: 10px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); display: flex; flex-direction: column; justify-content: space-between; }
         #dashboardPanelPerformance .performance-insight-label { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; }
@@ -531,7 +533,7 @@
         #dashboardPanelPerformance #hotColdChartSection > .mb-2 button {
           min-height: 28px;
           padding: 4px 9px;
-          font-size: 11px;
+          font-size: 12px;
           font-weight: 600;
           line-height: 16px;
         }
@@ -1035,7 +1037,7 @@
         }
 
         #dashboardPanelPerformance #categoryPerformanceWrapper {
-          top: 30px !important;
+          top: 45px !important;
           height: 150px !important;
           min-height: 150px !important;
           max-height: 150px !important;
@@ -1497,13 +1499,13 @@
 
         /* --------------------------------------------------
            Performance Row 2B
-           
+
            IMPORTANT:
            +10px height is added UPWARD, not downward.
-           
+
            height +10px
            translateY(-10px)
-           
+
            Therefore:
            - top border moves upward 10px
            - bottom returns to its original approved position
@@ -2103,12 +2105,12 @@
       #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
-      #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-radius: 8px 8px 0 0 !important; padding: 0 12px !important; font-size: 13px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
+      #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 13px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
       #dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important; grid-template-columns: none !important; gap: 0 !important; padding: 0 !important; }
       #dashboardTabList [role="tab"], #dashboardTabInsights { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; padding-right: 18px !important; padding-left: 18px !important; }
-      #dashboardTabList [role="tab"]:hover { background: color-mix(in srgb, var(--hover) 64%, transparent) !important; color: var(--text-primary) !important; }
-      #dashboardTabList [role="tab"][aria-selected="true"], #dashboardTabList [role="tab"][aria-selected="true"]:hover { border-bottom-color: var(--brand) !important; background: var(--brand-soft) !important; color: var(--brand) !important; }
-      #dashboardTabList [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; }
+      #dashboardTabList [role="tab"]:hover { border-color: transparent !important; outline: none !important; background: color-mix(in srgb, var(--hover) 64%, transparent) !important; box-shadow: none !important; color: var(--text-primary) !important; }
+      #dashboardTabList [role="tab"][aria-selected="true"], #dashboardTabList [role="tab"][aria-selected="true"]:hover { border-color: transparent !important; outline: none !important; background: var(--brand-soft) !important; box-shadow: none !important; color: var(--brand) !important; }
+      #dashboardTabList [role="tab"]:active, #dashboardTabList [role="tab"]:focus, #dashboardTabList [role="tab"]:focus-visible { border-color: transparent !important; outline: none !important; outline-offset: 0 !important; box-shadow: none !important; border-width: 0 0 3px !important; border-style: solid !important; --tw-ring-offset-width: 0px !important; --tw-ring-offset-shadow: 0 0 #0000 !important; --tw-ring-shadow: 0 0 #0000 !important; }
       #dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading, #dashboardPanelPerformance h2, #dashboardPanelInsights h2, #transactions h2 { font-size: var(--text-section-size) !important; font-weight: 600 !important; line-height: var(--text-section-line) !important; letter-spacing: -0.01em !important; }
       #dashboardPanelOverview .hf-analytics-card-header, #dashboardPanelOverview .hf-summary-card-header { min-height: var(--section-icon-size) !important; align-items: center !important; }
       #dashboardPanelOverview .hf-analytics-title-group, #dashboardPanelOverview .hf-summary-card-header { gap: var(--section-title-gap) !important; }
@@ -2261,6 +2263,24 @@
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:active { background: transparent !important; color: var(--text-primary) !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:focus:not(:focus-visible) { outline: none !important; box-shadow: none !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: 2px !important; box-shadow: none !important; }
+      }
+
+      /* Final application-wide interaction visual suppression. */
+      #appShell#appShell#appShell#appShell :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):is(:focus, :focus-visible, :active),
+      #appShell#appShell#appShell#appShell :where(.ui-custom-select):focus-within {
+        outline: none !important;
+        outline-offset: 0 !important;
+        box-shadow: none !important;
+        --tw-ring-offset-width: 0px !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
+      }
+
+      #appShell#appShell#appShell#appShell .hf-setting-choice:has(:checked) {
+        box-shadow: none !important;
+        --tw-ring-offset-width: 0px !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
       }
     </style>
   </head>
@@ -2699,8 +2719,8 @@
 
       <section id="performanceInsightsPanel" aria-labelledby="performanceInsightsTitle">
         <header class="performance-insights-header">
-          <h2 id="performanceInsightsTitle" class="text-sm font-bold">Performance Insights &amp; Plans</h2>
-          <p>Key insights and strategic actions to drive better results</p>
+          <h2 id="performanceInsightsTitle">Performance Signals</h2>
+          <p>Leading indicators of momentum, dependency, concentration, and margin health.</p>
         </header>
         <div id="performanceSignalGrid"></div>
       </section>
@@ -2732,7 +2752,8 @@
       </section>
 
       <section id="forecastSection" class="performance-signal-card min-w-0" aria-label="Revenue forecast">
-        <div id="forecastContainer"></div>
+        <span class="performance-signal-icon performance-signal-icon--forecast" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+        <div id="forecastContainer" class="performance-signal-content"></div>
       </section>
 
         <div id="kpiTargetReference">
@@ -2816,18 +2837,18 @@
     <!-- PRODUCT PERFORMANCE -->
     <div id="productConcentrationSection" data-composition-tier="secondary">
       <div class="performance-signal-card">
-        <div class="performance-signal-heading"><i class="fas fa-cubes" aria-hidden="true"></i><span>Product Contribution / Revenue Dependency</span></div>
-        <div id="revenueDependencyContainer"> </div>
+        <span class="performance-signal-icon performance-signal-icon--dependency" aria-hidden="true"><i class="fas fa-cubes"></i></span>
+        <div id="revenueDependencyContainer" class="performance-signal-content"></div>
       </div>
 
       <div class="performance-signal-card">
-        <div class="performance-signal-heading"><i class="fas fa-chart-pie" aria-hidden="true"></i><span>Revenue Concentration / Pareto Analysis</span></div>
-        <div id="paretoContainer"> </div>
+        <span class="performance-signal-icon performance-signal-icon--concentration" aria-hidden="true"><i class="fas fa-chart-pie"></i></span>
+        <div id="paretoContainer" class="performance-signal-content"></div>
       </div>
 
       <div id="marginHealthSection" class="performance-signal-card">
-        <div class="performance-signal-heading"><i class="fas fa-heart-pulse" aria-hidden="true"></i><span>Gross Margin Health</span></div>
-        <div id="marginHealthContainer"></div>
+        <span class="performance-signal-icon performance-signal-icon--margin" aria-hidden="true"><i class="fas fa-heart-pulse"></i></span>
+        <div id="marginHealthContainer" class="performance-signal-content"></div>
       </div>
     </div>
 
@@ -7269,13 +7290,13 @@
             : "text-slate-500";
 
         forecastContainer.innerHTML =
-        '<div class="performance-signal-heading"><i class="fas fa-chart-line" aria-hidden="true"></i><span>Next-month forecast</span></div>' +
-        '<div class="performance-insight-value ' + growthColor + '">Rp ' +
+        '<div class="performance-signal-top"><div class="performance-signal-label">Next-month forecast</div>' +
+        '<div class="performance-signal-primary performance-insight-value ' + growthColor + '">Rp ' +
         res.forecast.nextMonthRevenue.toLocaleString("id-ID") + '</div>' +
-        '<div class="mt-2 text-sm font-bold ' + growthColor + '">' +
+        '</div><div class="performance-signal-bottom"><div class="performance-signal-status ' + growthColor + '">' +
         (res.forecast.growthRate > 0 ? "▲ " : res.forecast.growthRate < 0 ? "▼ " : "") +
         Math.abs(res.forecast.growthRate) + '% expected movement</div>' +
-        '<div class="performance-insight-meta">Forward signal from the represented revenue trend</div>';
+        '<div class="performance-signal-meta">Forward signal from represented revenue trend</div></div>';
       }
 
       var marginProducts = res.performanceAnalytics && Array.isArray(res.performanceAnalytics.productProfitability)
@@ -7286,10 +7307,11 @@
       var grossMarginRate = marginRevenue !== 0 ? grossMargin / marginRevenue * 100 : 0;
       var marginHealth = initializeStableDashboardElements().performance.marginHealth;
       marginHealth.innerHTML =
-        '<div class="performance-insight-value">' + grossMarginRate.toFixed(1) + '%</div>' +
-        '<div class="mt-2 text-sm font-bold ' + (grossMarginRate >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' +
+        '<div class="performance-signal-top"><div class="performance-signal-label">Gross Margin Health</div>' +
+        '<div class="performance-signal-primary performance-insight-value">' + grossMarginRate.toFixed(1) + '%</div></div>' +
+        '<div class="performance-signal-bottom"><div class="performance-signal-status ' + (grossMarginRate >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' +
         (grossMarginRate >= 0 ? 'Positive gross margin' : 'Negative gross margin') + '</div>' +
-        '<div class="performance-insight-meta">' + formatChartCurrency(grossMargin) + ' from ' + formatChartCurrency(marginRevenue) + ' revenue</div>';
+        '<div class="performance-signal-meta">' + formatChartCurrency(grossMargin) + ' from ' + formatChartCurrency(marginRevenue) + ' revenue</div></div>';
     }
 
     //--------------------------------------------------
@@ -7479,10 +7501,13 @@
       if (revenueDependencyContainer)
       {
       revenueDependencyContainer.innerHTML = `
-      <div class="space-y-1">
-        <div class="truncate text-base font-bold"> ${res.revenueConcentration.product} </div>
-        <div class="performance-metric-value text-xl font-extrabold"> ${res.revenueConcentration.contribution}% of Revenue </div>
-        <div class="text-xs ${riskColor} font-semibold"> Dependency Risk: ${res.revenueConcentration.risk}</div>
+      <div class="performance-signal-top">
+        <div class="performance-signal-label">Product Contribution / Revenue Dependency</div>
+        <div class="performance-signal-primary performance-metric-value">${res.revenueConcentration.contribution}% of Revenue</div>
+      </div>
+      <div class="performance-signal-bottom">
+        <div class="performance-signal-status ${riskColor}">Dependency Risk: ${res.revenueConcentration.risk}</div>
+        <div class="performance-signal-meta">${res.revenueConcentration.product}</div>
       </div>
       `;
       }
@@ -7504,10 +7529,13 @@
         if (paretoContainer)
         {
         paretoContainer.innerHTML = `
-        <div class="space-y-1">
-        <div class="performance-metric-value text-xl font-extrabold"> ${res.paretoAnalysis.ratio}% </div>
-        <div class="text-xs"> ${res.paretoAnalysis.criticalProducts} dari ${res.paretoAnalysis.totalProducts} produk menghasilkan 80% revenue </div>
-        <div class="text-xs ${concentrationColor} font-semibold"> Revenue Concentration: ${res.paretoAnalysis.concentration} </div>
+        <div class="performance-signal-top">
+          <div class="performance-signal-label">Revenue Concentration / Pareto Analysis</div>
+          <div class="performance-signal-primary performance-metric-value">${res.paretoAnalysis.ratio}%</div>
+        </div>
+        <div class="performance-signal-bottom">
+          <div class="performance-signal-status ${concentrationColor}">Revenue Concentration: ${res.paretoAnalysis.concentration}</div>
+          <div class="performance-signal-meta">${res.paretoAnalysis.criticalProducts} of ${res.paretoAnalysis.totalProducts} products generate 80% of revenue</div>
         </div>
         `;
         }

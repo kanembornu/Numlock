@@ -1144,8 +1144,8 @@ function testPerformanceStabilizationContract()
   assertionsPassed += 2;
 
   [
-    ".performance-chart-shell { height: 232px; min-height: 232px; max-height: 232px; overflow: hidden; }",
-    ".performance-chart-shell-primary { height: 360px; min-height: 360px; max-height: 360px; }",
+    ".performance-chart-shell { height: 135px; min-height: 135px; max-height: 135px; overflow: hidden; }",
+    ".performance-chart-shell-primary { height: 175px; min-height: 175px; max-height: 175px; }",
     ".performance-chart-shell > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }",
     ".performance-chart-shell-primary { height: 260px; min-height: 260px; max-height: 260px; }",
     ".performance-chart-shell-primary { height: 220px; min-height: 220px; max-height: 220px; }"
@@ -1176,23 +1176,52 @@ function testPerformanceStabilizationContract()
     assertionsPassed++;
   });
   var ownershipRegion = getSourceRegion(source, "var sectionOwnership = {", "elements.dashboardPanels.forEach", "Dashboard section ownership");
-  fixture.finalOrder.forEach(function(id)
+  var performanceOwnershipOrder = [
+    "performanceSnapshotSection",
+    "productProfitabilitySection",
+    "performanceSecondaryGrid",
+    "performanceDecisionRow"
+  ];
+  var previousOwnershipIndex = -1;
+  performanceOwnershipOrder.forEach(function(id)
   {
-    assertSourceContains(ownershipRegion, 'staging.querySelector("#' + id + '")', "reconciled Performance order");
+    var token = 'staging.querySelector("#' + id + '")';
+    var tokenIndex = ownershipRegion.indexOf(token);
+    assertSourceContains(ownershipRegion, token, "reconciled Performance ownership");
+    if (tokenIndex <= previousOwnershipIndex)
+      throw new Error("Performance ownership order mismatch: " + id);
+    previousOwnershipIndex = tokenIndex;
     assertionsPassed++;
   });
+  var decisionRowRegion = getSourceRegion(source, '<div id="performanceDecisionRow">', "DASHBOARD INTELLIGENCE", "combined Performance decision row");
+  var expenseIndex = decisionRowRegion.indexOf('id="expenseChartSection"');
+  var insightsIndex = decisionRowRegion.indexOf('id="performanceInsightsPanel"');
+  if (expenseIndex === -1 || insightsIndex <= expenseIndex)
+    throw new Error("Performance decision row must order Expense Structure before Performance Insights & Plans");
+  var signalAssemblyRegion = getSourceRegion(source, 'var performanceSignalGrid = staging.querySelector("#performanceSignalGrid")', "var sectionOwnership = {", "Performance signal assembly");
+  var forecastAppendIndex = signalAssemblyRegion.indexOf("performanceSignalGrid.appendChild(forecastSection);");
+  var concentrationAppendIndex = signalAssemblyRegion.indexOf("performanceSignalGrid.appendChild(productConcentrationSection);");
+  if (forecastAppendIndex === -1 || concentrationAppendIndex <= forecastAppendIndex)
+    throw new Error("Performance signal assembly must order forecast before product concentration signals");
+  var concentrationMarkupIndex = source.indexOf('id="productConcentrationSection"');
+  var dependencyIndex = source.indexOf('id="revenueDependencyContainer"', concentrationMarkupIndex);
+  var paretoIndex = source.indexOf('id="paretoContainer"', concentrationMarkupIndex);
+  var marginHealthIndex = source.indexOf('id="marginHealthSection"', concentrationMarkupIndex);
+  if (concentrationMarkupIndex === -1 || dependencyIndex <= concentrationMarkupIndex || paretoIndex <= dependencyIndex || marginHealthIndex <= paretoIndex)
+    throw new Error("Performance concentration signals must order dependency, Pareto, then gross margin health");
+  assertionsPassed += 3;
   assertSourceContainsOnce(source, "function initializeDashboardTabs()", "single Dashboard tab initializer");
   assertSourceContains(source, "resizeVisibleDashboardCharts(tabName);", "repeat activation resize without recreation");
   assertionsPassed += 2;
 
   [
     'id="performanceSnapshotGrid" class="performance-snapshot-grid"',
-    '["Top Profit Product",',
-    '["Best Margin %",',
-    '["Top Revenue Product",',
-    '["Largest Expense Driver",',
-    '["Total Gross Margin",',
-    '["Revenue Concentration",',
+    '{ label: "Top Profit Product",',
+    '{ label: "Best Margin %",',
+    '{ label: "Top Revenue Product",',
+    '{ label: "Largest Expense Driver",',
+    '{ label: "Total Gross Margin",',
+    '{ label: "Revenue Concentration",',
     'data.slice(0, window.innerWidth < 640 ? 6 : 10)',
     'indexAxis: "y"',
     '{ label: "Gross Margin", numlockThemeRole: "margin"',
@@ -1204,8 +1233,8 @@ function testPerformanceStabilizationContract()
     'group: "Others"',
     'share.toFixed(1) + "% of total"',
     'id="forecastSection"',
-    'id="revenueDependencyContainer"',
-    'id="paretoContainer"',
+    'display: flex; min-height: 40px; flex: 0 0 40px; flex-direction: column; gap: 0; margin-bottom: 12px;',
+    'height: 100%; flex-direction: column; align-self: stretch;',
     'id="marginHealthContainer"',
     'grossMargin / marginRevenue * 100',
     '{ chart: categoryPerformanceChart, kind: "categoryMix" }',
@@ -5508,8 +5537,8 @@ function testDashboardOverviewContract()
     '#dashboardContent { gap: var(--overview-section-gap) !important; }',
     '#dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important; grid-template-columns: none !important;',
     '#dashboardTabList [role="tab"], #dashboardTabInsights { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important;',
-    '#dashboardTabList [role="tab"]:hover { background: color-mix(in srgb, var(--hover) 64%, transparent) !important;',
-    '#dashboardTabList [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important;',
+    '#dashboardTabList [role="tab"]:hover { border-color: transparent !important; outline: none !important; background: color-mix(in srgb, var(--hover) 64%, transparent) !important;',
+    '#dashboardTabList [role="tab"]:active, #dashboardTabList [role="tab"]:focus, #dashboardTabList [role="tab"]:focus-visible { border-color: transparent !important; outline: none !important;',
     '.ui-custom-select-option { display: flex !important; height: 40px !important; min-height: 40px !important; align-items: center !important; padding: 0 12px !important; }',
     '.ui-custom-select-check { display: inline-flex !important; width: 18px !important; height: 18px !important; flex-basis: 18px !important; align-items: center !important; justify-content: center !important; align-self: center !important; transform: none !important; line-height: 18px !important; }',
     '.ui-custom-select-option[aria-selected="true"]:hover,',
@@ -5801,6 +5830,16 @@ function testAccessibilityContract()
     source,
     'id="reportingInformation"',
     "reporting live region"
+  );
+  assertSourceContains(
+    source,
+    '#appShell#appShell#appShell#appShell :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):is(:focus, :focus-visible, :active)',
+    "global interaction visual suppression"
+  );
+  assertSourceContains(
+    source,
+    '--tw-ring-offset-shadow: 0 0 #0000 !important;',
+    "Tailwind interaction ring suppression"
   );
 
   var summary = {
