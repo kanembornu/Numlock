@@ -5874,7 +5874,7 @@ function testExecutivePresentationContract()
     'id="revenueChartTitle"',
     'id="diagnosisContainer"',
     'id="recommendationContainer"',
-    'id="executiveCenter"'
+    'id="businessMaturityCard"'
   ];
   var previousIndex = -1;
 
@@ -5897,10 +5897,10 @@ function testExecutivePresentationContract()
     'id="executiveSummaryTitle"',
     "Key Summary</h2>",
     "Key Metrics</h2>",
-    "Business Signals",
+    "Key Business Signals",
     "Top Products",
     "Recommended Actions",
-    "Decision Support",
+    "30-Day Action Roadmap",
     'id="revenueDependencyContainer"',
     "Revenue Dependency",
     'id="paretoContainer"',
@@ -5947,7 +5947,7 @@ function testExecutivePresentationContract()
 
   assertSourceContains(
     source,
-    ".slice(0,6)\n          .map(renderTimelineItem)",
+    ".slice(0,4)\n          .map(renderTimelineItem)",
     "recommendation priority ordering"
   );
   assertSourceContains(
@@ -5972,7 +5972,8 @@ function testExecutivePresentationContract()
   [
     "hf-summary-action-grid",
     "hf-kpi-strip",
-    'id="planningFocusRow" class="grid grid-cols-1 gap-2"'
+    'insightsColumn.id = "insightsColumn"',
+    'plansColumn.id = "plansColumn"'
   ].forEach(function(token)
   {
     assertSourceContains(
@@ -10164,6 +10165,181 @@ function testPerformanceAnalyticsVisualContract()
 
 function testIntelligencePlanningVisualContract()
 {
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var scenariosPassed = 0;
+
+  [
+    'insightsColumn.id = "insightsColumn"',
+    'plansColumn.id = "plansColumn"',
+    "grid-template-columns: minmax(0, 482fr) minmax(0, 619fr)",
+    "sectionOwnership.insights.push(insightsColumn, plansColumn)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "approved two-column architecture");
+  });
+  scenariosPassed++;
+
+  [
+    'insightsColumn.appendChild(staging.querySelector("#businessPriorityRegion"))',
+    'insightsColumn.appendChild(staging.querySelector("#diagnosisSection"))',
+    'insightsColumn.appendChild(staging.querySelector("#riskOpportunitySection"))',
+    'insightsColumn.appendChild(staging.querySelector("#businessMaturityCard"))'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Insights ownership and order");
+  });
+  scenariosPassed++;
+
+  [
+    'plansColumn.appendChild(staging.querySelector("#recommendationsSection"))',
+    'plansColumn.appendChild(staging.querySelector("#actionRoadmapCard"))',
+    'plansColumn.appendChild(staging.querySelector("#kpiTargetReference"))'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Plans ownership and order");
+  });
+  scenariosPassed++;
+
+  [
+    "Key Business Signals",
+    "Revenue Intelligence",
+    "Profit Intelligence",
+    "Risk Status",
+    "Growth Opportunity",
+    "Business Maturity",
+    "Business maturity scale",
+    "diagnosis.slice(0, 2).map(renderDiagnosisCard)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Insights baseline content");
+  });
+  scenariosPassed++;
+
+  [
+    "Recommended Actions",
+    ".slice(0,4)",
+    "30-Day Action Roadmap",
+    "Execution timeline",
+    "Target Reference",
+    "grid-template-columns: repeat(4, minmax(0, 1fr))",
+    "Profit Margin Ideal",
+    "Growth Score Target",
+    "Revenue Growth Target"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Plans baseline content");
+  });
+  scenariosPassed++;
+
+  [
+    'id="businessFocusCard"',
+    'id="priorityActionCard"',
+    'id="kpiAchievementCard"',
+    'id="executiveCenter"',
+    'id="planningFocusRow"',
+    'id="planningSupportRow"',
+    "View details",
+    "Action center",
+    '<div class="text-[10px] text-slate-400">4 Weeks</div>'
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "obsolete duplicate presentation");
+  });
+  scenariosPassed++;
+
+  [
+    "#dashboardPanelInsights:not([hidden])",
+    "overflow: hidden;",
+    "#dashboardPanelInsights #insightsColumn { grid-template-rows: 75fr 145fr 279fr 237fr 222fr; }",
+    "#dashboardPanelInsights #plansColumn { grid-template-rows: 75fr 405fr 270fr 230fr; }",
+    '<div class="insights-status-badge bg-amber-100 text-amber-700">',
+    "#dashboardPanelInsights #riskOpportunitySection { min-height: 0 !important; overflow: hidden !important; }"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "one-page geometry contract");
+  });
+  scenariosPassed++;
+
+  [
+    "background: color-mix(in srgb, var(--brand) 14%, var(--surface-1))",
+    "background: color-mix(in srgb, var(--success) 14%, var(--surface-1))",
+    "#dashboardPanelInsights #businessMaturityCard { margin: 0; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--brand) 18%, var(--border-subtle)); border-radius: var(--radius-card); background: var(--surface-1);",
+    "#dashboardPanelInsights #actionRoadmapCard { margin: 0; padding: 12px 16px; border: 1px solid color-mix(in srgb, var(--success) 18%, var(--border-subtle)); border-radius: var(--radius-card); background: var(--surface-1);",
+    ".insights-status-badge { display: inline-flex; min-height: 20px;",
+    'High: "bg-red-100 text-red-700"'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Insights and Plans visual normalization");
+  });
+  [
+    "#insightsColumn > :not(.insights-plans-header)",
+    "#plansColumn > :not(.insights-plans-header)",
+    ".hf-priority-action #businessPriorityLevel",
+    "#businessPriorityLevel.insights-status-badge"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "category-wide card body tint");
+  });
+  scenariosPassed++;
+
+  [
+    "grid-template-columns: repeat(3, minmax(0, 1fr))",
+    "System-defined targets from current decision rules.",
+    "target-reference-card-heading",
+    ".insights-status-badge"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact Target Reference");
+  });
+  [
+    'id="kpiTargetDetailsButton"',
+    "View targets"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "removed Target Reference control");
+  });
+  scenariosPassed++;
+
+  var tabFunctionStart = source.indexOf("function resizeVisibleDashboardCharts(tabName)");
+  var tabFunctionEnd = source.indexOf("function setDesktopSidebarCollapsed", tabFunctionStart);
+  var tabFunctionSource = source.slice(tabFunctionStart, tabFunctionEnd);
+  ["google.script.run", "getDashboardData(", "requestDashboardData("].forEach(function(token)
+  {
+    assertSourceExcludes(tabFunctionSource, token, "Insights tab backend request");
+  });
+  var insightsRenderSource = getSourceRegion(
+    source,
+    "function renderBusinessIntelligence(res)",
+    "function createInitialTransactionEntryState",
+    "Insights render ownership"
+  );
+  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  {
+    assertSourceExcludes(insightsRenderSource, token, "Insights response mutation");
+  });
+  scenariosPassed++;
+
+  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
+  var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
+  if (idQueryCount > 72 || selectorQueryCount > 2)
+  {
+    throw new Error("Insights query budget exceeded: ids=" + idQueryCount + ", selectors=" + selectorQueryCount);
+  }
+  scenariosPassed++;
+
+  var summary = {
+    passed: true,
+    scenarios: scenariosPassed,
+    recommendationOrderPreserved: true,
+    editableTargets: false,
+    backendRequests: 0,
+    idQueries: idQueryCount,
+    selectorQueries: selectorQueryCount
+  };
+  Logger.log("PASS: testIntelligencePlanningVisualContract | scenarios=" + summary.scenarios + " | recommendationOrderPreserved=true | editableTargets=false | backendRequests=0 | idQueries=" + summary.idQueries + " | selectorQueries=" + summary.selectorQueries);
+  return summary;
+
+  /* Historical pre-final Insights composition retained for release archaeology. */
   var source =
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
