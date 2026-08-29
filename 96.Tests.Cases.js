@@ -294,12 +294,15 @@ function testCanonicalTransactionEntryService()
   scenarios += 2;
   var options = buildTransactionEntryOptions(
     context.products.concat([{ ID_Prod: "P0", Produk: "Americano", Kategori: "Coffee", Kind: "Beverage", IsActive: true, Notes: "private" }]),
-    context.expenseItems
+    context.expenseItems,
+    context.pricing,
+    timestamp
   );
   if (options.sales.length !== 2 || options.sales[0].productId !== "P0" ||
       Object.prototype.hasOwnProperty.call(options.sales[0], "Notes") ||
       options.expenses.length !== 3 || options.expenses[0].item !== "Electricity" ||
-      Object.prototype.hasOwnProperty.call(options.expenses[0], "AccountCode")) {
+      Object.prototype.hasOwnProperty.call(options.expenses[0], "AccountCode") ||
+      options.sales[1].pricing.Hot.price !== 10000 || options.sales[1].pricing.Cold.hpp !== 5000) {
     throw new Error("Active projected entry options contract mismatch");
   }
   scenarios += 6;
@@ -1299,7 +1302,7 @@ function testSparseDatasetResilience()
   ];
 
   var expectedNormalJson =
-    '{"summary":{"revenue":350000,"expense":50000,"profit":300000,"unitsSold":9,"bestSeller":"Latte","topRevenueProduct":"Espresso","avgDailyRevenue":116667,"activeDays":3},"financial":{"revenue":350000,"expense":50000,"operatingExpense":50000,"inventoryExpense":0,"assetExpense":0,"grossProfit":350000,"operatingProfit":300000,"netProfit":300000,"profitMargin":85.7},"insights":{"profitMargin":85.7,"revenuePerCup":38889,"topExpense":{"category":"Supplies","amount":50000},"financial":{"revenue":350000,"expense":50000,"operatingExpense":50000,"inventoryExpense":0,"assetExpense":0,"grossProfit":350000,"operatingProfit":300000,"netProfit":300000,"profitMargin":85.7}},"revenueTrend":{"labels":["2025-01","2025-02","2025-03"],"values":[60000,200000,90000]},"hotColdSplit":{"hot":6,"cold":3},"topProducts":[{"name":"Latte","qty":5,"revenue":150000},{"name":"Espresso","qty":4,"revenue":200000}],"expenseBreakdown":[{"category":"Supplies","amount":50000}],"recentTransactions":[{"date":"2025-03-12","transactionType":"Purchase","product":"","purchaseCategory":"Supplies","qty":0,"revenue":0,"expense":50000},{"date":"2025-03-11","transactionType":"Sales","product":"Latte","purchaseCategory":"","qty":3,"revenue":90000,"expense":0},{"date":"2025-02-10","transactionType":"Sales","product":"Espresso","purchaseCategory":"","qty":4,"revenue":200000,"expense":0},{"date":"2025-01-10","transactionType":"Sales","product":"Latte","purchaseCategory":"","qty":2,"revenue":60000,"expense":0}],"diagnosis":[{"level":"warning","category":"expense","priority":"critical","title":"Biaya Terbesar","description":"Supplies menyumbang biaya terbesar sebesar Rp 50.000. Pertimbangkan evaluasi efisiensi.","message":"Supplies adalah komponen biaya terbesar (Rp 50.000). Pertimbangkan evaluasi efisiensi biaya."},{"level":"attention","category":"revenue","priority":"good","title":"Revenue per Cup","description":"Rata-rata setiap cup menghasilkan Rp 38.889 revenue.","message":"Setiap cup menghasilkan rata-rata Rp 38.889 revenue."},{"level":"good","message":"Profit margin sehat (85.7%)"}],"forecast":{"nextMonthRevenue":130000,"growthRate":233.3},"businessScore":{"score":75,"status":"Healthy","breakdown":{"profitMargin":85.7,"revenue":350000,"unitsSold":9}},"revenueIntelligence":{"direction":"Up","growthRate":233.3,"momentum":"Strong"},"expenseIntelligence":{"highestExpense":"Supplies","highestAmount":50000,"expenseShare":100},"profitIntelligence":{"direction":"Up","changeRate":85.7,"status":"Strong"},"profitTrend":{"labels":["2025-01","2025-02","2025-03"],"values":[60000,200000,40000]},"executiveSummary":"Revenue menunjukkan tren positif. Profit berada dalam kondisi yang sehat. Kondisi bisnis sehat dengan beberapa peluang peningkatan.","priorityAction":{"title":"Business Improvement","impact":"Medium","score":70,"message":"Supplies adalah biaya terbesar. Cari peluang efisiensi tanpa mengganggu operasional."},"riskEngine":{"riskLevel":"Low","riskCount":0,"risks":[]},"growthScore":{"growthScore":100,"status":"High Potential","breakdown":{"revenue":"Up","forecast":233.3,"profitMargin":85.7,"revenuePerCup":38889}},"recommendations":[{"priority":"Medium","score":70,"message":"Supplies adalah biaya terbesar. Cari peluang efisiensi tanpa mengganggu operasional."},{"priority":"Medium","score":40,"message":"Latte merupakan produk terlaris. Pertimbangkan bundling atau upselling."},{"priority":"Medium","score":35,"message":"Espresso menghasilkan revenue terbesar. Pastikan stok selalu tersedia."},{"priority":"Low","score":20,"message":"Forecast menunjukkan pertumbuhan revenue sebesar 233.3%. Pertahankan strategi yang berjalan saat ini."}],"opportunities":[{"title":"Best Seller Opportunity","message":"Latte memiliki volume penjualan tertinggi. Pertimbangkan bundling atau promo khusus."},{"title":"Revenue Opportunity","message":"Espresso menghasilkan revenue terbesar. Fokus pada ketersediaan stok."},{"title":"Pricing Opportunity","message":"Revenue per cup sudah cukup baik. Fokus meningkatkan volume penjualan."},{"title":"Growth Opportunity","message":"Forecast menunjukkan pertumbuhan revenue. Persiapkan kapasitas operasional."}],"kpiStatus":{"revenue":{"trend":"Up","growth":233.3,"label":"Strong"},"profit":{"trend":"Up","growth":85.7,"label":"Strong"},"business":{"score":75,"status":"Healthy"}},"productContribution":[{"name":"Espresso","revenue":200000,"qty":4,"contribution":57.1},{"name":"Latte","revenue":150000,"qty":5,"contribution":42.9}],"revenueConcentration":{"product":"Espresso","contribution":57.1,"risk":"High"},"paretoAnalysis":{"totalProducts":2,"criticalProducts":2,"ratio":100,"concentration":"Low"},"businessFocus":{"focus":"Business Optimization","priority":"Medium","reason":"Business Health masih dapat ditingkatkan.","expectedImpact":"Medium"},"executiveAlert":{"title":"Business Stable","level":"Good","color":"Green","message":"Tidak ada kondisi kritis yang memerlukan tindakan segera."},"actionRoadmap":[{"week":1,"title":"Maintain Profitability","action":"Pertahankan profit margin yang sudah baik."},{"week":2,"title":"Scale Best Seller","action":"Latte layak dijadikan fokus upselling."},{"week":3,"title":"Business Expansion","action":"Siapkan kapasitas operasional untuk pertumbuhan berikutnya."},{"week":4,"title":"Performance Review","action":"Bandingkan KPI bulan ini dengan target dan evaluasi hasil."}],"businessMaturity":{"score":88,"level":"Growing","description":"Bisnis berkembang dengan baik namun masih memiliki ruang untuk peningkatan."},"kpiAchievement":{"revenue":{"actual":350000,"target":2000000,"achievement":17.5},"profit":{"actual":300000,"target":1000000,"achievement":30},"units":{"actual":9,"target":100,"achievement":9},"margin":{"actual":85.7,"target":15,"achievement":100}},"dateFilter":{"filter":"custom","startDate":"2024-01-01","endDate":"2026-12-31","label":"Custom: 2024-01-01 to 2026-12-31","rowCount":4}}';
+    '{"summary":{"revenue":350000,"expense":50000,"profit":300000,"unitsSold":9,"bestSeller":"Latte","topRevenueProduct":"Espresso","avgDailyRevenue":116667,"activeDays":3},"financial":{"revenue":350000,"expense":50000,"operatingExpense":50000,"inventoryExpense":0,"assetExpense":0,"grossProfit":350000,"operatingProfit":300000,"netProfit":300000,"profitMargin":85.7},"insights":{"profitMargin":85.7,"revenuePerCup":38889,"topExpense":{"category":"Supplies","amount":50000},"financial":{"revenue":350000,"expense":50000,"operatingExpense":50000,"inventoryExpense":0,"assetExpense":0,"grossProfit":350000,"operatingProfit":300000,"netProfit":300000,"profitMargin":85.7}},"revenueTrend":{"labels":["2025-01","2025-02","2025-03"],"values":[60000,200000,90000]},"hotColdSplit":{"hot":6,"cold":3},"topProducts":[{"name":"Latte","qty":5,"revenue":150000},{"name":"Espresso","qty":4,"revenue":200000}],"expenseBreakdown":[{"category":"Supplies","amount":50000}],"recentTransactions":[{"date":"2025-03-12","transactionType":"Expense","product":"","purchaseCategory":"Supplies","qty":0,"revenue":0,"expense":50000},{"date":"2025-03-11","transactionType":"Sales","product":"Latte","purchaseCategory":"","qty":3,"revenue":90000,"expense":0},{"date":"2025-02-10","transactionType":"Sales","product":"Espresso","purchaseCategory":"","qty":4,"revenue":200000,"expense":0},{"date":"2025-01-10","transactionType":"Sales","product":"Latte","purchaseCategory":"","qty":2,"revenue":60000,"expense":0}],"diagnosis":[{"level":"warning","category":"expense","priority":"critical","title":"Biaya Terbesar","description":"Supplies menyumbang biaya terbesar sebesar Rp 50.000. Pertimbangkan evaluasi efisiensi.","message":"Supplies adalah komponen biaya terbesar (Rp 50.000). Pertimbangkan evaluasi efisiensi biaya."},{"level":"attention","category":"revenue","priority":"good","title":"Revenue per Cup","description":"Rata-rata setiap cup menghasilkan Rp 38.889 revenue.","message":"Setiap cup menghasilkan rata-rata Rp 38.889 revenue."},{"level":"good","message":"Profit margin sehat (85.7%)"}],"forecast":{"nextMonthRevenue":130000,"growthRate":233.3},"businessScore":{"score":75,"status":"Healthy","breakdown":{"profitMargin":85.7,"revenue":350000,"unitsSold":9}},"revenueIntelligence":{"direction":"Up","growthRate":233.3,"momentum":"Strong"},"expenseIntelligence":{"highestExpense":"Supplies","highestAmount":50000,"expenseShare":100},"profitIntelligence":{"direction":"Up","changeRate":85.7,"status":"Strong"},"profitTrend":{"labels":["2025-01","2025-02","2025-03"],"values":[60000,200000,40000]},"executiveSummary":"Revenue menunjukkan tren positif. Profit berada dalam kondisi yang sehat. Kondisi bisnis sehat dengan beberapa peluang peningkatan.","priorityAction":{"title":"Business Improvement","impact":"Medium","score":70,"message":"Supplies adalah biaya terbesar. Cari peluang efisiensi tanpa mengganggu operasional."},"riskEngine":{"riskLevel":"Low","riskCount":0,"risks":[]},"growthScore":{"growthScore":100,"status":"High Potential","breakdown":{"revenue":"Up","forecast":233.3,"profitMargin":85.7,"revenuePerCup":38889}},"recommendations":[{"priority":"Medium","score":70,"message":"Supplies adalah biaya terbesar. Cari peluang efisiensi tanpa mengganggu operasional."},{"priority":"Medium","score":40,"message":"Latte merupakan produk terlaris. Pertimbangkan bundling atau upselling."},{"priority":"Medium","score":35,"message":"Espresso menghasilkan revenue terbesar. Pastikan stok selalu tersedia."},{"priority":"Low","score":20,"message":"Forecast menunjukkan pertumbuhan revenue sebesar 233.3%. Pertahankan strategi yang berjalan saat ini."}],"opportunities":[{"title":"Best Seller Opportunity","message":"Latte memiliki volume penjualan tertinggi. Pertimbangkan bundling atau promo khusus."},{"title":"Revenue Opportunity","message":"Espresso menghasilkan revenue terbesar. Fokus pada ketersediaan stok."},{"title":"Pricing Opportunity","message":"Revenue per cup sudah cukup baik. Fokus meningkatkan volume penjualan."},{"title":"Growth Opportunity","message":"Forecast menunjukkan pertumbuhan revenue. Persiapkan kapasitas operasional."}],"kpiStatus":{"revenue":{"trend":"Up","growth":233.3,"label":"Strong"},"profit":{"trend":"Up","growth":85.7,"label":"Strong"},"business":{"score":75,"status":"Healthy"}},"productContribution":[{"name":"Espresso","revenue":200000,"qty":4,"contribution":57.1},{"name":"Latte","revenue":150000,"qty":5,"contribution":42.9}],"revenueConcentration":{"product":"Espresso","contribution":57.1,"risk":"High"},"paretoAnalysis":{"totalProducts":2,"criticalProducts":2,"ratio":100,"concentration":"Low"},"businessFocus":{"focus":"Business Optimization","priority":"Medium","reason":"Business Health masih dapat ditingkatkan.","expectedImpact":"Medium"},"executiveAlert":{"title":"Business Stable","level":"Good","color":"Green","message":"Tidak ada kondisi kritis yang memerlukan tindakan segera."},"actionRoadmap":[{"week":1,"title":"Maintain Profitability","action":"Pertahankan profit margin yang sudah baik."},{"week":2,"title":"Scale Best Seller","action":"Latte layak dijadikan fokus upselling."},{"week":3,"title":"Business Expansion","action":"Siapkan kapasitas operasional untuk pertumbuhan berikutnya."},{"week":4,"title":"Performance Review","action":"Bandingkan KPI bulan ini dengan target dan evaluasi hasil."}],"businessMaturity":{"score":88,"level":"Growing","description":"Bisnis berkembang dengan baik namun masih memiliki ruang untuk peningkatan."},"kpiAchievement":{"revenue":{"actual":350000,"target":2000000,"achievement":17.5},"profit":{"actual":300000,"target":1000000,"achievement":30},"units":{"actual":9,"target":100,"achievement":9},"margin":{"actual":85.7,"target":15,"achievement":100}},"dateFilter":{"filter":"custom","startDate":"2024-01-01","endDate":"2026-12-31","label":"Custom: 2024-01-01 to 2026-12-31","rowCount":4}}';
 
 
   var fixtures =
@@ -4272,9 +4275,15 @@ function testUiShellThemeContract()
       selectorQueryCount
     );
   }
+  var transactionsResponseSource = getSourceRegion(
+    source,
+    "function toggleVoidedTransactions()",
+    "function scheduleDeferredDashboardRender",
+    "UI shell Transactions response handling"
+  );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "response mutation");
+    assertSourceExcludes(transactionsResponseSource, token, "Transactions response mutation");
   });
   scenariosPassed++;
 
@@ -4558,9 +4567,15 @@ function testNineDestinationNavigationContract()
     "function initializeResponsiveShell()",
     "single responsive initializer"
   );
+  var transactionsResponseSource = getSourceRegion(
+    source,
+    "function toggleVoidedTransactions()",
+    "function scheduleDeferredDashboardRender",
+    "navigation Transactions response handling"
+  );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "response mutation");
+    assertSourceExcludes(transactionsResponseSource, token, "Transactions response mutation");
   });
   scenariosPassed++;
 
@@ -4665,7 +4680,7 @@ function testFullShellVisualContract()
     '#topUtilityBar { height: 76px; min-height: 76px;',
     '#topUtilityBar { height: 68px; min-height: 68px;',
     '#dashboardTabList,',
-    '#transactionsTabList { height: 40px; min-height: 40px; }'
+    '#transactionsTabList { width: max-content; height: 44px; min-height: 44px;'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "exact shell geometry");
@@ -4778,9 +4793,15 @@ function testFullShellVisualContract()
   assertSourceContainsOnce(source, "function initializeResponsiveShell()", "responsive listener initializer");
   assertSourceContainsOnce(source, "function initializeDashboardTabs()", "Dashboard listener initializer");
   assertSourceContainsOnce(source, "function initializeTransactionsTabs()", "Transactions listener initializer");
+  var transactionsResponseSource = getSourceRegion(
+    source,
+    "function toggleVoidedTransactions()",
+    "function scheduleDeferredDashboardRender",
+    "full shell Transactions response handling"
+  );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "response mutation");
+    assertSourceExcludes(transactionsResponseSource, token, "Transactions response mutation");
   });
 
   var idQueryCount =
@@ -5087,7 +5108,7 @@ function testDashboardTabFrameworkContract()
 
   [
     "#dashboardTabList,",
-    "#transactionsTabList { height: 40px; min-height: 40px; }",
+    "#transactionsTabList { width: max-content; height: 44px; min-height: 44px;",
     ".dashboard-tab-panel:not(#dashboardPanelOverview)",
     "#dashboardContent { display: grid; min-height: 0; flex: 1 1 auto; grid-template-rows: 44px minmax(0, 1fr); gap: 12px; }",
     "#dashboardPanelOverview { height: 100%; overflow: visible; }",
@@ -6225,19 +6246,24 @@ function testCsvExportContract()
     HtmlService.createHtmlOutputFromFile(
       "190.View.Index"
     ).getContent();
+  var exportServerSource = getTransactionsExport.toString() + filterTransactionsPeriodRows.toString();
   var scenariosPassed = 0;
 
   [
     'id="exportCsvButton"',
     'type="button"',
     'Export CSV',
-    'aria-label="Export visible transactions to CSV"',
+    'aria-label="Export all matching Transactions to CSV"',
     'disabled'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "CSV accessibility contract");
   });
   scenariosPassed++;
+
+  ["filterTransactionsPeriodRows(periodResult.rows", "rows: rows, totalRows: rows.length", "item: row.product || row.purchaseCategory"].forEach(function(token) {
+    assertSourceContains(exportServerSource, token, "server full matching CSV contract");
+  });
 
   assertSourceContains(
     source,
@@ -6260,51 +6286,51 @@ function testCsvExportContract()
   scenariosPassed++;
 
   [
-    'var tableBody = initializeStableDashboardElements().tableBody;',
-    'var headers = Array.from(table.tHead.rows[0].cells);',
-    'headers[index].textContent.trim()',
-    'var csvRows = [visibleColumnIndexes.map'
+    'var headers = ["Transaction ID", "Date", "Type", "Item", "Qty", "Amount"];',
+    'getTransactionsExport({',
+    'downloadTransactionsCsv(response.data.rows, Number(response.data.totalRows))',
+    'escapeCsvCell(formatTransactionDate(row.date), false)'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "CSV header row");
+    assertSourceContains(source, token, "full matching CSV projection");
   });
   scenariosPassed++;
 
   [
-    'var visibleRows = Array.from(tableBody.rows)',
-    '!row.hidden',
-    '!row.classList.contains("hidden")',
-    'row.cells.length === headers.length'
+    'tab: activeTransactionsTab',
+    'lifecycleState: transactionsLifecycleState',
+    'search: transactionsSearchQuery',
+    'drilldownType: activeTransactionDrilldown'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "visible CSV rows only");
+    assertSourceContains(source, token, "active logical CSV view");
   });
   scenariosPassed++;
 
   [
-    'header.hidden || header.classList.contains("hidden")',
-    'visibleColumnIndexes.map(function(index)',
-    'var cells = row.cells;',
-    'cells[index].textContent.trim()'
+    'escapeCsvCell(row.id, false)',
+    'escapeCsvCell(row.transactionType, false)',
+    'escapeCsvCell(row.item, false)',
+    'escapeCsvCell(row.amount, true)'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "visible CSV columns only");
+    assertSourceContains(source, token, "six-column CSV without Actions");
   });
   scenariosPassed++;
 
   [
-    'visibleRows.forEach(function(row)',
-    'csvRows.push(visibleColumnIndexes.map(function(index)'
+    'rows.forEach(function(row)',
+    'rows.length + " matching transaction rows were exported successfully."'
   ].forEach(function(token)
   {
-    assertSourceContains(source, token, "CSV ordering preserved");
+    assertSourceContains(source, token, "full CSV ordering preserved");
   });
   scenariosPassed++;
 
   [
     'visibleTransactionRowCount = transactions.length;',
     'visibleTransactionRowCount === 0;',
-    'if (!visibleRows.length)'
+    'button.disabled = visibleTransactionRowCount === 0;'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "empty CSV export disabled");
@@ -6360,8 +6386,8 @@ function testCsvExportContract()
   scenariosPassed++;
 
   [
-    "var numericColumnIndexes = [3, 4];",
-    "numericColumnIndexes.indexOf(index) !== -1",
+    "escapeCsvCell(row.qty || \"-\", true)",
+    "escapeCsvCell(row.amount, true)",
     "sanitizeCsvCellValue(value, isNumericColumn)",
     "isFormulaPrefix &&",
     "!isNegativeNumeric &&",
@@ -6397,9 +6423,8 @@ function testCsvExportContract()
     source.slice(exportFunctionStart, exportFunctionEnd);
 
   [
-    "google.script.run",
-    "getDashboardData(",
     "recentTransactions",
+    "getDashboardData(",
     "spreadsheet",
     "hiddenFields"
   ].forEach(function(token)
@@ -6407,7 +6432,7 @@ function testCsvExportContract()
     assertSourceExcludes(
       exportFunctionSource,
       token,
-      "CSV backend, source-object, or hidden-field access"
+      "CSV dashboard source-object or hidden-field access"
     );
   });
   scenariosPassed++;
@@ -6535,7 +6560,7 @@ function testClientRenderPerformanceContract()
     "transactionsPanelGroup", "transactionsEvidenceRegion",
     "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
     "transactionDrilldownSummary", "transactionDrilldownText",
-    "transactionsStateAnnouncement", "appShell", "sidebarCollapseButton",
+    "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsPageSize", "appShell", "sidebarCollapseButton",
     "mainContent", "topUtilityBar", "utilityPageTitle",
     "utilityPageContext", "sidebarDataStatus", "settings", "logs",
     "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
@@ -6587,7 +6612,7 @@ function testClientRenderPerformanceContract()
   [
     "transactionDrilldownSummary: required.transactionDrilldownSummary",
     "transactionDrilldownText: required.transactionDrilldownText",
-    "transactionsStateAnnouncement: required.transactionsStateAnnouncement",
+    "transactionsPagination: required.transactionsPagination",
     "tableBody: required.tableBody"
   ].forEach(function(token)
   {
@@ -6746,9 +6771,9 @@ function testInteractiveDrilldownContract()
     'renderOverviewKpiCard("Profit",',
     'renderOverviewKpiCard("Units Sold",',
     '"month",',
-    '"expenseCategory",',
+    'expenseCategory: true',
     'showPage("transactions");',
-    'transactionsResultHeading.focus();'
+    'setActiveTransactionsTab("recent");'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "KPI and chart drill-down wiring");
@@ -6764,18 +6789,18 @@ function testInteractiveDrilldownContract()
   var filterTransactionDrilldown =
     Function("return (" + filterSource + ");")();
   var transactions = [
-    { date: "2025-03-12", transactionType: "Purchase", purchaseCategory: "Supplies" },
+    { date: "2025-03-12", transactionType: "Expense", purchaseCategory: "Supplies" },
     { date: "2025-03-11", transactionType: "Sales", product: "Latte" },
     { date: "2025-02-10", transactionType: "Sales", product: "Espresso" },
-    { date: "2025-01-10", transactionType: "Purchase", purchaseCategory: "Rent" }
+    { date: "2025-01-10", transactionType: "Expense", purchaseCategory: "Rent" }
   ];
   var original = JSON.stringify(transactions);
   var cases = [
-    { type: "all", value: "", expected: "Purchase,Sales,Sales,Purchase" },
+    { type: "all", value: "", expected: "Expense,Sales,Sales,Expense" },
     { type: "sales", value: "", expected: "Sales,Sales" },
-    { type: "purchase", value: "", expected: "Purchase,Purchase" },
-    { type: "month", value: "2025-03", expected: "Purchase,Sales" },
-    { type: "expenseCategory", value: "Supplies", expected: "Purchase" },
+    { type: "purchase", value: "", expected: "Expense,Expense" },
+    { type: "month", value: "2025-03", expected: "Expense,Sales" },
+    { type: "expenseCategory", value: "Supplies", expected: "Expense" },
     { type: "expenseCategory", value: "Missing", expected: "" }
   ];
 
@@ -6805,10 +6830,10 @@ function testInteractiveDrilldownContract()
   scenariosPassed++;
 
   [
-    "latestDashboardTransactions =",
-    "res.recentTransactions.slice(0, 10)",
-    "Filtered from the latest 10 transactions already loaded for the active period.",
-    'setActiveTransactionsTab("recent", false);'
+    "getTransactionsPage({",
+    "pageSize: transactionsPageSize",
+    "Filtered across the active reporting period.",
+    'setActiveTransactionsTab("recent");'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "bounded existing-response scope");
@@ -6821,10 +6846,8 @@ function testInteractiveDrilldownContract()
   var applySource = source.slice(applyStart, applyEnd);
 
   [
-    "google.script.run",
     "getDashboardData(",
     "spreadsheet",
-    "localStorage",
     "sessionStorage",
     "fetch("
   ].forEach(function(token)
@@ -6836,7 +6859,7 @@ function testInteractiveDrilldownContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    boundedRows: 10,
+    boundedRows: 15,
     responseMutation: false
   };
 
@@ -6869,9 +6892,9 @@ function testSecondaryDestinationsHighFidelityContract()
   });
   scenariosPassed++;
 
-  assertSourceOccurrenceCount(transactionsRegion, 'data-transactions-tab="', 4, "four Transactions tabs");
-  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 6, "five data columns plus lifecycle actions");
-  [">Date</th>", ">Type</th>", ">Item</th>", ">Qty</th>", ">Amount</th>"].forEach(function(token)
+  assertSourceOccurrenceCount(transactionsRegion, 'data-transactions-tab="', 3, "three Transactions tabs");
+  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 7, "six data columns plus lifecycle actions");
+  [">Transaction ID</th>", ">Date</th>", ">Type</th>", ">Item</th>", ">Qty</th>", ">Amount</th>"].forEach(function(token)
   {
     assertSourceContains(transactionsRegion, token, "authoritative Transactions column");
   });
@@ -6881,7 +6904,7 @@ function testSecondaryDestinationsHighFidelityContract()
     'id="transactionsToolbar"', "hf-transactions-toolbar",
     'id="transactionsResultHeading"', 'id="transactionsScopeText"',
     'id="transactionDrilldownSummary"', 'id="exportCsvButton"',
-    'id="transactionsTableScroll"', "hf-secondary-surface"
+    'id="transactionsTableScroll"', 'id="transactionsTableCard"', "hf-secondary-surface"
   ].forEach(function(token)
   {
     assertSourceContains(transactionsRegion, token, "table-dominant Transactions composition");
@@ -6889,10 +6912,11 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   [
-    "res.recentTransactions.slice(0, 10)",
-    "latest 10 transactions already loaded",
-    "separate purchase history is unavailable",
-    "var visibleRows = Array.from(tableBody.rows)",
+    "getTransactionsPage({",
+    "pageSize: transactionsPageSize",
+    "Expense rows in the active period.",
+    "getTransactionsExport({",
+    "buildLocalTransactionsPage(pageNumber)",
     "sanitizeCsvCellValue(value, isNumericColumn)"
   ].forEach(function(token)
   {
@@ -6901,8 +6925,7 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   [
-    'setActiveTransactionsTab("recent", false);',
-    "transactionsResultHeading.focus();",
+    'setActiveTransactionsTab("recent");',
     "activeTransactionDrilldown = null;",
     'onclick="clearTransactionDrilldown()"'
   ].forEach(function(token)
@@ -6912,12 +6935,12 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   [
-    "#transactionsTableScroll th { height: 36px;",
-    "#transactionsTableScroll td { height: 40px;",
-    "#transactionsTableScroll td { height: 44px;",
+    "#transactionsTableScroll th { height: 38px;",
+    "#transactionsTableScroll td { height: 38px;",
+    "#transactionsTableScroll table { width: 100%; table-layout: fixed; }",
     "font-variant-numeric: tabular-nums",
     "min-w-[680px]",
-    "overflow: auto"
+    "overflow-x: auto; overflow-y: visible"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "Transactions density and containment");
@@ -6946,10 +6969,11 @@ function testSecondaryDestinationsHighFidelityContract()
   });
   scenariosPassed++;
 
-  ["profile", "notifications", "integrations", "type=\"checkbox\"", "<textarea", "<select"].forEach(function(token)
+  ["profile", "notifications", "integrations", "type=\"checkbox\"", "<textarea"].forEach(function(token)
   {
     assertSourceExcludes(settingsRegion, token, "unsupported Settings control");
   });
+  assertSourceContains(settingsRegion, 'id="transactionsPageSize"', "approved Transactions pagination preference");
   scenariosPassed++;
 
   [
@@ -7013,9 +7037,10 @@ function testSecondaryDestinationsHighFidelityContract()
   {
     assertSourceExcludes(navigationSource, token, "secondary navigation backend request");
   });
+  var transactionsClientSource = getSourceRegion(source, "function toggleVoidedTransactions()", "function scheduleDeferredDashboardRender", "Transactions client rendering");
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "secondary destination response mutation");
+    assertSourceExcludes(transactionsClientSource, token, "Transactions response mutation");
   });
 
   var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
@@ -7057,7 +7082,10 @@ function testTransactionEntryUiContract()
 {
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
   var tokenSource = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
+  var optionsServerSource = getTransactionEntryOptions.toString();
   var region = getSourceRegion(source, 'id="transactionEntryOverlay"', 'id="settings"', "Transaction entry UI");
+  var resetRegion = getSourceRegion(source, "function resetTransactionEntryForAnother(shouldFocusType)", "// Render Transactions", "new transaction reset");
+  var previewRegion = getSourceRegion(source, "function previewTransactionCorrection(payload)", "function renderCorrectionComparison", "correction preview");
   var scenarios = 0;
 
   ['id="newTransactionButton"', 'id="transactionEntryDialog"', 'role="dialog"', 'aria-modal="true"',
@@ -7089,6 +7117,8 @@ function testTransactionEntryUiContract()
 
   ['getProductEntryPricing(state.selectedProduct.productId, state.selectedType)',
     'var version = ++state.pricingRequestVersion;',
+    'var cachedPricing = state.selectedProduct.pricing && state.selectedProduct.pricing[state.selectedType];',
+    'state.pricingSource = "master-cache";',
     'if (version !== transactionEntryState.pricingRequestVersion) return;',
     'id="salesPreviewPrice"', 'id="salesPreviewHpp"', 'id="salesPreviewUnitMargin"',
     'id="salesPreviewRevenue"', 'id="salesPreviewCogs"', 'id="salesPreviewMargin"'].forEach(function(token) {
@@ -7105,8 +7135,11 @@ function testTransactionEntryUiContract()
 
   ['getTransactionEntryOptions()', 'transactionEntryState.optionsLoaded',
     'transactionEntryState.entryOptions = {', 'sales: response.data.sales.slice()',
-    'expenses: response.data.expenses.slice()', 'loadTransactionEntryOptions()">Retry'].forEach(function(token) {
+    'expenses: response.data.expenses.slice()', 'preloadTransactionEntryOptions()', 'loadTransactionEntryOptions()">Retry'].forEach(function(token) {
     assertSourceContains(source, token, "cached options and retry state");
+  });
+  ['CacheService.getScriptCache()', 'transaction-entry-options-v2|', 'cache.put(cacheKey', 'readCanonicalTable(ss, "ProductPricing"'].forEach(function(token) {
+    assertSourceContains(optionsServerSource, token, "revision-scoped master option cache");
   });
   scenarios++;
 
@@ -7164,7 +7197,7 @@ function testTransactionEntryUiContract()
   scenarios++;
 
   assertSourceContains(source,
-    '#transactions.active { display: grid; height: 100%; grid-template-rows: 40px 44px minmax(0, 1fr); gap: 12px; overflow: hidden; }',
+    '#transactions.active { display: grid; height: 100%; grid-template-rows: 44px minmax(0, 1fr); gap: 10px; overflow: hidden; }',
     "desktop Transactions CTA grid track");
   ['document.body.appendChild(entry.overlay);', 'elements.appShell.inert = true;',
     'elements.appShell.inert = false;'].forEach(function(token) {
@@ -7175,10 +7208,53 @@ function testTransactionEntryUiContract()
     'entry.submitRegion.hidden = true;', 'entry.submitRegion.hidden = false;'].forEach(function(token) {
     assertSourceContains(source, token, "separate persistent action footer");
   });
+  ['id="transactionCorrectionWorkspace"', 'entry.dialog.setAttribute("data-mode", "create");',
+    'entry.dialog.setAttribute("data-entry-type", type.toLowerCase());',
+    'entry.dialog.removeAttribute("data-entry-type");',
+    'entry.dialog.setAttribute("data-mode", "correction");',
+    'resetTransactionEntryForAnother(false);', 'transactionEntryState = createInitialTransactionEntryState();',
+    'entry.correctionWorkspace.hidden = true;', 'entry.correctionWorkspace.hidden = false;',
+    'entry.correctionReasonRegion.hidden = true;', 'entry.correctionReview.hidden = true;'].forEach(function(token) {
+    assertSourceContains(source, token, "content-fit create/correction modal ownership");
+  });
+  ['transactionEntryState = createInitialTransactionEntryState();', 'entry.correctionWorkspace.hidden = true;',
+    'entry.correctionReasonRegion.hidden = true;', 'entry.correctionReview.hidden = true;'].forEach(function(token) {
+    assertSourceContains(resetRegion, token, "fresh New Transaction correction-state reset");
+  });
+  ['if (state.mode !== "correction" || !state.originalDetail) return;',
+    'if (transactionEntryState !== state || state.mode !== "correction" || !state.originalDetail) return;'].forEach(function(token) {
+    assertSourceContains(previewRegion, token, "stale correction preview isolation");
+  });
   ['#transactionsEntryActionRow{min-height:44px;align-items:center}',
     '#transactionsEntryActionRow .transaction-entry-primary{width:-moz-max-content;width:max-content;height:44px;min-height:44px;flex:0 0 auto;align-self:center}',
-    '.transaction-entry-dialog{display:flex;width:min(100%,620px)',
-    'max-height:min(820px,calc(100dvh - 48px))',
+    '.transaction-entry-dialog{display:flex;width:min(100%,860px)',
+    'max-height:calc(100dvh - 48px)',
+    '.transaction-entry-fields{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}',
+    '.transaction-entry-fields h3{display:flex;width:100%;align-items:center;justify-content:flex-start;gap:0',
+    '#transactionEntryDialog[data-mode=create] .transaction-entry-fields h3{margin-top:12px}',
+    '.transaction-entry-fields h3>span:first-child{display:inline-flex;flex:0 0 auto;align-items:center;gap:8px}',
+    '.transaction-entry-ready-status{flex:0 0 auto;margin-inline-start:10px',
+    '.transaction-entry-money{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;border:1px solid var(--card-border)',
+    '.transaction-entry-money input{border:0;outline:none;background:transparent;box-shadow:none}',
+    '.transaction-entry-money:has(#expenseEntryAmount),.transaction-entry-money:has(#expenseEntryAmount):focus-within,.transaction-entry-money:has(#expenseEntryAmount):hover{border-color:var(--card-border)!important;outline:none!important;box-shadow:none!important}',
+    '#expenseEntryAmount{-webkit-appearance:none;-moz-appearance:none;appearance:none}',
+    '#expenseEntryAmount,#expenseEntryAmount:active,#expenseEntryAmount:focus,#expenseEntryAmount:focus-visible,#expenseEntryAmount:hover{border:0!important;border-width:0!important;border-color:transparent!important;outline:0!important;outline-offset:0!important;background:transparent!important;box-shadow:none!important}',
+    '.transaction-sales-detail-card{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))',
+    'gap:6px 12px', '.transaction-sales-product .transaction-entry-error:empty{display:none}',
+    '#salesEntryFields>.transaction-sales-detail-card{grid-column:1;grid-row:2;align-self:stretch}',
+    '#salesPricingPreview{grid-column:2;grid-row:2;align-self:stretch}',
+    '#transactionEntryDialog[data-mode=create][data-entry-type=sales] .transaction-entry-scroll{padding:14px 18px calc(14px + env(safe-area-inset-bottom))}',
+    '#transactionEntryDialog[data-mode=create][data-entry-type=sales] .transaction-entry-local-state{margin:8px 0}',
+    '#transactionEntryDialog[data-mode=correction] #transactionEntryForm{display:block}',
+    '.transaction-correction-workspace[hidden]{display:none}',
+    '.transaction-lifecycle-comparison[hidden]{display:none}',
+    '#transactionEntryDialog[data-mode=correction] .transaction-correction-workspace{display:grid;gap:10px;margin-top:12px}',
+    '#transactionEntryDialog[data-mode=correction][data-entry-type=sales] .transaction-correction-workspace.has-review{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}',
+    '#transactionEntryDialog[data-mode=correction] #transactionCorrectionReason{min-height:64px;resize:none}',
+    '#transactionEntryDialog[data-mode=correction] #transactionCorrectionReasonError:empty{display:none}',
+    '#transactionEntryDialog[data-mode=correction] .transaction-entry-submit{margin-top:12px}',
+    '#salesEntryQty{-webkit-appearance:textfield;appearance:textfield;-moz-appearance:textfield}',
+    '#salesEntryQty::-webkit-inner-spin-button,#salesEntryQty::-webkit-outer-spin-button{margin:0;-webkit-appearance:none;appearance:none}',
     'min-height:44px', 'env(safe-area-inset-bottom)', '@media (max-width:639px)',
     '.transaction-entry-overlay{position:fixed;align-items:stretch;justify-content:stretch;padding:0}',
     '.transaction-entry-dialog,.transaction-entry-overlay{inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0}',
@@ -7191,6 +7267,15 @@ function testTransactionEntryUiContract()
     'html.numlock-phone .transaction-entry-overlay{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;align-items:stretch;justify-content:stretch;margin:0;padding:0}',
     'html.numlock-phone .transaction-entry-dialog{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;margin:0;transform:none;border:0;border-radius:0;box-shadow:none}'].forEach(function(token) {
     assertSourceContains(tokenSource, token, "responsive entry containment");
+  });
+  scenarios++;
+
+  ['id="salesEntryOptionsStatus"', 'id="expenseEntryOptionsStatus"',
+    'function updateTransactionEntryOptionsPresentation()', 'Entry options ready</span>'].forEach(function(token) {
+    assertSourceContains(source, token, "detail-heading option readiness");
+  });
+  ['Operational entry', 'Operational Entry', 'Pricing ready.', 'Pricing Ready'].forEach(function(token) {
+    assertSourceExcludes(source, token, "removed redundant entry copy");
   });
   scenarios++;
 
@@ -7208,9 +7293,59 @@ function testTransactionLifecycleUiContract()
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
   var css = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
   var dataSource = buildCanonicalTransactionData.toString();
+  var detailBatchSource = getCanonicalTransactionDetails.toString();
   var dashboardSource = getDashboardData.toString() + buildDashboardDataExecution.toString() +
     buildDashboardResponse.toString() + buildRecentLifecycleTransactions.toString();
+  var transactionPageSource = getTransactionsPage.toString() + filterTransactionsPeriodRows.toString() +
+    normalizeTransactionsLifecycleState.toString() + buildTransactionsSearchIndex.toString() +
+    buildTransactionsPageResult.toString() + getTransactionsPeriodRows.toString();
   var scenarios = 0;
+
+  ["function runTransactionRowAction(action, transactionId, trigger)",
+    "openTransactionDetail(transactionId)", "loadTransactionForMutation(transactionId, action)",
+    '<span>View</span>', '<span>Correct</span>', '<span>Void</span>',
+    'r.source === "APP_ENTRY" && r.isActive !== false', "prefetchVisibleTransactionDetails(result.rows)",
+    ".getCanonicalTransactionDetails(ids)", "transactionDetailCache[transactionId]"].forEach(function(token) {
+    assertSourceContains(source, token, "direct lifecycle row actions");
+  });
+  ["transactionIds.slice(0, 50)", 'readCanonicalTable(ss, "tabsal"', 'readCanonicalTable(ss, "tabops"',
+    'readCanonicalTable(ss, "Logs"', "details: details"].forEach(function(token) {
+    assertSourceContains(detailBatchSource, token, "bounded canonical detail prefetch");
+  });
+  ["transactionActionOverlay", "transactionActionMenu", "openTransactionActionMenu", "closeTransactionActionMenu"].forEach(function(token) {
+    assertSourceExcludes(source, token, "removed grouped action menu");
+  });
+  ["getCanonicalTransactionDetail(transactionId)", "correctCanonicalTransaction(payload)", "voidCanonicalTransaction({ transactionId:"].forEach(function(token) {
+    assertSourceContains(source, token, "preserved lifecycle server handlers");
+  });
+  ["var search = String(safeRequest.search", 'requested === "active" || requested === "voided" || requested === "all"',
+    'lifecycleState === "active" && row.isActive === false', 'lifecycleState === "voided" && row.isActive !== false',
+    "cache.getAll(keys)", "cache.putAll(cacheEntries", "searchIndex", "prefetchedPages", "rangeStart:", "rangeEnd:"].forEach(function(token) {
+    assertSourceContains(transactionPageSource, token, "server pagination cache and search contract");
+  });
+  ['.transaction-lifecycle-dialog{display:flex;width:min(100%,760px)',
+    '.transaction-lifecycle-dialog .transaction-entry-scroll{padding:16px 18px}',
+    '.transaction-lifecycle-dialog .transaction-entry-local-state:empty{display:none}',
+    '#transactionVoidRegion:not([hidden]){display:grid;gap:8px;margin-top:12px}',
+    '#transactionVoidReasonError:empty{display:none}'].forEach(function(token) {
+    assertSourceContains(css, token, "content-fit lifecycle modal geometry");
+  });
+  ['function renderTransactionDetail(detail)',
+    'transaction-lifecycle-grid transaction-lifecycle-grid--active',
+    'transaction-lifecycle-grid transaction-lifecycle-grid--history',
+    'lifecycle.dialog.setAttribute("data-view-layout", showLifecycle ? "history" : "active");',
+    '? \'<div class="transaction-lifecycle-grid transaction-lifecycle-grid--history">\' + transactionCard + lifecycleCard + businessCard + auditCard',
+    ': \'<div class="transaction-lifecycle-grid transaction-lifecycle-grid--active">\'',
+    '["Transaction ID", detail.id]', '["CreatedBy", detail.createdBy]',
+    '["UpdatedBy", detail.updatedBy]', '["Original Transaction", detail.originalId]',
+    'white-space:normal;overflow-wrap:anywhere;word-break:break-word'].forEach(function(token) {
+    assertSourceContains(token.indexOf("white-space") === 0 ? css : source, token, "wrapped lifecycle detail composition");
+  });
+  ['Transaction lifecycle', 'Transaction Lifecycle'].forEach(function(token) {
+    assertSourceExcludes(source, token, "removed lifecycle eyebrow copy");
+  });
+  Logger.log("PASS: testTransactionLifecycleUiContract | scenarios=4");
+  return { passed: true, scenarios: 4, writes: 0 };
 
   ['data-transaction-id="${escapeUiHtml(r.id)}"', 'aria-label="Actions for transaction ${escapeUiHtml(r.id)}"',
     'class="transaction-row-action"', 'role="menu"', 'View Details', 'Correct Transaction', 'Void Transaction'].forEach(function(token) {
@@ -7291,8 +7426,9 @@ function testTransactionLifecycleUiContract()
   });
   scenarios++;
 
-  ['id="showVoidedTransactions"', 'showVoidedTransactions || transaction.isActive !== false',
-    'transaction-status-badge', '>Voided</span>', 'transaction-row-voided'].forEach(function(token) {
+  ['id="transactionsIsActive"', 'name="isActive"', 'value="active" selected>Active</option>', 'value="all">All</option>', 'value="voided">Voided</option>',
+    'lifecycleState === "active" && row.isActive === false', 'lifecycleState === "voided" && row.isActive !== false',
+    'transaction-status-badge', 'transaction-row-voided'].forEach(function(token) {
     assertSourceContains(source, token, "voided history presentation");
   });
   scenarios++;
@@ -7394,7 +7530,10 @@ function testTransactionLifecycleUiContract()
   scenarios++;
 
   ['document.body.appendChild(entry.overlay);', 'transaction-entry-dialog',
-    'html.numlock-phone .transaction-entry-dialog', '.transaction-lifecycle-dialog{display:flex;width:min(100%,620px)',
+    'html.numlock-phone .transaction-entry-dialog', '.transaction-lifecycle-dialog{display:flex;width:min(100%,760px)',
+    '.transaction-lifecycle-dialog .transaction-entry-scroll{padding:16px 18px}',
+    '.transaction-lifecycle-dialog .transaction-entry-local-state:empty{display:none}',
+    '#transactionVoidRegion:not([hidden]){display:grid;gap:8px;margin-top:12px}',
     '#transactionLifecycleOverlay{align-items:flex-end;padding:0}'].forEach(function(token) {
     assertSourceContains(token.indexOf(".") === 0 || token.indexOf("#") === 0 || token.indexOf("html") === 0 ? css : source, token, "responsive correction and void surfaces");
   });
@@ -7407,8 +7546,79 @@ function testTransactionLifecycleUiContract()
 function testTransactionsVisualContract()
 {
   var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent();
+  var css = HtmlService.createHtmlOutputFromFile("189.View.Tailwind").getContent();
   var scenariosPassed = 0;
-  var tabs = ["recent", "sales", "expenses", "purchases"];
+
+  ['data-transactions-tab="recent"', 'data-transactions-tab="sales"', 'data-transactions-tab="expenses"',
+    'id="transactionsPagination"', 'id="transactionsPreviousPage"', 'id="transactionsNextPage"',
+    'id="transactionsPageSize"', 'id="transactionsPageSizeFooter"', 'id="transactionsSearch"', 'option value="15"',
+    "const TRANSACTIONS_DEFAULT_PAGE_SIZE = 15;", "const TRANSACTIONS_ALLOWED_PAGE_SIZES = { 15: true, 25: true, 50: true };",
+    "transactionsPageSize = TRANSACTIONS_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : TRANSACTIONS_DEFAULT_PAGE_SIZE;",
+    "function formatTransactionDate(value)", 'return match[3] + " " + months',
+    "function requestTransactionsPage()", ".getTransactionsPage({",
+    "#transactionsTableScroll td { height: 40px;", "#transactionsTableCard { overflow: hidden;",
+    "#transactionsControls #transactionsTabList [role=\"tab\"].is-active",
+    ">Transaction ID</th>", "function scheduleTransactionsSearch(value)", "transactionsResultCache[cacheKey]",
+    ">IsActive</th>", 'function setTransactionsLifecycleState(value)', 'lifecycleState: transactionsLifecycleState',
+    "transactionsTableCard: required.transactionsTableCard",
+    "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 16%; }",
+    "#transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 24%; }",
+    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 19%;",
+    "transactionsSearchIndex", "prefetchAdjacentTransactionPages", "preloadTransactionEntryOptions",
+    "prefetchVisibleTransactionDetails", ".getTransactionsExport({",
+    "function getTransactionDiagnostics()", "transactionDiagnostics.showVoided", "transactionDiagnostics.export",
+    "function getTransactionLayoutDiagnostics()", "window.getTransactionLayoutDiagnostics = getTransactionLayoutDiagnostics;", "remainingVerticalBudgetBeforeOverflow",
+    'var entryMode = entryOpen ? String(entryDialog.getAttribute("data-mode") || "") : "";',
+    'var isNewTransaction = entryOpen && entryMode === "create";',
+    'var isCorrection = entryOpen && entryMode === "correction";',
+    'getComputedStyle(grid).gridTemplateColumns',
+    "bottomEmptySpaceEstimate", "nativeSpinnerSuppressionActive", "isActiveFilterExists",
+    "completeTransactionPageDiagnostic", "completeTransactionEntryDiagnostic", "completeTransactionActionDiagnostic",
+    "transactionDiagnostics.search.eventCount++", "transactionDiagnostics.pagination.eventCount++",
+    "transactionDiagnostics.newTransaction.eventCount++", "transactionDiagnostics.export.eventCount++",
+    "transactionDiagnostics.actions.viewEventCount++", "transactionDiagnostics.actions.correctEventCount++",
+    "transactionDiagnostics.actions.voidEventCount++",
+    "grid-template-columns: minmax(0, 1fr);", "border-top: 1px solid var(--divider); padding-top: 10px;",
+    "transactions-toolbar-controls", "transactions-row-action--view", "transactions-row-action--correct",
+    "transactions-row-action--void", '.transactions-row-actions { display: inline-flex; height: 40px;',
+    '.transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px;',
+    '.transactions-row-action::before { position: absolute; z-index: -1; inset: 0;',
+    "fa-chevron-left", "fa-chevron-right"].forEach(function(token) {
+    assertSourceContains(source, token, "Transactions pagination visual contract");
+  });
+  ['.transaction-status-badge{display:inline-flex;align-items:center;border:1px solid var(--border-strong);border-radius:var(--radius-pill);padding:2px 8px;color:var(--text-secondary);font-size:12px',
+    '.transaction-status-badge--active{border-color:var(--success);border-style:solid;background:var(--success-soft);color:var(--success)}',
+    '.transaction-status-badge--voided{border-color:var(--critical);border-style:dashed;background:var(--critical-soft);color:var(--critical)}',
+    '#transactionsToolbar .transaction-lifecycle-filter{display:inline-flex;min-height:44px;align-items:center;gap:8px;color:var(--text-secondary);font-size:14px',
+    '#transactionsToolbar .transaction-lifecycle-filter>span{font-size:14px}',
+    '#transactionsToolbar .transaction-lifecycle-filter select{min-height:40px', 'font-size:14px',
+    '.transaction-lifecycle-dialog[data-view-layout=active]{width:min(100%,840px)}',
+    '.transaction-lifecycle-grid--active{grid-template-columns:repeat(2,minmax(0,1fr))}',
+    '.transaction-lifecycle-grid--active>.transaction-lifecycle-group--identity{grid-column:1/-1}',
+    '.transaction-lifecycle-grid--history{grid-template-columns:repeat(2,minmax(0,1fr))}',
+    '.transaction-lifecycle-grid--active,.transaction-lifecycle-grid--history{align-items:stretch}',
+    '.transaction-lifecycle-grid--active>.transaction-lifecycle-group,.transaction-lifecycle-grid--history>.transaction-lifecycle-group{height:100%}',
+    '.transaction-lifecycle-grid--history>.transaction-lifecycle-group--identity,.transaction-lifecycle-grid--history>.transaction-lifecycle-group--relations{grid-column:1/-1}'].forEach(function(token) {
+    assertSourceContains(css, token, "IsActive badge/filter typography");
+  });
+  ['.transaction-type { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid transparent;',
+    '.transaction-type--sales { border-color: var(--success); background: var(--success-soft); color: var(--success); }',
+    '.transaction-type--expense { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }',
+    '#transactionsTableScroll td { height: 40px;'].forEach(function(token) {
+    assertSourceContains(source, token, "Transactions Type badge border and frozen row geometry");
+  });
+  ["transactionsTabPurchases", "transactionsPanelPurchases", "transactionActionOverlay", "transactionsStateAnnouncement"].forEach(function(token) {
+    assertSourceExcludes(source, token, "removed Transactions-only state");
+  });
+  assertSourceExcludes(
+    getSourceRegion(source, "function getTransactionLayoutDiagnostics()", "window.getTransactionLayoutDiagnostics", "Transactions layout diagnostics"),
+    'transactionEntryState.mode === "correction"',
+    "stale entry-state modal detection"
+  );
+  assertSourceExcludes(source, 'option value="10"', "legacy Transactions page-size choice");
+  Logger.log("PASS: testTransactionsVisualContract | scenarios=2");
+  return { passed: true, scenarios: 2, writes: 0 };
+  var tabs = ["recent", "sales", "expenses"];
   var transactionsTabRegion = getSourceRegion(
     source,
     'id="transactions"',
@@ -7438,6 +7648,10 @@ function testTransactionsVisualContract()
     {
       assertSourceContains(transactionsTabRegion, token, "Transactions tab ARIA relationship");
     });
+  });
+  ["purchases", "Purchases", "transactionsTabPurchases", "transactionsPanelPurchases"].forEach(function(token)
+  {
+    assertSourceExcludes(transactionsTabRegion, token, "removed Purchases tab contract");
   });
   assertSourceExcludes(
     transactionsTabRegion,
@@ -7475,17 +7689,16 @@ function testTransactionsVisualContract()
   var filterTransactionsForTab =
     Function("return (" + source.slice(filterStart, filterEnd).trim() + ");")();
   var rows = [
-    { transactionType: "Purchase", label: "first" },
+    { transactionType: "Expense", label: "first" },
     { transactionType: "Sales", label: "second" },
-    { transactionType: "Purchase", label: "third" },
+    { transactionType: "Expense", label: "third" },
     { transactionType: "Sales", label: "fourth" }
   ];
   var original = JSON.stringify(rows);
   var expected = {
     recent: "first,second,third,fourth",
     sales: "second,fourth",
-    expenses: "first,third",
-    purchases: "first,third"
+    expenses: "first,third"
   };
 
   tabs.forEach(function(tabName)
@@ -7508,20 +7721,29 @@ function testTransactionsVisualContract()
   [
     "res.recentTransactions.slice(0, 10)",
     'transaction.transactionType === "Sales"',
-    'transaction.transactionType === "Purchase"',
+    'transaction.transactionType === "Expense"',
     "Visible recent sales", "Visible recent expenses",
-    "Visible recent purchases", "separate purchase history is unavailable",
+    "Expense rows within the latest 10 transactions already loaded.",
     "latest 10 transactions already loaded"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "truthful bounded Transactions scope");
   });
+  assertSourceExcludes(
+    getSourceRegion(source, "function filterTransactionsForTab(", "function getVisibleTransactions", "Transactions tab filter"),
+    'transaction.transactionType === "Purchase"',
+    "Purchase display type"
+  );
   scenariosPassed++;
 
   [
     '>Date</th>', '>Type</th>', '>Item</th>', '>Qty</th>', '>Amount</th>',
     'class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}"', 'class="transactions-number',
-    'id="transactionsTableScroll"', 'overflow-x-auto', 'min-w-[680px]'
+    'id="transactionsControls"', 'id="transactionsEntryActionRow"',
+    'id="transactionsTableScroll"', 'overflow-x-auto', 'min-w-[680px]',
+    '#transactionsTableScroll table { width: 100%; table-layout: fixed; }',
+    '#transactionsTableScroll th:nth-child(3), #transactionsTableScroll td:nth-child(3) { width: auto; text-align: left; }',
+    '#transactionsTableScroll th:nth-child(6), #transactionsTableScroll td:nth-child(6) { width: 52px; padding: 0 4px; text-align: center; }'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "compact lifecycle table");
@@ -7566,8 +7788,8 @@ function testTransactionsVisualContract()
   [
     'role="status"', 'No visible transactions in this bounded view',
     ':root[data-theme="dark"] .bg-white',
-    '#transactions.active { display: grid; height: 100%; grid-template-rows: 40px 44px minmax(0, 1fr); gap: 12px; overflow: hidden; }',
-    '#transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }',
+    '#transactions.active { display: grid; height: 100%; grid-template-rows: 44px minmax(0, 1fr); gap: 10px; overflow: hidden; }',
+    '#transactionsTableScroll { min-height: 0; height: auto; flex: none; overflow-x: auto; overflow-y: visible; }',
     '#transactionsTableScroll { overflow-x: auto; }',
     '@media (max-width: 1023px)', '@media (prefers-reduced-motion: reduce)'
   ].forEach(function(token)
@@ -8163,13 +8385,13 @@ function testBoundedUiRefactorContract()
 
   assertSourceOccurrenceCount(
     source,
-    "updateTransactionsViewPresentation(transactions);",
-    3,
-    "authoritative Transactions presentation calls including voided filter"
+    "updateTransactionsViewPresentation(result);",
+    1,
+    "authoritative paginated Transactions presentation call"
   );
   assertSourceContainsOnce(
     source,
-    "function updateTransactionsViewPresentation(transactions)",
+    "function updateTransactionsViewPresentation(result)",
     "authoritative Transactions presentation owner"
   );
   scenariosPassed++;
@@ -8262,11 +8484,11 @@ function testBoundedUiRefactorContract()
   );
   var transactionsTabSource = getSourceRegion(
     source,
-    "function setActiveTransactionsTab(tabName, moveFocus)",
+    "function setActiveTransactionsTab(tabName)",
     "function initializeTransactionsTabs",
     "refactor Transactions tab ownership"
   );
-  [navigationSource, dashboardTabSource, transactionsTabSource].forEach(function(region)
+  [navigationSource, dashboardTabSource].forEach(function(region)
   {
     ["google.script.run", "getDashboardData(", "requestDashboardData("].forEach(function(token)
     {
@@ -8275,11 +8497,13 @@ function testBoundedUiRefactorContract()
   });
   scenariosPassed++;
 
+  var transactionsRenderSource = getSourceRegion(source, "function toggleVoidedTransactions()", "function scheduleDeferredDashboardRender", "bounded Transactions rendering");
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "refactor response mutation");
+    assertSourceExcludes(transactionsRenderSource, token, "Transactions response mutation");
   });
-  assertSourceContains(source, "res.recentTransactions.slice(0, 10)", "bounded Transactions copy");
+  assertSourceContains(source, "pageSize: transactionsPageSize", "bounded Transactions page request");
+  assertSourceContains(transactionsTabSource, "requestTransactionsPage();", "server-backed Transactions tab switch");
   scenariosPassed++;
 
   [
@@ -8300,8 +8524,8 @@ function testBoundedUiRefactorContract()
     "#dashboardSidebar { width: 248px;", "#dashboardSidebar { width: 224px;",
     "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar { width: 64px;",
     "#topUtilityBar { height: 76px;", "#topUtilityBar { height: 68px;",
-    "#dashboardTabList { height: 44px;", "#transactionsTabList { height: 40px;", "#transactionsTableScroll th { height: 36px;",
-    "#transactionsTableScroll td { height: 40px;"
+    "#dashboardTabList { height: 44px;", "#transactionsTabList { width: max-content; height: 44px;", "#transactionsTableScroll th { height: 38px;",
+    "#transactionsTableScroll td { height: 38px;"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "unchanged visual geometry");

@@ -40,6 +40,8 @@ module.exports = {
     'bg-indigo-500',
     'bg-emerald-500',
     'bg-amber-500',
-    'bg-rose-500'
+    'bg-rose-500',
+    'transaction-status-badge--active',
+    'transaction-status-badge--voided'
   ]
 };

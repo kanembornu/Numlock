@@ -381,9 +381,21 @@ function canonicalEntryContext(ss, timestamp, transactionType) {
   return context;
 }
 
-function buildTransactionEntryOptions(products, expenseItems) {
+function buildTransactionEntryOptions(products, expenseItems, pricingRows, referenceDate) {
+  var pricingIndex = buildProductPricingIndex(pricingRows || []);
   var sales = products.filter(function(row) { return isCanonicalActive(row.IsActive); })
-    .map(function(row) { return { productId: String(row.ID_Prod), product: String(row.Produk), category: String(row.Kategori), kind: String(row.Kind) }; })
+    .map(function(row) {
+      var productId = String(row.ID_Prod);
+      var pricing = {};
+      ["Hot", "Cold"].forEach(function(type) {
+        if (!pricingIndex[productId.trim() + "|" + type]) return;
+        var price = resolveProductPrice(pricingIndex, productId, type, referenceDate || new Date(), true);
+        pricing[type] = { productId: productId, product: String(row.Produk), type: type,
+          hpp: Number(price.HPP) || 0, price: Number(price.Harga) || 0,
+          unitMargin: (Number(price.Harga) || 0) - (Number(price.HPP) || 0) };
+      });
+      return { productId: productId, product: String(row.Produk), category: String(row.Kategori), kind: String(row.Kind), pricing: pricing };
+    })
     .sort(function(a, b) { return a.product.localeCompare(b.product) || a.productId.localeCompare(b.productId); });
   var expenses = expenseItems.filter(function(row) { return isCanonicalActive(row.IsActive); })
     .map(function(row) { return { expenseItemId: String(row.ID_Ops), item: String(row.Item), category: String(row.Kategori), kind: String(row.Kind), group: String(row.Group) }; })
@@ -393,10 +405,19 @@ function buildTransactionEntryOptions(products, expenseItems) {
 
 function getTransactionEntryOptions() {
   try {
+    var revision = typeof getDashboardCacheRevision === "function" ? getDashboardCacheRevision() : "0";
+    var cache = CacheService.getScriptCache();
+    var cacheKey = "transaction-entry-options-v2|" + revision;
+    var cached = cache.get(cacheKey);
+    if (cached) return { success: true, data: JSON.parse(cached), cacheHit: true };
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var products = readCanonicalTable(ss, "Products", ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]);
     var expenses = readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"]);
-    return { success: true, data: buildTransactionEntryOptions(products, expenses) };
+    var pricing = readCanonicalTable(ss, "ProductPricing", ["ID_Prod", "Tipe", "EffectiveFrom", "EffectiveTo", "HPP", "Harga", "IsActive"]);
+    var data = buildTransactionEntryOptions(products, expenses, pricing, new Date());
+    data.revision = revision;
+    cache.put(cacheKey, JSON.stringify(data), 300);
+    return { success: true, data: data, cacheHit: false };
   } catch (error) { return canonicalEntryFailure(error); }
 }
 
@@ -564,6 +585,76 @@ function getCanonicalTransactionDetail(transactionId) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     return canonicalLifecycleSuccess(normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, transactionId), ss));
+  } catch (error) { return canonicalEntryFailure(error); }
+}
+
+function getCanonicalTransactionDetails(transactionIds) {
+  try {
+    var ids = Array.isArray(transactionIds) ? transactionIds.slice(0, 50) : [];
+    var unique = {}, ordered = [];
+    ids.forEach(function(id) {
+      var value = String(id || "").trim();
+      if (!value || unique[value]) return;
+      canonicalLifecycleLedgerSpec(value);
+      unique[value] = true;
+      ordered.push(value);
+    });
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var salesRows = ordered.some(function(id) { return id.indexOf("SAL-") === 0; })
+      ? readCanonicalTable(ss, "tabsal", CANONICAL_ENTRY.SALES_HEADERS) : [];
+    var expenseRows = ordered.some(function(id) { return id.indexOf("OPS-") === 0; })
+      ? readCanonicalTable(ss, "tabops", CANONICAL_ENTRY.EXPENSE_HEADERS) : [];
+    var products = salesRows.length
+      ? buildCanonicalMasterMap(readCanonicalTable(ss, "Products", ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]), "ID_Prod", "Products") : {};
+    var expenses = expenseRows.length
+      ? buildCanonicalMasterMap(readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"]), "ID_Ops", "ExpenseItems") : {};
+    var ledgers = {};
+    salesRows.concat(expenseRows).forEach(function(row) {
+      var id = String(row.ID_Trx || "");
+      if (unique[id]) ledgers[id] = row;
+    });
+    var relations = {};
+    readCanonicalTable(ss, "Logs", CANONICAL_ENTRY.LOG_HEADERS).forEach(function(row) {
+      var id = String(row.RecordID || "");
+      if (!unique[id] || String(row.Module) !== TRANSACTION_LIFECYCLE.MODULE) return;
+      var metadata;
+      try { metadata = JSON.parse(String(row.Metadata || "{}")); } catch (error) { return; }
+      relations[id] = relations[id] || { originalId: null, replacementId: null };
+      if (metadata.originalId) relations[id].originalId = String(metadata.originalId);
+      if (metadata.replacementId) relations[id].replacementId = String(metadata.replacementId);
+    });
+    var details = ordered.map(function(id) {
+      var row = ledgers[id];
+      if (!row) throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
+      var sales = id.indexOf("SAL-") === 0;
+      var source = String(row.Source || "").trim();
+      var active = isCanonicalActive(row.IsActive);
+      var mutable = source === CANONICAL_ENTRY.SOURCE && active;
+      var master = sales ? products[String(row.ID_Prod)] : expenses[String(row.ID_Ops)];
+      if (!master) throw canonicalEntryError("WRITE_FAILED", "Transaction master data could not be resolved.", null);
+      var detail = sales ? {
+        id: id, date: row.Tanggal, source: source, isActive: active,
+        productId: String(row.ID_Prod), product: String(master.Produk), category: String(master.Kategori), kind: String(master.Kind),
+        type: String(row.Tipe), qty: Number(row.Qty), unitHPP: Number(row.HPP), unitPrice: Number(row.HJ),
+        cogs: Number(row.Qty) * Number(row.HPP), revenue: Number(row.Qty) * Number(row.HJ),
+        margin: Number(row.Qty) * (Number(row.HJ) - Number(row.HPP)),
+        createdAt: row.CreatedAt || null, createdBy: String(row.CreatedBy || ""), updatedAt: row.UpdatedAt || null, updatedBy: String(row.UpdatedBy || "")
+      } : {
+        id: id, date: row.Tanggal, source: source, isActive: active,
+        expenseItemId: String(row.ID_Ops), item: String(master.Item), category: String(master.Kategori), kind: String(master.Kind), group: String(master.Group),
+        amount: Number(row.Nilai), createdAt: row.CreatedAt || null, createdBy: String(row.CreatedBy || ""),
+        updatedAt: row.UpdatedAt || null, updatedBy: String(row.UpdatedBy || "")
+      };
+      detail.status = active ? "ACTIVE" : "VOIDED";
+      detail.canCorrect = mutable;
+      detail.canVoid = mutable;
+      detail.immutableReason = source !== CANONICAL_ENTRY.SOURCE ? (source === "LEGACY_GOOGLE" ? "LEGACY_TRANSACTION" : "HISTORICAL_TRANSACTION") : (!active ? "ALREADY_VOIDED" : null);
+      var relation = relations[id] || { originalId: null, replacementId: null };
+      detail.originalId = relation.originalId;
+      detail.replacementId = relation.replacementId;
+      return detail;
+    });
+    return canonicalLifecycleSuccess({ revision: typeof getDashboardCacheRevision === "function" ? getDashboardCacheRevision() : "0", details: details });
   } catch (error) { return canonicalEntryFailure(error); }
 }
 

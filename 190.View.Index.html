@@ -101,7 +101,13 @@
       #dashboardTabList { height: 44px; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); }
       #dashboardTabList [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; }
       #dashboardTabList [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
-      #transactionsTabList { height: 40px; min-height: 40px; }
+      #transactionsTabList { width: max-content; height: 44px; min-height: 44px; gap: 10px; border: 1px solid var(--card-border); border-radius: 10px; padding: 2px 8px 0; background: var(--surface-1); box-shadow: var(--card-shadow); }
+      #transactionsControls { display: flex; min-width: 0; height: 44px; align-items: center; justify-content: space-between; gap: 16px; }
+      #transactionsControls #transactionsTabList { min-width: 0; flex: 0 1 auto; align-self: center; }
+      #transactionsControls #transactionsTabList [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; color: var(--text-secondary); font-size: 14px; font-weight: 700; line-height: 20px; }
+      #transactionsControls #transactionsTabList [role="tab"].is-active { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+      #transactionsTabList [role="tab"]:focus, #transactionsTabList [role="tab"]:focus-visible, #newTransactionButton:focus, #newTransactionButton:focus-visible, .transactions-row-action:focus, .transactions-row-action:focus-visible { outline: none !important; box-shadow: none !important; }
+      #transactionsControls #transactionsEntryActionRow { flex: 0 0 auto; align-self: center; }
       .dashboard-tab-panel { min-width: 0; }
       .transactions-tab-panel { min-width: 0; }
       .transactions-table-row:hover { background: var(--surface-2); }
@@ -262,9 +268,59 @@
       #dashboardTabList:has(#dashboardTabOverview[aria-selected="true"]) { border-bottom-color: transparent; }
       .hf-secondary-surface { border-width: 1px; }
       .hf-transactions-toolbar { min-height: 52px; }
+      #transactionsToolbar { display: grid; min-height: 108px; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-bottom: 12px; padding: 10px 14px 12px; }
+      #transactionsToolbar > .transactions-toolbar-copy { display: flex; min-width: 0; min-height: 38px; flex-direction: column; justify-content: center; }
+      #transactionsResultHeading { font-size: 15px; font-weight: 700; line-height: 20px; }
+      #transactionsScopeText { margin-top: 3px; font-size: 12px; line-height: 17px; }
+      #transactionsToolbar > .transactions-toolbar-controls { display: flex; width: 100%; min-width: 0; min-height: 44px; align-items: center; gap: 10px; border-top: 1px solid var(--divider); padding-top: 10px; }
+      #transactionsTableScroll { width: 100%; overflow-x: auto; overflow-y: visible; }
+      #transactionsTableScroll table { width: 100%; table-layout: fixed; }
       #transactionsTableScroll thead { background: var(--surface-2); }
-      #transactionsTableScroll th { height: 36px; padding-top: 0; padding-bottom: 0; font-size: 12px; font-weight: 600; line-height: 18px; text-transform: none; letter-spacing: 0; }
-      #transactionsTableScroll td { height: 40px; padding-top: 0; padding-bottom: 0; font-size: 13px; line-height: 18px; }
+      #transactionsTableScroll th { height: 38px; padding: 0 12px; border-bottom: 1px solid var(--divider); color: var(--text-secondary); font-size: 14px; font-weight: 700; line-height: 18px; text-transform: none; letter-spacing: 0; }
+      #transactionsTableScroll th + th { border-left: 1px solid var(--border-subtle); }
+      #transactionsTableScroll td { height: 40px; padding: 0 10px; font-size: 14px; line-height: 20px; vertical-align: middle; }
+      #transactionsTableScroll th { text-align: center; }
+      #transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 16%; }
+      #transactionsTableScroll td:nth-child(1) { font-size: 11px; letter-spacing: -0.01em; }
+      #transactionsTableScroll th:nth-child(2), #transactionsTableScroll td:nth-child(2) { width: 10%; text-align: center; }
+      #transactionsTableScroll th:nth-child(3), #transactionsTableScroll td:nth-child(3) { width: 8%; text-align: center; }
+      #transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 24%; }
+      #transactionsTableScroll th:nth-child(5), #transactionsTableScroll td:nth-child(5) { width: 5%; padding-right: 6px; padding-left: 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(6), #transactionsTableScroll td:nth-child(6) { width: 10%; }
+      #transactionsTableScroll td:nth-child(6) { text-align: left; }
+      #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 8%; padding: 0 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 19%; padding: 0 6px; text-align: center; }
+      #transactionsTableCard { overflow: hidden; }
+      .transactions-row-actions { display: inline-flex; height: 40px; align-items: center; justify-content: center; gap: 6px; }
+      .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
+      .transactions-row-action::before { position: absolute; z-index: -1; inset: 0; border-radius: 8px; background: var(--transaction-action-bg); content: ""; }
+      .transactions-row-action--view { --transaction-action-bg: var(--surface-3); color: var(--text-secondary); }
+      .transactions-row-action--view:hover { --transaction-action-bg: var(--hover); color: var(--text-primary); }
+      .transactions-row-action--correct { --transaction-action-bg: var(--brand-soft); color: var(--brand); }
+      .transactions-row-action--correct:hover { --transaction-action-bg: var(--selected); }
+      .transactions-row-action--void { --transaction-action-bg: var(--critical-soft); color: var(--critical); }
+      .transactions-row-action--void:hover { filter: brightness(.96); }
+      #transactionsPagination { min-height: 50px; border-top: 1px solid var(--divider); padding: 7px 12px; }
+      #transactionsPagination button { display: inline-flex; min-width: 92px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 5px 12px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+      #transactionsPagination button:disabled { cursor: default; opacity: .45; }
+      #transactionsPageIndicator { color: var(--text-primary); font-size: 14px; font-weight: 500; }
+      #transactionsRangeSummary { color: var(--text-primary); font-size: 14px; }
+      .transactions-pagination-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+      .transactions-pagination-controls label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; white-space: nowrap; }
+      .transactions-pagination-controls select { height: 36px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-primary); font-size: 14px; }
+      .transactions-search { display: flex; min-width: 300px; flex: 1 1 auto; align-items: center; gap: 8px; }
+      .transactions-search input { width: 100%; min-width: 0; height: 42px; border: 1px solid var(--card-border); border-radius: 9px; padding: 0 14px; background: var(--surface-1); color: var(--text-primary); font-size: 14px; }
+      .transactions-search button { display: inline-flex; height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 0 12px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+      .transactions-search button:disabled { opacity: .45; }
+      #exportCsvButton { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; }
+      #transactionsTableCard.is-scrollable #transactionsTableScroll { max-height: 608px; overflow-y: auto; }
+      .transactions-page-size-setting { display: flex; margin-top: 16px; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--divider); padding-top: 14px; }
+      .transactions-page-size-setting select { min-width: 96px; min-height: 38px; border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 10px; background: var(--surface-1); color: var(--text-primary); }
+      #transactionsTableScroll tbody tr { border-bottom-color: var(--divider); }
+      #transactionsTableScroll tbody tr:last-child { border-bottom: 0; }
+      .transaction-type { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 2px 8px; font-size: 12px; font-weight: 700; line-height: 18px; }
+      .transaction-type--sales { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      .transaction-type--expense { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
       .hf-settings-grid { width: 100%; max-width: 960px; }
       .hf-setting-choice { min-height: 88px; }
       .hf-about-row { min-height: 36px; }
@@ -1702,12 +1758,12 @@
         #dashboardPanelInsights .target-reference-icon { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 8px; background: var(--brand-soft); color: var(--brand); }
         #dashboardPanelInsights #kpiTargetDetails > li:nth-child(2) .target-reference-icon { background: var(--success-soft); color: var(--success); }
         #dashboardPanelInsights .insights-status-badge { display: inline-flex; min-height: 20px; flex: 0 0 auto; align-items: center; justify-content: center; border-radius: 9999px; padding: 0 8px; font-size: 10px; font-weight: 700; line-height: 16px; vertical-align: middle; }
-        #transactions.active { display: grid; height: 100%; grid-template-rows: 40px 44px minmax(0, 1fr); gap: 12px; overflow: hidden; }
+        #transactions.active { display: grid; height: 100%; grid-template-rows: 44px minmax(0, 1fr); gap: 10px; overflow: hidden; }
         #transactionsTabList { margin: 0; }
-        #transactionsPanelGroup { min-height: 0; height: auto; }
-        .transactions-tab-panel:not([hidden]) { display: flex; min-height: 0; height: 100%; flex-direction: column; }
-        #transactionsEvidenceRegion { min-height: 0; flex: 1 1 auto; }
-        #transactionsTableScroll { min-height: 0; flex: 1 1 auto; overflow: auto; }
+        #transactionsPanelGroup { min-height: 0; height: auto; align-self: start; }
+        .transactions-tab-panel:not([hidden]) { display: block; min-height: 0; height: auto; }
+        #transactionsEvidenceRegion { display: block; min-height: 0; }
+        #transactionsTableScroll { min-height: 0; height: auto; flex: none; overflow-x: auto; overflow-y: visible; }
         #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
         #settings.active { height: 100%; overflow: hidden; }
         #settingsSections { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; }
@@ -2204,12 +2260,18 @@
       #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
-      #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 13px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
+      #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
       #dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important; grid-template-columns: none !important; gap: 0 !important; padding: 0 !important; }
       #dashboardTabList [role="tab"], #dashboardTabInsights { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important; padding-right: 18px !important; padding-left: 18px !important; }
       #dashboardTabList [role="tab"]:hover { border-color: transparent !important; outline: none !important; background: color-mix(in srgb, var(--hover) 64%, transparent) !important; box-shadow: none !important; color: var(--text-primary) !important; }
       #dashboardTabList [role="tab"][aria-selected="true"], #dashboardTabList [role="tab"][aria-selected="true"]:hover { border-color: transparent !important; outline: none !important; background: var(--brand-soft) !important; box-shadow: none !important; color: var(--brand) !important; }
       #dashboardTabList [role="tab"]:active, #dashboardTabList [role="tab"]:focus, #dashboardTabList [role="tab"]:focus-visible { border-color: transparent !important; outline: none !important; outline-offset: 0 !important; box-shadow: none !important; border-width: 0 0 3px !important; border-style: solid !important; --tw-ring-offset-width: 0px !important; --tw-ring-offset-shadow: 0 0 #0000 !important; --tw-ring-shadow: 0 0 #0000 !important; }
+      #transactionsControls { height: 46px; }
+      #transactionsTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; height: 46px !important; min-height: 46px !important; margin-left: 0 !important; grid-template-columns: none !important; gap: 0 !important; padding: 0 !important; }
+      #transactionsTabList [role="tab"] { display: flex !important; width: auto !important; min-width: 0 !important; height: 45px !important; flex: 0 0 auto !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 18px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
+      #transactionsTabList [role="tab"]:hover { border-color: transparent !important; outline: none !important; background: color-mix(in srgb, var(--hover) 64%, transparent) !important; box-shadow: none !important; color: var(--text-primary) !important; }
+      #transactionsTabList [role="tab"][aria-selected="true"], #transactionsTabList [role="tab"][aria-selected="true"]:hover { border-color: transparent !important; outline: none !important; background: var(--brand-soft) !important; box-shadow: none !important; color: var(--brand) !important; }
+      #transactionsTabList [role="tab"]:active, #transactionsTabList [role="tab"]:focus, #transactionsTabList [role="tab"]:focus-visible { border-color: transparent !important; outline: none !important; outline-offset: 0 !important; box-shadow: none !important; border-width: 0 0 3px !important; border-style: solid !important; --tw-ring-offset-width: 0px !important; --tw-ring-offset-shadow: 0 0 #0000 !important; --tw-ring-shadow: 0 0 #0000 !important; }
       #dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading, #dashboardPanelPerformance h2, #dashboardPanelInsights h2, #transactions h2 { font-size: var(--text-section-size) !important; font-weight: 600 !important; line-height: var(--text-section-line) !important; letter-spacing: -0.01em !important; }
       #dashboardPanelInsights #recommendationsHeading { line-height: 28px !important; }
       #dashboardPanelOverview .hf-analytics-card-header, #dashboardPanelOverview .hf-summary-card-header { min-height: var(--section-icon-size) !important; align-items: center !important; }
@@ -2237,6 +2299,8 @@
       #dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 23px !important; font-weight: 700 !important; line-height: 30px !important; letter-spacing: -0.03em !important; }
       .hf-top-products-table thead th, #transactionsTableScroll th { font-size: 12px !important; font-weight: 600 !important; line-height: 18px !important; letter-spacing: 0 !important; text-transform: none !important; }
       .hf-top-products-table tbody th, .hf-top-products-table tbody td, #transactionsTableScroll td { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
+      #transactionsTableScroll th { font-size: 13px !important; font-weight: 700 !important; line-height: 18px !important; }
+      #transactionsTableScroll td { font-size: 14px !important; font-weight: 400 !important; line-height: 20px !important; }
       .hf-top-products-table tbody th { font-weight: 600 !important; }
       .ui-custom-select-trigger, .ui-custom-select-option { font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 500 !important; line-height: 18px !important; }
       .ui-custom-select-option { display: flex !important; height: 40px !important; min-height: 40px !important; align-items: center !important; padding: 0 12px !important; }
@@ -2939,71 +3003,90 @@
         <div class="min-w-0">
           <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Bounded transaction evidence</p>
           <h1 id="transactionsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Transactions</h1>
-          <p id="transactionsDescription" class="mt-1 text-sm ui-theme-secondary">Latest 10 transactions for the active period.</p>
+          <p id="transactionsDescription" class="mt-1 text-sm ui-theme-secondary">Transactions for the active reporting period.</p>
         </div>
       </header>
 
-      <div id="transactionsTabList" class="flex min-w-0 gap-3 overflow-x-auto border-b px-3" role="tablist" aria-label="Transaction views">
-        <button id="transactionsTabRecent" type="button" role="tab" aria-selected="true" aria-controls="transactionsPanelRecent" tabindex="0" data-transactions-tab="recent" class="h-10 shrink-0 border-b-2 border-indigo-600 px-3 text-[13px] font-semibold text-indigo-700">Recent</button>
-        <button id="transactionsTabSales" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelSales" tabindex="-1" data-transactions-tab="sales" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Sales</button>
-        <button id="transactionsTabExpenses" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelExpenses" tabindex="-1" data-transactions-tab="expenses" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Expenses</button>
-        <button id="transactionsTabPurchases" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelPurchases" tabindex="-1" data-transactions-tab="purchases" class="h-10 shrink-0 border-b-2 border-transparent px-3 text-[13px] font-semibold text-slate-600">Purchases</button>
-      </div>
+      <div id="transactionsControls">
+        <div id="transactionsTabList" class="flex min-w-0 gap-3 overflow-x-auto border-b px-3" role="tablist" aria-label="Transaction views">
+          <button id="transactionsTabRecent" type="button" role="tab" aria-selected="true" aria-controls="transactionsPanelRecent" data-transactions-tab="recent" class="is-active shrink-0">Recent</button>
+          <button id="transactionsTabSales" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelSales" data-transactions-tab="sales" class="shrink-0">Sales</button>
+          <button id="transactionsTabExpenses" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelExpenses" data-transactions-tab="expenses" class="shrink-0">Expenses</button>
+        </div>
 
-      <div id="transactionsEntryActionRow" class="flex justify-end">
-        <button id="newTransactionButton" type="button" class="transaction-entry-primary" onclick="openTransactionEntry()">
-          <i class="fas fa-plus" aria-hidden="true"></i>
-          <span>New Transaction</span>
-        </button>
+        <div id="transactionsEntryActionRow" class="flex justify-end">
+          <button id="newTransactionButton" type="button" class="transaction-entry-primary" onclick="openTransactionEntry()">
+            <i class="fas fa-plus" aria-hidden="true"></i>
+            <span>New Transaction</span>
+          </button>
+        </div>
       </div>
 
       <div id="transactionsPanelGroup">
         <section id="transactionsPanelRecent" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabRecent" data-transactions-panel="recent">
           <div id="transactionsEvidenceRegion" class="flex min-h-0 flex-1 flex-col" aria-labelledby="transactionsResultHeading">
             <div id="transactionsToolbar" class="hf-transactions-toolbar hf-secondary-surface mb-3 flex flex-wrap items-center justify-between gap-3 px-3 py-2">
-              <div class="min-w-0">
+              <div class="transactions-toolbar-copy min-w-0">
                 <h2 id="transactionsResultHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Visible recent transactions</h2>
-                <p id="transactionsScopeText" class="mt-1 text-xs ui-theme-muted">Up to 10 rows already loaded for the active period.</p>
+                <p id="transactionsScopeText" class="mt-1 text-xs ui-theme-muted">Loading the active reporting period.</p>
               </div>
-              <div class="flex flex-wrap items-center justify-end gap-2">
-                <label class="transaction-voided-toggle"><input id="showVoidedTransactions" type="checkbox" onchange="toggleVoidedTransactions()"><span>Show voided</span></label>
+              <div class="transactions-toolbar-controls">
+                <div class="transactions-search">
+                  <input id="transactionsSearch" type="search" autocomplete="off" placeholder="Search ID, item, or type" oninput="scheduleTransactionsSearch(this.value)">
+                  <button id="clearTransactionsSearch" type="button" onclick="clearTransactionsSearch()" disabled><i class="fas fa-xmark" aria-hidden="true"></i><span>Clear</span></button>
+                </div>
+                <label class="transaction-lifecycle-filter" for="transactionsIsActive"><span>IsActive</span><select id="transactionsIsActive" name="isActive" onchange="setTransactionsLifecycleState(this.value)"><option value="active" selected>Active</option><option value="all">All</option><option value="voided">Voided</option></select></label>
                 <div id="transactionDrilldownSummary" class="hidden flex items-center gap-2 border-l border-indigo-200 pl-3" role="status" aria-live="polite" aria-atomic="true">
                   <p id="transactionDrilldownText" class="text-xs font-semibold text-slate-700"></p>
                   <button id="clearTransactionDrilldownButton" type="button" class="min-h-10 rounded-lg border border-indigo-300 bg-white px-3 py-2 text-sm font-semibold text-indigo-700" onclick="clearTransactionDrilldown()">Show all recent</button>
                 </div>
-                <button id="exportCsvButton" type="button" onclick="exportVisibleTransactionsToCsv()" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" aria-label="Export visible transactions to CSV" disabled>Export CSV</button>
+                <button id="exportCsvButton" type="button" onclick="exportVisibleTransactionsToCsv()" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" aria-label="Export all matching Transactions to CSV" title="Exports all matching transactions" disabled><i class="fas fa-download" aria-hidden="true"></i><span>Export CSV</span></button>
               </div>
             </div>
 
-            <p id="transactionsStateAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-            <div id="transactionsTableScroll" class="hf-secondary-surface max-w-full overflow-x-auto" tabindex="0" aria-label="Visible transactions table, horizontally scrollable">
+            <div id="transactionsTableCard" class="hf-secondary-surface">
+            <div id="transactionsTableScroll" class="max-w-full overflow-x-auto">
               <table class="w-full min-w-[680px]">
                 <caption class="sr-only">Visible bounded transactions for the selected Transactions tab</caption>
                 <thead class="border-b">
                   <tr>
-                    <th scope="col" class="px-4 text-left">Date</th>
+                    <th scope="col" class="px-4">Transaction ID</th>
+                    <th scope="col" class="px-4 text-center">Date</th>
                     <th scope="col" class="px-4 text-left">Type</th>
                     <th scope="col" class="px-4 text-left">Item</th>
                     <th scope="col" class="px-4 text-right">Qty</th>
                     <th scope="col" class="px-4 text-right">Amount</th>
-                    <th scope="col" class="w-14 px-2 text-center"><span class="sr-only">Actions</span></th>
+                    <th scope="col" class="px-4 text-center">IsActive</th>
+                    <th scope="col" class="px-2 text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
               </table>
             </div>
+            <div id="transactionsPagination" class="flex items-center justify-between gap-3" hidden>
+              <span id="transactionsRangeSummary">Showing 0–0 of 0 transactions</span>
+              <div class="transactions-pagination-controls">
+                <label for="transactionsPageSizeFooter">Rows per page
+                  <select id="transactionsPageSizeFooter" onchange="setTransactionsPageSize(this.value)">
+                    <option value="15">15</option><option value="25">25</option><option value="50">50</option>
+                  </select>
+                </label>
+                <span id="transactionsPageIndicator">Page 1 of 1</span>
+                <button id="transactionsPreviousPage" type="button" onclick="changeTransactionsPage(-1)"><i class="fas fa-chevron-left" aria-hidden="true"></i><span>Previous</span></button>
+                <button id="transactionsNextPage" type="button" onclick="changeTransactionsPage(1)"><span>Next</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+              </div>
+            </div>
+            </div>
           </div>
         </section>
         <section id="transactionsPanelSales" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabSales" data-transactions-panel="sales" hidden></section>
         <section id="transactionsPanelExpenses" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabExpenses" data-transactions-panel="expenses" hidden></section>
-        <section id="transactionsPanelPurchases" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabPurchases" data-transactions-panel="purchases" hidden></section>
       </div>
 
       <div id="transactionEntryOverlay" class="transaction-entry-overlay" hidden>
         <section id="transactionEntryDialog" class="transaction-entry-dialog" role="dialog" aria-modal="true" aria-labelledby="transactionEntryTitle" aria-describedby="transactionEntryDescription" tabindex="-1">
           <header class="transaction-entry-header">
             <div>
-              <p class="hf-section-label">Operational entry</p>
               <h2 id="transactionEntryTitle" class="ui-theme-primary">New Transaction</h2>
               <p id="transactionEntryDescription" class="ui-theme-secondary">Choose a transaction type to begin.</p>
             </div>
@@ -3025,38 +3108,40 @@
               </div>
             </fieldset>
 
-            <div id="transactionEntryOptionsState" class="transaction-entry-local-state" role="status" aria-live="polite">Select Sales or Expense.</div>
+            <div id="transactionEntryOptionsState" class="transaction-entry-local-state sr-only" role="status" aria-live="polite">Select Sales or Expense.</div>
 
             <form id="transactionEntryForm" novalidate onsubmit="submitTransactionEntry(event)">
               <section id="salesEntryFields" class="transaction-entry-fields" aria-labelledby="salesEntryHeading" hidden>
-                <h3 id="salesEntryHeading"><i class="fas fa-receipt" aria-hidden="true"></i> Sales details</h3>
-                <div class="transaction-entry-control">
-                  <label for="productEntrySearch">Product</label>
-                  <div class="transaction-entry-combobox">
-                    <input id="productEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="productEntryListbox" aria-describedby="productEntryError" placeholder="Search products" oninput="filterTransactionEntryOptions('product')" onkeydown="handleEntryComboboxKeydown(event, 'product')">
-                    <div id="productEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Products" hidden></div>
+                <h3 id="salesEntryHeading"><span><i class="fas fa-receipt" aria-hidden="true"></i> Sales details</span><span id="salesEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>
+                <div class="transaction-sales-detail-card">
+                  <div class="transaction-entry-control transaction-sales-product">
+                    <label for="productEntrySearch">Product</label>
+                    <div class="transaction-entry-combobox">
+                      <input id="productEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="productEntryListbox" aria-describedby="productEntryError" placeholder="Search products" oninput="filterTransactionEntryOptions('product')" onkeydown="handleEntryComboboxKeydown(event, 'product')">
+                      <div id="productEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Products" hidden></div>
+                    </div>
+                    <p id="productEntryMeta" class="transaction-entry-meta"></p>
+                    <p id="productEntryError" class="transaction-entry-error" role="alert"></p>
                   </div>
-                  <p id="productEntryMeta" class="transaction-entry-meta"></p>
-                  <p id="productEntryError" class="transaction-entry-error" role="alert"></p>
-                </div>
 
-                <fieldset class="transaction-entry-fieldset">
-                  <legend>Serving type</legend>
-                  <div class="transaction-entry-segments">
-                    <button id="salesTypeHot" type="button" role="radio" aria-checked="false" data-sales-type="Hot" onclick="setSalesEntryType('Hot')">Hot</button>
-                    <button id="salesTypeCold" type="button" role="radio" aria-checked="false" data-sales-type="Cold" onclick="setSalesEntryType('Cold')">Cold</button>
-                  </div>
-                  <p id="salesTypeError" class="transaction-entry-error" role="alert"></p>
-                </fieldset>
+                  <fieldset class="transaction-entry-fieldset transaction-sales-serving">
+                    <legend>Serving type</legend>
+                    <div class="transaction-entry-segments">
+                      <button id="salesTypeHot" type="button" role="radio" aria-checked="false" data-sales-type="Hot" onclick="setSalesEntryType('Hot')">Hot</button>
+                      <button id="salesTypeCold" type="button" role="radio" aria-checked="false" data-sales-type="Cold" onclick="setSalesEntryType('Cold')">Cold</button>
+                    </div>
+                    <p id="salesTypeError" class="transaction-entry-error" role="alert"></p>
+                  </fieldset>
 
-                <div class="transaction-entry-control">
-                  <label for="salesEntryQty">Quantity</label>
-                  <div class="transaction-entry-quantity">
-                    <button type="button" aria-label="Decrease quantity" onclick="adjustSalesEntryQty(-1)"><i class="fas fa-minus" aria-hidden="true"></i></button>
-                    <input id="salesEntryQty" type="number" inputmode="numeric" min="1" step="1" value="1" aria-describedby="salesEntryQtyError" oninput="updateSalesEntryQty()">
-                    <button type="button" aria-label="Increase quantity" onclick="adjustSalesEntryQty(1)"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                  <div class="transaction-entry-control transaction-sales-quantity">
+                    <label for="salesEntryQty">Quantity</label>
+                    <div class="transaction-entry-quantity">
+                      <button type="button" aria-label="Decrease quantity" onclick="adjustSalesEntryQty(-1)"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                      <input id="salesEntryQty" type="number" inputmode="numeric" min="1" step="1" value="1" aria-describedby="salesEntryQtyError" oninput="updateSalesEntryQty()">
+                      <button type="button" aria-label="Increase quantity" onclick="adjustSalesEntryQty(1)"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                    </div>
+                    <p id="salesEntryQtyError" class="transaction-entry-error" role="alert"></p>
                   </div>
-                  <p id="salesEntryQtyError" class="transaction-entry-error" role="alert"></p>
                 </div>
 
                 <section id="salesPricingPreview" class="transaction-entry-preview" aria-labelledby="salesPricingHeading" aria-busy="false">
@@ -3077,7 +3162,7 @@
               </section>
 
               <section id="expenseEntryFields" class="transaction-entry-fields" aria-labelledby="expenseEntryHeading" hidden>
-                <h3 id="expenseEntryHeading"><i class="fas fa-wallet" aria-hidden="true"></i> Expense details</h3>
+                <h3 id="expenseEntryHeading"><span><i class="fas fa-wallet" aria-hidden="true"></i> Expense details</span><span id="expenseEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>
                 <div class="transaction-entry-control">
                   <label for="expenseEntrySearch">Expense item</label>
                   <div class="transaction-entry-combobox">
@@ -3094,19 +3179,20 @@
                 </div>
               </section>
 
+              <div id="transactionCorrectionWorkspace" class="transaction-correction-workspace">
+                <section id="transactionCorrectionReasonRegion" class="transaction-entry-control" hidden>
+                  <label for="transactionCorrectionReason">Correction reason</label>
+                  <textarea id="transactionCorrectionReason" rows="3" maxlength="500" aria-describedby="transactionCorrectionReasonError" oninput="updateCorrectionReason()"></textarea>
+                  <p id="transactionCorrectionReasonError" class="transaction-entry-error" role="alert"></p>
+                </section>
+
+                <section id="transactionCorrectionReview" class="transaction-lifecycle-comparison" aria-labelledby="transactionCorrectionReviewHeading" hidden>
+                  <h3 id="transactionCorrectionReviewHeading">Review correction</h3>
+                  <div id="transactionCorrectionComparison"></div>
+                  <p class="transaction-lifecycle-notice"><strong>The original transaction will be voided</strong> and a corrected replacement will be created.</p>
+                </section>
+              </div>
             </form>
-
-            <section id="transactionCorrectionReasonRegion" class="transaction-entry-control" hidden>
-              <label for="transactionCorrectionReason">Correction reason</label>
-              <textarea id="transactionCorrectionReason" rows="3" maxlength="500" aria-describedby="transactionCorrectionReasonError" oninput="updateCorrectionReason()"></textarea>
-              <p id="transactionCorrectionReasonError" class="transaction-entry-error" role="alert"></p>
-            </section>
-
-            <section id="transactionCorrectionReview" class="transaction-lifecycle-comparison" aria-labelledby="transactionCorrectionReviewHeading" hidden>
-              <h3 id="transactionCorrectionReviewHeading">Review correction</h3>
-              <div id="transactionCorrectionComparison"></div>
-              <p class="transaction-lifecycle-notice"><strong>The original transaction will be voided</strong> and a corrected replacement will be created.</p>
-            </section>
 
             <section id="transactionEntrySuccess" class="transaction-entry-success" role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden>
               <i class="fas fa-circle-check" aria-hidden="true"></i>
@@ -3128,18 +3214,10 @@
       </div>
     </section>
 
-      <div id="transactionActionOverlay" class="transaction-action-overlay" hidden>
-        <section id="transactionActionMenu" class="transaction-action-menu" role="menu" aria-labelledby="transactionActionTitle" tabindex="-1">
-          <h2 id="transactionActionTitle">Transaction Actions</h2>
-          <div id="transactionActionItems"></div>
-          <button type="button" class="transaction-action-cancel" onclick="closeTransactionActionMenu(true)">Cancel</button>
-        </section>
-      </div>
-
       <div id="transactionLifecycleOverlay" class="transaction-entry-overlay" hidden>
         <section id="transactionLifecycleDialog" class="transaction-lifecycle-dialog" role="dialog" aria-modal="true" aria-labelledby="transactionLifecycleTitle" aria-describedby="transactionLifecycleDescription" tabindex="-1">
           <header class="transaction-entry-header">
-            <div><p id="transactionLifecycleEyebrow" class="hf-section-label">Transaction lifecycle</p><h2 id="transactionLifecycleTitle" class="ui-theme-primary">Transaction Details</h2><p id="transactionLifecycleDescription" class="ui-theme-secondary">Canonical server record.</p></div>
+            <div><h2 id="transactionLifecycleTitle" class="ui-theme-primary">Transaction Details</h2><p id="transactionLifecycleDescription" class="ui-theme-secondary">Canonical server record.</p></div>
             <button type="button" class="transaction-entry-icon-button" aria-label="Close transaction dialog" onclick="closeTransactionLifecycleDialog()"><i class="fas fa-xmark" aria-hidden="true"></i></button>
           </header>
           <div class="transaction-entry-scroll">
@@ -3186,6 +3264,12 @@
             </div>
           </fieldset>
           <p id="themeStatus" class="mt-4 min-h-5 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="transactions-page-size-setting">
+            <label for="transactionsPageSize"><strong class="block text-sm ui-theme-primary">Transactions rows per page</strong><span class="mt-1 block text-xs ui-theme-muted">Stored only in this browser.</span></label>
+            <select id="transactionsPageSize" onchange="setTransactionsPageSize(this.value)">
+              <option value="15">15</option><option value="25">25</option><option value="50">50</option>
+            </select>
+          </div>
         </section>
 
         <section id="aboutSection" class="hf-secondary-surface p-4" aria-labelledby="aboutHeading">
@@ -3276,10 +3360,38 @@
   let stableDashboardElements = null;
   let pendingDashboardRenderFrame = null;
   let visibleTransactionRowCount = 0;
-  let latestDashboardTransactions = [];
   let latestLifecycleTransactions = [];
-  let showVoidedTransactions = false;
-  let transactionActionState = { transactionId: "", source: "", isActive: false, trigger: null };
+  let transactionsLifecycleState = "active";
+  let transactionsDateFilter = null;
+  const TRANSACTIONS_DEFAULT_PAGE_SIZE = 15;
+  const TRANSACTIONS_ALLOWED_PAGE_SIZES = { 15: true, 25: true, 50: true };
+  let transactionsPageSize = TRANSACTIONS_DEFAULT_PAGE_SIZE;
+  let transactionsPages = { recent: 1, sales: 1, expenses: 1 };
+  let transactionsPageResult = { rows: [], totalRows: 0, page: 1, pageSize: TRANSACTIONS_DEFAULT_PAGE_SIZE, totalPages: 0 };
+  let transactionsRequestSequence = 0;
+  let transactionsSearchQuery = "";
+  let transactionsSearchTimer = null;
+  let transactionsResultCache = {};
+  let transactionsResultCacheOrder = [];
+  let transactionsSearchIndex = null;
+  let transactionsCacheRevision = "";
+  let transactionsPerformanceEvidence = null;
+  let transactionsPendingKey = "";
+  let transactionDetailCache = {};
+  let transactionDetailPending = {};
+  let transactionDetailSources = {};
+  let transactionDiagnosticPageSource = "unmeasured";
+  let transactionDiagnosticPrefetchKeys = {};
+  let transactionEntryOptionsDiagnosticSource = "server";
+  let transactionDiagnostics = {
+    search: { lastLatencyMs: null, serverCalls: 0, source: "unmeasured", eventCount: 0 },
+    pagination: { lastLatencyMs: null, source: "unmeasured", eventCount: 0 },
+    newTransaction: { lastLatencyMs: null, source: "unmeasured", eventCount: 0 },
+    actions: { viewLatencyMs: null, correctLatencyMs: null, voidLatencyMs: null, source: {}, viewEventCount: 0, correctEventCount: 0, voidEventCount: 0 },
+    showVoided: { uncheckedTotal: null, checkedTotal: null, inactiveMatched: null, fullDataset: false },
+    export: { activeTab: "", search: "", includeVoided: false, matchingRows: null, exportedRows: null, eventCount: 0 }
+  };
+  let transactionDiagnosticPending = {};
   let transactionLifecycleState = { detail: null, mode: "detail", trigger: null, submitting: false };
   let activeTransactionDrilldown = null;
   let themeFoundationInitialized = false;
@@ -3586,7 +3698,7 @@
         "transactionsPanelGroup", "transactionsEvidenceRegion",
         "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
         "transactionDrilldownSummary", "transactionDrilldownText",
-        "transactionsStateAnnouncement", "appShell", "sidebarCollapseButton",
+        "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSize", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
         "mainContent", "topUtilityBar", "utilityPageTitle",
         "utilityPageContext", "sidebarDataStatus", "settings", "logs",
         "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
@@ -3600,7 +3712,7 @@
         "categoryMixCenter", "categoryMixLegend", "hotColdComparison", "hotColdChartSummary", "hotColdChartEmpty",
         "marginHealthContainer",
         "transactionEntryOverlay", "transactionEntryDialog", "closeTransactionEntryButton",
-        "transactionEntryOptionsState", "transactionEntryForm", "salesEntryFields",
+        "transactionEntryOptionsState", "salesEntryOptionsStatus", "expenseEntryOptionsStatus", "transactionEntryForm", "salesEntryFields",
         "expenseEntryFields", "transactionTypeSales", "transactionTypeExpense",
         "productEntrySearch", "productEntryListbox", "productEntryMeta", "productEntryError",
         "expenseEntrySearch", "expenseEntryListbox", "expenseEntryMeta", "expenseEntryError",
@@ -3610,11 +3722,11 @@
         "salesPreviewRevenue", "salesPreviewCogs", "salesPreviewMargin", "expenseEntryAmount",
         "expenseEntryAmountError", "transactionEntrySubmitRegion", "transactionEntryGeneralError", "submitTransactionEntryButton",
         "transactionEntrySubmitLabel", "transactionEntrySuccess", "transactionEntrySuccessDetails",
-        "showVoidedTransactions", "transactionActionOverlay", "transactionActionMenu", "transactionActionItems",
+        "transactionsIsActive",
         "transactionLifecycleOverlay", "transactionLifecycleDialog", "transactionLifecycleTitle", "transactionLifecycleDescription",
         "transactionLifecycleState", "transactionLifecycleContent", "transactionVoidRegion", "transactionVoidReason",
         "transactionVoidReasonError", "transactionLifecycleFooter", "transactionEntryTitle", "transactionEntryDescription",
-        "transactionTypeFieldset", "transactionCorrectionReasonRegion", "transactionCorrectionReason",
+        "transactionTypeFieldset", "transactionCorrectionWorkspace", "transactionCorrectionReasonRegion", "transactionCorrectionReason",
         "transactionCorrectionReasonError", "transactionCorrectionReview", "transactionCorrectionComparison"
       ];
       var required = {};
@@ -3677,7 +3789,16 @@
         transactionsScopeText: required.transactionsScopeText,
         transactionDrilldownSummary: required.transactionDrilldownSummary,
         transactionDrilldownText: required.transactionDrilldownText,
-        transactionsStateAnnouncement: required.transactionsStateAnnouncement,
+        transactionsTableCard: required.transactionsTableCard,
+        transactionsPagination: required.transactionsPagination,
+        transactionsPreviousPage: required.transactionsPreviousPage,
+        transactionsNextPage: required.transactionsNextPage,
+        transactionsPageIndicator: required.transactionsPageIndicator,
+        transactionsRangeSummary: required.transactionsRangeSummary,
+        transactionsPageSize: required.transactionsPageSize,
+        transactionsPageSizeFooter: required.transactionsPageSizeFooter,
+        transactionsSearch: required.transactionsSearch,
+        clearTransactionsSearch: required.clearTransactionsSearch,
         appShell: required.appShell,
         sidebarCollapseButton: required.sidebarCollapseButton,
         mainContent: required.mainContent,
@@ -3718,7 +3839,9 @@
       elements.transactionEntry = {
         trigger: required.newTransactionButton, overlay: required.transactionEntryOverlay,
         dialog: required.transactionEntryDialog, closeButton: required.closeTransactionEntryButton,
-        optionsState: required.transactionEntryOptionsState, form: required.transactionEntryForm,
+        optionsState: required.transactionEntryOptionsState,
+        salesOptionsStatus: required.salesEntryOptionsStatus, expenseOptionsStatus: required.expenseEntryOptionsStatus,
+        form: required.transactionEntryForm,
         salesFields: required.salesEntryFields, expenseFields: required.expenseEntryFields,
         typeSales: required.transactionTypeSales, typeExpense: required.transactionTypeExpense,
         productSearch: required.productEntrySearch, productListbox: required.productEntryListbox,
@@ -3739,15 +3862,14 @@
         successDetails: required.transactionEntrySuccessDetails,
         title: required.transactionEntryTitle, description: required.transactionEntryDescription,
         typeFieldset: required.transactionTypeFieldset,
+        correctionWorkspace: required.transactionCorrectionWorkspace,
         correctionReasonRegion: required.transactionCorrectionReasonRegion,
         correctionReason: required.transactionCorrectionReason, correctionReasonError: required.transactionCorrectionReasonError,
         correctionReview: required.transactionCorrectionReview, correctionComparison: required.transactionCorrectionComparison
       };
-      elements.showVoidedTransactions = required.showVoidedTransactions;
+      elements.transactionsIsActive = required.transactionsIsActive;
       elements.lifecycle = {
-        actionOverlay: required.transactionActionOverlay, actionMenu: required.transactionActionMenu,
-        actionItems: required.transactionActionItems, overlay: required.transactionLifecycleOverlay,
-        dialog: required.transactionLifecycleDialog, title: required.transactionLifecycleTitle,
+        overlay: required.transactionLifecycleOverlay, dialog: required.transactionLifecycleDialog, title: required.transactionLifecycleTitle,
         description: required.transactionLifecycleDescription, state: required.transactionLifecycleState,
         content: required.transactionLifecycleContent, voidRegion: required.transactionVoidRegion,
         voidReason: required.transactionVoidReason, voidReasonError: required.transactionVoidReasonError,
@@ -4102,19 +4224,6 @@
 
       document.addEventListener("keydown", function(event)
       {
-        var actionOverlay = elements.lifecycle.actionOverlay;
-        if (actionOverlay && !actionOverlay.hidden)
-        {
-          var menuItems = Array.prototype.slice.call(elements.lifecycle.actionMenu.querySelectorAll('button:not([disabled])'));
-          var itemIndex = menuItems.indexOf(document.activeElement);
-          if (event.key === "Escape") { event.preventDefault(); closeTransactionActionMenu(true); return; }
-          if ((event.key === "ArrowDown" || event.key === "ArrowUp") && menuItems.length) {
-            event.preventDefault();
-            menuItems[(itemIndex + (event.key === "ArrowDown" ? 1 : -1) + menuItems.length) % menuItems.length].focus();
-            return;
-          }
-        }
-
         var lifecycleOverlay = elements.lifecycle.overlay;
         if (lifecycleOverlay && !lifecycleOverlay.hidden)
         {
@@ -4159,10 +4268,6 @@
       elements.transactionEntry.overlay.addEventListener("click", function(event)
       {
         if (event.target === elements.transactionEntry.overlay) closeTransactionEntry();
-      });
-
-      elements.lifecycle.actionOverlay.addEventListener("click", function(event) {
-        if (event.target === event.currentTarget) closeTransactionActionMenu(true);
       });
 
       elements.lifecycle.overlay.addEventListener("click", function(event) {
@@ -5699,58 +5804,63 @@
 
     function exportVisibleTransactionsToCsv()
     {
-      try
-      {
-      var tableBody = initializeStableDashboardElements().tableBody;
-      var table = tableBody.parentElement;
-      var headers = Array.from(table.tHead.rows[0].cells);
-      var numericColumnIndexes = [3, 4];
-      var visibleColumnIndexes = headers
-        .map(function(header, index)
-        {
-          return header.hidden || header.classList.contains("hidden")
-            ? -1
-            : index;
-        })
-        .filter(function(index)
-        {
-          return index !== -1;
-        });
-      var visibleRows = Array.from(tableBody.rows).filter(function(row)
-      {
-        return !row.hidden &&
-          !row.classList.contains("hidden") &&
-          row.cells.length === headers.length;
+      var button = initializeStableDashboardElements().exportCsvButton;
+      if (button.disabled || !transactionsDateFilter) return;
+      transactionDiagnostics.export.eventCount++;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      transactionDiagnosticPending.export = {
+        activeTab: activeTransactionsTab,
+        search: transactionsSearchQuery,
+        includeVoided: transactionsLifecycleState !== "active",
+        lifecycleState: transactionsLifecycleState
+      };
+      google.script.run.withSuccessHandler(function(response) {
+        button.disabled = visibleTransactionRowCount === 0;
+        button.setAttribute("aria-busy", "false");
+        if (!response || response.success !== true || !response.data || !Array.isArray(response.data.rows)) {
+          logClientEvent("Error", "CSV export", "The matching transaction export could not be prepared.");
+          return;
+        }
+        downloadTransactionsCsv(response.data.rows, Number(response.data.totalRows));
+      }).withFailureHandler(function(error) {
+        button.disabled = visibleTransactionRowCount === 0;
+        button.setAttribute("aria-busy", "false");
+        console.error("CSV export failed", error);
+        logClientEvent("Error", "CSV export", error);
+      }).getTransactionsExport({
+        tab: activeTransactionsTab,
+        includeVoided: transactionsLifecycleState !== "active",
+        lifecycleState: transactionsLifecycleState,
+        filter: transactionsDateFilter.filter,
+        customStart: transactionsDateFilter.customStart,
+        customEnd: transactionsDateFilter.customEnd,
+        drilldownType: activeTransactionDrilldown && activeTransactionDrilldown.type,
+        drilldownValue: activeTransactionDrilldown && activeTransactionDrilldown.value,
+        search: transactionsSearchQuery
       });
+    }
 
-      if (!visibleRows.length)
-      {
-        logClientEvent(
-          "Warning",
-          "CSV export",
-          "CSV export was unavailable because no rows were visible."
-        );
-        return;
-      }
-
-      var csvRows = [visibleColumnIndexes.map(function(index)
-      {
-        return escapeCsvCell(
-          headers[index].textContent.trim(),
-          false
-        );
-      }).join(",")];
-
-      visibleRows.forEach(function(row)
-      {
-        var cells = row.cells;
-        csvRows.push(visibleColumnIndexes.map(function(index)
-        {
-          return escapeCsvCell(
-            cells[index].textContent.trim(),
-            numericColumnIndexes.indexOf(index) !== -1
-          );
-        }).join(","));
+    function downloadTransactionsCsv(rows, matchingRows)
+    {
+      var pendingExport = transactionDiagnosticPending.export || {};
+      transactionDiagnostics.export = {
+        activeTab: pendingExport.activeTab || activeTransactionsTab,
+        search: typeof pendingExport.search === "string" ? pendingExport.search : transactionsSearchQuery,
+        includeVoided: typeof pendingExport.includeVoided === "boolean" ? pendingExport.includeVoided : transactionsLifecycleState !== "active",
+        matchingRows: Number.isFinite(matchingRows) ? matchingRows : rows.length,
+        exportedRows: rows.length,
+        eventCount: transactionDiagnostics.export.eventCount
+      };
+      delete transactionDiagnosticPending.export;
+      var headers = ["Transaction ID", "Date", "Type", "Item", "Qty", "Amount"];
+      var csvRows = [headers.map(function(header) { return escapeCsvCell(header, false); }).join(",")];
+      rows.forEach(function(row) {
+        csvRows.push([
+          escapeCsvCell(row.id, false), escapeCsvCell(formatTransactionDate(row.date), false),
+          escapeCsvCell(row.transactionType, false), escapeCsvCell(row.item, false),
+          escapeCsvCell(row.qty || "-", true), escapeCsvCell(row.amount, true)
+        ].join(","));
       });
 
       var blob = new Blob(
@@ -5770,14 +5880,8 @@
       logClientEvent(
         "Info",
         "CSV export",
-        "Visible transaction rows were exported successfully."
+        rows.length + " matching transaction rows were exported successfully."
       );
-      }
-      catch (error)
-      {
-        console.error("CSV export failed", error);
-        logClientEvent("Error", "CSV export", error);
-      }
     }
 
     function requestDashboardData(request)
@@ -7658,8 +7762,9 @@
       return {
         transactionType: null, entryOptions: null, selectedProduct: null,
         selectedExpense: null, selectedType: null, qty: 1, amount: null,
-        pricing: null, loadingOptions: false, loadingPricing: false,
-        submitting: false, optionsLoaded: false, pricingRequestVersion: 0,
+        pricing: null, pricingSource: "unknown", lastPriceReadyLatencyMs: null,
+        loadingOptions: false, loadingPricing: false,
+        submitting: false, optionsLoaded: false, optionsRevision: "", pricingRequestVersion: 0,
         activeOptionIndex: { product: -1, expense: -1 }, successResult: null,
         submissionComplete: false, mode: "create", originalDetail: null,
         correctionReason: "", correctionPreview: null, correctionStage: "edit"
@@ -7705,22 +7810,20 @@
 
     function openTransactionEntry()
     {
+      transactionDiagnostics.newTransaction.eventCount++;
+      transactionDiagnosticPending.newTransaction = { startedAt: performance.now() };
       var elements = initializeStableDashboardElements();
       var entry = elements.transactionEntry;
-      transactionEntryLastFocus = document.activeElement;
-      entry.title.innerText = "New Transaction";
-      entry.description.innerText = "Choose a transaction type to begin.";
-      entry.typeFieldset.hidden = false;
-      entry.typeSales.disabled = false;
-      entry.typeExpense.disabled = false;
-      entry.correctionReasonRegion.hidden = true;
-      entry.correctionReview.hidden = true;
+      var priorFocus = document.activeElement;
+      resetTransactionEntryForAnother(false);
+      transactionEntryLastFocus = priorFocus;
       document.body.appendChild(entry.overlay);
       entry.overlay.hidden = false;
       elements.appShell.inert = true;
       document.body.classList.add("overflow-hidden");
       entry.dialog.focus();
-      if (!transactionEntryState.optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
+      if (transactionEntryState.optionsLoaded) completeTransactionEntryDiagnostic("master-cache");
+      else if (!transactionEntryState.loadingOptions) loadTransactionEntryOptions();
     }
 
     function closeTransactionEntry()
@@ -7737,6 +7840,7 @@
 
     function loadTransactionEntryOptions()
     {
+      if (transactionEntryState.optionsLoaded || transactionEntryState.loadingOptions) return;
       var entry = initializeStableDashboardElements().transactionEntry;
       transactionEntryState.loadingOptions = true;
       entry.optionsState.innerText = "Loading products and expense items…";
@@ -7753,9 +7857,15 @@
             sales: response.data.sales.slice(), expenses: response.data.expenses.slice()
           };
           transactionEntryState.optionsLoaded = true;
+          transactionEntryState.optionsRevision = String(response.data.revision || "");
           entry.optionsState.innerText = response.data.sales.length || response.data.expenses.length
             ? "Entry options ready." : "No active entry options are available.";
+          updateTransactionEntryOptionsPresentation();
           updateTransactionEntrySubmitState();
+          if (transactionDiagnosticPending.newTransaction) {
+            completeTransactionEntryDiagnostic("server");
+          }
+          transactionEntryOptionsDiagnosticSource = "master-cache";
         })
         .withFailureHandler(function(error)
         {
@@ -7765,13 +7875,39 @@
         .getTransactionEntryOptions();
     }
 
+    function preloadTransactionEntryOptions()
+    {
+      if (!transactionEntryState.optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
+    }
+
+    function completeTransactionEntryDiagnostic(source)
+    {
+      var pending = transactionDiagnosticPending.newTransaction;
+      if (!pending) return;
+      transactionDiagnostics.newTransaction = {
+        lastLatencyMs: Math.round((performance.now() - pending.startedAt) * 10) / 10,
+        source: source,
+        eventCount: transactionDiagnostics.newTransaction.eventCount
+      };
+      delete transactionDiagnosticPending.newTransaction;
+    }
+
     function showTransactionEntryOptionsFailure()
     {
       var entry = initializeStableDashboardElements().transactionEntry;
       transactionEntryState.loadingOptions = false;
       transactionEntryState.optionsLoaded = false;
       entry.optionsState.innerHTML = 'Entry options could not be loaded. <button type="button" class="font-semibold underline" onclick="loadTransactionEntryOptions()">Retry</button>';
+      updateTransactionEntryOptionsPresentation();
       updateTransactionEntrySubmitState();
+    }
+
+    function updateTransactionEntryOptionsPresentation()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var ready = transactionEntryState.optionsLoaded && Boolean(transactionEntryState.entryOptions);
+      entry.salesOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "SALES");
+      entry.expenseOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "EXPENSE");
     }
 
     function setTransactionEntryType(type)
@@ -7779,14 +7915,17 @@
       if (type !== "SALES" && type !== "EXPENSE") return;
       var entry = initializeStableDashboardElements().transactionEntry;
       transactionEntryState.transactionType = type;
+      entry.dialog.setAttribute("data-entry-type", type.toLowerCase());
       entry.typeSales.setAttribute("aria-checked", String(type === "SALES"));
       entry.typeExpense.setAttribute("aria-checked", String(type === "EXPENSE"));
       entry.salesFields.hidden = type !== "SALES";
       entry.expenseFields.hidden = type !== "EXPENSE";
       entry.generalError.innerText = "";
       entry.optionsState.innerText = transactionEntryState.optionsLoaded ? "Entry options ready." : entry.optionsState.innerText;
+      updateTransactionEntryOptionsPresentation();
       closeEntryCombobox(type === "SALES" ? "expense" : "product");
       updateTransactionEntrySubmitState();
+      if (transactionEntryState.optionsLoaded) completeTransactionEntryDiagnostic(transactionEntryOptionsDiagnosticSource);
     }
 
     function getEntryCombobox(type)
@@ -7918,10 +8057,24 @@
     {
       var state = transactionEntryState;
       var entry = initializeStableDashboardElements().transactionEntry;
+      var startedAt = performance.now();
       var version = ++state.pricingRequestVersion;
       state.pricing = null;
+      state.pricingSource = "unknown";
       renderTransactionEntryPricing();
       if (!state.selectedProduct || !state.selectedType) { updateTransactionEntrySubmitState(); return; }
+      var cachedPricing = state.selectedProduct.pricing && state.selectedProduct.pricing[state.selectedType];
+      if (cachedPricing) {
+        state.loadingPricing = false;
+        state.pricing = cachedPricing;
+        state.pricingSource = "master-cache";
+        state.lastPriceReadyLatencyMs = Math.round((performance.now() - startedAt) * 10) / 10;
+        entry.pricingPreview.setAttribute("aria-busy", "false");
+        entry.pricingState.innerText = "";
+        renderTransactionEntryPricing();
+        updateTransactionEntrySubmitState();
+        return;
+      }
       state.loadingPricing = true;
       entry.pricingPreview.setAttribute("aria-busy", "true");
       entry.pricingState.innerText = "Loading pricing…";
@@ -7936,7 +8089,11 @@
             showTransactionEntryApiError(response && response.error, "pricing"); return;
           }
           state.pricing = response.data;
-          entry.pricingState.innerText = "Pricing ready.";
+          state.selectedProduct.pricing = state.selectedProduct.pricing || {};
+          state.selectedProduct.pricing[state.selectedType] = response.data;
+          state.pricingSource = "server";
+          state.lastPriceReadyLatencyMs = Math.round((performance.now() - startedAt) * 10) / 10;
+          entry.pricingState.innerText = "";
           renderTransactionEntryPricing();
           updateTransactionEntrySubmitState();
         })
@@ -8004,7 +8161,9 @@
       if (transactionEntryState.mode !== "correction" || transactionEntryState.correctionStage !== "review") return;
       transactionEntryState.correctionStage = "edit";
       transactionEntryState.correctionPreview = null;
-      initializeStableDashboardElements().transactionEntry.correctionReview.hidden = true;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
     }
 
     function updateCorrectionReason()
@@ -8019,6 +8178,7 @@
         transactionEntryState.correctionStage = "edit";
         transactionEntryState.correctionPreview = null;
         entry.correctionReview.hidden = true;
+        entry.correctionReview.parentElement.classList.remove("has-review");
       }
       updateTransactionEntrySubmitState();
     }
@@ -8089,6 +8249,7 @@
           state.submissionComplete = true;
           state.successResult = response.data;
           showTransactionEntrySuccess(response.data);
+          invalidateTransactionsClientCaches();
           refreshTransactionEntryAfterSuccess();
         })
         .withFailureHandler(function(error)
@@ -8105,19 +8266,23 @@
     {
       var state = transactionEntryState;
       var entry = initializeStableDashboardElements().transactionEntry;
+      if (state.mode !== "correction" || !state.originalDetail) return;
       state.submitting = true;
       entry.generalError.innerText = "";
       updateTransactionEntrySubmitState();
       google.script.run.withSuccessHandler(function(response) {
+        if (transactionEntryState !== state || state.mode !== "correction" || !state.originalDetail) return;
         state.submitting = false;
         if (!response || response.success !== true) { showTransactionEntryApiError(response && response.error, "correction"); return; }
         state.correctionPreview = response.data;
         state.correctionStage = "review";
         renderCorrectionComparison(response.data);
         entry.correctionReview.hidden = false;
+        entry.correctionReview.parentElement.classList.add("has-review");
         entry.correctionReview.scrollIntoView({ block: "nearest" });
         updateTransactionEntrySubmitState();
       }).withFailureHandler(function(error) {
+        if (transactionEntryState !== state || state.mode !== "correction" || !state.originalDetail) return;
         console.error("Transaction correction preview failed", error);
         state.submitting = false;
         entry.generalError.innerText = "Correction preview could not be loaded.";
@@ -8157,6 +8322,7 @@
         state.submissionComplete = true;
         state.successResult = response.data;
         showTransactionCorrectionSuccess(response.data);
+        invalidateTransactionsClientCaches();
         refreshTransactionEntryAfterSuccess();
       }).withFailureHandler(function(error) {
         console.error("Canonical transaction correction failed", error);
@@ -8172,6 +8338,7 @@
       entry.form.hidden = true;
       entry.correctionReasonRegion.hidden = true;
       entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
       entry.submitRegion.hidden = true;
       entry.success.querySelector("h3").innerText = "Transaction corrected";
       entry.successDetails.innerHTML = '<div><dt>Original</dt><dd>' + escapeUiHtml(result.original.id) + ' — Voided</dd></div><div><dt>Replacement</dt><dd>' + escapeUiHtml(result.replacement.id) + ' — Active</dd></div>';
@@ -8221,14 +8388,18 @@
       entry.success.focus();
     }
 
-    function resetTransactionEntryForAnother()
+    function resetTransactionEntryForAnother(shouldFocusType)
     {
       var cachedOptions = transactionEntryState.entryOptions;
       var optionsLoaded = transactionEntryState.optionsLoaded;
+      var optionsRevision = transactionEntryState.optionsRevision;
       transactionEntryState = createInitialTransactionEntryState();
       transactionEntryState.entryOptions = cachedOptions;
       transactionEntryState.optionsLoaded = optionsLoaded;
+      transactionEntryState.optionsRevision = optionsRevision;
       var entry = initializeStableDashboardElements().transactionEntry;
+      entry.dialog.setAttribute("data-mode", "create");
+      entry.dialog.removeAttribute("data-entry-type");
       entry.form.reset();
       entry.form.hidden = false;
       entry.submitRegion.hidden = false;
@@ -8240,8 +8411,10 @@
       entry.typeFieldset.hidden = false;
       entry.typeSales.disabled = false;
       entry.typeExpense.disabled = false;
+      entry.correctionWorkspace.hidden = true;
       entry.correctionReasonRegion.hidden = true;
       entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
       entry.salesFields.hidden = true;
       entry.expenseFields.hidden = true;
       entry.typeSales.setAttribute("aria-checked", "false");
@@ -8253,9 +8426,10 @@
       entry.salesTypeError.innerText = ""; entry.qtyError.innerText = "";
       entry.amountError.innerText = ""; entry.generalError.innerText = "";
       entry.optionsState.innerText = optionsLoaded ? "Entry options ready." : "Select Sales or Expense.";
+      updateTransactionEntryOptionsPresentation();
       renderTransactionEntryPricing();
       updateTransactionEntrySubmitState();
-      entry.typeSales.focus();
+      if (shouldFocusType !== false) entry.typeSales.focus();
     }
 
     //--------------------------------------------------
@@ -8268,73 +8442,70 @@
       });
     }
 
-    function toggleVoidedTransactions()
+    function setTransactionsLifecycleState(value)
     {
-      showVoidedTransactions = initializeStableDashboardElements().showVoidedTransactions.checked;
-      var transactions = getVisibleTransactions();
-      renderTransactionRows(transactions);
-      updateTransactionsViewPresentation(transactions);
-    }
-    function filterTransactionsForTab(transactions, tabName)
-    {
-      if (tabName === "sales")
-      {
-        return transactions.filter(function(transaction)
-        {
-          return transaction.transactionType === "Sales";
-        });
-      }
-
-      if (tabName === "expenses" || tabName === "purchases")
-      {
-        return transactions.filter(function(transaction)
-        {
-          return transaction.transactionType === "Purchase";
-        });
-      }
-
-      return transactions.slice();
+      transactionsLifecycleState = { active: true, all: true, voided: true }[value] ? value : "active";
+      initializeStableDashboardElements().transactionsIsActive.value = transactionsLifecycleState;
+      transactionsPages[activeTransactionsTab] = 1;
+      requestTransactionsPage();
     }
 
-    function getVisibleTransactions()
+    function setTransactionsPageSize(value)
     {
-      var lifecycleRows = latestLifecycleTransactions.filter(function(transaction) {
-        return showVoidedTransactions || transaction.isActive !== false;
-      });
-      if (activeTransactionsTab === "recent" && activeTransactionDrilldown)
-      {
-        return filterTransactionDrilldown(
-          lifecycleRows,
-          activeTransactionDrilldown
-        ).slice(0, 10);
-      }
-
-      return filterTransactionsForTab(
-        lifecycleRows,
-        activeTransactionsTab
-      ).slice(0, 10);
+      var pageSize = Number(value);
+      transactionsPageSize = TRANSACTIONS_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : TRANSACTIONS_DEFAULT_PAGE_SIZE;
+      var elements = initializeStableDashboardElements();
+      elements.transactionsPageSize.value = String(transactionsPageSize);
+      elements.transactionsPageSizeFooter.value = String(transactionsPageSize);
+      elements.transactionsTableCard.classList.toggle("is-scrollable", transactionsPageSize > 15);
+      transactionsPages = { recent: 1, sales: 1, expenses: 1 };
+      transactionsResultCache = {};
+      transactionsResultCacheOrder = [];
+      try { window.localStorage.setItem("numlock.transactions.pageSize", String(transactionsPageSize)); } catch (error) {}
+      if (transactionsDateFilter) requestTransactionsPage();
     }
 
-    function updateTransactionsViewPresentation(transactions)
+    function initializeTransactionsPageSize()
+    {
+      var saved = "";
+      try { saved = window.localStorage.getItem("numlock.transactions.pageSize") || ""; } catch (error) {}
+      setTransactionsPageSize(saved || TRANSACTIONS_DEFAULT_PAGE_SIZE);
+    }
+
+    function scheduleTransactionsSearch(value)
+    {
+      window.clearTimeout(transactionsSearchTimer);
+      transactionDiagnostics.search.eventCount++;
+      transactionDiagnosticPending.search = { startedAt: performance.now(), serverCalls: 0 };
+      transactionsSearchTimer = window.setTimeout(function()
+      {
+        transactionsSearchQuery = String(value || "").trim();
+        transactionsPages[activeTransactionsTab] = 1;
+        initializeStableDashboardElements().clearTransactionsSearch.disabled = !transactionsSearchQuery;
+        requestTransactionsPage();
+      }, 300);
+    }
+
+    function clearTransactionsSearch()
+    {
+      window.clearTimeout(transactionsSearchTimer);
+      transactionDiagnostics.search.eventCount++;
+      transactionDiagnosticPending.search = { startedAt: performance.now(), serverCalls: 0 };
+      transactionsSearchQuery = "";
+      transactionsPages[activeTransactionsTab] = 1;
+      var elements = initializeStableDashboardElements();
+      elements.transactionsSearch.value = "";
+      elements.clearTransactionsSearch.disabled = true;
+      requestTransactionsPage();
+    }
+
+    function updateTransactionsViewPresentation(result)
     {
       var elements = initializeStableDashboardElements();
       var viewCopy = {
-        recent: {
-          heading: "Visible recent transactions",
-          scope: "Up to 10 rows already loaded for the active period."
-        },
-        sales: {
-          heading: "Visible recent sales",
-          scope: "Sales rows within the latest 10 transactions already loaded."
-        },
-        expenses: {
-          heading: "Visible recent expenses",
-          scope: "Purchase-type expense evidence within the latest 10 transactions already loaded."
-        },
-        purchases: {
-          heading: "Visible recent purchases",
-          scope: "Purchase rows within the latest 10 transactions already loaded; separate purchase history is unavailable."
-        }
+        recent: { heading: "Recent transactions", scope: "Sales and Expense rows in the active period." },
+        sales: { heading: "Sales", scope: "Sales rows in the active period." },
+        expenses: { heading: "Expenses", scope: "Expense rows in the active period." }
       }[activeTransactionsTab];
       var isDrilldown =
         activeTransactionsTab === "recent" &&
@@ -8344,24 +8515,247 @@
         ? activeTransactionDrilldown.label
         : viewCopy.heading;
       elements.transactionsScopeText.innerText = isDrilldown
-        ? "Filtered from the latest 10 transactions already loaded for the active period."
-        : viewCopy.scope + (showVoidedTransactions ? " Voided records included for audit review." : "");
+        ? "Filtered across the active reporting period."
+        : viewCopy.scope + (transactionsLifecycleState === "all" ? " Active and voided records included." : transactionsLifecycleState === "voided" ? " Voided records only." : "");
       elements.transactionsDescription.innerText =
-        "Latest 10 transactions for the active period.";
+        "Transactions for the active reporting period.";
       elements.transactionDrilldownSummary.classList.toggle(
         "hidden",
         !isDrilldown
       );
       elements.transactionDrilldownText.innerText = isDrilldown
-        ? activeTransactionDrilldown.label + " · " + transactions.length + " matching rows"
+        ? activeTransactionDrilldown.label + " · " + result.totalRows + " matching rows"
         : "";
-      elements.transactionsStateAnnouncement.innerText =
-        (isDrilldown ? "Drill-down" : viewCopy.heading) +
-        ": " + transactions.length +
-        (transactions.length === 1 ? " visible row." : " visible rows.");
+      elements.transactionsPagination.hidden = false;
+      elements.transactionsRangeSummary.innerText = "Showing " + result.rangeStart + "–" + result.rangeEnd + " of " + result.totalRows + " transactions";
+      elements.transactionsPageIndicator.innerText = result.totalPages
+        ? "Page " + result.page + " of " + result.totalPages
+        : "Page 1 of 1";
+      elements.transactionsPreviousPage.disabled = result.page <= 1;
+      elements.transactionsNextPage.disabled = result.totalPages === 0 || result.page >= result.totalPages;
     }
 
-    function setActiveTransactionsTab(tabName, moveFocus)
+    function transactionsCacheKey(tabName, pageNumber)
+    {
+      return [
+        transactionsDateFilter.filter, transactionsDateFilter.customStart, transactionsDateFilter.customEnd,
+        tabName, pageNumber, transactionsPageSize, transactionsLifecycleState,
+        transactionsSearchQuery, activeTransactionDrilldown && activeTransactionDrilldown.type || "",
+        activeTransactionDrilldown && activeTransactionDrilldown.value || ""
+      ].join("|");
+    }
+
+    function cacheTransactionsResult(cacheKey, result)
+    {
+      if (!Object.prototype.hasOwnProperty.call(transactionsResultCache, cacheKey)) transactionsResultCacheOrder.push(cacheKey);
+      transactionsResultCache[cacheKey] = result;
+      while (transactionsResultCacheOrder.length > 24) delete transactionsResultCache[transactionsResultCacheOrder.shift()];
+    }
+
+    function filterTransactionsSearchIndex(lifecycleStateOverride)
+    {
+      var query = transactionsSearchQuery.toLowerCase();
+      var lifecycleState = typeof lifecycleStateOverride === "string" ? lifecycleStateOverride : transactionsLifecycleState;
+      return (transactionsSearchIndex || []).filter(function(row) {
+        if (lifecycleState === "active" && row.isActive === false) return false;
+        if (lifecycleState === "voided" && row.isActive !== false) return false;
+        if (activeTransactionsTab === "sales" && row.transactionType !== "Sales") return false;
+        if (activeTransactionsTab === "expenses" && row.transactionType !== "Expense") return false;
+        if (row.transactionType !== "Sales" && row.transactionType !== "Expense") return false;
+        if (activeTransactionsTab === "recent" && activeTransactionDrilldown) {
+          if (activeTransactionDrilldown.type === "sales" && row.transactionType !== "Sales") return false;
+          if (activeTransactionDrilldown.type === "purchase" && row.transactionType !== "Expense") return false;
+          if (activeTransactionDrilldown.type === "month" && String(row.date || "").slice(0, 7) !== activeTransactionDrilldown.value) return false;
+          if (activeTransactionDrilldown.type === "expenseCategory" &&
+              (row.transactionType !== "Expense" || row.purchaseCategory !== activeTransactionDrilldown.value)) return false;
+        }
+        if (!query) return true;
+        return [row.id, row.product, row.purchaseCategory, row.transactionType].some(function(value) {
+          return String(value || "").toLowerCase().indexOf(query) !== -1;
+        });
+      });
+    }
+
+    function buildLocalTransactionsPage(pageNumber)
+    {
+      var rows = filterTransactionsSearchIndex();
+      var totalRows = rows.length;
+      var totalPages = totalRows ? Math.ceil(totalRows / transactionsPageSize) : 0;
+      var page = totalPages ? Math.min(Math.max(1, pageNumber), totalPages) : 1;
+      var offset = (page - 1) * transactionsPageSize;
+      return { rows: rows.slice(offset, offset + transactionsPageSize), totalRows: totalRows,
+        page: page, pageSize: transactionsPageSize, totalPages: totalPages,
+        rangeStart: totalRows ? offset + 1 : 0, rangeEnd: totalRows ? Math.min(offset + transactionsPageSize, totalRows) : 0 };
+    }
+
+    function prefetchAdjacentTransactionPages(result)
+    {
+      if (!transactionsSearchIndex) return;
+      [result.page - 1, result.page + 1].forEach(function(page) {
+        if (page < 1 || page > result.totalPages) return;
+        var key = transactionsCacheKey(activeTransactionsTab, page);
+        if (!transactionsResultCache[key]) {
+          cacheTransactionsResult(key, buildLocalTransactionsPage(page));
+          transactionDiagnosticPrefetchKeys[key] = true;
+        }
+      });
+    }
+
+    function requestTransactionsPage()
+    {
+      if (!transactionsDateFilter) return;
+      var requestStartedAt = performance.now();
+      var cacheKey = transactionsCacheKey(activeTransactionsTab, transactionsPages[activeTransactionsTab]);
+      if (transactionsResultCache[cacheKey]) {
+        transactionsRequestSequence++;
+        transactionsPendingKey = "";
+        var cachedRenderStartedAt = performance.now();
+        transactionDiagnosticPageSource = transactionDiagnosticPrefetchKeys[cacheKey] ? "prefetch" : "cache";
+        delete transactionDiagnosticPrefetchKeys[cacheKey];
+        applyTransactionsPageResult(transactionsResultCache[cacheKey]);
+        transactionsPerformanceEvidence = {
+          source: "client-cache",
+          totalMs: performance.now() - requestStartedAt,
+          renderMs: performance.now() - cachedRenderStartedAt,
+          payloadBytes: 0
+        };
+        return;
+      }
+      if (transactionsSearchIndex) {
+        transactionsRequestSequence++;
+        transactionsPendingKey = "";
+        var localResult = buildLocalTransactionsPage(transactionsPages[activeTransactionsTab]);
+        cacheTransactionsResult(cacheKey, localResult);
+        transactionDiagnosticPageSource = "local-index";
+        applyTransactionsPageResult(localResult);
+        prefetchAdjacentTransactionPages(localResult);
+        transactionsPerformanceEvidence = { source: "client-index", totalMs: performance.now() - requestStartedAt, payloadBytes: 0 };
+        return;
+      }
+      if (transactionsPendingKey === cacheKey) return;
+      transactionsPendingKey = cacheKey;
+      var requestToken = ++transactionsRequestSequence;
+      var resultHeading = initializeStableDashboardElements().transactionsResultHeading;
+      if (!visibleTransactionRowCount) {
+        resultHeading.innerText = "Loading transactions…";
+        initializeStableDashboardElements().tableBody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-sm ui-theme-muted">Loading transactions…</td></tr>';
+        initializeStableDashboardElements().exportCsvButton.disabled = true;
+      }
+      google.script.run.withSuccessHandler(function(result) {
+        var safeResult = result || { rows: [], totalRows: 0, page: 1, pageSize: transactionsPageSize, totalPages: 0, rangeStart: 0, rangeEnd: 0 };
+        if (safeResult.searchIndex) {
+          if (transactionsCacheRevision && transactionsCacheRevision !== String(safeResult.cacheRevision || "")) transactionDetailCache = {};
+          transactionsCacheRevision = String(safeResult.cacheRevision || "");
+          transactionsSearchIndex = safeResult.searchIndex.slice();
+        }
+        cacheTransactionsResult(cacheKey, safeResult);
+        if (safeResult.prefetchedPages) {
+          ["sales", "expenses"].forEach(function(tabName) {
+            var prefetchKey = [transactionsDateFilter.filter, transactionsDateFilter.customStart, transactionsDateFilter.customEnd, tabName, 1, transactionsPageSize, "active", "", "", ""].join("|");
+            cacheTransactionsResult(prefetchKey, safeResult.prefetchedPages[tabName]);
+          });
+        }
+        if (requestToken !== transactionsRequestSequence) {
+          if (safeResult.searchIndex) preloadTransactionEntryOptions();
+          return;
+        }
+        transactionsPendingKey = "";
+        var renderStartedAt = performance.now();
+        transactionDiagnosticPageSource = "server";
+        applyTransactionsPageResult(safeResult);
+        transactionsPerformanceEvidence = {
+          source: safeResult.cacheHit ? "server-cache" : "spreadsheet",
+          totalMs: performance.now() - requestStartedAt,
+          renderMs: performance.now() - renderStartedAt,
+          serverMs: Number(safeResult.executionMs) || 0,
+          payloadBytes: Number(safeResult.payloadBytes) || 0
+        };
+        prefetchAdjacentTransactionPages(safeResult);
+        preloadTransactionEntryOptions();
+      }).withFailureHandler(function(error) {
+        if (requestToken !== transactionsRequestSequence) return;
+        transactionsPendingKey = "";
+        console.error("Transactions page failed", error);
+        transactionsPageResult = { rows: [], totalRows: 0, page: 1, pageSize: transactionsPageSize, totalPages: 0 };
+        renderTransactionRows([]);
+        resultHeading.innerText = "Transactions unavailable";
+        initializeStableDashboardElements().transactionsScopeText.innerText = "Unable to load this page. Try again.";
+      }).getTransactionsPage({
+        tab: activeTransactionsTab,
+        page: transactionsPages[activeTransactionsTab],
+        pageSize: transactionsPageSize,
+        includeVoided: transactionsLifecycleState !== "active",
+        lifecycleState: transactionsLifecycleState,
+        filter: transactionsDateFilter.filter,
+        customStart: transactionsDateFilter.customStart,
+        customEnd: transactionsDateFilter.customEnd,
+        drilldownType: activeTransactionDrilldown && activeTransactionDrilldown.type,
+        drilldownValue: activeTransactionDrilldown && activeTransactionDrilldown.value,
+        search: transactionsSearchQuery
+      });
+    }
+
+    function applyTransactionsPageResult(result)
+    {
+      transactionsPageResult = result;
+      transactionsPages[activeTransactionsTab] = result.page;
+      latestLifecycleTransactions = result.rows.slice();
+      renderTransactionRows(result.rows);
+      updateTransactionsViewPresentation(result);
+      updateTransactionLifecycleDiagnostics();
+      prefetchVisibleTransactionDetails(result.rows);
+    }
+
+    function completeTransactionPageDiagnostic(source)
+    {
+      ["search", "pagination"].forEach(function(category) {
+        var pending = transactionDiagnosticPending[category];
+        if (!pending) return;
+        if (category === "search") {
+          transactionDiagnostics.search = {
+            lastLatencyMs: Math.round((performance.now() - pending.startedAt) * 10) / 10,
+            serverCalls: Number(pending.serverCalls || 0) + (source === "server" ? 1 : 0),
+            source: source,
+            eventCount: transactionDiagnostics.search.eventCount
+          };
+        } else {
+          transactionDiagnostics.pagination = {
+            lastLatencyMs: Math.round((performance.now() - pending.startedAt) * 10) / 10,
+            source: source,
+            eventCount: transactionDiagnostics.pagination.eventCount
+          };
+        }
+        delete transactionDiagnosticPending[category];
+      });
+    }
+
+    function updateTransactionLifecycleDiagnostics()
+    {
+      if (!transactionsSearchIndex) {
+        transactionDiagnostics.showVoided.fullDataset = false;
+        return;
+      }
+      var activeRows = filterTransactionsSearchIndex("active");
+      var allRows = filterTransactionsSearchIndex("all");
+      transactionDiagnostics.showVoided = {
+        uncheckedTotal: activeRows.length,
+        checkedTotal: allRows.length,
+        inactiveMatched: allRows.filter(function(row) { return row.isActive === false; }).length,
+        fullDataset: true
+      };
+    }
+
+    function changeTransactionsPage(delta)
+    {
+      var nextPage = transactionsPages[activeTransactionsTab] + Number(delta || 0);
+      if (nextPage < 1 || (transactionsPageResult.totalPages && nextPage > transactionsPageResult.totalPages)) return;
+      transactionDiagnostics.pagination.eventCount++;
+      transactionDiagnosticPending.pagination = { startedAt: performance.now() };
+      transactionsPages[activeTransactionsTab] = nextPage;
+      requestTransactionsPage();
+    }
+
+    function setActiveTransactionsTab(tabName)
     {
       var elements = initializeStableDashboardElements();
       var selectedTab = null;
@@ -8373,11 +8767,7 @@
           tab.getAttribute("data-transactions-tab") === tabName;
 
         tab.setAttribute("aria-selected", String(isSelected));
-        tab.tabIndex = isSelected ? 0 : -1;
-        tab.classList.toggle("border-indigo-600", isSelected);
-        tab.classList.toggle("text-indigo-700", isSelected);
-        tab.classList.toggle("border-transparent", !isSelected);
-        tab.classList.toggle("text-slate-600", !isSelected);
+        tab.classList.toggle("is-active", isSelected);
 
         if (isSelected)
         {
@@ -8405,15 +8795,7 @@
 
       activeTransactionsTab = tabName;
       selectedPanel.appendChild(elements.transactionsEvidenceRegion);
-
-      var transactions = getVisibleTransactions();
-      renderTransactionRows(transactions);
-      updateTransactionsViewPresentation(transactions);
-
-      if (moveFocus)
-      {
-        selectedTab.focus();
-      }
+      requestTransactionsPage();
     }
 
     function initializeTransactionsTabs()
@@ -8425,54 +8807,16 @@
 
       var elements = initializeStableDashboardElements();
 
-      Array.prototype.forEach.call(elements.transactionsTabs, function(tab, index)
+      Array.prototype.forEach.call(elements.transactionsTabs, function(tab)
       {
         tab.addEventListener("click", function()
         {
-          setActiveTransactionsTab(
-            tab.getAttribute("data-transactions-tab"),
-            false
-          );
-        });
-
-        tab.addEventListener("keydown", function(event)
-        {
-          var targetIndex = index;
-
-          if (event.key === "ArrowRight")
-          {
-            targetIndex = (index + 1) % elements.transactionsTabs.length;
-          }
-          else if (event.key === "ArrowLeft")
-          {
-            targetIndex =
-              (index - 1 + elements.transactionsTabs.length) %
-              elements.transactionsTabs.length;
-          }
-          else if (event.key === "Home")
-          {
-            targetIndex = 0;
-          }
-          else if (event.key === "End")
-          {
-            targetIndex = elements.transactionsTabs.length - 1;
-          }
-          else
-          {
-            return;
-          }
-
-          event.preventDefault();
-          setActiveTransactionsTab(
-            elements.transactionsTabs[targetIndex]
-              .getAttribute("data-transactions-tab"),
-            true
-          );
+          setActiveTransactionsTab(tab.getAttribute("data-transactions-tab"));
         });
       });
 
       transactionsTabsInitialized = true;
-      setActiveTransactionsTab(activeTransactionsTab, false);
+      initializeTransactionsPageSize();
     }
 
     function filterTransactionDrilldown(transactions, drilldown)
@@ -8491,7 +8835,7 @@
 
         if (drilldown.type === "purchase")
         {
-          return transaction.transactionType === "Purchase";
+          return transaction.transactionType === "Expense";
         }
 
         if (drilldown.type === "month")
@@ -8501,7 +8845,7 @@
 
         if (drilldown.type === "expenseCategory")
         {
-          return transaction.transactionType === "Purchase" &&
+          return transaction.transactionType === "Expense" &&
             transaction.purchaseCategory === drilldown.value;
         }
 
@@ -8518,32 +8862,45 @@
           ? transactions.map(function(r)
             {
               var amount = r.revenue || r.expense || 0;
-              var status = r.isActive === false ? '<span class="transaction-status-badge">Voided</span>' : "";
+              var status = r.isActive === false ? "Voided" : "Active";
+              var canMutate = r.source === "APP_ENTRY" && r.isActive !== false;
+              var actions = '<button type="button" class="transactions-row-action transactions-row-action--view" onclick="runTransactionRowAction(\'detail\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-eye" aria-hidden="true"></i><span>View</span></button>';
+              if (canMutate) actions += '<button type="button" class="transactions-row-action transactions-row-action--correct" onclick="runTransactionRowAction(\'correct\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-pen" aria-hidden="true"></i><span>Correct</span></button><button type="button" class="transactions-row-action transactions-row-action--void" onclick="runTransactionRowAction(\'void\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-ban" aria-hidden="true"></i><span>Void</span></button>';
               return `
               <tr class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}">
+                  <td class="px-4 whitespace-nowrap font-medium">${escapeUiHtml(r.id)}</td>
                   <td class="px-4 whitespace-nowrap">
-                    ${new Date(r.date).toLocaleDateString()}
+                    ${formatTransactionDate(r.date)}
                   </td>
 
                   <td class="px-4">
-                    <span class="inline-flex items-center text-xs font-semibold
-                      ${r.transactionType === "Sales"
-                        ? "text-green-700"
-                        : "text-red-700"}"> ${r.transactionType}${status}
+                    <span class="transaction-type ${r.transactionType === "Sales"
+                        ? "transaction-type--sales"
+                        : "transaction-type--expense"}"> ${r.transactionType}
                     </span>
                   </td>
 
                   <td class="max-w-[280px] px-4 break-words"> ${r.product || r.purchaseCategory || "-"} </td>
-                  <td class="transactions-number px-4"> ${r.qty || "-"} </td>
-                  <td class="transactions-number whitespace-nowrap px-4 font-semibold ${amount < 0 ? "text-red-600" : ""}"> Rp ${amount.toLocaleString("id-ID")}</td>
-                  <td class="px-2 text-center"><button type="button" class="transaction-row-action" data-transaction-id="${escapeUiHtml(r.id)}" aria-label="Actions for transaction ${escapeUiHtml(r.id)}" aria-haspopup="menu" aria-expanded="false" onclick="openTransactionActionMenu(event.currentTarget)"><i class="fas fa-ellipsis" aria-hidden="true"></i></button></td>
+                  <td class="px-4 text-center"> ${r.qty || "-"} </td>
+                  <td class="whitespace-nowrap px-4 text-left font-semibold ${amount < 0 ? "text-red-600" : ""}"> Rp ${amount.toLocaleString("id-ID")}</td>
+                  <td class="px-4 text-center"><span class="transaction-status-badge transaction-status-badge--${r.isActive === false ? "voided" : "active"}">${status}</span></td>
+                  <td class="px-2 text-center"><span class="transactions-row-actions">${actions}</span></td>
                 </tr>`;
             }).join("")
-          : '<tr><td colspan="6" class="p-8 text-center text-sm ui-theme-muted">No visible transactions in this bounded view for the selected period.</td></tr>';
+          : '<tr><td colspan="8" class="p-8 text-center text-sm ui-theme-muted">No transactions match this view for the selected period.</td></tr>';
 
       visibleTransactionRowCount = transactions.length;
       elements.exportCsvButton.disabled =
         visibleTransactionRowCount === 0;
+      completeTransactionPageDiagnostic(transactionDiagnosticPageSource);
+    }
+
+    function formatTransactionDate(value)
+    {
+      var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return "-";
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return match[3] + " " + months[Number(match[2]) - 1] + " " + match[1];
     }
 
     function findLifecycleTransaction(transactionId)
@@ -8551,70 +8908,15 @@
       return latestLifecycleTransactions.find(function(transaction) { return transaction.id === transactionId; }) || null;
     }
 
-    function openTransactionActionMenu(trigger)
+    function runTransactionRowAction(action, transactionId, trigger)
     {
-      closeTransactionActionMenu(false);
-      var transactionId = trigger.getAttribute("data-transaction-id");
-      var transaction = findLifecycleTransaction(transactionId);
-      if (!transaction) return;
-      transactionActionState = {
-        transactionId: transaction.id,
-        source: transaction.source,
-        isActive: transaction.isActive !== false,
-        trigger: trigger
-      };
-      trigger.setAttribute("aria-expanded", "true");
-      var lifecycle = initializeStableDashboardElements().lifecycle;
-      var overlay = lifecycle.actionOverlay;
-      var menu = lifecycle.actionMenu;
-      var items = lifecycle.actionItems;
-      items.innerHTML = '<button type="button" role="menuitem" onclick="selectTransactionAction(\'detail\')"><i class="fas fa-receipt" aria-hidden="true"></i>View Details</button>';
-      if (transactionActionState.source === "APP_ENTRY" && transactionActionState.isActive) {
-        items.innerHTML += '<button type="button" role="menuitem" onclick="selectTransactionAction(\'correct\')"><i class="fas fa-pen" aria-hidden="true"></i>Correct Transaction</button><button type="button" role="menuitem" class="transaction-action-destructive" onclick="selectTransactionAction(\'void\')"><i class="fas fa-ban" aria-hidden="true"></i>Void Transaction</button>';
-      }
-      document.body.appendChild(overlay);
-      overlay.hidden = false;
-      overlay.setAttribute("aria-hidden", "false");
-      initializeStableDashboardElements().appShell.inert = true;
-      document.body.classList.add("overflow-hidden");
-      if (!window.matchMedia("(max-width: 639px)").matches && !document.documentElement.classList.contains("numlock-phone")) {
-        var rect = trigger.getBoundingClientRect();
-        menu.style.top = Math.min(window.innerHeight - menu.offsetHeight - 8, rect.bottom + 4) + "px";
-        menu.style.left = Math.max(8, Math.min(window.innerWidth - menu.offsetWidth - 8, rect.right - menu.offsetWidth)) + "px";
-      } else { menu.style.top = ""; menu.style.left = ""; }
-      var first = items.querySelector('[role="menuitem"]');
-      if (first) first.focus();
-    }
-
-    function closeTransactionActionMenu(restoreFocus)
-    {
-      var elements = initializeStableDashboardElements();
-      var lifecycle = elements.lifecycle;
-      var overlay = lifecycle.actionOverlay;
-      var trigger = transactionActionState.trigger;
-      if (overlay) {
-        overlay.hidden = true;
-        overlay.setAttribute("aria-hidden", "true");
-      }
-      lifecycle.actionItems.innerHTML = "";
-      lifecycle.actionMenu.style.top = "";
-      lifecycle.actionMenu.style.left = "";
-      elements.appShell.inert = false;
-      document.body.classList.remove("overflow-hidden");
-      transactionActionState = { transactionId: "", source: "", isActive: false, trigger: null };
-      if (trigger) {
-        trigger.setAttribute("aria-expanded", "false");
-        if (restoreFocus) trigger.focus();
-      }
-    }
-
-    function selectTransactionAction(action)
-    {
-      var transactionId = transactionActionState.transactionId;
-      var trigger = transactionActionState.trigger;
-      closeTransactionActionMenu(false);
       transactionLifecycleState.trigger = trigger;
       if (!transactionId) return;
+      var diagnosticAction = action === "detail" ? "view" : action;
+      if (diagnosticAction === "view") transactionDiagnostics.actions.viewEventCount++;
+      if (diagnosticAction === "correct") transactionDiagnostics.actions.correctEventCount++;
+      if (diagnosticAction === "void") transactionDiagnostics.actions.voidEventCount++;
+      transactionDiagnosticPending[diagnosticAction] = { startedAt: performance.now() };
       if (action === "detail") openTransactionDetail(transactionId);
       else loadTransactionForMutation(transactionId, action);
     }
@@ -8651,6 +8953,7 @@
       lifecycle.content.innerHTML = "";
       lifecycle.voidRegion.hidden = true;
       lifecycle.footer.innerHTML = "";
+      lifecycle.dialog.removeAttribute("data-view-layout");
       document.body.appendChild(overlay);
       overlay.hidden = false;
       elements.appShell.inert = true;
@@ -8669,15 +8972,275 @@
 
     function loadCanonicalTransactionDetail(transactionId, onSuccess)
     {
+      if (transactionDetailCache[transactionId]) {
+        initializeStableDashboardElements().lifecycle.state.innerText = "";
+        onSuccess(transactionDetailCache[transactionId]);
+        transactionDetailSources[transactionId] = "cache";
+        return;
+      }
       google.script.run.withSuccessHandler(function(response) {
         if (!response || response.success !== true) { renderLifecycleLoadError(response && response.error); return; }
         initializeStableDashboardElements().lifecycle.state.innerText = "";
+        transactionDetailCache[transactionId] = response.data;
+        transactionDetailSources[transactionId] = "server";
         onSuccess(response.data);
       }).withFailureHandler(function(error) {
         console.error("Canonical transaction detail failed", error);
         renderLifecycleLoadError(null);
       }).getCanonicalTransactionDetail(transactionId);
     }
+
+    function prefetchVisibleTransactionDetails(rows)
+    {
+      var ids = rows.filter(function(row) {
+        return row.source === "APP_ENTRY" && row.isActive !== false && !transactionDetailCache[row.id] && !transactionDetailPending[row.id];
+      }).map(function(row) { transactionDetailPending[row.id] = true; return row.id; });
+      if (!ids.length) return;
+      google.script.run.withSuccessHandler(function(response) {
+        ids.forEach(function(id) { delete transactionDetailPending[id]; });
+        if (!response || response.success !== true || !response.data || !Array.isArray(response.data.details)) return;
+        var revision = String(response.data.revision || "");
+        if (transactionsCacheRevision && revision && transactionsCacheRevision !== revision) transactionDetailCache = {};
+        if (revision) transactionsCacheRevision = revision;
+        response.data.details.forEach(function(detail) {
+          transactionDetailCache[detail.id] = detail;
+          transactionDetailSources[detail.id] = "preload";
+        });
+      }).withFailureHandler(function(error) {
+        ids.forEach(function(id) { delete transactionDetailPending[id]; });
+        console.error("Transaction detail prefetch failed", error);
+      }).getCanonicalTransactionDetails(ids);
+    }
+
+    function invalidateTransactionsClientCaches()
+    {
+      transactionsResultCache = {};
+      transactionsResultCacheOrder = [];
+      transactionsSearchIndex = null;
+      transactionsCacheRevision = "";
+      transactionDetailCache = {};
+      transactionDetailPending = {};
+      transactionDetailSources = {};
+      transactionDiagnosticPrefetchKeys = {};
+      transactionsPendingKey = "";
+    }
+
+    function completeTransactionActionDiagnostic(action, transactionId)
+    {
+      var pending = transactionDiagnosticPending[action];
+      if (!pending) return;
+      var latency = Math.round((performance.now() - pending.startedAt) * 10) / 10;
+      if (action === "view") transactionDiagnostics.actions.viewLatencyMs = latency;
+      if (action === "correct") transactionDiagnostics.actions.correctLatencyMs = latency;
+      if (action === "void") transactionDiagnostics.actions.voidLatencyMs = latency;
+      transactionDiagnostics.actions.source[action] = transactionDetailSources[transactionId] || "server";
+      delete transactionDiagnosticPending[action];
+    }
+
+    function getTransactionDiagnostics()
+    {
+      return JSON.parse(JSON.stringify(transactionDiagnostics));
+    }
+
+    function getTransactionLayoutDiagnostics()
+    {
+      var byId = document["getElementById"].bind(document);
+      function round(value)
+      {
+        return Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
+      }
+
+      function rectOf(element)
+      {
+        if (!element) return null;
+        var rect = element.getBoundingClientRect();
+        return { top: round(rect.top), right: round(rect.right), bottom: round(rect.bottom), left: round(rect.left), width: round(rect.width), height: round(rect.height) };
+      }
+
+      function isVisible(element)
+      {
+        return Boolean(element && !element.hidden && element.getClientRects().length);
+      }
+
+      function gridColumnCount(grid)
+      {
+        if (!isVisible(grid) || getComputedStyle(grid).display.indexOf("grid") === -1) return 0;
+        var computedColumns = String(getComputedStyle(grid).gridTemplateColumns || "").trim();
+        if (computedColumns && computedColumns !== "none") {
+          return computedColumns.split(/\s+/).filter(Boolean).length;
+        }
+        var rows = {};
+        Array.prototype.forEach.call(grid.children, function(child) {
+          if (!isVisible(child)) return;
+          var top = Math.round(child.getBoundingClientRect().top);
+          rows[top] = (rows[top] || 0) + 1;
+        });
+        return Object.keys(rows).reduce(function(maximum, key) { return Math.max(maximum, rows[key]); }, 0);
+      }
+
+      function spinnerSuppressionActive(input)
+      {
+        if (!input || input.type !== "number") return false;
+        var mozSuppressed = String(getComputedStyle(input).MozAppearance || "").toLowerCase() === "textfield";
+        var webkitSuppressed = false;
+        Array.prototype.forEach.call(document.styleSheets, function(sheet) {
+          var rules;
+          try { rules = sheet.cssRules; } catch (error) { return; }
+          function inspect(ruleList)
+          {
+            Array.prototype.forEach.call(ruleList || [], function(rule) {
+              if (rule.cssRules) inspect(rule.cssRules);
+              var selector = String(rule.selectorText || "");
+              if (selector.indexOf("salesEntryQty") !== -1 && selector.indexOf("spin-button") !== -1 &&
+                  String(rule.style && (rule.style.webkitAppearance || rule.style.appearance) || "").toLowerCase() === "none") webkitSuppressed = true;
+            });
+          }
+          inspect(rules);
+        });
+        return mozSuppressed || webkitSuppressed;
+      }
+
+      function modalMeasurement(dialog, content, open)
+      {
+        if (!open || !isVisible(dialog)) return { open: false };
+        var dialogRect = dialog.getBoundingClientRect();
+        var contentRect = content && content.getBoundingClientRect();
+        var visibleChildren = content ? Array.prototype.filter.call(content.children, isVisible) : [];
+        var lastChild = visibleChildren.length ? visibleChildren[visibleChildren.length - 1] : null;
+        var lastBottom = lastChild ? lastChild.getBoundingClientRect().bottom : contentRect && contentRect.top;
+        var gridCandidates = Array.prototype.slice.call(dialog.getElementsByClassName("transaction-entry-fields"))
+          .concat(Array.prototype.slice.call(dialog.querySelectorAll("#transactionEntryForm")))
+          .concat(Array.prototype.slice.call(dialog.getElementsByClassName("transaction-lifecycle-grid")));
+        var activeGrid = gridCandidates.filter(function(candidate) {
+          return isVisible(candidate) && getComputedStyle(candidate).display.indexOf("grid") !== -1;
+        })[0] || null;
+        var quantity = Array.prototype.filter.call(dialog.getElementsByTagName("input"), function(input) { return input.id === "salesEntryQty"; })[0] || null;
+        return {
+          open: true,
+          modalWidth: round(dialogRect.width), modalHeight: round(dialogRect.height),
+          contentWidth: contentRect ? round(contentRect.width) : null, contentHeight: contentRect ? round(contentRect.height) : null,
+          scrollHeight: content ? content.scrollHeight : null, clientHeight: content ? content.clientHeight : null,
+          overflowY: content ? getComputedStyle(content).overflowY : null,
+          bottomEmptySpaceEstimate: contentRect ? round(Math.max(0, contentRect.bottom - lastBottom)) : null,
+          viewportMargins: { top: round(dialogRect.top), right: round(innerWidth - dialogRect.right), bottom: round(innerHeight - dialogRect.bottom), left: round(dialogRect.left) },
+          formGridColumnCount: gridColumnCount(activeGrid),
+          quantityInput: quantity ? { type: quantity.type, classes: quantity.className || "", nativeSpinnerSuppressionActive: spinnerSuppressionActive(quantity) } : null
+        };
+      }
+
+      function pricingMeasurement(mode)
+      {
+        var state = transactionEntryState || {};
+        var selected = state.selectedProduct
+          ? { id: state.selectedProduct.productId, label: state.selectedProduct.product }
+          : state.selectedExpense
+            ? { id: state.selectedExpense.expenseItemId, label: state.selectedExpense.item }
+            : null;
+        var applicable = mode === "newTransaction" || mode === "correct";
+        return applicable ? {
+          selectedItem: selected,
+          masterDataClientCached: Boolean(state.optionsLoaded && state.entryOptions),
+          pricingClientCached: Boolean(state.pricing),
+          serverRequestInFlight: Boolean(state.loadingOptions || state.loadingPricing),
+          openingOrSelectionCausedServerRequest: state.pricingSource === "server" || state.loadingOptions || state.loadingPricing,
+          lastPriceReadyLatencyMs: Number.isFinite(state.lastPriceReadyLatencyMs) ? state.lastPriceReadyLatencyMs : null,
+          source: state.pricing ? state.pricingSource : state.optionsLoaded ? "preload" : state.loadingOptions || state.loadingPricing ? "server" : "unknown"
+        } : null;
+      }
+
+      var tableCard = byId("transactionsTableCard");
+      var tableBody = byId("tableBody");
+      var pagination = byId("transactionsPagination");
+      var rowElements = tableBody ? Array.prototype.filter.call(tableBody.rows, function(row) { return row.cells.length > 1; }) : [];
+      var rowHeights = rowElements.map(function(row) { return row.getBoundingClientRect().height; });
+      var tableScroll = byId("transactionsTableScroll");
+      var headers = tableScroll && tableScroll.getElementsByTagName("thead")[0]
+        ? Array.prototype.slice.call(tableScroll.getElementsByTagName("thead")[0].getElementsByTagName("th")) : [];
+      var columnWidths = {};
+      headers.forEach(function(header) { columnWidths[String(header.innerText || "").trim() || "Actions"] = round(header.getBoundingClientRect().width); });
+      var actionRow = rowElements[0] || null;
+      var actionCell = actionRow && actionRow.cells[actionRow.cells.length - 1];
+      var actionGroup = actionCell && actionCell.firstElementChild;
+      var actionButton = actionGroup && actionGroup.firstElementChild;
+      var actionCellStyle = actionCell && getComputedStyle(actionCell);
+      var actionGroupStyle = actionGroup && getComputedStyle(actionGroup);
+      var documentElement = document.documentElement;
+      var body = document.body;
+      var pageScrollHeight = Math.max(documentElement.scrollHeight, body ? body.scrollHeight : 0);
+      var tableRect = tableCard && tableCard.getBoundingClientRect();
+      var paginationRect = pagination && pagination.getBoundingClientRect();
+      var entryOverlay = byId("transactionEntryOverlay");
+      var entryDialog = byId("transactionEntryDialog");
+      var entryContent = byId("transactionEntryScroll");
+      var entryOpen = isVisible(entryOverlay) && isVisible(entryDialog);
+      var entryMode = entryOpen ? String(entryDialog.getAttribute("data-mode") || "") : "";
+      var isNewTransaction = entryOpen && entryMode === "create";
+      var isCorrection = entryOpen && entryMode === "correction";
+      var lifecycleOverlay = byId("transactionLifecycleOverlay");
+      var lifecycleDialog = byId("transactionLifecycleDialog");
+      var lifecycleContent = lifecycleDialog && lifecycleDialog.getElementsByClassName("transaction-entry-scroll")[0];
+      var lifecycleOpen = isVisible(lifecycleOverlay) && isVisible(lifecycleDialog);
+      var lifecycleMode = transactionLifecycleState && transactionLifecycleState.mode;
+      var lifecycleMeasurement = modalMeasurement(lifecycleDialog, lifecycleContent, lifecycleOpen);
+
+      return {
+        table: {
+          viewportWidth: innerWidth, viewportHeight: innerHeight,
+          pageScrollHeight: pageScrollHeight, pageClientHeight: documentElement.clientHeight,
+          container: rectOf(tableCard), tbodyHeight: tableBody ? round(tableBody.getBoundingClientRect().height) : null,
+          currentRenderedRowCount: rowElements.length,
+          averageRowHeight: rowHeights.length ? round(rowHeights.reduce(function(total, height) { return total + height; }, 0) / rowHeights.length) : null,
+          minRowHeight: rowHeights.length ? round(Math.min.apply(Math, rowHeights)) : null,
+          maxRowHeight: rowHeights.length ? round(Math.max.apply(Math, rowHeights)) : null,
+          pagination: rectOf(pagination),
+          remainingVerticalBudgetBeforeOverflow: tableRect ? round(innerHeight - Math.max(tableRect.bottom, paginationRect ? paginationRect.bottom : tableRect.bottom)) : null,
+          visibleColumnNames: headers.filter(isVisible).map(function(header) { return String(header.innerText || "").trim() || "Actions"; }),
+          columnWidths: columnWidths,
+          actions: {
+            cellPaddingTop: actionCellStyle ? actionCellStyle.paddingTop : null,
+            cellPaddingBottom: actionCellStyle ? actionCellStyle.paddingBottom : null,
+            groupGap: actionGroupStyle ? actionGroupStyle.gap : null,
+            buttonHeight: actionButton ? round(actionButton.getBoundingClientRect().height) : null,
+            buttonPaddingTop: actionButton ? getComputedStyle(actionButton).paddingTop : null,
+            buttonPaddingBottom: actionButton ? getComputedStyle(actionButton).paddingBottom : null
+          }
+        },
+        modals: {
+          newTransaction: modalMeasurement(entryDialog, entryContent, isNewTransaction),
+          view: lifecycleMode === "detail" ? lifecycleMeasurement : { open: false },
+          correct: modalMeasurement(entryDialog, entryContent, entryOpen && isCorrection),
+          void: lifecycleMode === "void" ? lifecycleMeasurement : { open: false }
+        },
+        price: {
+          newTransaction: pricingMeasurement("newTransaction"),
+          correct: pricingMeasurement("correct")
+        },
+        search: {
+          existingLifecycleControls: Array.prototype.map.call((function() {
+            var toolbar = byId("transactionsToolbar");
+            return toolbar ? Array.prototype.slice.call(toolbar.getElementsByTagName("input")).concat(Array.prototype.slice.call(toolbar.getElementsByTagName("select"))) : [];
+          })(), function(control) { return control.id || control.name || control.type; }),
+          showVoided: transactionsLifecycleState !== "active",
+          isActiveFilterExists: Boolean((function() {
+            var toolbar = byId("transactionsToolbar");
+            return toolbar && Array.prototype.some.call(toolbar.getElementsByTagName("select"), function(control) { return control.name === "isActive" || control.id === "transactionsIsActive"; });
+          })()),
+          queryState: {
+            tab: activeTransactionsTab, search: transactionsSearchQuery,
+            lifecycleState: transactionsLifecycleState,
+            includeVoided: transactionsLifecycleState !== "active",
+            filter: transactionsDateFilter && transactionsDateFilter.filter,
+            customStart: transactionsDateFilter && transactionsDateFilter.customStart,
+            customEnd: transactionsDateFilter && transactionsDateFilter.customEnd,
+            page: transactionsPages[activeTransactionsTab], pageSize: transactionsPageSize,
+            drilldownType: activeTransactionDrilldown && activeTransactionDrilldown.type,
+            drilldownValue: activeTransactionDrilldown && activeTransactionDrilldown.value
+          }
+        }
+      };
+    }
+
+    window.getTransactionLayoutDiagnostics = getTransactionLayoutDiagnostics;
 
     function renderLifecycleLoadError(error)
     {
@@ -8716,15 +9279,25 @@
     {
       var lifecycle = initializeStableDashboardElements().lifecycle;
       var sales = Boolean(detail.productId);
-      var identity = [["Status", detail.status], ["Transaction ID", detail.id], ["Date / Time", formatLifecycleDate(detail.date)], ["Source", sourceDisplayLabel(detail.source)]];
+      var identity = [["Transaction ID", detail.id], ["Date / Time", formatLifecycleDate(detail.date)], ["Type", sales ? "Sales" : "Expense"], ["Status", detail.status]];
       var business = sales
-        ? [["Product", detail.product], ["Category", detail.category], ["Kind", detail.kind], ["Serving Type", detail.type], ["Qty", detail.qty], ["Unit HPP", formatEntryCurrency(detail.unitHPP)], ["Unit Price", formatEntryCurrency(detail.unitPrice)], ["COGS", formatEntryCurrency(detail.cogs)], ["Revenue", formatEntryCurrency(detail.revenue)], ["Margin", formatEntryCurrency(detail.margin)]]
+        ? [["Product", detail.product], ["Serving Type", detail.type], ["Qty", detail.qty], ["Amount", formatEntryCurrency(detail.revenue)]]
         : [["Expense Item", detail.item], ["Category", detail.category], ["Kind", detail.kind], ["Group", detail.group], ["Amount", formatEntryCurrency(detail.amount)]];
-      var audit = [["CreatedAt", formatLifecycleDate(detail.createdAt)], ["CreatedBy", detail.createdBy], ["UpdatedAt", formatLifecycleDate(detail.updatedAt)], ["UpdatedBy", detail.updatedBy], ["Original transaction", detail.originalId], ["Replacement transaction", detail.replacementId]];
+      var audit = [["Source", sourceDisplayLabel(detail.source)], ["CreatedBy", detail.createdBy], ["CreatedAt", formatLifecycleDate(detail.createdAt)], ["UpdatedBy", detail.updatedBy], ["UpdatedAt", formatLifecycleDate(detail.updatedAt)]];
+      var lifecycleRows = [["Lifecycle Status", detail.status], ["Original Transaction", detail.originalId], ["Replacement Transaction", detail.replacementId]];
+      var showLifecycle = detail.status === "VOIDED" || Boolean(detail.originalId || detail.replacementId);
+      var transactionCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--identity"><h3>Transaction</h3><dl>' + detailRowsHtml(identity) + '</dl></section>';
+      var businessCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--business"><h3>' + (sales ? "Sales" : "Expense") + '</h3><dl>' + detailRowsHtml(business) + '</dl></section>';
+      var auditCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--audit"><h3>Audit</h3><dl>' + detailRowsHtml(audit) + '</dl></section>';
+      var lifecycleCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--relations"><h3>Lifecycle</h3><dl>' + detailRowsHtml(lifecycleRows) + '</dl></section>';
       lifecycle.title.innerText = sales ? "Sales Details" : "Expense Details";
       lifecycle.description.innerText = detail.status === "VOIDED" ? "Voided record retained in the audit history." : "Canonical server record.";
-      lifecycle.content.innerHTML = '<div class="transaction-lifecycle-grid"><section class="transaction-lifecycle-group"><h3>Transaction</h3><dl>' + detailRowsHtml(identity) + '</dl></section><section class="transaction-lifecycle-group"><h3>' + (sales ? "Sales" : "Expense") + '</h3><dl>' + detailRowsHtml(business) + '</dl></section><section class="transaction-lifecycle-group"><h3>Audit</h3><dl>' + detailRowsHtml(audit) + '</dl></section></div>';
+      lifecycle.dialog.setAttribute("data-view-layout", showLifecycle ? "history" : "active");
+      lifecycle.content.innerHTML = showLifecycle
+        ? '<div class="transaction-lifecycle-grid transaction-lifecycle-grid--history">' + transactionCard + lifecycleCard + businessCard + auditCard + '</div>'
+        : '<div class="transaction-lifecycle-grid transaction-lifecycle-grid--active">' + transactionCard + businessCard + auditCard + '</div>';
       lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+      completeTransactionActionDiagnostic("view", detail.id);
     }
 
     function renderTransactionVoidConfirmation(detail)
@@ -8739,6 +9312,7 @@
       lifecycle.voidRegion.hidden = false;
       lifecycle.voidReason.value = "";
       updateVoidReason();
+      completeTransactionActionDiagnostic("void", detail.id);
     }
 
     function updateVoidReason()
@@ -8771,6 +9345,7 @@
         lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Transaction voided</h3><p class="ui-theme-secondary">' + escapeUiHtml(response.data.id) + ' remains available in audit history.</p></section>';
         lifecycle.state.innerText = "Transaction voided successfully.";
         lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+        invalidateTransactionsClientCaches();
         refreshTransactionEntryAfterSuccess();
       }).withFailureHandler(function(error) {
         console.error("Canonical transaction void failed", error);
@@ -8797,24 +9372,33 @@
       closeTransactionLifecycleDialog();
       var cachedOptions = transactionEntryState.entryOptions;
       var optionsLoaded = transactionEntryState.optionsLoaded;
+      var optionsRevision = transactionEntryState.optionsRevision;
       transactionEntryState = createInitialTransactionEntryState();
       transactionEntryState.entryOptions = cachedOptions;
       transactionEntryState.optionsLoaded = optionsLoaded;
+      transactionEntryState.optionsRevision = optionsRevision;
       transactionEntryState.mode = "correction";
       transactionEntryState.originalDetail = detail;
       transactionEntryState.transactionType = detail.productId ? "SALES" : "EXPENSE";
       var entry = initializeStableDashboardElements().transactionEntry;
+      entry.dialog.setAttribute("data-mode", "correction");
+      entry.dialog.setAttribute("data-entry-type", detail.productId ? "sales" : "expense");
       entry.form.reset(); entry.form.hidden = false; entry.success.hidden = true; entry.submitRegion.hidden = false;
       entry.title.innerText = "Correct Transaction";
       entry.description.innerText = detail.id + " · The original will be voided after confirmation.";
       entry.typeFieldset.hidden = true;
       entry.typeSales.disabled = true; entry.typeExpense.disabled = true;
+      entry.correctionWorkspace.hidden = false;
       entry.correctionReasonRegion.hidden = false; entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
       entry.correctionReason.value = ""; entry.correctionReasonError.innerText = "";
       entry.salesFields.hidden = transactionEntryState.transactionType !== "SALES";
       entry.expenseFields.hidden = transactionEntryState.transactionType !== "EXPENSE";
       if (detail.productId) {
-        transactionEntryState.selectedProduct = { productId: detail.productId, product: detail.product, category: detail.category, kind: detail.kind };
+        var cachedProductOption = optionsLoaded && cachedOptions && cachedOptions.sales
+          ? cachedOptions.sales.find(function(option) { return option.productId === detail.productId; }) : null;
+        transactionEntryState.selectedProduct = cachedProductOption ||
+          { productId: detail.productId, product: detail.product, category: detail.category, kind: detail.kind };
         transactionEntryState.selectedType = detail.type; transactionEntryState.qty = detail.qty;
         entry.productSearch.value = detail.product; entry.productMeta.innerText = [detail.category, detail.kind].filter(Boolean).join(" · ");
         entry.qty.value = detail.qty; entry.typeHot.setAttribute("aria-checked", String(detail.type === "Hot")); entry.typeCold.setAttribute("aria-checked", String(detail.type === "Cold"));
@@ -8827,6 +9411,7 @@
       document.body.appendChild(entry.overlay); entry.overlay.hidden = false; initializeStableDashboardElements().appShell.inert = true; document.body.classList.add("overflow-hidden"); entry.dialog.focus();
       if (!optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
       updateTransactionEntrySubmitState();
+      completeTransactionActionDiagnostic("correct", detail.id);
     }
 
     function applyTransactionDrilldown(type, value, label)
@@ -8855,32 +9440,28 @@
         label: label
       };
 
-      setActiveTransactionsTab("recent", false);
+      transactionsPages.recent = 1;
+      setActiveTransactionsTab("recent");
       showPage("transactions");
-      initializeStableDashboardElements().transactionsResultHeading.focus();
     }
 
     function clearTransactionDrilldown()
     {
       activeTransactionDrilldown = null;
-      setActiveTransactionsTab("recent", false);
-      initializeStableDashboardElements().transactionsResultHeading.focus();
+      transactionsPages.recent = 1;
+      setActiveTransactionsTab("recent");
     }
 
     function renderTransactions(res)
     {
-      latestDashboardTransactions =
-        Array.isArray(res.recentTransactions)
-          ? res.recentTransactions.slice(0, 10)
-          : [];
-      latestLifecycleTransactions = Array.isArray(res.recentLifecycleTransactions)
-        ? res.recentLifecycleTransactions.slice()
-        : latestDashboardTransactions.slice();
-
-      var transactions = getVisibleTransactions();
-
-      renderTransactionRows(transactions);
-      updateTransactionsViewPresentation(transactions);
+      transactionsDateFilter = {
+        filter: lastDashboardRequest && lastDashboardRequest.filter || "currentYear",
+        customStart: lastDashboardRequest && lastDashboardRequest.customStart || "",
+        customEnd: lastDashboardRequest && lastDashboardRequest.customEnd || ""
+      };
+      transactionsPages = { recent: 1, sales: 1, expenses: 1 };
+      invalidateTransactionsClientCaches();
+      requestTransactionsPage();
     }
 
     function scheduleDeferredDashboardRender(res, requestToken)

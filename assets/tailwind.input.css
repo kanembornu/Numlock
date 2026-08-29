@@ -265,9 +265,9 @@
   .transaction-entry-overlay[hidden] { display: none; }
   #transactionsEntryActionRow { min-height: 44px; align-items: center; }
   #transactionsEntryActionRow .transaction-entry-primary { width: max-content; height: 44px; min-height: 44px; flex: 0 0 auto; align-self: center; }
-  .transaction-entry-dialog { display: flex; width: min(100%, 620px); max-height: min(820px, calc(100dvh - 48px)); flex-direction: column; overflow: hidden; border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-2); }
+  .transaction-entry-dialog { display: flex; width: min(100%, 860px); max-height: calc(100dvh - 48px); flex-direction: column; overflow: hidden; border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-2); }
   .transaction-entry-header { position: sticky; z-index: 2; top: 0; display: flex; flex: 0 0 auto; align-items: flex-start; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--divider); padding: 20px 22px; background: var(--surface-1); }
-  .transaction-entry-header h2 { margin-top: 4px; font-size: 24px; font-weight: var(--font-weight-bold); line-height: 30px; }
+  .transaction-entry-header h2 { margin: 0; font-size: 24px; font-weight: var(--font-weight-bold); line-height: 30px; }
   .transaction-entry-header p:last-child { margin-top: 4px; font-size: 13px; line-height: 18px; }
   .transaction-entry-icon-button { width: 44px; flex: 0 0 44px; padding: 0; }
   .transaction-entry-scroll { min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 20px 22px calc(22px + env(safe-area-inset-bottom)); }
@@ -277,10 +277,40 @@
   .transaction-entry-segments button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-secondary); font-weight: var(--font-weight-semibold); }
   .transaction-entry-segments button[aria-checked="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); box-shadow: inset 0 0 0 1px var(--brand); }
   .transaction-entry-local-state { margin: 14px 0; min-height: 20px; color: var(--text-muted); font-size: 13px; line-height: 20px; }
-  .transaction-entry-fields { display: grid; gap: 18px; }
+  .transaction-entry-fields { display: grid; gap: 10px 10px; }
   .transaction-entry-fields[hidden] { display: none; }
-  .transaction-entry-fields h3 { display: flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 18px; font-weight: var(--font-weight-bold); }
+  .transaction-entry-fields h3 { display: flex; width: 100%; align-items: center; justify-content: flex-start; gap: 0; color: var(--text-primary); font-size: 18px; font-weight: var(--font-weight-bold); }
+  #transactionEntryDialog[data-mode="create"] .transaction-entry-fields h3 { margin-top: 12px; }
+  .transaction-entry-fields h3 > span:first-child { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 8px; }
   .transaction-entry-fields h3 i { color: var(--brand); }
+  .transaction-entry-ready-status { flex: 0 0 auto; margin-inline-start: 10px; border-radius: var(--radius-pill); background: var(--success-soft); padding: 3px 10px; color: var(--success); font-size: 11px; font-weight: var(--font-weight-semibold); line-height: 16px; }
+  .transaction-entry-ready-status[hidden] { display: none; }
+  .transaction-sales-detail-card { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 6px 12px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-2); padding: 14px; }
+  .transaction-sales-product { grid-column: 1 / -1; }
+  .transaction-sales-product .transaction-entry-error:empty { display: none; }
+  .transaction-sales-detail-card .transaction-entry-quantity { grid-template-columns: 42px minmax(64px, 1fr) 42px; gap: 6px; }
+  .transaction-correction-workspace { display: grid; gap: 12px; }
+  .transaction-correction-workspace[hidden] { display: none; }
+  @media (min-width: 768px) {
+    .transaction-entry-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    .transaction-entry-fields h3 { grid-column: 1 / -1; }
+    #salesEntryFields > .transaction-sales-detail-card { grid-column: 1; grid-row: 2; align-self: stretch; }
+    #salesPricingPreview { grid-column: 2; grid-row: 2; align-self: stretch; }
+    #transactionEntryDialog[data-mode="create"][data-entry-type="sales"] .transaction-entry-scroll { padding: 14px 18px calc(14px + env(safe-area-inset-bottom)); }
+    #transactionEntryDialog[data-mode="create"][data-entry-type="sales"] .transaction-entry-local-state { margin: 8px 0; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-entry-scroll { padding: 14px 18px 16px; }
+    #transactionEntryDialog[data-mode="correction"] #transactionEntryForm { display: block; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-correction-workspace { display: grid; gap: 10px; margin-top: 12px; }
+    #transactionEntryDialog[data-mode="correction"][data-entry-type="sales"] .transaction-correction-workspace.has-review { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+    #transactionEntryDialog[data-mode="correction"] #transactionCorrectionReason { min-height: 64px; resize: none; }
+    #transactionEntryDialog[data-mode="correction"] #transactionCorrectionReasonError:empty { display: none; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-entry-submit { margin-top: 12px; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-lifecycle-comparison { margin-top: 0; padding: 10px; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-comparison-column { padding: 8px; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-comparison-column h4 { margin-bottom: 5px; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-comparison-column p { margin-top: 2px; }
+    #transactionEntryDialog[data-mode="correction"] .transaction-lifecycle-notice { margin-top: 9px; padding: 9px 10px; line-height: 17px; }
+  }
   .transaction-entry-control input { width: 100%; min-height: 48px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-primary); padding: 10px 12px; font-size: 16px; }
   .transaction-entry-control textarea { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-primary); padding: 10px 12px; font-size: 16px; }
   .transaction-entry-combobox { position: relative; }
@@ -299,7 +329,7 @@
   .transaction-entry-quantity input { padding-right: 4px; padding-left: 4px; text-align: center; font-weight: var(--font-weight-bold); }
   .transaction-entry-money { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); }
   .transaction-entry-money span { padding-left: 12px; color: var(--text-secondary); font-weight: var(--font-weight-semibold); }
-  .transaction-entry-money input { border: 0; background: transparent; }
+  .transaction-entry-money input { border: 0; outline: none; background: transparent; box-shadow: none; }
   .transaction-entry-preview { border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-2); padding: 14px; }
   .transaction-entry-preview-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .transaction-entry-preview-heading h4 { color: var(--text-primary); font-size: 14px; font-weight: var(--font-weight-bold); }
@@ -324,39 +354,69 @@
   .transaction-entry-segments button:focus-visible,
   .transaction-entry-option:focus-visible,
   .transaction-entry-quantity button:focus-visible,
-  .transaction-entry-control input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .transaction-entry-control input:focus-visible { outline: 0px solid var(--focus); outline-offset: 2px; }
   .transaction-entry-control textarea:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .transaction-voided-toggle { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 13px; font-weight: var(--font-weight-semibold); }
-  .transaction-voided-toggle input { width: 18px; height: 18px; accent-color: var(--brand); }
+  .transaction-entry-money:has(#expenseEntryAmount),
+  .transaction-entry-money:has(#expenseEntryAmount):hover,
+  .transaction-entry-money:has(#expenseEntryAmount):focus-within { border-color: var(--card-border) !important; outline: none !important; box-shadow: none !important; }
+  #expenseEntryAmount { -webkit-appearance: none; appearance: none; }
+  #expenseEntryAmount,
+  #expenseEntryAmount:hover,
+  #expenseEntryAmount:focus,
+  #expenseEntryAmount:focus-visible,
+  #expenseEntryAmount:active { border: 0 !important; border-width: 0 !important; border-color: transparent !important; outline: 0 !important; outline-offset: 0 !important; background: transparent !important; box-shadow: none !important; }
+  #transactionsToolbar .transaction-lifecycle-filter { display: inline-flex; min-height: 44px; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 14px; font-weight: var(--font-weight-semibold); }
+  #transactionsToolbar .transaction-lifecycle-filter > span { font-size: 14px; }
+  #transactionsToolbar .transaction-lifecycle-filter select { min-height: 40px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); padding: 7px 30px 7px 10px; color: var(--text-primary); font-size: 14px; font-weight: var(--font-weight-semibold); }
   .transaction-row-voided td:not(:last-child) { color: var(--text-muted); }
-  .transaction-status-badge { display: inline-flex; margin-left: 6px; align-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); padding: 2px 7px; color: var(--text-secondary); font-size: 10px; font-weight: var(--font-weight-bold); }
-  .transaction-row-action { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: var(--radius-control); color: var(--text-secondary); }
-  .transaction-row-action:hover { background: var(--hover); color: var(--text-primary); }
-  .transaction-row-action:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .transaction-action-overlay { position: fixed; z-index: 110; inset: 0; }
-  .transaction-action-overlay[hidden] { display: none !important; }
-  .transaction-action-menu { position: fixed; width: 220px; border: 1px solid var(--card-border); border-radius: var(--radius-card); padding: 6px; background: var(--surface-1); box-shadow: var(--shadow-2); }
-  .transaction-action-menu h2 { padding: 8px 10px 6px; color: var(--text-muted); font-size: 11px; font-weight: var(--font-weight-bold); text-transform: uppercase; letter-spacing: .08em; }
-  .transaction-action-menu button { display: flex; width: 100%; min-height: 44px; align-items: center; gap: 10px; border-radius: 7px; padding: 9px 10px; color: var(--text-primary); font-size: 14px; font-weight: var(--font-weight-semibold); text-align: left; }
-  .transaction-action-menu button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
-  .transaction-action-menu .transaction-action-destructive { color: var(--critical); }
+  .transaction-status-badge { display: inline-flex; align-items: center; border: 1px solid var(--border-strong); border-radius: var(--radius-pill); padding: 2px 8px; color: var(--text-secondary); font-size: 12px; font-weight: var(--font-weight-bold); line-height: 16px; }
+  .transaction-status-badge--active { border-color: var(--success); border-style: solid; background: var(--success-soft); color: var(--success); }
+  .transaction-status-badge--voided { border-color: var(--critical); border-style: dashed; background: var(--critical-soft); color: var(--critical); }
   .transaction-action-cancel { display: none !important; }
-  .transaction-lifecycle-dialog { display: flex; width: min(100%, 620px); max-height: min(760px, calc(100dvh - 48px)); flex-direction: column; overflow: hidden; border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-2); }
+  .transaction-lifecycle-dialog { display: flex; width: min(100%, 760px); max-height: calc(100dvh - 48px); flex-direction: column; overflow: hidden; border: 1px solid var(--card-border); border-radius: 16px; background: var(--surface-1); box-shadow: var(--shadow-2); }
+  .transaction-lifecycle-dialog .transaction-entry-scroll { padding: 16px 18px; }
+  .transaction-lifecycle-dialog .transaction-entry-local-state:empty { display: none; }
+  #transactionVoidRegion:not([hidden]) { display: grid; gap: 8px; margin-top: 12px; }
+  #transactionVoidReasonError:empty { display: none; }
+  #transactionVoidRegion .transaction-lifecycle-notice { margin-top: 0; }
   .transaction-lifecycle-footer { display: flex; flex: 0 0 auto; justify-content: flex-end; gap: 10px; border-top: 1px solid var(--divider); padding: 14px 22px calc(14px + env(safe-area-inset-bottom)); background: var(--surface-1); }
-  .transaction-lifecycle-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+  .transaction-lifecycle-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-items: start; gap: 12px; }
+  .transaction-lifecycle-grid--active { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transaction-lifecycle-grid--active > .transaction-lifecycle-group--identity { grid-column: 1 / -1; }
+  .transaction-lifecycle-grid--history { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .transaction-lifecycle-grid--active,
+  .transaction-lifecycle-grid--history { align-items: stretch; }
+  .transaction-lifecycle-grid--active > .transaction-lifecycle-group,
+  .transaction-lifecycle-grid--history > .transaction-lifecycle-group { height: 100%; }
+  .transaction-lifecycle-grid--history > .transaction-lifecycle-group--identity,
+  .transaction-lifecycle-grid--history > .transaction-lifecycle-group--relations { grid-column: 1 / -1; }
+  .transaction-lifecycle-column { display: grid; align-content: start; gap: 12px; min-width: 0; }
+  #salesEntryQty { appearance: textfield; -moz-appearance: textfield; }
+  #salesEntryQty::-webkit-inner-spin-button, #salesEntryQty::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; appearance: none; }
   .transaction-lifecycle-group { border: 1px solid var(--card-border); border-radius: var(--radius-card); padding: 14px; }
   .transaction-lifecycle-group h3, .transaction-lifecycle-comparison h3 { margin-bottom: 10px; color: var(--text-primary); font-size: 14px; font-weight: var(--font-weight-bold); }
   .transaction-lifecycle-group dl, .transaction-lifecycle-comparison { display: grid; gap: 8px; }
-  .transaction-lifecycle-group dl div { display: flex; justify-content: space-between; gap: 12px; }
+  .transaction-lifecycle-group dl div { display: grid; grid-template-columns: minmax(92px, auto) minmax(0, 1fr); align-items: start; gap: 12px; }
   .transaction-lifecycle-group dt { color: var(--text-muted); font-size: 12px; }
-  .transaction-lifecycle-group dd { color: var(--text-primary); font-size: 13px; font-weight: var(--font-weight-semibold); text-align: right; overflow-wrap: anywhere; }
+  .transaction-lifecycle-group dd { min-width: 0; max-width: 100%; color: var(--text-primary); font-size: 13px; font-weight: var(--font-weight-semibold); text-align: right; white-space: normal; overflow-wrap: anywhere; word-break: break-word; }
   .transaction-lifecycle-notice { margin-top: 14px; border-radius: var(--radius-control); background: var(--brand-soft); padding: 12px; color: var(--text-secondary); font-size: 13px; line-height: 19px; }
   .transaction-lifecycle-destructive { background: var(--critical-soft); color: var(--critical); }
   .transaction-lifecycle-comparison { margin-top: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); padding: 14px; }
+  .transaction-lifecycle-comparison[hidden] { display: none; }
   .transaction-comparison-columns { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
   .transaction-comparison-column { border-radius: var(--radius-control); background: var(--surface-2); padding: 10px; }
   .transaction-comparison-column h4 { margin-bottom: 8px; color: var(--text-muted); font-size: 11px; font-weight: var(--font-weight-bold); letter-spacing: .06em; }
   .transaction-comparison-column p { margin-top: 4px; color: var(--text-primary); font-size: 12px; }
+
+  @media (min-width: 900px) {
+    .transaction-lifecycle-dialog[data-view-layout="active"] { width: min(100%, 840px); }
+  }
+
+  @media (max-width: 767px) {
+    .transaction-lifecycle-grid { grid-template-columns: minmax(0, 1fr); }
+    .transaction-sales-detail-card { grid-template-columns: minmax(0, 1fr); }
+    .transaction-sales-product { grid-column: auto; }
+  }
 
   @media (max-width: 639px) {
     .transaction-entry-overlay { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; align-items: stretch; justify-content: stretch; margin: 0; padding: 0; }
@@ -366,10 +426,6 @@
     .transaction-entry-fields { gap: 13px; }
     .transaction-entry-submit-region { position: relative; z-index: 2; margin: 0; border-top: 1px solid var(--divider); padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 16px var(--surface-1); }
     .transaction-entry-submit { min-height: 52px; margin-top: 0; box-shadow: none; }
-    .transaction-action-overlay { position: fixed; inset: 0; display: flex; width: 100%; height: 100%; align-items: flex-end; justify-content: stretch; background: var(--overlay); }
-    .transaction-action-menu { position: fixed; top: auto !important; right: 0; bottom: 0; left: 0; width: 100%; max-width: none; margin: 0; transform: none; border-width: 1px 0 0; border-radius: 16px 16px 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
-    .transaction-action-menu h2 { padding: 8px 10px 10px; font-size: 13px; }
-    .transaction-action-menu button { min-height: 52px; }
     .transaction-action-cancel { display: flex !important; margin-top: 8px; justify-content: center; border-top: 1px solid var(--divider); }
     .transaction-lifecycle-dialog { width: 100%; max-height: calc(100dvh - 24px); border-width: 1px 0 0; border-radius: 16px 16px 0 0; }
     #transactionLifecycleOverlay { align-items: flex-end; padding: 0; }
@@ -378,10 +434,6 @@
   }
   html.numlock-phone .transaction-entry-overlay { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; align-items: stretch; justify-content: stretch; margin: 0; padding: 0; }
   html.numlock-phone .transaction-entry-dialog { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; max-height: none; margin: 0; transform: none; border: 0; border-radius: 0; box-shadow: none; }
-  html.numlock-phone .transaction-action-overlay { position: fixed; inset: 0; display: flex; width: 100%; height: 100%; align-items: flex-end; justify-content: stretch; background: var(--overlay); }
-  html.numlock-phone .transaction-action-menu { position: fixed; top: auto !important; right: 0; bottom: 0; left: 0; width: 100%; max-width: none; margin: 0; transform: none; border-width: 1px 0 0; border-radius: 16px 16px 0 0; padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
-  html.numlock-phone .transaction-action-menu h2 { padding: 8px 10px 10px; font-size: 13px; }
-  html.numlock-phone .transaction-action-menu button { min-height: 52px; }
   html.numlock-phone .transaction-action-cancel { display: flex !important; margin-top: 8px; justify-content: center; border-top: 1px solid var(--divider); }
   .hf-analytics-card-header { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: var(--space-5); }
   .hf-analytics-title-group { display: inline-flex; min-width: 0; align-items: center; gap: var(--space-5); }
