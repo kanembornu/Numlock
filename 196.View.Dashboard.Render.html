@@ -1,0 +1,2267 @@
+    //--------------------------------------------------
+    // Skeleton Business Overview
+    //--------------------------------------------------
+    function showBusinessOverviewSkeleton()
+    {
+      initializeStableDashboardElements().businessOverview.innerHTML = new Array(5) .fill("")
+        .map(function()
+          {
+            return `
+            <div class="overview-surface rounded-2xl border p-4">
+              <div class="skeleton h-3 w-20 mb-4"></div>
+              <div class="skeleton h-7 w-32 mb-3"></div>
+              <div class="skeleton h-3 w-24"></div>
+            </div>
+            `;
+          })
+      .join("");
+    }
+
+    //--------------------------------------------------
+    // Skeleton Chart
+    //--------------------------------------------------
+    function showChartSkeleton()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.mainChartSkeleton.classList.remove("hidden");
+      elements.hotColdSkeleton.classList.remove("hidden");
+      elements.expenseSkeleton.classList.remove("hidden");
+      elements.topProductSkeleton.classList.remove("hidden");
+      elements.keySummarySkeleton.classList.remove("hidden");
+      elements.revenueHeaderSkeleton.classList.remove("hidden");
+      elements.topProductsHeaderSkeleton.classList.remove("hidden");
+      elements.periodComparisonSkeleton.classList.remove("hidden");
+      elements.dataQualitySkeleton.classList.remove("hidden");
+      elements.quickActionsSkeleton.classList.remove("hidden");
+    }
+
+    function hideChartSkeleton()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.mainChartSkeleton.classList.add("hidden");
+      elements.hotColdSkeleton.classList.add("hidden");
+      elements.expenseSkeleton.classList.add("hidden");
+      elements.topProductSkeleton.classList.add("hidden");
+      elements.keySummarySkeleton.classList.add("hidden");
+      elements.revenueHeaderSkeleton.classList.add("hidden");
+      elements.topProductsHeaderSkeleton.classList.add("hidden");
+      elements.periodComparisonSkeleton.classList.add("hidden");
+      elements.dataQualitySkeleton.classList.add("hidden");
+      elements.quickActionsSkeleton.classList.add("hidden");
+    }
+
+    function formatDashboardMonthRange(startDate, endDate)
+    {
+      function formatMonth(dateKey)
+      {
+        var parts = String(dateKey || "").split("-");
+
+        if (
+          parts.length !== 3 ||
+          !/^\d{4}$/.test(parts[0]) ||
+          !/^\d{2}$/.test(parts[1])
+        )
+        {
+          return "";
+        }
+
+        return parts[1] + "/" + parts[0];
+      }
+
+      var startMonth = formatMonth(startDate);
+      var endMonth = formatMonth(endDate);
+
+      if (!startMonth || !endMonth)
+      {
+        return "";
+      }
+
+      return startMonth === endMonth
+        ? startMonth
+        : startMonth + " – " + endMonth;
+    }
+
+    function formatDashboardDay(dateKey)
+    {
+      var parts = String(dateKey || "").split("-");
+
+      if (
+        parts.length !== 3 ||
+        !/^\d{4}$/.test(parts[0]) ||
+        !/^\d{2}$/.test(parts[1]) ||
+        !/^\d{2}$/.test(parts[2])
+      )
+      {
+        return "";
+      }
+
+      return parts[2] + "/" + parts[1] + "/" + parts[0];
+    }
+
+    function formatDashboardPresentationPeriod(dateKey, granularity)
+    {
+      var parts = String(dateKey || "").split("-");
+      var monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      var month = monthNames[Number(parts[1]) - 1];
+
+      if (!/^\d{4}$/.test(parts[0]) || !month)
+      {
+        return "";
+      }
+
+      if (granularity === "day" && /^\d{2}$/.test(parts[2] || ""))
+      {
+        return parts[2] + " " + month + " " + parts[0];
+      }
+
+      return month + " " + parts[0];
+    }
+
+    function renderReportingMetadata(res)
+    {
+      var scope = res && res.reportingScope;
+      var freshness = res && res.dataFreshness;
+
+      if (!res || !res.dateFilter || !scope || !freshness)
+      {
+        throw new Error("Dashboard reporting metadata is missing");
+      }
+
+      renderAvailablePeriodOptions(res.dateFilter);
+
+      document.getElementById("dateFilterLabel").innerText =
+        formatDashboardMonthRange(
+          res.dateFilter.startDate,
+          res.dateFilter.endDate
+        );
+      document.getElementById("transactionCountLabel").innerText =
+        scope.transactionCount + " transactions";
+
+      var latestDate =
+        formatDashboardDay(scope.lastTransactionDate);
+
+      document.getElementById("latestDataLabel").innerText =
+        latestDate
+          ? "Updated " + latestDate
+          : "No transaction data";
+      initializeStableDashboardElements().sidebarDataStatus.innerText =
+        latestDate
+          ? freshness.status + " · " + latestDate
+          : freshness.status;
+
+      var badge =
+        document.getElementById("freshnessStatusBadge");
+
+      var statusClasses = {
+        "Current": "bg-emerald-100 text-emerald-700",
+        "Stale": "bg-amber-100 text-amber-700",
+        "No Data": "bg-slate-100 text-slate-600"
+      };
+
+      badge.className =
+        "rounded-full px-3 py-1 font-semibold " +
+        statusClasses[freshness.status];
+      badge.innerText = freshness.status;
+    }
+
+    function formatPeriodComparisonValue(percentage, status)
+    {
+      if (status === "No Comparison")
+      {
+        return "N/A";
+      }
+
+      if (status === "Stable")
+      {
+        return "0.0%";
+      }
+
+      var value = Number(percentage);
+
+      if (!isFinite(value))
+      {
+        return "N/A";
+      }
+
+      return (status === "Up" ? "▲ " : "▼ -") +
+        Math.abs(value).toFixed(1) +
+        "%";
+    }
+
+    function renderPeriodComparison(periodComparison)
+    {
+      var comparison =
+        periodComparison || null;
+      var label = document.getElementById("periodComparisonLabel");
+      var lead = document.getElementById("periodComparisonLead");
+      var period = document.getElementById("periodComparisonPeriod");
+
+      if (
+        !comparison ||
+        !comparison.changes ||
+        !comparison.status ||
+        !comparison.previous ||
+        !comparison.previous.startDate ||
+        !comparison.previous.endDate
+      )
+      {
+        lead.innerText = comparison && comparison.message || "Comparison unavailable";
+        period.innerText = "";
+        return;
+      }
+
+      var previousPeriod =
+        formatDashboardPresentationPeriod(comparison.previous.startDate, "day") +
+        " – " +
+        formatDashboardPresentationPeriod(comparison.previous.endDate, "day");
+
+      lead.innerText = comparison.previous.rowCount > 0
+        ? "Compared with"
+        : "Comparison unavailable";
+      period.innerText = comparison.previous.rowCount > 0
+        ? previousPeriod
+        : previousPeriod + " has no data";
+    }
+
+    function normalizeOverviewContextResponse(res)
+    {
+      var comparison = res && (res.periodComparison || res.comparison) || null;
+      var quality = res && (res.dataQuality || res.quality) || null;
+      var previous = comparison && (comparison.previous || comparison.period) || null;
+      var comparisonAvailable = Boolean(
+        comparison && previous && previous.startDate && previous.endDate &&
+        comparison.changes && comparison.status
+      );
+
+      return {
+        comparison: comparisonAvailable
+          ? comparison
+          : {
+              available: false,
+              message: comparison && comparison.message || "Comparison unavailable"
+            },
+        quality: quality
+      };
+    }
+
+    function renderOverviewContext(res)
+    {
+      var context = normalizeOverviewContextResponse(res);
+
+      try
+      {
+        renderPeriodComparison(context.comparison);
+      }
+      catch (comparisonError)
+      {
+        console.error("Dashboard comparison render failed", comparisonError);
+        document.getElementById("periodComparisonLead").innerText =
+          context.comparison.message || "Comparison unavailable";
+        document.getElementById("periodComparisonPeriod").innerText = "";
+      }
+
+      try
+      {
+        renderDataQuality({ dataQuality: context.quality });
+      }
+      catch (qualityError)
+      {
+        console.error("Dashboard Data Quality render failed", qualityError);
+        renderDataQuality({ dataQuality: null });
+      }
+    }
+
+    function formatKpiTargetValue(target)
+    {
+      var value =
+        Number(target.target);
+
+      if (target.unit === "currency")
+      {
+        return "Rp " +
+          value.toLocaleString("id-ID");
+      }
+
+      if (target.unit === "percent")
+      {
+        return value.toLocaleString("id-ID") +
+          "%";
+      }
+
+      if (target.unit === "quantity")
+      {
+        return value.toLocaleString("id-ID") +
+          " units";
+      }
+
+      return String(target.target);
+    }
+
+    function renderKpiTargets(kpiTargets)
+    {
+      var targetReference =
+        kpiTargets || null;
+
+      if (
+        !targetReference ||
+        !Array.isArray(targetReference.targets) ||
+        targetReference.editable !== false ||
+        !targetReference.provenance
+      )
+      {
+        throw new Error(
+          "Dashboard KPI target reference is missing"
+        );
+      }
+
+      document.getElementById("kpiTargetProvenance").innerText =
+        "System-defined targets from current decision rules.";
+
+      var approvedTargetPresentation = [
+        { label: "Profit Margin Ideal", value: "≥ 15%", description: "Target minimum profit margin ideal.", icon: "fa-chart-line" },
+        { label: "Growth Score Target", value: "≥ 75 / 100", description: "Target score for business health and growth.", icon: "fa-arrow-trend-up" },
+        { label: "Revenue Growth Target", value: "≥ 20%", description: "Target annual revenue growth.", icon: "fa-bullseye" }
+      ];
+
+      document.getElementById("kpiTargetDetails").innerHTML =
+        approvedTargetPresentation.map(function(target)
+        {
+          return `
+            <li class="rounded-xl bg-slate-50">
+              <div class="target-reference-card-heading">
+                <span class="target-reference-icon" aria-hidden="true"><i class="fas ${target.icon}"></i></span>
+                <div class="target-reference-card-title text-slate-600">${target.label}</div>
+              </div>
+              <div class="target-reference-card-body min-w-0">
+                <div class="target-reference-card-value mt-1 font-bold text-slate-900">${target.value}</div>
+                <div class="target-reference-card-meta mt-1 text-slate-600">${target.description}</div>
+              </div>
+            </li>
+          `;
+        }).join("");
+    }
+
+    function renderDataQuality(res)
+    {
+      var quality =
+        res && res.dataQuality;
+
+      if (
+        !quality ||
+        !Array.isArray(quality.issues) ||
+        !quality.scope
+      )
+      {
+        document.getElementById("dataQualityStatusBadge").className =
+          "inline-flex items-center rounded-full px-3 py-1 font-semibold bg-slate-100 text-slate-600";
+        document.getElementById("dataQualityStatusBadge").innerText = "Unavailable";
+        document.getElementById("dataQualityScopeSummary").innerText = "· quality metadata unavailable";
+        document.getElementById("dataQualityDetailsButton").classList.add("hidden");
+        document.getElementById("dataQualityDetailsButton").setAttribute("aria-expanded", "false");
+        document.getElementById("dataQualityDetails").classList.add("hidden");
+        return;
+      }
+
+      var badge =
+        document.getElementById("dataQualityStatusBadge");
+
+      var issueCount =
+        document.getElementById("dataQualityIssueCount");
+
+      var scopeSummary =
+        document.getElementById("dataQualityScopeSummary");
+
+      var button =
+        document.getElementById("dataQualityDetailsButton");
+
+      var details =
+        document.getElementById("dataQualityDetails");
+
+      var inactiveCanonicalRows =
+        Number(
+          quality.lifecycle &&
+          quality.lifecycle.inactiveCanonicalRows
+        ) || 0;
+
+      var statusClasses = {
+        "Good": "bg-emerald-100 text-emerald-700",
+        "Attention": "bg-amber-100 text-amber-700",
+        "Critical": "bg-red-100 text-red-700"
+      };
+
+      if (!statusClasses[quality.status])
+      {
+        throw new Error(
+          "Dashboard data-quality status is invalid"
+        );
+      }
+
+      badge.className =
+        "inline-flex items-center rounded-full px-3 py-1 font-semibold " +
+        statusClasses[quality.status];
+      badge.innerText = quality.status;
+
+      issueCount.innerText =
+        quality.issueCount === 0
+          ? "No data issues"
+          : quality.issueCount + " data issues";
+
+      scopeSummary.innerText =
+        "· " + quality.scope.scopedRows.toLocaleString("id-ID") +
+        " rows · " +
+        quality.scope.excludedInvalidDateRows.toLocaleString("id-ID") +
+        " excluded · " +
+        inactiveCanonicalRows.toLocaleString("id-ID") +
+        " inactive lifecycle";
+
+      button.classList.toggle(
+        "hidden",
+        quality.issueCount === 0 && inactiveCanonicalRows === 0
+      );
+      button.setAttribute("aria-expanded", "false");
+
+      details.classList.add("hidden");
+      var issueSummary =
+        quality.issues
+          .map(function(issue)
+          {
+            return escapeUiHtml(issue.label) + ": " + Number(issue.count || 0).toLocaleString("id-ID");
+          })
+          .join(", ");
+      details.innerHTML =
+        "<strong>Quality issues</strong>" +
+        "<p>" + (quality.issueCount === 0 ? "None" : issueSummary) + "</p>" +
+        "<strong>Lifecycle</strong>" +
+        "<p>" + inactiveCanonicalRows.toLocaleString("id-ID") + " inactive canonical rows</p>";
+    }
+
+    //--------------------------------------------------
+    // Render Business Overview
+    //--------------------------------------------------
+    function renderOverviewKpiCard(label, value, type, drilldownLabel, delta, status, valueClass)
+    {
+      var supportingText =
+        status === "No Comparison"
+          ? "N/A"
+          : delta;
+      var iconByLabel = {
+        Revenue: "fa-arrow-trend-up",
+        Expense: "fa-wallet",
+        Profit: "fa-coins",
+        "Profit Margin": "fa-percent",
+        "Units Sold": "fa-mug-hot"
+      };
+      var comparisonClass =
+        status === "Increase" || status === "Improved" || status === "Up"
+          ? "text-emerald-600"
+          : status === "Decrease" || status === "Declined" || status === "Down"
+            ? "text-red-600"
+            : "text-slate-500";
+
+      return `
+        <button
+          type="button"
+          class="hf-kpi-card w-full px-4 py-3 text-left"
+          onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
+          aria-label="View transactions for ${label}">
+          <span class="flex items-center gap-2"><span class="hf-kpi-icon"><i class="fas ${iconByLabel[label]}" aria-hidden="true"></i></span><span class="hf-section-label">${label}</span></span>
+          <strong class="overview-kpi-value mt-2 block truncate text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
+          <span class="hf-kpi-comparison"><span>vs Last Period</span><strong class="${comparisonClass}">${supportingText}</strong></span>
+        </button>`;
+    }
+
+    function renderBusinessOverview(res)
+    {
+      var comparison = res.periodComparison;
+      var marginPoints = comparison.changes.profitMarginPoints;
+      var marginStatus = comparison.status.profitMargin;
+      var marginDelta =
+        marginPoints === null || !isFinite(Number(marginPoints))
+          ? "—"
+          : (marginStatus === "Up" ? "▲ " : marginStatus === "Down" ? "▼ -" : "") +
+            Math.abs(Number(marginPoints)).toFixed(1) + "pp";
+      var negativeClass = "text-red-600";
+
+      initializeStableDashboardElements().businessOverview.innerHTML = [
+        renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions", formatPeriodComparisonValue(comparison.changes.revenuePercent, comparison.status.revenue), comparison.status.revenue, res.summary.revenue < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions", formatPeriodComparisonValue(comparison.changes.expensePercent, comparison.status.expense), comparison.status.expense, res.summary.expense < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", formatPeriodComparisonValue(comparison.changes.profitPercent, comparison.status.profit), comparison.status.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
+        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", formatPeriodComparisonValue(comparison.changes.unitsSoldPercent, comparison.status.unitsSold), comparison.status.unitsSold, res.summary.unitsSold < 0 ? negativeClass : "")
+      ].join("");
+      scheduleLayoutDebugMeasurement();
+    }
+
+    //--------------------------------------------------
+    // Render Charts
+    //--------------------------------------------------
+    function renderDiagnosisCard(item)
+    {
+      const config =
+        item.level==="warning"
+        ?
+        {
+        badge:"bg-red-100 text-red-700",
+        label:"Critical"
+        }
+        :
+        item.level==="attention"
+        ?
+        {
+        badge:"bg-amber-100 text-amber-700",
+        label:"Attention"
+        }
+        :
+        {
+        badge:"bg-emerald-100 text-emerald-700",
+        label:"Opportunity"
+        };
+
+      return `
+      <div class="py-3" role="listitem">
+        <div class="flex items-start justify-between gap-2">
+          <h4 class="business-signal-marker text-sm font-bold text-slate-900">${item.title || "Business condition"}</h4>
+          <span class="insights-status-badge ${config.badge}">${config.label}</span>
+        </div>
+        <p class="mt-1 text-xs leading-snug text-slate-600">${item.description || item.message || "No additional detail."}</p>
+      </div>
+      `;
+    }
+
+    function renderTimelineItem(item,index,items)
+    {
+        var config =
+        {
+            High:
+            {
+                dot:"bg-red-500",
+                badge:"bg-red-100 text-red-700",
+                label:"High Priority"
+            },
+
+            Medium:
+            {
+                dot:"bg-amber-500",
+                badge:"bg-amber-100 text-amber-700",
+                label:"Medium Priority"
+            },
+
+            Low:
+            {
+                dot:"bg-emerald-500",
+                badge:"bg-emerald-100 text-emerald-700",
+                label:"Low Priority"
+            }
+        }[item.priority] ||
+        {
+            dot:"bg-slate-400",
+            badge:"bg-slate-100 text-slate-600",
+            label:item.priority
+        };
+
+        var message = String(item.message || "");
+        var normalizedMessage = message.toLowerCase();
+        var recommendationTitle = normalizedMessage.indexOf("profit margin") >= 0
+          ? "Improve Profit Margin"
+          : normalizedMessage.indexOf("business score") >= 0
+            ? "Strengthen Business Health"
+            : normalizedMessage.indexOf("biaya terbesar") >= 0 || normalizedMessage.indexOf("salary") >= 0
+              ? "Optimize Largest Expense"
+              : normalizedMessage.indexOf("produk terlaris") >= 0 || normalizedMessage.indexOf("thirsty tea") >= 0
+                ? "Scale Best-Selling Product"
+                : "Execute Priority Improvement";
+
+        return `
+
+        <div class="recommendation-item" role="listitem">
+
+            <div class="recommendation-node">
+
+                <div class="flex h-7 w-7 items-center justify-center rounded-full ${config.dot} text-[10px] font-bold text-white">${index + 1}</div>
+
+            </div>
+
+            <div class="flex-1">
+
+                <div class="flex items-center justify-between gap-2">
+
+                    <h4 class="text-sm font-semibold text-slate-800">${recommendationTitle}</h4>
+
+                    <span class="insights-status-badge ${config.badge}">
+
+                        ${config.label}
+
+                    </span>
+
+                </div>
+
+                <p class="recommendation-copy text-xs leading-snug text-slate-600">
+
+                    ${item.message}
+
+                </p>
+
+            </div>
+
+        </div>
+
+        `;
+    }
+
+    function formatChartCurrency(value)
+    {
+      return "Rp " + Number(value || 0).toLocaleString("id-ID");
+    }
+
+    function formatChartQuantity(value)
+    {
+      return Number(value || 0).toLocaleString("id-ID") + " units";
+    }
+
+    function formatChartMonthLabel(label)
+    {
+      var parts = String(label || "").split("-");
+      return parts.length === 2
+        ? parts[1] + "/" + parts[0]
+        : String(label || "");
+    }
+
+    function formatRevenueAxisLabel(label, granularity)
+    {
+      var parts = String(label || "").split("-");
+      var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      if (granularity === "day" && parts.length === 3)
+      {
+        return [parts[2] + " " + monthNames[Number(parts[1]) - 1], parts[0]];
+      }
+
+      return parts.length >= 2
+        ? [monthNames[Number(parts[1]) - 1], parts[0]]
+        : String(label || "");
+    }
+
+    function formatRevenueTooltipPeriod(label, granularity)
+    {
+      return formatDashboardPresentationPeriod(label, granularity);
+    }
+
+    function formatCompactChartNumber(value)
+    {
+      var number = Number(value || 0);
+
+      if (Math.abs(number) >= 1000000)
+      {
+        return (number / 1000000).toLocaleString("en-US", { maximumFractionDigits: 1 }) + "M";
+      }
+
+      if (Math.abs(number) >= 1000)
+      {
+        return (number / 1000).toLocaleString("en-US", { maximumFractionDigits: 0 }) + "K";
+      }
+
+      return number.toLocaleString("en-US");
+    }
+
+    function formatRevenueAxisTick(value)
+    {
+      return typeof value === "number" && value === 0
+        ? ""
+        : formatCompactChartNumber(value);
+    }
+
+    function getResponsiveChartFontSize()
+    {
+      return window.matchMedia("(max-width: 767px)").matches
+        ? 14
+        : 11;
+    }
+
+    function formatChartMonthLongLabel(label)
+    {
+      var parts = String(label || "").split("-");
+      var months = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+      ];
+      var monthIndex = Number(parts[1]) - 1;
+
+      return parts.length === 2 && months[monthIndex]
+        ? months[monthIndex] + " " + parts[0]
+        : String(label || "");
+    }
+
+    function destroyChartInstance(chart)
+    {
+      if (chart)
+      {
+        chart.destroy();
+      }
+
+      return null;
+    }
+
+    function isChartLibraryAvailable()
+    {
+      return typeof Chart === "function";
+    }
+
+    function shouldReduceMotion()
+    {
+      return window.matchMedia(
+        "(prefers-reduced-motion: reduce)"
+      ).matches;
+    }
+
+    function reportChartLibraryUnavailable()
+    {
+      if (chartUnavailableDiagnosticLogged)
+      {
+        return;
+      }
+
+      chartUnavailableDiagnosticLogged = true;
+      console.error(
+        "Chart.js unavailable; chart rendering was skipped."
+      );
+      logClientEvent(
+        "Warning",
+        "Chart rendering",
+        "Chart.js was unavailable, so chart rendering was skipped."
+      );
+    }
+
+    function setChartPresentation(canvasId, emptyId, summaryId, isEmpty, message, summary)
+    {
+      var canvas = document.getElementById(canvasId);
+      var empty = document.getElementById(emptyId);
+      var summaryElement = document.getElementById(summaryId);
+      var context = canvas.getContext("2d");
+
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.classList.toggle("hidden", isEmpty);
+      empty.classList.toggle("hidden", !isEmpty);
+      empty.classList.toggle("flex", isEmpty);
+      empty.innerText = isEmpty ? message : "";
+      summaryElement.innerText = summary;
+    }
+
+    function createRevenueGradient(context)
+    {
+      var chart = context.chart;
+      var area = chart.chartArea;
+      var palette = getCurrentThemePalette();
+
+      if (!area)
+      {
+        return palette.revenueFill;
+      }
+
+      var gradient = chart.ctx.createLinearGradient(0, area.top, 0, area.bottom);
+      gradient.addColorStop(0, palette.revenueFill);
+      gradient.addColorStop(1, palette.revenueFillTransparent);
+      return gradient;
+    }
+
+    function findFirstRevenuePeakIndex(values)
+    {
+      var peakIndex = -1;
+
+      (values || []).forEach(function(value, index)
+      {
+        if (
+          peakIndex === -1 ||
+          Number(value) > Number(values[peakIndex])
+        )
+        {
+          peakIndex = index;
+        }
+      });
+
+      return peakIndex;
+    }
+
+    function getRevenueTooltipContract(palette, labels, granularity, peakIndex)
+    {
+      var fontFamily = getComputedStyle(document.documentElement).getPropertyValue("--font-sans").trim();
+      return {
+        backgroundColor: palette.tooltipBackground,
+        titleColor: palette.tooltipText,
+        bodyColor: palette.tooltipText,
+        padding: 12,
+        cornerRadius: 6,
+        titleFont: { family: fontFamily, size: 12, weight: "600", lineHeight: 1.2 },
+        bodyFont: { family: fontFamily, size: 12, weight: "400", lineHeight: 1.2 },
+        titleSpacing: 2,
+        titleMarginBottom: 6,
+        bodySpacing: 2,
+        boxPadding: 0,
+        shadowColor: palette.grid,
+        shadowBlur: 8,
+        shadowOffsetY: 3,
+        filter: function(tooltipItem)
+        {
+          return tooltipItem.dataIndex !== peakIndex;
+        },
+        callbacks: {
+          title: function(context)
+          {
+            return context.length
+              ? formatRevenueTooltipPeriod(labels[context[0].dataIndex], granularity)
+              : "";
+          },
+          label: function(context)
+          {
+            return "Revenue: " + formatChartCurrency(context.raw);
+          }
+        }
+      };
+    }
+
+    function chartTooltipCanvasFont(font)
+    {
+      return font.weight + " " + font.size + "px/" + font.lineHeight + " " + font.family;
+    }
+
+    function drawRoundedCanvasRect(context, x, y, width, height, radius)
+    {
+      var right = x + width;
+      var bottom = y + height;
+      context.beginPath();
+      context.moveTo(x + radius, y);
+      context.lineTo(right - radius, y);
+      context.quadraticCurveTo(right, y, right, y + radius);
+      context.lineTo(right, bottom - radius);
+      context.quadraticCurveTo(right, bottom, right - radius, bottom);
+      context.lineTo(x + radius, bottom);
+      context.quadraticCurveTo(x, bottom, x, bottom - radius);
+      context.lineTo(x, y + radius);
+      context.quadraticCurveTo(x, y, x + radius, y);
+      context.closePath();
+    }
+
+    function calculatePeakTooltipPosition(chartArea, canvasWidth, canvasHeight, pointX, pointY, width, height, offset)
+    {
+      var maximumX = Math.max(0, canvasWidth - width);
+      var x = Math.max(0, Math.min(pointX - width / 2, maximumX));
+      var aboveY = pointY - height - offset;
+      var belowY = pointY + offset;
+      var fitsAbove = aboveY >= 0;
+      var maximumY = Math.max(0, Math.min(chartArea.bottom, canvasHeight) - height);
+      var y = fitsAbove ? aboveY : belowY;
+
+      return {
+        x: x,
+        y: Math.max(0, Math.min(y, maximumY)),
+        placement: fitsAbove ? "above" : "below"
+      };
+    }
+
+    var revenuePeakLabelPlugin = {
+      id: "revenuePeakLabel",
+      afterDatasetsDraw: function(chart, args, options)
+      {
+        if (!options || options.index < 0) return;
+        var metadata = chart.getDatasetMeta(0);
+        var point = metadata && metadata.data && metadata.data[options.index];
+        if (!point) return;
+
+        var context = chart.ctx;
+        var style = options.tooltip;
+        var title = style.callbacks.title([{ dataIndex: options.index }]);
+        var body = style.callbacks.label({ raw: options.revenue, dataIndex: options.index });
+        context.save();
+        context.font = chartTooltipCanvasFont(style.titleFont);
+        var titleWidth = context.measureText(title).width;
+        context.font = chartTooltipCanvasFont(style.bodyFont);
+        var bodyWidth = context.measureText(body).width;
+        var width = Math.max(titleWidth, bodyWidth) + style.padding * 2;
+        var titleLineHeight = style.titleFont.size * style.titleFont.lineHeight;
+        var bodyLineHeight = style.bodyFont.size * style.bodyFont.lineHeight;
+        var height = style.padding * 2 + titleLineHeight + style.titleMarginBottom + bodyLineHeight;
+        var position = calculatePeakTooltipPosition(
+          chart.chartArea,
+          chart.width,
+          chart.height,
+          point.x,
+          point.y,
+          width,
+          height,
+          10
+        );
+        var x = position.x;
+        var y = position.y;
+        context.fillStyle = style.backgroundColor;
+        context.shadowColor = style.shadowColor;
+        context.shadowBlur = style.shadowBlur;
+        context.shadowOffsetY = style.shadowOffsetY;
+        drawRoundedCanvasRect(context, x, y, width, height, style.cornerRadius);
+        context.fill();
+        context.shadowColor = "transparent";
+        context.fillStyle = style.titleColor;
+        context.textAlign = "left";
+        context.textBaseline = "top";
+        context.font = chartTooltipCanvasFont(style.titleFont);
+        context.fillText(title, x + style.padding, y + style.padding);
+        context.fillStyle = style.bodyColor;
+        context.font = chartTooltipCanvasFont(style.bodyFont);
+        context.fillText(body, x + style.padding, y + style.padding + titleLineHeight + style.titleMarginBottom);
+        context.restore();
+      }
+    };
+
+    function renderRevenueChart(revenueTrend)
+    {
+      var chartPalette = getCurrentThemePalette();
+      var labels = Array.isArray(revenueTrend.labels) ? revenueTrend.labels : [];
+      var values = Array.isArray(revenueTrend.values) ? revenueTrend.values : [];
+      var granularity = revenueTrend.granularity === "day" ? "day" : "month";
+      var isEmpty = values.length === 0;
+      var total = values.reduce(function(sum, value) { return sum + Number(value || 0); }, 0);
+      var highestIndex = findFirstRevenuePeakIndex(values);
+      var tooltipContract = getRevenueTooltipContract(chartPalette, labels, granularity, highestIndex);
+
+      var summary = isEmpty
+        ? "Revenue trend has no represented periods."
+        : "Revenue trend for " + labels.length + " represented " +
+          (granularity === "day" ? "days." : "months.");
+      var chartAvailable = isChartLibraryAvailable();
+
+      revenueChart = destroyChartInstance(revenueChart);
+      setChartPresentation(
+        "mainChart",
+        "revenueChartEmpty",
+        "revenueChartSummary",
+        !chartAvailable || isEmpty,
+        chartAvailable
+          ? "No revenue data for the selected period."
+          : "Chart unavailable.",
+        summary
+      );
+
+      if (!chartAvailable || isEmpty)
+      {
+        return;
+      }
+
+      revenueChart = new Chart(
+        document.getElementById("mainChart").getContext("2d"),
+        {
+          type: "line",
+          data: {
+            labels: labels.map(function(label)
+            {
+              return formatRevenueAxisLabel(label, granularity);
+            }),
+            datasets: [{
+              label: "Revenue",
+              data: values,
+              borderColor: chartPalette.series[0],
+              backgroundColor: createRevenueGradient,
+              borderWidth: 2.75,
+              pointRadius: values.map(function(value, index)
+              {
+                return index === highestIndex ? 6.5 : 3.5;
+              }),
+              pointHoverRadius: 7,
+              pointHitRadius: 12,
+              pointBorderWidth: 1,
+              pointBackgroundColor: values.map(function(value, index)
+              {
+                return index === highestIndex ? chartPalette.series[2] : chartPalette.series[0];
+              }),
+              pointBorderColor: chartPalette.pointStroke,
+              fill: true,
+              tension: 0.4,
+              spanGaps: false
+            }]
+          },
+          options: {
+            animation: shouldReduceMotion() ? false : undefined,
+            responsive: true,
+            maintainAspectRatio: false,
+            layout: { padding: { top: 10, right: 12, bottom: 10, left: 6 } },
+            onClick: function(event, elements)
+            {
+              if (elements.length)
+              {
+                var month = labels[elements[0].index].slice(0, 7);
+                applyTransactionDrilldown(
+                  "month",
+                  month,
+                  "Revenue trend · " + formatChartMonthLabel(month)
+                );
+              }
+            },
+            plugins: {
+              legend: { display: false },
+              revenuePeakLabel: {
+                index: highestIndex,
+                revenue: Number(values[highestIndex]) || 0,
+                tooltip: tooltipContract
+              },
+              tooltip: {
+                backgroundColor: tooltipContract.backgroundColor,
+                titleColor: tooltipContract.titleColor,
+                bodyColor: tooltipContract.bodyColor,
+                displayColors: false,
+                padding: tooltipContract.padding,
+                cornerRadius: tooltipContract.cornerRadius,
+                titleFont: tooltipContract.titleFont,
+                bodyFont: tooltipContract.bodyFont,
+                titleSpacing: tooltipContract.titleSpacing,
+                titleMarginBottom: tooltipContract.titleMarginBottom,
+                bodySpacing: tooltipContract.bodySpacing,
+                boxPadding: tooltipContract.boxPadding,
+                filter: tooltipContract.filter,
+                callbacks: tooltipContract.callbacks
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { color: chartPalette.axis, padding: 10, maxTicksLimit: granularity === "day" ? 12 : 12, font: { size: getResponsiveChartFontSize(), weight: "500" } } },
+              y: { beginAtZero: true, min: 0,
+                grid: {
+                  color: chartPalette.grid,
+                  drawTicks: false,
+                  lineWidth: 0.6
+                },
+                ticks: {
+                  color: chartPalette.axis,
+                  padding: 9,
+                  stepSize: granularity === "day" ? 100000 : 1000000,
+                  callback: formatRevenueAxisTick,
+                  font: { size: getResponsiveChartFontSize(), weight: "500" }
+                }
+              }
+            }
+          },
+          plugins: [revenuePeakLabelPlugin]
+        }
+      );
+    }
+
+    function createPerformanceBarOptions(chartPalette, currencyAxis, metrics, stacked)
+    {
+      return {
+        animation: shouldReduceMotion() ? false : undefined,
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: "index", intersect: false },
+        plugins: {
+          legend: { position: "bottom", labels: { color: chartPalette.axis, usePointStyle: true, pointStyle: "rectRounded" } },
+          tooltip: {
+            backgroundColor: chartPalette.tooltipBackground,
+            titleColor: chartPalette.tooltipText,
+            bodyColor: chartPalette.tooltipText,
+            callbacks: {
+              label: function(context) { return context.dataset.label + ": " + formatChartCurrency(context.raw); },
+              afterBody: function(context)
+              {
+                var metric = metrics && context.length ? metrics[context[0].dataIndex] : null;
+                return metric
+                  ? ["Units: " + formatChartQuantity(metric.units), "Gross Margin %: " + Number(metric.grossMarginPercent || 0).toFixed(1) + "%"]
+                  : [];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { stacked: stacked === true, grid: { display: false }, ticks: { color: chartPalette.axis, maxRotation: 0, minRotation: 0 } },
+          y: { stacked: stacked === true, beginAtZero: true, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, callback: currencyAxis ? formatRevenueAxisTick : undefined } }
+        }
+      };
+    }
+
+    function renderPerformanceSnapshot(performanceAnalytics)
+    {
+      var elements = initializeStableDashboardElements();
+      var products = performanceAnalytics && Array.isArray(performanceAnalytics.productProfitability)
+        ? performanceAnalytics.productProfitability.slice()
+        : [];
+      var expenses = performanceAnalytics && Array.isArray(performanceAnalytics.expenseGroups)
+        ? performanceAnalytics.expenseGroups.slice()
+        : [];
+      var topProfit = products.length ? products[0] : null;
+      var revenueLeader = products.reduce(function(leader, item)
+      {
+        return !leader || Number(item.revenue || 0) > Number(leader.revenue || 0) ? item : leader;
+      }, null);
+      var bestMargin = products.reduce(function(best, item)
+      {
+        return !best || Number(item.grossMarginPercent || 0) > Number(best.grossMarginPercent || 0) ? item : best;
+      }, null);
+      var largestExpense = expenses.reduce(function(largest, item)
+      {
+        return !largest || Number(item.amount || 0) > Number(largest.amount || 0) ? item : largest;
+      }, null);
+      var totalExpense = expenses.reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0);
+      var totalRevenue = products.reduce(function(sum, item) { return sum + Number(item.revenue || 0); }, 0);
+      var totalGrossMargin = Number(performanceAnalytics && performanceAnalytics.totalGrossMargin != null ? performanceAnalytics.totalGrossMargin : 0);
+      var topProfitShare = topProfit && totalGrossMargin !== 0 ? Number(topProfit.grossMargin || 0) / totalGrossMargin * 100 : 0;
+      var concentrationShare = revenueLeader && totalRevenue > 0 ? Number(revenueLeader.revenue || 0) / totalRevenue * 100 : 0;
+      var concentrationStatus = concentrationShare >= 50 ? "High dependency" : concentrationShare >= 30 ? "Moderate dependency" : "Diversified revenue";
+      var grossMarginComparison = performanceAnalytics && performanceAnalytics.grossMarginComparison || null;
+      var grossMarginBadge = null;
+      var grossMarginBadgeTone = "neutral";
+      if (grossMarginComparison)
+      {
+        var grossMarginStatus = grossMarginComparison.status;
+        var grossMarginPercent = Number(grossMarginComparison.grossMarginChangePercent);
+        if (grossMarginStatus === "No Comparison")
+        {
+          grossMarginBadge = "N/A";
+          grossMarginBadgeTone = "neutral";
+        }
+        else if (grossMarginStatus === "Stable")
+        {
+          grossMarginBadge = "0.0% vs last period";
+          grossMarginBadgeTone = "neutral";
+        }
+        else if (isFinite(grossMarginPercent))
+        {
+          grossMarginBadge =
+            (grossMarginStatus === "Up" ? "▲ +" : "▼ -") +
+            Math.abs(grossMarginPercent).toFixed(1) +
+            "% vs last period";
+          grossMarginBadgeTone =
+            grossMarginStatus === "Up" ? "green" : "red";
+        }
+        else
+        {
+          grossMarginBadge = "N/A";
+          grossMarginBadgeTone = "neutral";
+        }
+      }
+      function buildKpiCard(config)
+      {
+        var nameRow = config.name
+          ? '<div class="performance-kpi-name">' + escapeUiHtml(config.name) + '</div>'
+          : '<div class="performance-kpi-name performance-kpi-name--empty" aria-hidden="true">&nbsp;</div>';
+        var footer = config.badge
+          ? '<div class="performance-kpi-footer">' +
+              '<span class="performance-kpi-badge performance-kpi-badge--' + config.badgeTone + '">' +
+                escapeUiHtml(config.badge) +
+              '</span>' +
+            '</div>'
+          : '<div class="performance-kpi-footer performance-kpi-footer--empty"></div>';
+        return (
+          '<div class="performance-kpi-header">' +
+            '<span class="performance-kpi-icon performance-kpi-icon--' + config.tone + '">' +
+              '<i class="fas fa-' + config.icon + '" aria-hidden="true"></i>' +
+            '</span>' +
+            '<span class="performance-kpi-label">' + escapeUiHtml(config.label) + '</span>' +
+          '</div>' +
+          nameRow +
+          '<div class="performance-kpi-value performance-kpi-value--' + config.tone + '">' +
+            escapeUiHtml(config.value) +
+          '</div>' +
+          '<div class="performance-kpi-description">' + escapeUiHtml(config.description) + '</div>' +
+          footer
+        );
+      }
+      var snapshots = [
+        { label: "Top Profit Product", icon: "trophy", tone: "blue", name: topProfit ? topProfit.label : "No data", value: topProfit ? formatChartCurrency(topProfit.grossMargin) : "—", description: "Gross Margin nominal", badge: topProfit ? topProfitShare.toFixed(1) + "% of total GM" : "No data", badgeTone: "blue" },
+        { label: "Best Margin %", icon: "percent", tone: "green", name: bestMargin ? bestMargin.label : "No data", value: bestMargin ? Number(bestMargin.grossMarginPercent || 0).toFixed(1) + "%" : "—", description: "Highest product margin rate", badge: "High efficiency", badgeTone: "green" },
+        { label: "Top Revenue Product", icon: "arrow-trend-up", tone: "purple", name: revenueLeader ? revenueLeader.label : "No data", value: revenueLeader ? formatChartCurrency(revenueLeader.revenue) : "—", description: "Highest revenue", badge: revenueLeader ? concentrationShare.toFixed(1) + "% of total revenue" : "No data", badgeTone: "purple" },
+        { label: "Largest Expense Driver", icon: "credit-card", tone: "orange", name: largestExpense ? largestExpense.group : "No data", value: largestExpense && totalExpense > 0 ? (Number(largestExpense.amount || 0) / totalExpense * 100).toFixed(1) + "%" : "—", description: "of total expense", badge: largestExpense ? formatChartCurrency(largestExpense.amount) : "No data", badgeTone: "orange" },
+        { label: "Total Gross Margin", icon: "cube", tone: "teal", name: null, value: formatChartCurrency(totalGrossMargin), description: "Total gross profit", badge: grossMarginBadge, badgeTone: grossMarginBadgeTone },
+        { label: "Revenue Concentration", icon: "bullseye", tone: "pink", name: null, value: concentrationShare.toFixed(1) + "%", description: "Top product revenue share", badge: concentrationStatus, badgeTone: "pink" }
+      ];
+      elements.performance.snapshotCards
+        .forEach(function(card, index)
+        {
+          card.innerHTML = buildKpiCard(snapshots[index]);
+        });
+    }
+
+    function renderProductProfitabilityChart(performanceAnalytics)
+    {
+      var chartPalette = getCurrentThemePalette();
+      var data = performanceAnalytics && Array.isArray(performanceAnalytics.productProfitability)
+        ? performanceAnalytics.productProfitability.slice()
+        : [];
+      var displayedProducts = data.slice(0, window.innerWidth < 640 ? 6 : 10);
+      var chartAvailable = isChartLibraryAvailable();
+      var summary = displayedProducts.length
+        ? displayedProducts.length + " products ranked by gross margin. Leader: " + displayedProducts[0].label +
+          " at " + formatChartCurrency(displayedProducts[0].grossMargin) + "."
+        : "No product profitability data for the selected period.";
+
+      productProfitabilityChart = destroyChartInstance(productProfitabilityChart);
+      setChartPresentation("productProfitabilityChart", "productProfitabilityEmpty", "productProfitabilitySummary",
+        !chartAvailable || displayedProducts.length === 0, chartAvailable ? "No product sales data for the selected period." : "Chart unavailable.", summary);
+      if (!chartAvailable || displayedProducts.length === 0) return;
+
+      var productProfitabilityLabelPlugin = {
+        id: "productProfitabilityLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var yScale = chart.scales.y;
+          var meta = chart.getDatasetMeta(0);
+          var chartLeft = chart.chartArea.left;
+          var chartRight = chart.chartArea.right;
+          var percentageX = chart.width - 10;
+
+          ctx.save();
+          ctx.textBaseline = "middle";
+
+          displayedProducts.forEach(function(item, index)
+          {
+            var y = yScale.getPixelForValue(index);
+            var bar = meta.data[index];
+            var valueX = bar ? Math.min(bar.x + 12, chartRight + 12) : chartRight + 12;
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "600 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText((index + 1) + ". " + item.label, chartLeft - 132, y);
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "700 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(formatChartCurrency(item.grossMargin), valueX, y);
+
+            ctx.fillStyle = chartPalette.series[2] || chartPalette.axis;
+            ctx.font = "600 11.5px Inter, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(
+              Number(item.grossMarginPercent || 0).toFixed(1) + "%",
+              percentageX,
+              y
+            );
+          });
+
+          ctx.restore();
+        },
+        beforeDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+
+          ctx.save();
+          ctx.fillStyle = chartPalette.axis;
+          ctx.font = "700 10.5px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("Margin %", chart.width - 10, chart.chartArea.top - 2);
+          ctx.restore();
+        }
+      };
+
+      productProfitabilityChart = new Chart(document.getElementById("productProfitabilityChart").getContext("2d"), {
+        type: "bar",
+        data: {
+          labels: displayedProducts.map(function(item) { return item.label; }),
+          datasets: [
+            { label: "Gross Margin", numlockThemeRole: "margin", data: displayedProducts.map(function(item) { return item.grossMargin; }), backgroundColor: chartPalette.series[1], borderColor: chartPalette.series[1], borderRadius: 5, barPercentage: 0.84, categoryPercentage: 0.80 }
+          ]
+        },
+        plugins: [productProfitabilityLabelPlugin],
+        options: {
+          animation: shouldReduceMotion() ? false : undefined,
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          layout: {
+            padding: {
+              left: 136,
+              right: 132,
+              top: 20,
+              bottom: 2
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: chartPalette.tooltipBackground,
+              titleColor: chartPalette.tooltipText,
+              bodyColor: chartPalette.tooltipText,
+              callbacks: {
+                label: function(context) { return "Gross Margin: " + formatChartCurrency(context.raw); },
+                afterBody: function(context)
+                {
+                  var metric = displayedProducts[context[0].dataIndex];
+                  return ["Revenue: " + formatChartCurrency(metric.revenue), "COGS: " + formatChartCurrency(metric.cogs), "Margin: " + Number(metric.grossMarginPercent || 0).toFixed(1) + "%"];
+                }
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, font: { weight: "600" }, callback: formatRevenueAxisTick } },
+            y: { grid: { display: false }, ticks: { display: false, autoSkip: false } }
+          }
+        }
+      });
+    }
+
+    function renderCategoryPerformanceChart(performanceAnalytics)
+    {
+      var grouping = activePerformanceGrouping === "kind" ? "kind" : "category";
+      var chartPalette = getCurrentThemePalette();
+      var groups = performanceAnalytics && performanceAnalytics.classifications &&
+        Array.isArray(performanceAnalytics.classifications[grouping])
+        ? performanceAnalytics.classifications[grouping].slice(0, 8)
+        : [];
+      var chartAvailable = isChartLibraryAvailable();
+      var categoryElements = initializeStableDashboardElements().performance;
+      var summary = groups.length
+        ? groups.length + " " + grouping + " groups showing COGS and gross margin contribution to revenue."
+        : "No " + grouping + " performance data for the selected period.";
+
+      categoryPerformanceChart = destroyChartInstance(categoryPerformanceChart);
+      categoryElements.categoryMixCenter.innerHTML = "";
+      categoryElements.categoryMixLegend.innerHTML = "";
+      setChartPresentation("categoryPerformanceChart", "categoryPerformanceEmpty", "categoryPerformanceSummary",
+        !chartAvailable || !groups.length, chartAvailable ? "No classification data for the selected period." : "Chart unavailable.", summary);
+      if (!chartAvailable || !groups.length) return;
+
+      var totalRevenue = groups.reduce(function(sum, item) { return sum + Number(item.revenue || 0); }, 0);
+      /*
+       * Category Mix needs four visually distinct primary colors.
+       * Keep the first, third and fourth colors theme-aware while
+       * forcing the second series to a clear purple accent.
+       */
+      var categoryColorOrder = [0, 2, 3, 5, 6, 7, 1];
+
+      var categoryColors = groups.map(function(item, index)
+      {
+        if (index === 1)
+        {
+          return "#8b5cf6";
+        }
+
+        var paletteIndex = categoryColorOrder[
+          (index > 1 ? index - 1 : index) % categoryColorOrder.length
+        ] % chartPalette.series.length;
+
+        return chartPalette.series[paletteIndex];
+      });
+      categoryElements.categoryMixCenter.innerHTML = '<div class="text-[10px] text-slate-500">Total Revenue</div><strong>' + formatChartCurrency(totalRevenue) + '</strong>';
+      categoryElements.categoryMixLegend.innerHTML =
+        '<div class="performance-detail-header">' +
+          '<span>' + (grouping === "kind" ? "Kind" : "Category") + '</span>' +
+          '<span>Revenue</span>' +
+          '<span>Margin %</span>' +
+        '</div>' +
+        groups.map(function(item, index)
+        {
+          return '<div class="performance-detail-row">' +
+            '<span><i class="performance-detail-dot" style="background:var(--chart-series-' + (index % 8 + 1) + ')"></i>' +
+              escapeUiHtml(item.label) +
+            '</span>' +
+            '<span class="performance-detail-revenue">' + formatChartCurrency(item.revenue) + '</span>' +
+            '<span>' + Number(item.grossMarginPercent || 0).toFixed(1) + '%</span>' +
+          '</div>';
+        }).join("");
+      var categoryMixLeaderLabelPlugin = {
+        id: "categoryMixLeaderLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var meta = chart.getDatasetMeta(0);
+
+          if (!meta || !meta.data || !meta.data.length) return;
+
+          var leftLabels = [];
+          var rightLabels = [];
+          var minimumGap = 30;
+
+          meta.data.forEach(function(arc, index)
+          {
+            var item = groups[index];
+            var revenue = Number(item.revenue || 0);
+            var share = totalRevenue > 0 ? revenue / totalRevenue * 100 : 0;
+            var angle = (arc.startAngle + arc.endAngle) / 2;
+            /*
+             * Major slices retain their natural geometric side.
+             * Small slices prefer the less crowded side.
+             *
+             * Because callouts no longer use connector lines,
+             * this redistribution cannot cross the doughnut.
+             */
+            var side = Math.cos(angle) >= 0 ? 1 : -1;
+
+            if (share < 20)
+            {
+              var leftLoad = leftLabels.length;
+              var rightLoad = rightLabels.length;
+
+              if (rightLoad > leftLoad)
+              {
+                side = -1;
+              }
+              else if (leftLoad > rightLoad)
+              {
+                side = 1;
+              }
+            }
+
+            var point = {
+              index: index,
+              item: item,
+              revenue: revenue,
+              share: share,
+              angle: angle,
+              side: side,
+              startX: arc.x + Math.cos(angle) * (arc.outerRadius + 2),
+              startY: arc.y + Math.sin(angle) * (arc.outerRadius + 2),
+              desiredY: arc.y + Math.sin(angle) * (arc.outerRadius + 14)
+            };
+
+            (side > 0 ? rightLabels : leftLabels).push(point);
+          });
+
+          function distribute(items)
+          {
+            if (!items.length) return;
+
+            items.sort(function(a, b)
+            {
+              return a.desiredY - b.desiredY;
+            });
+
+            /*
+             * Protected annotation area around the doughnut.
+             * Keep clear of title/dropdown above and grid below.
+             */
+            var topLimit = chart.chartArea.top + 16;
+            var bottomLimit = chart.chartArea.bottom - 18;
+
+            if (items.length === 1)
+            {
+              items[0].labelY = Math.max(
+                topLimit,
+                Math.min(bottomLimit, items[0].desiredY)
+              );
+              return;
+            }
+
+            /*
+             * Two callouts are the normal Kind-side case.
+             * Give them deliberate upper/lower positions rather
+             * than letting them cluster around their slice angles.
+             */
+            if (items.length === 2)
+            {
+              var usableHeight = bottomLimit - topLimit;
+
+              items[0].labelY = topLimit + usableHeight * 0.25;
+              items[1].labelY = topLimit + usableHeight * 0.75;
+              return;
+            }
+
+            /*
+             * Fallback for future classifications with >2 labels
+             * on the same side.
+             */
+            var availableHeight = Math.max(
+              0,
+              bottomLimit - topLimit
+            );
+
+            var slotGap = availableHeight / (items.length + 1);
+
+            items.forEach(function(item, index)
+            {
+              item.labelY = topLimit + slotGap * (index + 1);
+            });
+          }
+
+          distribute(leftLabels);
+          distribute(rightLabels);
+
+          ctx.save();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = chartPalette.axis;
+          ctx.fillStyle = chartPalette.axis;
+
+          leftLabels.concat(rightLabels).forEach(function(label)
+          {
+            var isRight = label.side > 0;
+            var arc = meta.data[label.index];
+
+            /*
+             * Floating callout:
+             * no connector line, therefore no possibility of crossing
+             * the doughnut or visually attaching to the wrong slice.
+             */
+            var textX = arc.x +
+              label.side * (arc.outerRadius + 58);
+
+            var dotX = textX +
+              (isRight ? -10 : 10);
+
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = categoryColors[
+              label.index % categoryColors.length
+            ];
+
+            ctx.beginPath();
+            ctx.arc(
+              dotX,
+              label.labelY - 6,
+              3,
+              0,
+              Math.PI * 2
+            );
+            ctx.fill();
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.globalAlpha = 1;
+            ctx.textBaseline = "middle";
+            ctx.textAlign = isRight ? "left" : "right";
+
+            ctx.font = "700 12px Inter, sans-serif";
+            ctx.fillText(
+              label.item.label,
+              textX,
+              label.labelY - 7
+            );
+
+            ctx.font = "600 12px Inter, sans-serif";
+            ctx.fillText(
+              label.share.toFixed(1) + "%",
+              textX,
+              label.labelY + 8
+            );
+          });
+
+          ctx.restore();
+        }
+      };
+
+      categoryPerformanceChart = new Chart(document.getElementById("categoryPerformanceChart").getContext("2d"), {
+        type: "doughnut",
+        data: {
+          labels: groups.map(function(item) { return item.label; }),
+          datasets: [{ label: "Revenue Share", data: groups.map(function(item) { return item.revenue; }), backgroundColor: categoryColors, borderColor: "transparent", borderWidth: 0 }]
+        },
+        plugins: [categoryMixLeaderLabelPlugin],
+        options: {
+          animation: shouldReduceMotion() ? false : undefined,
+          responsive: true,
+          maintainAspectRatio: false,
+          rotation: -210,
+          radius: "98%",
+          cutout: "64%",
+          layout: {
+            padding: {
+              left: 54,
+              right: 54,
+              top: 0,
+              bottom: 0
+            }
+          },
+          plugins: { legend: { display: false }, tooltip: { backgroundColor: chartPalette.tooltipBackground, titleColor: chartPalette.tooltipText, bodyColor: chartPalette.tooltipText,
+            callbacks: { label: function(context) { var item = groups[context.dataIndex]; var share = totalRevenue > 0 ? Number(item.revenue || 0) / totalRevenue * 100 : 0; return "Revenue: " + formatChartCurrency(item.revenue) + " · " + share.toFixed(1) + "% · Margin " + Number(item.grossMarginPercent || 0).toFixed(1) + "%"; } } } }
+        }
+      });
+    }
+
+    function renderHotColdEconomicsComparison(hotColdEconomics)
+    {
+      var chartPalette = getCurrentThemePalette();
+      var economics = Array.isArray(hotColdEconomics) ? hotColdEconomics.slice() : [];
+      var isEmpty = !economics.some(function(item) { return Number(item.revenue || 0) !== 0 || Number(item.cogs || 0) !== 0; });
+      var summary = economics.map(function(item) { return item.label + " margin " + formatChartCurrency(item.grossMargin) + " (" + Number(item.grossMarginPercent || 0).toFixed(1) + "%)."; }).join(" ");
+      var chartAvailable = isChartLibraryAvailable();
+
+      hotColdChart = destroyChartInstance(hotColdChart);
+      var hotColdElements = initializeStableDashboardElements().performance;
+      hotColdElements.hotColdSummary.innerText = summary || "No Hot/Cold economics data for the selected period.";
+      hotColdElements.hotColdEmpty.classList.toggle("hidden", !isEmpty);
+      hotColdElements.hotColdEmpty.innerText = "No Hot/Cold sales data for the selected period.";
+      if (isEmpty)
+      {
+        hotColdElements.hotColdComparison.innerHTML = "";
+        return;
+      }
+
+      var maximumRevenue = Math.max.apply(null, economics.map(function(item) { return Number(item.revenue || 0); }));
+      var revenueLeader = economics.reduce(function(leader, item)
+      {
+        return !leader || Number(item.revenue || 0) > Number(leader.revenue || 0) ? item : leader;
+      }, null);
+      var marginLeader = economics.reduce(function(leader, item)
+      {
+        return !leader || Number(item.grossMarginPercent || 0) > Number(leader.grossMarginPercent || 0) ? item : leader;
+      }, null);
+      var revenueDifference = economics.length > 1 ? Math.abs(Number(economics[0].revenue || 0) - Number(economics[1].revenue || 0)) : 0;
+      var marginDifference = economics.length > 1 ? Math.abs(Number(economics[0].grossMarginPercent || 0) - Number(economics[1].grossMarginPercent || 0)) : 0;
+      var cards = economics.map(function(item)
+      {
+        var width = maximumRevenue > 0 ? Number(item.revenue || 0) / maximumRevenue * 100 : 0;
+        return '<article class="hot-cold-card"><div class="hot-cold-label">' + escapeUiHtml(item.label) + '</div>' +
+          '<div class="serving-type-card-body"><div class="serving-type-card-metrics">' +
+          '<div class="serving-type-metric"><div class="serving-type-metric-label">Revenue</div><div class="serving-type-metric-value serving-type-revenue-value">' + formatChartCurrency(item.revenue) + '</div></div>' +
+          '<div class="serving-type-metric"><div class="serving-type-metric-label">Gross Margin</div><div class="serving-type-metric-value serving-type-gross-margin-value">' + formatChartCurrency(item.grossMargin) + '</div></div>' +
+          '<div class="serving-type-metric"><div class="serving-type-metric-label">Margin</div><div class="serving-type-metric-value serving-type-margin-value">' + Number(item.grossMarginPercent || 0).toFixed(1) + '%</div></div></div>' +
+          '<div class="serving-type-meter-slot"><div class="hot-cold-meter" title="COGS ' + formatChartCurrency(item.cogs) + '"><span style="width:' + width.toFixed(1) + '%"></span></div></div></div></article>';
+      }).join("");
+
+      hotColdElements.hotColdComparison.innerHTML =
+        '<div class="hot-cold-card-grid">' + cards + '</div>' +
+        '<section class="hot-cold-performance" aria-label="Performance comparison"><div class="hot-cold-performance-grid">' +
+        '<div class="serving-comparison-item"><div class="serving-comparison-label">Revenue Leader</div><div class="serving-comparison-result"><div class="serving-comparison-leader">' + escapeUiHtml(revenueLeader ? revenueLeader.label : "—") + '</div><div class="serving-comparison-value">+' + formatChartCurrency(revenueDifference) + '</div></div></div>' +
+        '<div class="serving-comparison-item"><div class="serving-comparison-label">Margin Leader</div><div class="serving-comparison-result"><div class="serving-comparison-leader">' + escapeUiHtml(marginLeader ? marginLeader.label : "—") + '</div><div class="serving-comparison-value">+' + marginDifference.toFixed(1) + ' pts</div></div></div>' +
+        '</div></section>';
+    }
+
+    function renderExpenseChart(expenseBreakdown)
+    {
+      var chartPalette = getCurrentThemePalette();
+      var rankedExpenses = expenseBreakdown.reduce(function(ranked, item)
+      {
+        var insertAt = ranked.length;
+        for (var index = 0; index < ranked.length; index++)
+        {
+          if (Number(item.amount || 0) > Number(ranked[index].amount || 0))
+          {
+            insertAt = index;
+            break;
+          }
+        }
+        return ranked.slice(0, insertAt).concat([item], ranked.slice(insertAt));
+      }, []);
+      var total = rankedExpenses.reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0);
+      var driverShares = [1, 2, 3].map(function(count)
+      {
+        var cumulativeAmount = rankedExpenses.slice(0, count).reduce(function(sum, item)
+        {
+          return sum + Number(item.amount || 0);
+        }, 0);
+        return total > 0 ? cumulativeAmount / total * 100 : 0;
+      });
+      var expenseData = rankedExpenses.slice(0, 4);
+      if (rankedExpenses.length > 4)
+      {
+        expenseData = rankedExpenses.slice(0, 3);
+        expenseData.push({
+          group: "Others",
+          amount: rankedExpenses.slice(3).reduce(function(sum, item) { return sum + Number(item.amount || 0); }, 0)
+        });
+      }
+      var isEmpty = expenseData.length === 0;
+      var largest = null;
+
+      expenseData.forEach(function(item)
+      {
+        if (!largest || item.amount > largest.amount)
+        {
+          largest = item;
+        }
+      });
+
+      var summary = isEmpty
+        ? "Expense breakdown has no represented categories."
+        : expenseData.length + " expense categories, total " + formatChartCurrency(total) +
+          ". Showing " + expenseData.length + " groups. Largest: " + largest.group + " at " + formatChartCurrency(largest.amount) + ".";
+      var chartAvailable = isChartLibraryAvailable();
+
+      expenseChart = destroyChartInstance(expenseChart);
+      setChartPresentation(
+        "expenseChart",
+        "expenseChartEmpty",
+        "expenseChartSummary",
+        !chartAvailable || isEmpty,
+        chartAvailable
+          ? "No expense data for the selected period."
+          : "Chart unavailable.",
+        summary
+      );
+
+      var expenseSummaryBox = document.getElementById("expenseSummaryBox");
+      expenseSummaryBox.innerHTML = isEmpty
+        ? '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Summary</p><p class="expense-summary-label">No expense data for the selected period.</p></div>'
+        : '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Summary</p>' +
+          '<p class="expense-summary-total">' + formatChartCurrency(total) + '</p>' +
+          '<p class="expense-summary-label">Total Operating Expense</p></div>' +
+          '<div class="expense-summary-block"><p class="expense-summary-label">Largest Expense</p>' +
+          '<p class="expense-summary-largest">' + escapeUiHtml(largest.group) + '</p>' +
+          '<p class="expense-summary-share">' + formatChartCurrency(largest.amount) + ' (' + driverShares[0].toFixed(1) + '%)</p></div>' +
+          '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Drivers</p>' +
+          '<div class="expense-driver-list">' +
+          driverShares.map(function(share, index)
+          {
+            var label = index === 0 ? "Top 1 Expense" : "Top " + (index + 1) + " Expenses";
+            return '<div class="expense-driver-row"><span class="expense-driver-label">' + label + '</span>' +
+              '<span class="expense-driver-meter"><span class="expense-driver-fill" style="width:' + Math.min(share, 100).toFixed(1) + '%"></span></span>' +
+              '<span class="expense-driver-share">' + share.toFixed(1) + '%</span></div>';
+          }).join("") + '</div></div>';
+
+      if (!chartAvailable || isEmpty)
+      {
+        return;
+      }
+
+      var expenseBarLabelPlugin = {
+        id: "expenseBarLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var meta = chart.getDatasetMeta(0);
+
+          ctx.save();
+          ctx.textAlign = "center";
+          ctx.textBaseline = "bottom";
+          meta.data.forEach(function(bar, index)
+          {
+            var amount = Number(expenseData[index].amount || 0);
+            var share = total > 0 ? amount / total * 100 : 0;
+            var labelY = Math.max(chart.chartArea.top + 20, bar.y - 4);
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "600 11px Inter, sans-serif";
+            ctx.fillText(formatChartCurrency(amount), bar.x, labelY - 11);
+            ctx.font = "500 10px Inter, sans-serif";
+            ctx.fillText("(" + share.toFixed(1) + "%)", bar.x, labelY);
+          });
+          ctx.restore();
+        }
+      };
+
+      var expenseYAxisLabelPlugin = {
+        id: "expenseYAxisLabels",
+        afterDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var yScale = chart.scales.y;
+
+          ctx.save();
+          ctx.fillStyle = chartPalette.axis;
+          ctx.font = "600 10px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.textBaseline = "middle";
+          yScale.ticks.forEach(function(tick, index)
+          {
+            ctx.fillText(tick.label, yScale.right - 8, yScale.getPixelForTick(index));
+          });
+          ctx.restore();
+        }
+      };
+
+      expenseChart = new Chart(
+        document.getElementById("expenseChart").getContext("2d"),
+        {
+          type: "bar",
+          data: {
+            labels: expenseData.map(function(item) { return item.group; }),
+            datasets: [{
+              label: "Expense",
+              data: expenseData.map(function(item) { return item.amount; }),
+              backgroundColor: chartPalette.series[2],
+              borderColor: chartPalette.series[2],
+              borderRadius: { topLeft: 9, topRight: 9, bottomLeft: 0, bottomRight: 0 },
+              borderSkipped: false,
+              barPercentage: 0.72,
+              categoryPercentage: 0.8
+            }]
+          },
+          plugins: [expenseBarLabelPlugin, expenseYAxisLabelPlugin],
+          options: {
+            animation: shouldReduceMotion() ? false : undefined,
+            responsive: true,
+            maintainAspectRatio: false,
+            onClick: function(event, elements)
+            {
+              if (elements.length)
+              {
+                applyTransactionDrilldown("purchase", "", "Expense transactions");
+              }
+            },
+            layout: { padding: { top: 4, right: 4, bottom: 0, left: 0 } },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: chartPalette.tooltipBackground,
+                titleColor: chartPalette.tooltipText,
+                bodyColor: chartPalette.tooltipText,
+                callbacks: {
+                  label: function(context)
+                  {
+                    var amount = Number(context.raw || 0);
+                    var share = total > 0 ? amount / total * 100 : 0;
+                    return "Expense: " + formatChartCurrency(amount) + " · " + share.toFixed(1) + "% of total";
+                  }
+                }
+              }
+            },
+            scales: {
+              x: { grid: { display: false }, ticks: { autoSkip: false, color: chartPalette.axis, font: { weight: 600 }, maxRotation: 0, minRotation: 0 } },
+              y: {
+                beginAtZero: true,
+                min: 0,
+                grace: "24%",
+                grid: { color: chartPalette.grid, drawOnChartArea: true, drawTicks: false },
+                border: { display: true },
+                ticks: { color: "rgba(0, 0, 0, 0)", stepSize: 2000000, font: { size: 10, weight: 600 }, callback: formatRevenueAxisTick }
+              }
+            }
+          }
+        }
+      );
+    }
+
+    function renderCharts(res)
+    {
+      var revenueTrend = res.revenueTrend || { labels: [], values: [] };
+      latestPerformanceAnalytics = res.performanceAnalytics || { productProfitability: [], classifications: { category: [], kind: [] }, hotColdEconomics: [], expenseGroups: [] };
+      var topProducts = Array.isArray(res.topProducts) ? res.topProducts : [];
+
+      if (!isChartLibraryAvailable())
+      {
+        reportChartLibraryUnavailable();
+      }
+
+      renderRevenueChart(revenueTrend);
+      try
+      {
+        renderPerformanceSnapshot(latestPerformanceAnalytics);
+        renderProductProfitabilityChart(latestPerformanceAnalytics);
+        renderCategoryPerformanceChart(latestPerformanceAnalytics);
+        renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);
+        renderExpenseChart(Array.isArray(latestPerformanceAnalytics.expenseGroups) ? latestPerformanceAnalytics.expenseGroups : []);
+      }
+      catch (performanceError)
+      {
+        console.error("Performance analytics render failed", performanceError);
+        logClientEvent("Error", "Dashboard load", "Performance analytics rendering failed.");
+      }
+
+      document.getElementById("topProductsContainer").innerHTML = topProducts.length
+        ? '<table class="hf-top-products-table ui-table-body"><colgroup><col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue"></colgroup>' +
+          '<thead><tr><th scope="col">#</th><th scope="col">Product</th><th scope="col">Units</th><th scope="col">Revenue</th></tr></thead>' +
+          '<tbody>' + topProducts.slice(0, 10).map(function(p, index)
+          {
+            return '<tr><td>' + (index + 1) + '</td>' +
+              '<th scope="row" class="text-left font-semibold">' + p.name + '</th>' +
+              '<td class="tabular-nums">' + Number(p.qty || 0).toLocaleString("id-ID") + '</td>' +
+              '<td class="font-semibold tabular-nums ' + (Number(p.revenue || 0) < 0 ? 'text-red-600' : '') + '">Rp ' + Number(p.revenue || 0).toLocaleString("id-ID") + '</td></tr>';
+          }).join("") + '</tbody></table>'
+        : '<p class="ui-empty-state py-6 text-center">No product sales for the selected period.</p>';
+    }
+
+    //--------------------------------------------------
+    // Render Business Intelligence
+    //--------------------------------------------------
+    function renderBusinessIntelligence(res)
+    {
+      var diagnosis =
+        Array.isArray(res.diagnosis)
+          ? res.diagnosis
+          : [];
+
+      if (res.revenueIntelligence && res.profitIntelligence)
+      {
+        var diagnosisContainer =
+          document.getElementById("diagnosisContainer");
+        var revenueMovementClass =
+          Number(res.revenueIntelligence.growthRate) < 0
+            ? "text-red-600"
+            : Number(res.revenueIntelligence.growthRate) > 0
+              ? "text-emerald-600"
+              : "text-slate-500";
+        var profitMovementClass =
+          Number(res.profitIntelligence.changeRate) < 0
+            ? "text-red-600"
+            : Number(res.profitIntelligence.changeRate) > 0
+              ? "text-emerald-600"
+              : "text-slate-500";
+        diagnosisContainer.innerHTML =
+          diagnosis.slice(0, 2).map(renderDiagnosisCard).join("");
+
+        diagnosisContainer.nextElementSibling.innerHTML =
+          '<div class="intelligence-summary-card intelligence-summary-card--revenue">' +
+          '<span class="intelligence-summary-icon" aria-hidden="true"><i class="fas fa-arrow-trend-up"></i></span>' +
+          '<div class="intelligence-summary-content"><div class="intelligence-summary-title">Revenue Intelligence</div>' +
+          '<div class="intelligence-summary-value-row"><strong class="intelligence-summary-metric">' + res.revenueIntelligence.direction +
+          ' · ' + res.revenueIntelligence.growthRate + '%</strong><span class="intelligence-summary-divider" aria-hidden="true"></span>' +
+          '<span class="insights-status-badge bg-emerald-100 text-emerald-700">' + res.revenueIntelligence.momentum + '</span></div></div></div>' +
+          '<div class="intelligence-summary-card intelligence-summary-card--profit">' +
+          '<span class="intelligence-summary-icon" aria-hidden="true"><i class="fas fa-arrow-trend-up"></i></span>' +
+          '<div class="intelligence-summary-content"><div class="intelligence-summary-title">Profit Intelligence</div>' +
+          '<div class="intelligence-summary-value-row"><strong class="intelligence-summary-metric">' + res.profitIntelligence.direction +
+          ' · ' + res.profitIntelligence.changeRate + '%</strong><span class="intelligence-summary-divider" aria-hidden="true"></span>' +
+          '<span class="insights-status-badge bg-amber-100 text-amber-700">' + res.profitIntelligence.status + '</span>' +
+          '<span class="intelligence-summary-divider" aria-hidden="true"></span><span class="intelligence-summary-meta">Rp ' +
+          res.summary.profit.toLocaleString("id-ID") + '</span></div></div></div>';
+      }
+
+      if (res.forecast)
+      {
+        var forecastContainer = document.getElementById("forecastContainer");
+
+        if (!forecastContainer)
+        {
+          logClientEvent("Warning", "Dashboard load", "Forecast presentation is not mounted.");
+          return;
+        }
+
+        const growthColor =
+          res.forecast.nextMonthRevenue < 0 || res.forecast.growthRate < 0
+            ? "text-red-600"
+            : res.forecast.growthRate > 0
+            ? "text-emerald-600"
+            : "text-slate-500";
+
+        forecastContainer.innerHTML =
+        '<div class="performance-signal-top"><div class="performance-signal-label">Next-month forecast</div>' +
+        '<div class="performance-signal-primary performance-insight-value ' + growthColor + '">Rp ' +
+        res.forecast.nextMonthRevenue.toLocaleString("id-ID") + '</div>' +
+        '</div><div class="performance-signal-bottom"><div class="performance-signal-status ' + growthColor + '">' +
+        (res.forecast.growthRate > 0 ? "▲ " : res.forecast.growthRate < 0 ? "▼ " : "") +
+        Math.abs(res.forecast.growthRate) + '% expected movement</div>' +
+        '<div class="performance-signal-meta">Forward signal from represented revenue trend</div></div>';
+      }
+
+      var marginProducts = res.performanceAnalytics && Array.isArray(res.performanceAnalytics.productProfitability)
+        ? res.performanceAnalytics.productProfitability
+        : [];
+      var marginRevenue = marginProducts.reduce(function(sum, item) { return sum + Number(item.revenue || 0); }, 0);
+      var grossMargin = marginProducts.reduce(function(sum, item) { return sum + Number(item.grossMargin || 0); }, 0);
+      var grossMarginRate = marginRevenue !== 0 ? grossMargin / marginRevenue * 100 : 0;
+      var marginHealth = initializeStableDashboardElements().performance.marginHealth;
+      marginHealth.innerHTML =
+        '<div class="performance-signal-top"><div class="performance-signal-label">Gross Margin Health</div>' +
+        '<div class="performance-signal-primary performance-insight-value">' + grossMarginRate.toFixed(1) + '%</div></div>' +
+        '<div class="performance-signal-bottom"><div class="performance-signal-status ' + (grossMarginRate >= 0 ? 'text-emerald-600' : 'text-red-600') + '">' +
+        (grossMarginRate >= 0 ? 'Positive gross margin' : 'Negative gross margin') + '</div>' +
+        '<div class="performance-signal-meta">' + formatChartCurrency(grossMargin) + ' from ' + formatChartCurrency(marginRevenue) + ' revenue</div></div>';
+    }
+
+    //--------------------------------------------------
+    // Render Executive Center
+    //--------------------------------------------------
+    function renderExecutiveSummary(res)
+    {
+      var revenueTrend = res.revenueTrend || { labels: [], values: [] };
+      var granularity = revenueTrend.granularity === "day" ? "day" : "month";
+      var revenueValues = Array.isArray(revenueTrend.values)
+        ? revenueTrend.values
+        : [];
+      var highestRevenue = revenueValues.length
+        ? Math.max.apply(null, revenueValues)
+        : 0;
+      var highestRevenueIndex = revenueValues.indexOf(highestRevenue);
+      var highestRevenuePeriod =
+        highestRevenueIndex >= 0 && revenueTrend.labels[highestRevenueIndex]
+          ? formatRevenueAxisLabel(revenueTrend.labels[highestRevenueIndex], granularity).join(" ")
+          : "No represented period";
+      var averageMonthlyRevenue =
+        Number(res.summary.averageMonthlyRevenue || 0);
+      var presentedAverageMonthlyRevenue =
+        Math.round(averageMonthlyRevenue / 1000) * 1000;
+      var periodLabels = {
+        currentMonth: "This Month",
+        previousMonth: "Previous Month",
+        currentYear: "This Year",
+        previousYear: "Previous Year",
+        customMonth: "Custom Month",
+        customYear: "Custom Year",
+        custom: "Custom Range"
+      };
+      document.getElementById("executiveSummaryPeriod").innerText =
+        periodLabels[res.dateFilter.filter] || res.dateFilter.label;
+      var summaryMetrics = [
+        ["Highest Revenue", formatChartCurrency(highestRevenue), highestRevenuePeriod, highestRevenue < 0 ? "text-red-600" : ""],
+        ["Average Monthly Revenue", formatChartCurrency(presentedAverageMonthlyRevenue), "Across represented months", presentedAverageMonthlyRevenue < 0 ? "text-red-600" : ""],
+        ["Total Profit", formatChartCurrency(res.summary.profit), "Revenue less expense", res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"],
+        ["Average Profit Margin", Number(res.insights.profitMargin || 0).toLocaleString("id-ID") + "%", "Current selected period", Number(res.insights.profitMargin || 0) < 0 ? "text-red-600" : ""]
+      ];
+
+      document.getElementById("executiveSummary").innerHTML =
+        summaryMetrics.map(function(metric)
+        {
+          return '<div class="min-w-0">' +
+            '<div class="hf-section-label">' + metric[0] + '</div>' +
+            '<div class="performance-metric-value mt-1 truncate text-lg font-extrabold ' + metric[3] + '">' +
+            metric[1] + '</div>' +
+            '<div class="mt-0.5 truncate text-[10px] text-slate-500">' + metric[2] + '</div></div>';
+        }).join("");
+
+      if (res.businessPriority)
+      {
+        var priority =
+          res.businessPriority;
+
+        var priorityClasses = {
+          Critical: "bg-red-100 text-red-700",
+          High: "bg-red-100 text-red-700",
+          Medium: "bg-indigo-100 text-indigo-700",
+          Low: "bg-emerald-100 text-emerald-700"
+        };
+
+        var priorityLevel =
+          document.getElementById("businessPriorityLevel");
+
+        priorityLevel.className =
+          "insights-status-badge " +
+          priorityClasses[priority.level];
+        priorityLevel.innerText =
+          priority.level + " Priority";
+
+        document.getElementById("priorityTitle").innerText =
+          priority.title;
+        document.getElementById("priorityReason").innerText =
+          priority.reason;
+        document.getElementById("priorityMessage").innerText =
+          "Next action: " + priority.action;
+
+        var evidenceValue =
+          typeof priority.evidence.value === "number"
+            ? priority.evidence.value.toLocaleString("id-ID")
+            : String(priority.evidence.value);
+
+        document.getElementById("priorityMeta").innerText =
+          priority.evidence.metric +
+          ": " +
+          evidenceValue +
+          " · " +
+          priority.evidence.comparison;
+      }
+    }
+
+    function renderExecutiveCenter(res)
+    {
+
+      if (res.riskEngine)
+      {
+        document.getElementById("riskLevel").innerText = res.riskEngine.riskLevel;
+        document.getElementById("riskCount").innerText = res.riskEngine.riskCount + " active risks detected";
+
+        var riskColor = "bg-emerald-100 text-emerald-700";
+
+        if (res.riskEngine.riskLevel === "Medium")
+        {
+          riskColor = "bg-amber-100 text-amber-700";
+        }
+
+        if (res.riskEngine.riskLevel === "High")
+        {
+          riskColor = "bg-red-100 text-red-700";
+        }
+
+        document.getElementById("riskLevel").className = "insights-status-badge " + riskColor;
+        document.getElementById("riskList").innerHTML =
+          res.riskEngine.risks
+            .map(function(item)
+            {
+              return `
+              <div class="insights-status-badge bg-amber-100 text-amber-700">
+                ${item}
+              </div>`;
+            })
+            .join("");
+      }
+
+      if (res.growthScore)
+      {
+        document.getElementById("growthScore").innerText = res.growthScore.growthScore + " / 100";
+        document.getElementById("growthStatus").innerText = res.growthScore.status;
+
+        var score = res.growthScore.growthScore;
+        var message = "";
+
+        if (score >= 80)
+        {
+          message = "Bisnis memiliki peluang pertumbuhan yang tinggi. Fokus pada ekspansi dan peningkatan kapasitas.";
+        }
+          else if (score >= 60)
+          {
+            message = "Peluang pertumbuhan cukup baik. Optimalkan produk unggulan dan efisiensi operasional.";
+          }
+          else
+          {
+            message = "Fokus pada pemulihan revenue dan profit margin sebelum melakukan ekspansi.";
+          }
+
+        var growthMessageElement =
+          document.getElementById("growthMessage");
+        growthMessageElement.innerText = message;
+
+        var color = "text-red-600";
+
+        if (score >= 80)
+        {
+          color = "text-emerald-600";
+        }
+          else if (score >= 60)
+          {
+          color = "text-amber-600";
+          }
+
+        document.getElementById("growthScore").className = "text-xl font-bold " + color;
+        document.getElementById("growthStatus").className =
+          "insights-status-badge " +
+          (score >= 80
+            ? "bg-emerald-100 text-emerald-700"
+            : score >= 60
+              ? "bg-amber-100 text-amber-700"
+              : "bg-red-100 text-red-700");
+
+        /*
+         * Business Maturity owns this Growth Opportunity support area.
+         * Revenue / Profit Intelligence presentation removed.
+         */
+        document.getElementById("intelligenceDirectionContext").innerHTML = "";
+      }
+
+      if (res.revenueConcentration)
+      {
+        var revenueDependencyContainer = document.getElementById("revenueDependencyContainer");
+        var riskColor = "text-emerald-600";
+        if (res.revenueConcentration.risk === "Medium")
+        {
+          riskColor = "text-amber-600";
+        }
+
+        if (res.revenueConcentration.risk === "High")
+          {
+            riskColor = "text-red-600";
+          }
+
+      if (revenueDependencyContainer)
+      {
+      revenueDependencyContainer.innerHTML = `
+      <div class="performance-signal-top">
+        <div class="performance-signal-label">Product Contribution / Revenue Dependency</div>
+        <div class="performance-signal-primary performance-metric-value">${res.revenueConcentration.contribution}% of Revenue</div>
+      </div>
+      <div class="performance-signal-bottom">
+        <div class="performance-signal-status ${riskColor}">Dependency Risk: ${res.revenueConcentration.risk}</div>
+        <div class="performance-signal-meta">${res.revenueConcentration.product}</div>
+      </div>
+      `;
+      }
+      }
+
+      if (res.paretoAnalysis)
+      {
+        var paretoContainer = document.getElementById("paretoContainer");
+        var concentrationColor = "text-emerald-600";
+        if (res.paretoAnalysis.concentration === "Medium")
+        {
+          concentrationColor = "text-amber-600";
+        }
+        if (res.paretoAnalysis.concentration === "High")
+        {
+          concentrationColor = "text-red-600";
+        }
+
+        if (paretoContainer)
+        {
+        paretoContainer.innerHTML = `
+        <div class="performance-signal-top">
+          <div class="performance-signal-label">Revenue Concentration / Pareto Analysis</div>
+          <div class="performance-signal-primary performance-metric-value">${res.paretoAnalysis.ratio}%</div>
+        </div>
+        <div class="performance-signal-bottom">
+          <div class="performance-signal-status ${concentrationColor}">Revenue Concentration: ${res.paretoAnalysis.concentration}</div>
+          <div class="performance-signal-meta">${res.paretoAnalysis.criticalProducts} of ${res.paretoAnalysis.totalProducts} products generate 80% of revenue</div>
+        </div>
+        `;
+        }
+      }
+
+      var recommendations =
+        Array.isArray(res.recommendations)
+          ? res.recommendations
+          : [];
+
+      if (recommendations.length)
+      {
+          document.getElementById("recommendationContainer").innerHTML =
+          recommendations
+          .slice(0,4)
+          .map(renderTimelineItem)
+          .join("");
+      }
+    }
+
+    function renderDeferredDashboardPresentation(res)
+    {
+      //--------------------------------------------------
+      // Business Maturity
+      //--------------------------------------------------
+      if (res.businessMaturity)
+      {
+        var maturityColor = "text-red-600";
+        if ( res.businessMaturity.score >= 75 )
+          {
+            maturityColor = "text-emerald-600";
+          }
+          else if ( res.businessMaturity.score >= 60 )
+            {
+              maturityColor = "text-amber-600";
+            }
+
+        var maturityBadgeClass = res.businessMaturity.score >= 75
+          ? "bg-emerald-100 text-emerald-700"
+          : res.businessMaturity.score >= 60
+            ? "bg-amber-100 text-amber-700"
+            : "bg-red-100 text-red-700";
+
+        document.getElementById( "businessMaturityCard" ).innerHTML = `
+        <div class="flex items-start gap-4">
+          <span class="insights-card-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></span>
+          <div class="min-w-0 flex-1">
+            <div class="business-maturity-title text-slate-900">Business Maturity</div>
+            <div class="business-maturity-summary"><div class="business-maturity-score text-3xl font-bold ${maturityColor}">${res.businessMaturity.score}</div>
+            <div class="business-maturity-indicator"><span class="insights-status-badge ${maturityBadgeClass}">${res.businessMaturity.level}</span></div><div class="business-maturity-status text-slate-600">${res.businessMaturity.description}</div></div>
+            <div class="business-maturity-scale mt-5 grid grid-cols-4 text-center text-[10px] text-slate-600" aria-label="Business maturity scale">
+              <div><span class="business-maturity-node"></span><span class="business-maturity-stage-label">Startup</span><br>(0-25)</div>
+              <div><span class="business-maturity-node"></span><span class="business-maturity-stage-label">Developing</span><br>(26-50)</div>
+              <div class="text-amber-600"><span class="business-maturity-node business-maturity-node--active"></span><span class="business-maturity-stage-label">Stable</span><br>(51-75)</div>
+              <div><span class="business-maturity-node"></span><span class="business-maturity-stage-label">Advanced</span><br>(76-100)</div>
+            </div>
+          </div>
+        </div>`;
+      }
+
+      //--------------------------------------------------
+      // Action Roadmap
+      //--------------------------------------------------
+      if (
+        Array.isArray(res.actionRoadmap) &&
+        res.actionRoadmap.length
+      )
+      {
+        document.getElementById( "actionRoadmapCard" ).innerHTML = `
+
+        <div>
+            <div class="insights-section-heading action-roadmap-heading mb-2">
+            <span class="insights-card-icon" aria-hidden="true"><i class="fas fa-calendar-days"></i></span>
+            <div>
+              <div class="action-roadmap-title">30-Day Action Roadmap</div>
+              <div class="mt-1 text-xs text-slate-500">Execution timeline</div>
+            </div>
+            </div>
+          <div class="action-roadmap-grid mt-5 grid grid-cols-4 gap-3">
+
+          ${
+
+          res.actionRoadmap.map(function(item,index)
+          {
+            return `
+              <div class="relative min-w-0 pt-1 text-center">
+                <div class="flex flex-col items-center">
+                  <div class="action-roadmap-node flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-bold text-white">${item.week}</div>
+                </div>
+                <div class="mt-2">
+                  <div class="action-roadmap-week-label font-semibold text-slate-500">Week ${item.week}</div>
+                  <div class="action-roadmap-item-title mt-1 font-semibold">${item.title}</div>
+                  <div class="action-roadmap-item-description mt-1 text-slate-600">${item.action}</div>
+                </div>
+              </div>
+              `;
+          }).join("")
+          }
+          </div>
+        </div>
+      `;
+      }
+
+    }

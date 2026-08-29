@@ -1,0 +1,177 @@
+  let revenueChart;
+  let productProfitabilityChart;
+  let categoryPerformanceChart;
+  let hotColdChart;
+  let expenseChart;
+  let latestPerformanceAnalytics = null;
+  let activePerformanceGrouping = "category";
+  let chartUnavailableDiagnosticLogged = false;
+  let responsiveChartResizeTimer = null;
+
+    function resizeVisibleDashboardCharts(tabName)
+    {
+      var chartsByTab = {
+        overview: [revenueChart],
+        performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]
+      };
+
+      (chartsByTab[tabName] || [])
+        .forEach(function(chart)
+        {
+          if (chart)
+          {
+            chart.resize();
+          }
+        });
+    }
+
+    function scheduleResponsiveChartResize()
+    {
+      window.clearTimeout(responsiveChartResizeTimer);
+      responsiveChartResizeTimer = window.setTimeout(function()
+      {
+        responsiveChartResizeTimer = null;
+        resizeVisibleDashboardCharts(activeDashboardTab);
+      }, 120);
+    }
+
+    function getCurrentThemePalette(forceLight)
+    {
+      var styles = window.getComputedStyle(document.documentElement);
+      var prefix = forceLight ? "--print-" : "--";
+
+      function readToken(name)
+      {
+        return styles.getPropertyValue(prefix + name).trim();
+      }
+
+      return {
+        series: [
+          readToken("chart-series-1"),
+          readToken("chart-series-2"),
+          readToken("chart-series-3"),
+          readToken("chart-series-4")
+        ],
+        grid: readToken("chart-grid"),
+        axis: readToken("chart-axis"),
+        tooltipBackground: readToken("tooltip-bg"),
+        tooltipText: readToken("tooltip-text"),
+        revenueFill: readToken("chart-revenue-fill"),
+        revenueFillTransparent: readToken("chart-revenue-fill-transparent"),
+        pointRing: readToken("chart-point-ring"),
+        pointStroke: readToken("chart-point-stroke")
+      };
+    }
+
+    function applyChartThemeTokens(chart, palette, chartKind)
+    {
+      var options = chart.config.options;
+      var dataset = chart.data.datasets[0];
+      var isRevenueChart = chartKind === "revenue";
+
+      if (isRevenueChart)
+      {
+        var peakIndex = options.plugins.revenuePeakLabel.index;
+        dataset.borderColor = palette.series[0];
+        dataset.pointBackgroundColor =
+          dataset.data.map(function(value, index)
+          {
+            return index === peakIndex ? palette.series[2] : palette.series[0];
+          });
+        dataset.pointBorderColor = palette.pointStroke;
+      }
+      else if (chartKind === "hotCold")
+      {
+        dataset.backgroundColor = [
+          palette.series[3],
+          palette.series[1]
+        ];
+      }
+      else if (chartKind === "expense")
+      {
+        dataset.backgroundColor = palette.series[2];
+        dataset.borderColor = palette.series[2];
+      }
+      else if (chartKind === "categoryMix")
+      {
+        dataset.backgroundColor = dataset.data.map(function(value, index)
+        {
+          return palette.series[index % palette.series.length];
+        });
+        dataset.borderColor = palette.pointStroke;
+      }
+      else if (chartKind === "performance")
+      {
+        var performanceThemeIndexes = { revenue: 0, margin: 1, cogs: 2 };
+        chart.data.datasets.forEach(function(performanceDataset, index)
+        {
+          var themeIndex = performanceThemeIndexes[performanceDataset.numlockThemeRole];
+          var color = palette.series[typeof themeIndex === "number" ? themeIndex : index % palette.series.length];
+          performanceDataset.backgroundColor = color;
+          performanceDataset.borderColor = color;
+          if (performanceDataset.type === "line")
+          {
+            performanceDataset.pointBackgroundColor = color;
+            performanceDataset.pointBorderColor = palette.pointStroke;
+          }
+        });
+      }
+
+      options.plugins.tooltip.backgroundColor = palette.tooltipBackground;
+      options.plugins.tooltip.titleColor = palette.tooltipText;
+      options.plugins.tooltip.bodyColor = palette.tooltipText;
+
+      if (options.plugins.legend && options.plugins.legend.labels)
+      {
+        options.plugins.legend.labels.color = palette.axis;
+      }
+
+      Object.keys(options.scales || {})
+        .forEach(function(axisKey)
+        {
+          var axis = options.scales[axisKey];
+          axis.ticks = axis.ticks || {};
+          axis.ticks.color = palette.axis;
+          axis.grid = axis.grid || {};
+          axis.border = axis.border || {};
+          axis.border.color = palette.grid;
+
+          if (axis.grid.display !== false)
+          {
+            axis.grid.color = palette.grid;
+            axis.grid.lineWidth =
+              isRevenueChart && axisKey === "y"
+                ? 0.6
+                : 1;
+          }
+        });
+
+      if (isRevenueChart && options.plugins.revenuePeakLabel)
+      {
+        var peakTooltip = options.plugins.revenuePeakLabel.tooltip;
+        peakTooltip.backgroundColor = palette.tooltipBackground;
+        peakTooltip.titleColor = palette.tooltipText;
+        peakTooltip.bodyColor = palette.tooltipText;
+        peakTooltip.shadowColor = palette.grid;
+      }
+
+      chart.update("none");
+    }
+
+    function synchronizeChartTheme(forceLight)
+    {
+      var palette = getCurrentThemePalette(forceLight === true);
+
+      [
+        { chart: revenueChart, kind: "revenue" },
+        { chart: productProfitabilityChart, kind: "performance" },
+        { chart: categoryPerformanceChart, kind: "categoryMix" },
+        { chart: expenseChart, kind: "expense" }
+      ].forEach(function(entry)
+      {
+        if (entry.chart)
+        {
+          applyChartThemeTokens(entry.chart, palette, entry.kind);
+        }
+      });
+    }

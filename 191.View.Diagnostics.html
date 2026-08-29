@@ -1,0 +1,422 @@
+    function getTransactionLayoutDiagnostics()
+    {
+      var byId = document["getElementById"].bind(document);
+      function round(value)
+      {
+        return Number.isFinite(value) ? Math.round(value * 10) / 10 : null;
+      }
+
+      function rectOf(element)
+      {
+        if (!element) return null;
+        var rect = element.getBoundingClientRect();
+        return { top: round(rect.top), right: round(rect.right), bottom: round(rect.bottom), left: round(rect.left), width: round(rect.width), height: round(rect.height) };
+      }
+
+      function isVisible(element)
+      {
+        return Boolean(element && !element.hidden && element.getClientRects().length);
+      }
+
+      function gridColumnCount(grid)
+      {
+        if (!isVisible(grid) || getComputedStyle(grid).display.indexOf("grid") === -1) return 0;
+        var computedColumns = String(getComputedStyle(grid).gridTemplateColumns || "").trim();
+        if (computedColumns && computedColumns !== "none") {
+          return computedColumns.split(/\s+/).filter(Boolean).length;
+        }
+        var rows = {};
+        Array.prototype.forEach.call(grid.children, function(child) {
+          if (!isVisible(child)) return;
+          var top = Math.round(child.getBoundingClientRect().top);
+          rows[top] = (rows[top] || 0) + 1;
+        });
+        return Object.keys(rows).reduce(function(maximum, key) { return Math.max(maximum, rows[key]); }, 0);
+      }
+
+      function spinnerSuppressionActive(input)
+      {
+        if (!input || input.type !== "number") return false;
+        var mozSuppressed = String(getComputedStyle(input).MozAppearance || "").toLowerCase() === "textfield";
+        var webkitSuppressed = false;
+        Array.prototype.forEach.call(document.styleSheets, function(sheet) {
+          var rules;
+          try { rules = sheet.cssRules; } catch (error) { return; }
+          function inspect(ruleList)
+          {
+            Array.prototype.forEach.call(ruleList || [], function(rule) {
+              if (rule.cssRules) inspect(rule.cssRules);
+              var selector = String(rule.selectorText || "");
+              if (selector.indexOf("salesEntryQty") !== -1 && selector.indexOf("spin-button") !== -1 &&
+                  String(rule.style && (rule.style.webkitAppearance || rule.style.appearance) || "").toLowerCase() === "none") webkitSuppressed = true;
+            });
+          }
+          inspect(rules);
+        });
+        return mozSuppressed || webkitSuppressed;
+      }
+
+      function modalMeasurement(dialog, content, open)
+      {
+        if (!open || !isVisible(dialog)) return { open: false };
+        var dialogRect = dialog.getBoundingClientRect();
+        var contentRect = content && content.getBoundingClientRect();
+        var visibleChildren = content ? Array.prototype.filter.call(content.children, isVisible) : [];
+        var lastChild = visibleChildren.length ? visibleChildren[visibleChildren.length - 1] : null;
+        var lastBottom = lastChild ? lastChild.getBoundingClientRect().bottom : contentRect && contentRect.top;
+        var gridCandidates = Array.prototype.slice.call(dialog.getElementsByClassName("transaction-entry-fields"))
+          .concat(Array.prototype.slice.call(dialog.querySelectorAll("#transactionEntryForm")))
+          .concat(Array.prototype.slice.call(dialog.getElementsByClassName("transaction-lifecycle-grid")));
+        var activeGrid = gridCandidates.filter(function(candidate) {
+          return isVisible(candidate) && getComputedStyle(candidate).display.indexOf("grid") !== -1;
+        })[0] || null;
+        var quantity = Array.prototype.filter.call(dialog.getElementsByTagName("input"), function(input) { return input.id === "salesEntryQty"; })[0] || null;
+        return {
+          open: true,
+          modalWidth: round(dialogRect.width), modalHeight: round(dialogRect.height),
+          contentWidth: contentRect ? round(contentRect.width) : null, contentHeight: contentRect ? round(contentRect.height) : null,
+          scrollHeight: content ? content.scrollHeight : null, clientHeight: content ? content.clientHeight : null,
+          overflowY: content ? getComputedStyle(content).overflowY : null,
+          bottomEmptySpaceEstimate: contentRect ? round(Math.max(0, contentRect.bottom - lastBottom)) : null,
+          viewportMargins: { top: round(dialogRect.top), right: round(innerWidth - dialogRect.right), bottom: round(innerHeight - dialogRect.bottom), left: round(dialogRect.left) },
+          formGridColumnCount: gridColumnCount(activeGrid),
+          quantityInput: quantity ? { type: quantity.type, classes: quantity.className || "", nativeSpinnerSuppressionActive: spinnerSuppressionActive(quantity) } : null
+        };
+      }
+
+      function pricingMeasurement(mode)
+      {
+        var state = transactionEntryState || {};
+        var selected = state.selectedProduct
+          ? { id: state.selectedProduct.productId, label: state.selectedProduct.product }
+          : state.selectedExpense
+            ? { id: state.selectedExpense.expenseItemId, label: state.selectedExpense.item }
+            : null;
+        var applicable = mode === "newTransaction" || mode === "correct";
+        return applicable ? {
+          selectedItem: selected,
+          masterDataClientCached: Boolean(state.optionsLoaded && state.entryOptions),
+          pricingClientCached: Boolean(state.pricing),
+          serverRequestInFlight: Boolean(state.loadingOptions || state.loadingPricing),
+          openingOrSelectionCausedServerRequest: state.pricingSource === "server" || state.loadingOptions || state.loadingPricing,
+          lastPriceReadyLatencyMs: Number.isFinite(state.lastPriceReadyLatencyMs) ? state.lastPriceReadyLatencyMs : null,
+          source: state.pricing ? state.pricingSource : state.optionsLoaded ? "preload" : state.loadingOptions || state.loadingPricing ? "server" : "unknown"
+        } : null;
+      }
+
+      var tableCard = byId("transactionsTableCard");
+      var tableBody = byId("tableBody");
+      var pagination = byId("transactionsPagination");
+      var rowElements = tableBody ? Array.prototype.filter.call(tableBody.rows, function(row) { return row.cells.length > 1; }) : [];
+      var rowHeights = rowElements.map(function(row) { return row.getBoundingClientRect().height; });
+      var tableScroll = byId("transactionsTableScroll");
+      var headers = tableScroll && tableScroll.getElementsByTagName("thead")[0]
+        ? Array.prototype.slice.call(tableScroll.getElementsByTagName("thead")[0].getElementsByTagName("th")) : [];
+      var columnWidths = {};
+      headers.forEach(function(header) { columnWidths[String(header.innerText || "").trim() || "Actions"] = round(header.getBoundingClientRect().width); });
+      var actionRow = rowElements[0] || null;
+      var actionCell = actionRow && actionRow.cells[actionRow.cells.length - 1];
+      var actionGroup = actionCell && actionCell.firstElementChild;
+      var actionButton = actionGroup && actionGroup.firstElementChild;
+      var actionCellStyle = actionCell && getComputedStyle(actionCell);
+      var actionGroupStyle = actionGroup && getComputedStyle(actionGroup);
+      var documentElement = document.documentElement;
+      var body = document.body;
+      var pageScrollHeight = Math.max(documentElement.scrollHeight, body ? body.scrollHeight : 0);
+      var tableRect = tableCard && tableCard.getBoundingClientRect();
+      var paginationRect = pagination && pagination.getBoundingClientRect();
+      var entryOverlay = byId("transactionEntryOverlay");
+      var entryDialog = byId("transactionEntryDialog");
+      var entryContent = byId("transactionEntryScroll");
+      var entryOpen = isVisible(entryOverlay) && isVisible(entryDialog);
+      var entryMode = entryOpen ? String(entryDialog.getAttribute("data-mode") || "") : "";
+      var isNewTransaction = entryOpen && entryMode === "create";
+      var isCorrection = entryOpen && entryMode === "correction";
+      var lifecycleOverlay = byId("transactionLifecycleOverlay");
+      var lifecycleDialog = byId("transactionLifecycleDialog");
+      var lifecycleContent = lifecycleDialog && lifecycleDialog.getElementsByClassName("transaction-entry-scroll")[0];
+      var lifecycleOpen = isVisible(lifecycleOverlay) && isVisible(lifecycleDialog);
+      var lifecycleMode = transactionLifecycleState && transactionLifecycleState.mode;
+      var lifecycleMeasurement = modalMeasurement(lifecycleDialog, lifecycleContent, lifecycleOpen);
+
+      return {
+        table: {
+          viewportWidth: innerWidth, viewportHeight: innerHeight,
+          pageScrollHeight: pageScrollHeight, pageClientHeight: documentElement.clientHeight,
+          container: rectOf(tableCard), tbodyHeight: tableBody ? round(tableBody.getBoundingClientRect().height) : null,
+          currentRenderedRowCount: rowElements.length,
+          averageRowHeight: rowHeights.length ? round(rowHeights.reduce(function(total, height) { return total + height; }, 0) / rowHeights.length) : null,
+          minRowHeight: rowHeights.length ? round(Math.min.apply(Math, rowHeights)) : null,
+          maxRowHeight: rowHeights.length ? round(Math.max.apply(Math, rowHeights)) : null,
+          pagination: rectOf(pagination),
+          remainingVerticalBudgetBeforeOverflow: tableRect ? round(innerHeight - Math.max(tableRect.bottom, paginationRect ? paginationRect.bottom : tableRect.bottom)) : null,
+          visibleColumnNames: headers.filter(isVisible).map(function(header) { return String(header.innerText || "").trim() || "Actions"; }),
+          columnWidths: columnWidths,
+          actions: {
+            cellPaddingTop: actionCellStyle ? actionCellStyle.paddingTop : null,
+            cellPaddingBottom: actionCellStyle ? actionCellStyle.paddingBottom : null,
+            groupGap: actionGroupStyle ? actionGroupStyle.gap : null,
+            buttonHeight: actionButton ? round(actionButton.getBoundingClientRect().height) : null,
+            buttonPaddingTop: actionButton ? getComputedStyle(actionButton).paddingTop : null,
+            buttonPaddingBottom: actionButton ? getComputedStyle(actionButton).paddingBottom : null
+          }
+        },
+        modals: {
+          newTransaction: modalMeasurement(entryDialog, entryContent, isNewTransaction),
+          view: lifecycleMode === "detail" ? lifecycleMeasurement : { open: false },
+          correct: modalMeasurement(entryDialog, entryContent, entryOpen && isCorrection),
+          void: lifecycleMode === "void" ? lifecycleMeasurement : { open: false }
+        },
+        price: {
+          newTransaction: pricingMeasurement("newTransaction"),
+          correct: pricingMeasurement("correct")
+        },
+        search: {
+          existingLifecycleControls: Array.prototype.map.call((function() {
+            var toolbar = byId("transactionsToolbar");
+            return toolbar ? Array.prototype.slice.call(toolbar.getElementsByTagName("input")).concat(Array.prototype.slice.call(toolbar.getElementsByTagName("select"))) : [];
+          })(), function(control) { return control.id || control.name || control.type; }),
+          showVoided: transactionsLifecycleState !== "active",
+          isActiveFilterExists: Boolean((function() {
+            var toolbar = byId("transactionsToolbar");
+            return toolbar && Array.prototype.some.call(toolbar.getElementsByTagName("select"), function(control) { return control.name === "isActive" || control.id === "transactionsIsActive"; });
+          })()),
+          queryState: {
+            tab: activeTransactionsTab, search: transactionsSearchQuery,
+            lifecycleState: transactionsLifecycleState,
+            includeVoided: transactionsLifecycleState !== "active",
+            filter: transactionsDateFilter && transactionsDateFilter.filter,
+            customStart: transactionsDateFilter && transactionsDateFilter.customStart,
+            customEnd: transactionsDateFilter && transactionsDateFilter.customEnd,
+            page: transactionsPages[activeTransactionsTab], pageSize: transactionsPageSize,
+            drilldownType: activeTransactionDrilldown && activeTransactionDrilldown.type,
+            drilldownValue: activeTransactionDrilldown && activeTransactionDrilldown.value
+          }
+        }
+      };
+    }
+
+    window.getTransactionLayoutDiagnostics = getTransactionLayoutDiagnostics;
+
+    function completeTransactionEntryDiagnostic(source)
+    {
+      var pending = transactionDiagnosticPending.newTransaction;
+      if (!pending) return;
+      transactionDiagnostics.newTransaction = {
+        lastLatencyMs: Math.round((performance.now() - pending.startedAt) * 10) / 10,
+        source: source,
+        eventCount: transactionDiagnostics.newTransaction.eventCount
+      };
+      delete transactionDiagnosticPending.newTransaction;
+    }
+
+    function completeTransactionPageDiagnostic(source)
+    {
+      ["search", "pagination"].forEach(function(category) {
+        var pending = transactionDiagnosticPending[category];
+        if (!pending) return;
+        if (category === "search") {
+          transactionDiagnostics.search = {
+            lastLatencyMs: Math.round((performance.now() - pending.startedAt) * 10) / 10,
+            serverCalls: Number(pending.serverCalls || 0) + (source === "server" ? 1 : 0),
+            source: source,
+            eventCount: transactionDiagnostics.search.eventCount
+          };
+        } else {
+          transactionDiagnostics.pagination = {
+            lastLatencyMs: Math.round((performance.now() - pending.startedAt) * 10) / 10,
+            source: source,
+            eventCount: transactionDiagnostics.pagination.eventCount
+          };
+        }
+        delete transactionDiagnosticPending[category];
+      });
+    }
+
+    function updateTransactionLifecycleDiagnostics()
+    {
+      if (!transactionsSearchIndex) {
+        transactionDiagnostics.showVoided.fullDataset = false;
+        return;
+      }
+      var activeRows = filterTransactionsSearchIndex("active");
+      var allRows = filterTransactionsSearchIndex("all");
+      transactionDiagnostics.showVoided = {
+        uncheckedTotal: activeRows.length,
+        checkedTotal: allRows.length,
+        inactiveMatched: allRows.filter(function(row) { return row.isActive === false; }).length,
+        fullDataset: true
+      };
+    }
+
+    function completeTransactionActionDiagnostic(action, transactionId)
+    {
+      var pending = transactionDiagnosticPending[action];
+      if (!pending) return;
+      var latency = Math.round((performance.now() - pending.startedAt) * 10) / 10;
+      if (action === "view") transactionDiagnostics.actions.viewLatencyMs = latency;
+      if (action === "correct") transactionDiagnostics.actions.correctLatencyMs = latency;
+      if (action === "void") transactionDiagnostics.actions.voidLatencyMs = latency;
+      transactionDiagnostics.actions.source[action] = transactionDetailSources[transactionId] || "server";
+      delete transactionDiagnosticPending[action];
+    }
+
+    function getTransactionDiagnostics()
+    {
+      return JSON.parse(JSON.stringify(transactionDiagnostics));
+    }
+
+    function getLayoutDebugRect(element, textOnly)
+    {
+      if (!element)
+      {
+        return null;
+      }
+
+      var rect;
+      if (textOnly)
+      {
+        var range = document.createRange();
+        range.selectNodeContents(element);
+        rect = range.getBoundingClientRect();
+      }
+      else
+      {
+        rect = element.getBoundingClientRect();
+      }
+
+      return {
+        top: rect.top,
+        bottom: rect.bottom,
+        left: rect.left,
+        right: rect.right,
+        width: rect.width,
+        height: rect.height,
+        centerX: rect.left + rect.width / 2,
+        centerY: rect.top + rect.height / 2
+      };
+    }
+
+    function formatLayoutDebugNumber(value)
+    {
+      return Number(value).toFixed(2);
+    }
+
+    function scheduleLayoutDebugMeasurement()
+    {
+      if (!layoutDebugEnabled)
+      {
+        return;
+      }
+
+      if (layoutDebugAnimationFrame)
+      {
+        window.cancelAnimationFrame(layoutDebugAnimationFrame);
+      }
+
+      layoutDebugAnimationFrame = window.requestAnimationFrame(function()
+      {
+        layoutDebugAnimationFrame = null;
+        refreshLayoutDebugMeasurements();
+      });
+    }
+
+    function refreshLayoutDebugMeasurements()
+    {
+      if (!layoutDebugEnabled)
+      {
+        return;
+      }
+
+      var kpiCard = document.getElementById("businessOverview").firstElementChild;
+      var kpiIconElement = kpiCard && kpiCard.getElementsByClassName("hf-kpi-icon")[0];
+      var kpiTitleElement = kpiCard && kpiCard.getElementsByClassName("hf-section-label")[0];
+      var revenueIconElement = document.getElementById("revenueChartSection").getElementsByClassName("hf-analytics-title-icon")[0];
+      var revenueTitleElement = document.getElementById("revenueChartTitle");
+      var summaryIconElement = document.getElementById("executiveSummarySection").getElementsByClassName("hf-summary-title-icon")[0];
+      var summaryTitleElement = document.getElementById("executiveSummaryTitle");
+      var kpiIcon = getLayoutDebugRect(kpiIconElement, false);
+      var kpiTitle = getLayoutDebugRect(kpiTitleElement, false);
+      var revenueIcon = getLayoutDebugRect(revenueIconElement, false);
+      var revenueTitle = getLayoutDebugRect(revenueTitleElement, false);
+      var summaryIcon = getLayoutDebugRect(summaryIconElement, false);
+      var summaryTitle = getLayoutDebugRect(summaryTitleElement, false);
+
+      if (!kpiIcon || !kpiTitle || !revenueIcon || !revenueTitle || !summaryIcon || !summaryTitle)
+      {
+        document.getElementById("layoutDebugPanel").textContent = "LAYOUT DEBUG\nWaiting for Overview geometry...";
+        return;
+      }
+
+      var mainRect = document.getElementById("mainContent").getBoundingClientRect();
+      var kpiCardRect = kpiCard.getBoundingClientRect();
+      var revenueCardRect = document.getElementById("revenueChartSection").getBoundingClientRect();
+      var summaryCardRect = summaryIconElement.closest(".overview-surface").getBoundingClientRect();
+      var panel = document.getElementById("layoutDebugPanel");
+      var sidebarState = document.getElementById("appShell").getAttribute("data-sidebar-collapsed") === "true" ? "COLLAPSED" : "EXPANDED";
+      var delta = function(value, reference) { return value - reference; };
+      var kpiGap = kpiTitle.left - kpiIcon.right;
+      var revenueGap = revenueTitle.left - revenueIcon.right;
+      var summaryGap = summaryTitle.left - summaryIcon.right;
+
+      [kpiIconElement, kpiTitleElement, revenueIconElement, revenueTitleElement, summaryIconElement, summaryTitleElement].forEach(function(element)
+      {
+        element.classList.add("layout-debug-target");
+      });
+
+      document.getElementById("layoutDebugIconGuide").style.left = kpiIcon.left + "px";
+      document.getElementById("layoutDebugTitleGuide").style.left = kpiTitle.left + "px";
+      panel.textContent = [
+        "LAYOUT DEBUG",
+        "STATE sidebar: " + sidebarState,
+        "viewport.width: " + formatLayoutDebugNumber(window.innerWidth),
+        "",
+        "KPI REFERENCE",
+        "icon.left: " + formatLayoutDebugNumber(kpiIcon.left),
+        "icon.right: " + formatLayoutDebugNumber(kpiIcon.right),
+        "icon.width: " + formatLayoutDebugNumber(kpiIcon.width),
+        "icon.centerX: " + formatLayoutDebugNumber(kpiIcon.centerX),
+        "title.left: " + formatLayoutDebugNumber(kpiTitle.left),
+        "icon-title.gap: " + formatLayoutDebugNumber(kpiGap),
+        "",
+        "REVENUE DELTA",
+        "icon.left: " + formatLayoutDebugNumber(delta(revenueIcon.left, kpiIcon.left)),
+        "icon.right: " + formatLayoutDebugNumber(delta(revenueIcon.right, kpiIcon.right)),
+        "icon.width: " + formatLayoutDebugNumber(delta(revenueIcon.width, kpiIcon.width)),
+        "icon.centerX: " + formatLayoutDebugNumber(delta(revenueIcon.centerX, kpiIcon.centerX)),
+        "title.left: " + formatLayoutDebugNumber(delta(revenueTitle.left, kpiTitle.left)),
+        "icon-title.gap: " + formatLayoutDebugNumber(delta(revenueGap, kpiGap)),
+        "",
+        "KEY SUMMARY DELTA",
+        "icon.left: " + formatLayoutDebugNumber(delta(summaryIcon.left, kpiIcon.left)),
+        "icon.right: " + formatLayoutDebugNumber(delta(summaryIcon.right, kpiIcon.right)),
+        "icon.width: " + formatLayoutDebugNumber(delta(summaryIcon.width, kpiIcon.width)),
+        "icon.centerX: " + formatLayoutDebugNumber(delta(summaryIcon.centerX, kpiIcon.centerX)),
+        "title.left: " + formatLayoutDebugNumber(delta(summaryTitle.left, kpiTitle.left)),
+        "icon-title.gap: " + formatLayoutDebugNumber(delta(summaryGap, kpiGap)),
+        "",
+        "CONTENT",
+        "main.left: " + formatLayoutDebugNumber(mainRect.left),
+        "kpi.card.left: " + formatLayoutDebugNumber(kpiCardRect.left),
+        "revenue.card.left: " + formatLayoutDebugNumber(revenueCardRect.left),
+        "summary.card.left: " + formatLayoutDebugNumber(summaryCardRect.left)
+      ].join("\n");
+    }
+
+    function setLayoutDebugEnabled(enabled)
+    {
+      layoutDebugEnabled = Boolean(enabled);
+      document.documentElement.setAttribute("data-layout-debug", String(layoutDebugEnabled));
+
+      if (layoutDebugEnabled)
+      {
+        if (!layoutDebugListenersInitialized)
+        {
+          window.addEventListener("resize", scheduleLayoutDebugMeasurement);
+          document.getElementById("sidebarCollapseButton").addEventListener("click", scheduleLayoutDebugMeasurement);
+          document.getElementById("dashboardTabOverview").addEventListener("click", scheduleLayoutDebugMeasurement);
+          layoutDebugListenersInitialized = true;
+        }
+        scheduleLayoutDebugMeasurement();
+      }
+    }

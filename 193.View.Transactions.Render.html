@@ -1,0 +1,85 @@
+    function updateTransactionsViewPresentation(result)
+    {
+      var elements = initializeStableDashboardElements();
+      var viewCopy = {
+        recent: { heading: "Recent transactions", scope: "Sales and Expense rows in the active period." },
+        sales: { heading: "Sales", scope: "Sales rows in the active period." },
+        expenses: { heading: "Expenses", scope: "Expense rows in the active period." }
+      }[activeTransactionsTab];
+      var isDrilldown =
+        activeTransactionsTab === "recent" &&
+        Boolean(activeTransactionDrilldown);
+
+      elements.transactionsResultHeading.innerText = isDrilldown
+        ? activeTransactionDrilldown.label
+        : viewCopy.heading;
+      elements.transactionsScopeText.innerText = isDrilldown
+        ? "Filtered across the active reporting period."
+        : viewCopy.scope + (transactionsLifecycleState === "all" ? " Active and voided records included." : transactionsLifecycleState === "voided" ? " Voided records only." : "");
+      elements.transactionsDescription.innerText =
+        "Transactions for the active reporting period.";
+      elements.transactionDrilldownSummary.classList.toggle(
+        "hidden",
+        !isDrilldown
+      );
+      elements.transactionDrilldownText.innerText = isDrilldown
+        ? activeTransactionDrilldown.label + " · " + result.totalRows + " matching rows"
+        : "";
+      elements.transactionsPagination.hidden = false;
+      elements.transactionsRangeSummary.innerText = "Showing " + result.rangeStart + "–" + result.rangeEnd + " of " + result.totalRows + " transactions";
+      elements.transactionsPageIndicator.innerText = result.totalPages
+        ? "Page " + result.page + " of " + result.totalPages
+        : "Page 1 of 1";
+      elements.transactionsPreviousPage.disabled = result.page <= 1;
+      elements.transactionsNextPage.disabled = result.totalPages === 0 || result.page >= result.totalPages;
+    }
+
+    function renderTransactionRows(transactions)
+    {
+      var elements = initializeStableDashboardElements();
+
+      elements.tableBody.innerHTML =
+        transactions.length
+          ? transactions.map(function(r)
+            {
+              var amount = r.revenue || r.expense || 0;
+              var status = r.isActive === false ? "Voided" : "Active";
+              var canMutate = r.source === "APP_ENTRY" && r.isActive !== false;
+              var actions = '<button type="button" class="transactions-row-action transactions-row-action--view" onclick="runTransactionRowAction(\'detail\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-eye" aria-hidden="true"></i><span>View</span></button>';
+              if (canMutate) actions += '<button type="button" class="transactions-row-action transactions-row-action--correct" onclick="runTransactionRowAction(\'correct\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-pen" aria-hidden="true"></i><span>Correct</span></button><button type="button" class="transactions-row-action transactions-row-action--void" onclick="runTransactionRowAction(\'void\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-ban" aria-hidden="true"></i><span>Void</span></button>';
+              return `
+              <tr class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}">
+                  <td class="px-4 whitespace-nowrap font-medium">${escapeUiHtml(r.id)}</td>
+                  <td class="px-4 whitespace-nowrap">
+                    ${formatTransactionDate(r.date)}
+                  </td>
+
+                  <td class="px-4">
+                    <span class="transaction-type ${r.transactionType === "Sales"
+                        ? "transaction-type--sales"
+                        : "transaction-type--expense"}"> ${r.transactionType}
+                    </span>
+                  </td>
+
+                  <td class="max-w-[280px] px-4 break-words"> ${r.product || r.purchaseCategory || "-"} </td>
+                  <td class="px-4 text-center"> ${r.qty || "-"} </td>
+                  <td class="whitespace-nowrap px-4 text-left font-semibold ${amount < 0 ? "text-red-600" : ""}"> Rp ${amount.toLocaleString("id-ID")}</td>
+                  <td class="px-4 text-center"><span class="transaction-status-badge transaction-status-badge--${r.isActive === false ? "voided" : "active"}">${status}</span></td>
+                  <td class="px-2 text-center"><span class="transactions-row-actions">${actions}</span></td>
+                </tr>`;
+            }).join("")
+          : '<tr><td colspan="8" class="p-8 text-center text-sm ui-theme-muted">No transactions match this view for the selected period.</td></tr>';
+
+      visibleTransactionRowCount = transactions.length;
+      elements.exportCsvButton.disabled =
+        visibleTransactionRowCount === 0;
+      completeTransactionPageDiagnostic(transactionDiagnosticPageSource);
+    }
+
+    function formatTransactionDate(value)
+    {
+      var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return "-";
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return match[3] + " " + months[Number(match[2]) - 1] + " " + match[1];
+    }

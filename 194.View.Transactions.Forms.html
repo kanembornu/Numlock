@@ -1,0 +1,491 @@
+    function createInitialTransactionEntryState()
+    {
+      return {
+        transactionType: null, entryOptions: null, selectedProduct: null,
+        selectedExpense: null, selectedType: null, qty: 1, amount: null,
+        pricing: null, pricingSource: "unknown", lastPriceReadyLatencyMs: null,
+        loadingOptions: false, loadingPricing: false,
+        submitting: false, optionsLoaded: false, optionsRevision: "", pricingRequestVersion: 0,
+        activeOptionIndex: { product: -1, expense: -1 }, successResult: null,
+        submissionComplete: false, mode: "create", originalDetail: null,
+        correctionReason: "", correctionPreview: null, correctionStage: "edit"
+      };
+    }
+
+    function formatEntryCurrency(value)
+    {
+      return "Rp " + Number(value || 0).toLocaleString("id-ID");
+    }
+
+    function normalizeEntryInteger(value)
+    {
+      var digits = String(value || "").replace(/[^0-9]/g, "");
+      return digits ? Number(digits) : null;
+    }
+
+    function setEntryError(element, message)
+    {
+      element.innerText = message || "";
+      var control = element.previousElementSibling;
+      if (control && control.tagName === "INPUT") control.setAttribute("aria-invalid", String(Boolean(message)));
+    }
+
+    function updateTransactionEntrySubmitState()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var state = transactionEntryState;
+      var validSales = state.transactionType === "SALES" && state.selectedProduct &&
+        state.selectedType && Number.isInteger(state.qty) && state.qty >= 1 && state.pricing;
+      var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
+        Number.isInteger(state.amount) && state.amount > 0;
+      var correctionReasonValid = state.mode !== "correction" || state.correctionReason.trim().length >= 3;
+      entry.submit.disabled = state.submitting || state.submissionComplete || state.loadingOptions ||
+        !(validSales || validExpense) || !correctionReasonValid;
+      entry.submit.setAttribute("aria-busy", String(state.submitting));
+      entry.submitLabel.innerText = state.submitting
+        ? (state.mode === "correction" ? "Processing…" : "Saving…")
+        : state.mode === "correction"
+          ? (state.correctionStage === "review" ? "Confirm Correction" : "Review Correction")
+          : "Save Transaction";
+    }
+
+    function openTransactionEntry()
+    {
+      transactionDiagnostics.newTransaction.eventCount++;
+      transactionDiagnosticPending.newTransaction = { startedAt: performance.now() };
+      var elements = initializeStableDashboardElements();
+      var entry = elements.transactionEntry;
+      var priorFocus = document.activeElement;
+      resetTransactionEntryForAnother(false);
+      transactionEntryLastFocus = priorFocus;
+      document.body.appendChild(entry.overlay);
+      entry.overlay.hidden = false;
+      elements.appShell.inert = true;
+      document.body.classList.add("overflow-hidden");
+      entry.dialog.focus();
+      if (transactionEntryState.optionsLoaded) completeTransactionEntryDiagnostic("master-cache");
+      else if (!transactionEntryState.loadingOptions) loadTransactionEntryOptions();
+    }
+
+    function closeTransactionEntry()
+    {
+      var elements = initializeStableDashboardElements();
+      var entry = elements.transactionEntry;
+      entry.overlay.hidden = true;
+      elements.appShell.inert = false;
+      document.body.classList.remove("overflow-hidden");
+      closeEntryCombobox("product");
+      closeEntryCombobox("expense");
+      if (transactionEntryLastFocus && typeof transactionEntryLastFocus.focus === "function") transactionEntryLastFocus.focus();
+    }
+
+    function loadTransactionEntryOptions()
+    {
+      if (transactionEntryState.optionsLoaded || transactionEntryState.loadingOptions) return;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.loadingOptions = true;
+      entry.optionsState.innerText = "Loading products and expense items…";
+      updateTransactionEntrySubmitState();
+      google.script.run
+        .withSuccessHandler(function(response)
+        {
+          transactionEntryState.loadingOptions = false;
+          if (!response || response.success !== true || !response.data ||
+              !Array.isArray(response.data.sales) || !Array.isArray(response.data.expenses)) {
+            showTransactionEntryOptionsFailure(); return;
+          }
+          transactionEntryState.entryOptions = {
+            sales: response.data.sales.slice(), expenses: response.data.expenses.slice()
+          };
+          transactionEntryState.optionsLoaded = true;
+          transactionEntryState.optionsRevision = String(response.data.revision || "");
+          entry.optionsState.innerText = response.data.sales.length || response.data.expenses.length
+            ? "Entry options ready." : "No active entry options are available.";
+          updateTransactionEntryOptionsPresentation();
+          updateTransactionEntrySubmitState();
+          if (transactionDiagnosticPending.newTransaction) {
+            completeTransactionEntryDiagnostic("server");
+          }
+          transactionEntryOptionsDiagnosticSource = "master-cache";
+        })
+        .withFailureHandler(function(error)
+        {
+          console.error("Transaction entry options failed", error);
+          showTransactionEntryOptionsFailure();
+        })
+        .getTransactionEntryOptions();
+    }
+
+    function preloadTransactionEntryOptions()
+    {
+      if (!transactionEntryState.optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
+    }
+
+    function showTransactionEntryOptionsFailure()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.loadingOptions = false;
+      transactionEntryState.optionsLoaded = false;
+      entry.optionsState.innerHTML = 'Entry options could not be loaded. <button type="button" class="font-semibold underline" onclick="loadTransactionEntryOptions()">Retry</button>';
+      updateTransactionEntryOptionsPresentation();
+      updateTransactionEntrySubmitState();
+    }
+
+    function updateTransactionEntryOptionsPresentation()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var ready = transactionEntryState.optionsLoaded && Boolean(transactionEntryState.entryOptions);
+      entry.salesOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "SALES");
+      entry.expenseOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "EXPENSE");
+    }
+
+    function setTransactionEntryType(type)
+    {
+      if (type !== "SALES" && type !== "EXPENSE") return;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.transactionType = type;
+      entry.dialog.setAttribute("data-entry-type", type.toLowerCase());
+      entry.typeSales.setAttribute("aria-checked", String(type === "SALES"));
+      entry.typeExpense.setAttribute("aria-checked", String(type === "EXPENSE"));
+      entry.salesFields.hidden = type !== "SALES";
+      entry.expenseFields.hidden = type !== "EXPENSE";
+      entry.generalError.innerText = "";
+      entry.optionsState.innerText = transactionEntryState.optionsLoaded ? "Entry options ready." : entry.optionsState.innerText;
+      updateTransactionEntryOptionsPresentation();
+      closeEntryCombobox(type === "SALES" ? "expense" : "product");
+      updateTransactionEntrySubmitState();
+      if (transactionEntryState.optionsLoaded) completeTransactionEntryDiagnostic(transactionEntryOptionsDiagnosticSource);
+    }
+
+    function getEntryCombobox(type)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      return type === "product"
+        ? { input: entry.productSearch, listbox: entry.productListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.sales : [] }
+        : { input: entry.expenseSearch, listbox: entry.expenseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.expenses : [] };
+    }
+
+    function getFilteredEntryOptions(type)
+    {
+      var combo = getEntryCombobox(type);
+      var query = combo.input.value.trim().toLocaleLowerCase();
+      return combo.options.filter(function(option)
+      {
+        var text = type === "product"
+          ? [option.product, option.category, option.kind].join(" ")
+          : [option.item, option.category, option.group, option.kind].join(" ");
+        return !query || text.toLocaleLowerCase().indexOf(query) !== -1;
+      }).slice(0, 30);
+    }
+
+    function renderEntryOptionList(type)
+    {
+      var combo = getEntryCombobox(type);
+      var options = getFilteredEntryOptions(type);
+      combo.listbox.innerHTML = "";
+      options.forEach(function(option, index)
+      {
+        var button = document.createElement("button");
+        var selectedId = type === "product"
+          ? transactionEntryState.selectedProduct && transactionEntryState.selectedProduct.productId
+          : transactionEntryState.selectedExpense && transactionEntryState.selectedExpense.expenseItemId;
+        var optionId = type === "product" ? option.productId : option.expenseItemId;
+        button.type = "button";
+        button.className = "transaction-entry-option";
+        button.setAttribute("role", "option");
+        button.setAttribute("aria-selected", String(selectedId === optionId));
+        button.setAttribute("data-active", String(transactionEntryState.activeOptionIndex[type] === index));
+        button.innerText = type === "product" ? option.product : option.item;
+        var meta = document.createElement("span");
+        meta.innerText = type === "product"
+          ? [option.category, option.kind].filter(Boolean).join(" · ")
+          : [option.category, option.group].filter(Boolean).join(" · ");
+        button.appendChild(meta);
+        button.addEventListener("click", function() { selectTransactionEntryOption(type, option); });
+        combo.listbox.appendChild(button);
+      });
+      if (!options.length) {
+        var empty = document.createElement("p");
+        empty.className = "p-3 text-sm ui-theme-muted";
+        empty.innerText = "No matching options.";
+        combo.listbox.appendChild(empty);
+      }
+      combo.listbox.hidden = false;
+      combo.input.setAttribute("aria-expanded", "true");
+    }
+
+    function filterTransactionEntryOptions(type)
+    {
+      if (!transactionEntryState.optionsLoaded) return;
+      transactionEntryState.activeOptionIndex[type] = -1;
+      if (type === "product") transactionEntryState.selectedProduct = null;
+      else transactionEntryState.selectedExpense = null;
+      renderEntryOptionList(type);
+      if (type === "product") requestTransactionEntryPricing();
+      invalidateCorrectionReview();
+      updateTransactionEntrySubmitState();
+    }
+
+    function closeEntryCombobox(type)
+    {
+      var combo = getEntryCombobox(type);
+      combo.listbox.hidden = true;
+      combo.input.setAttribute("aria-expanded", "false");
+      transactionEntryState.activeOptionIndex[type] = -1;
+    }
+
+    function handleEntryComboboxKeydown(event, type)
+    {
+      if (["ArrowDown", "ArrowUp", "Enter", "Escape"].indexOf(event.key) === -1) return;
+      if (event.key === "Escape") { closeEntryCombobox(type); return; }
+      event.preventDefault();
+      var options = getFilteredEntryOptions(type);
+      if (!options.length) return;
+      if (event.key === "Enter" && transactionEntryState.activeOptionIndex[type] >= 0) {
+        selectTransactionEntryOption(type, options[transactionEntryState.activeOptionIndex[type]]); return;
+      }
+      var direction = event.key === "ArrowUp" ? -1 : 1;
+      var current = transactionEntryState.activeOptionIndex[type];
+      transactionEntryState.activeOptionIndex[type] = (current + direction + options.length) % options.length;
+      renderEntryOptionList(type);
+    }
+
+    function selectTransactionEntryOption(type, option)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      if (type === "product") {
+        transactionEntryState.selectedProduct = option;
+        entry.productSearch.value = option.product;
+        entry.productMeta.innerText = [option.category, option.kind].filter(Boolean).join(" · ");
+        entry.productError.innerText = "";
+        requestTransactionEntryPricing();
+      } else {
+        transactionEntryState.selectedExpense = option;
+        entry.expenseSearch.value = option.item;
+        entry.expenseMeta.innerText = [option.category, option.group].filter(Boolean).join(" · ");
+        entry.expenseError.innerText = "";
+      }
+      closeEntryCombobox(type);
+      invalidateCorrectionReview();
+      updateTransactionEntrySubmitState();
+    }
+
+    function setSalesEntryType(type)
+    {
+      if (type !== "Hot" && type !== "Cold") return;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.selectedType = type;
+      entry.typeHot.setAttribute("aria-checked", String(type === "Hot"));
+      entry.typeCold.setAttribute("aria-checked", String(type === "Cold"));
+      entry.salesTypeError.innerText = "";
+      invalidateCorrectionReview();
+      requestTransactionEntryPricing();
+    }
+
+    function requestTransactionEntryPricing()
+    {
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var startedAt = performance.now();
+      var version = ++state.pricingRequestVersion;
+      state.pricing = null;
+      state.pricingSource = "unknown";
+      renderTransactionEntryPricing();
+      if (!state.selectedProduct || !state.selectedType) { updateTransactionEntrySubmitState(); return; }
+      var cachedPricing = state.selectedProduct.pricing && state.selectedProduct.pricing[state.selectedType];
+      if (cachedPricing) {
+        state.loadingPricing = false;
+        state.pricing = cachedPricing;
+        state.pricingSource = "master-cache";
+        state.lastPriceReadyLatencyMs = Math.round((performance.now() - startedAt) * 10) / 10;
+        entry.pricingPreview.setAttribute("aria-busy", "false");
+        entry.pricingState.innerText = "";
+        renderTransactionEntryPricing();
+        updateTransactionEntrySubmitState();
+        return;
+      }
+      state.loadingPricing = true;
+      entry.pricingPreview.setAttribute("aria-busy", "true");
+      entry.pricingState.innerText = "Loading pricing…";
+      updateTransactionEntrySubmitState();
+      google.script.run
+        .withSuccessHandler(function(response)
+        {
+          if (version !== transactionEntryState.pricingRequestVersion) return;
+          state.loadingPricing = false;
+          entry.pricingPreview.setAttribute("aria-busy", "false");
+          if (!response || response.success !== true) {
+            showTransactionEntryApiError(response && response.error, "pricing"); return;
+          }
+          state.pricing = response.data;
+          state.selectedProduct.pricing = state.selectedProduct.pricing || {};
+          state.selectedProduct.pricing[state.selectedType] = response.data;
+          state.pricingSource = "server";
+          state.lastPriceReadyLatencyMs = Math.round((performance.now() - startedAt) * 10) / 10;
+          entry.pricingState.innerText = "";
+          renderTransactionEntryPricing();
+          updateTransactionEntrySubmitState();
+        })
+        .withFailureHandler(function(error)
+        {
+          if (version !== transactionEntryState.pricingRequestVersion) return;
+          console.error("Transaction pricing failed", error);
+          state.loadingPricing = false;
+          entry.pricingPreview.setAttribute("aria-busy", "false");
+          entry.pricingState.innerText = "Pricing could not be loaded.";
+          updateTransactionEntrySubmitState();
+        })
+        .getProductEntryPricing(state.selectedProduct.productId, state.selectedType);
+    }
+
+    function renderTransactionEntryPricing()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var pricing = transactionEntryState.pricing;
+      var qty = transactionEntryState.qty;
+      entry.previewQty.innerText = "×" + qty;
+      entry.previewPrice.innerText = pricing ? formatEntryCurrency(pricing.price) : "—";
+      entry.previewHpp.innerText = pricing ? formatEntryCurrency(pricing.hpp) : "—";
+      entry.previewUnitMargin.innerText = pricing ? formatEntryCurrency(pricing.unitMargin) : "—";
+      entry.previewRevenue.innerText = pricing ? formatEntryCurrency(pricing.price * qty) : "—";
+      entry.previewCogs.innerText = pricing ? formatEntryCurrency(pricing.hpp * qty) : "—";
+      entry.previewMargin.innerText = pricing ? formatEntryCurrency(pricing.unitMargin * qty) : "—";
+    }
+
+    function adjustSalesEntryQty(delta)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var current = normalizeEntryInteger(entry.qty.value) || 1;
+      entry.qty.value = Math.max(1, current + delta);
+      updateSalesEntryQty();
+    }
+
+    function updateSalesEntryQty()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var qty = Number(entry.qty.value);
+      var valid = Number.isInteger(qty) && qty >= 1;
+      transactionEntryState.qty = valid ? qty : null;
+      invalidateCorrectionReview();
+      entry.qtyError.innerText = valid ? "" : "Quantity must be a whole number of at least 1.";
+      entry.qty.setAttribute("aria-invalid", String(!valid));
+      renderTransactionEntryPricing();
+      updateTransactionEntrySubmitState();
+    }
+
+    function updateExpenseEntryAmount()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var amount = normalizeEntryInteger(entry.amount.value);
+      transactionEntryState.amount = amount;
+      invalidateCorrectionReview();
+      entry.amount.value = amount ? amount.toLocaleString("id-ID") : "";
+      entry.amountError.innerText = amount && amount > 0 ? "" : "Amount must be greater than 0.";
+      entry.amount.setAttribute("aria-invalid", String(!(amount && amount > 0)));
+      updateTransactionEntrySubmitState();
+    }
+
+    function invalidateCorrectionReview()
+    {
+      if (transactionEntryState.mode !== "correction" || transactionEntryState.correctionStage !== "review") return;
+      transactionEntryState.correctionStage = "edit";
+      transactionEntryState.correctionPreview = null;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
+    }
+
+    function updateCorrectionReason()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.correctionReason = entry.correctionReason.value;
+      var valid = entry.correctionReason.value.trim().length >= 3;
+      entry.correctionReasonError.innerText = valid || !entry.correctionReason.value
+        ? "" : "Enter a meaningful correction reason.";
+      entry.correctionReason.setAttribute("aria-invalid", String(!valid));
+      if (transactionEntryState.correctionStage === "review") {
+        transactionEntryState.correctionStage = "edit";
+        transactionEntryState.correctionPreview = null;
+        entry.correctionReview.hidden = true;
+        entry.correctionReview.parentElement.classList.remove("has-review");
+      }
+      updateTransactionEntrySubmitState();
+    }
+
+    function transactionEntryErrorMessage(code)
+    {
+      return {
+        PRODUCT_INACTIVE: "Product is no longer available.",
+        PRODUCT_NOT_FOUND: "Product is no longer available.",
+        PRICE_NOT_FOUND: "Price is not available for this product/type.",
+        PRICE_AMBIGUOUS: "Pricing configuration needs attention.",
+        INVALID_QTY: "Quantity must be a whole number of at least 1.",
+        EXPENSE_ITEM_INACTIVE: "Expense item is no longer available.",
+        EXPENSE_ITEM_NOT_FOUND: "Expense item is no longer available.",
+        INVALID_AMOUNT: "Amount must be greater than 0.",
+        TRANSACTION_NOT_FOUND: "Transaction could not be found.",
+        TRANSACTION_READ_ONLY: "Historical transactions cannot be changed.",
+        TRANSACTION_ALREADY_VOIDED: "This transaction has already been voided.",
+        INVALID_VOID_REASON: "Enter a meaningful reason.",
+        WRITE_FAILED: "Transaction could not be saved. Please try again."
+      }[code] || "Transaction could not be saved. Please try again.";
+    }
+
+    function showTransactionEntryApiError(error, context)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var code = error && error.code ? error.code : "WRITE_FAILED";
+      var message = transactionEntryErrorMessage(code);
+      if (code === "INVALID_QTY") entry.qtyError.innerText = message;
+      else if (code === "INVALID_AMOUNT") entry.amountError.innerText = message;
+      else if (code === "INVALID_VOID_REASON" && transactionEntryState.mode === "correction") entry.correctionReasonError.innerText = message;
+      else if (code.indexOf("PRODUCT_") === 0) entry.productError.innerText = message;
+      else if (code.indexOf("EXPENSE_ITEM_") === 0) entry.expenseError.innerText = message;
+      else if (context === "pricing") entry.pricingState.innerText = message;
+      else entry.generalError.innerText = message;
+      updateTransactionEntrySubmitState();
+    }
+
+    function resetTransactionEntryForAnother(shouldFocusType)
+    {
+      var cachedOptions = transactionEntryState.entryOptions;
+      var optionsLoaded = transactionEntryState.optionsLoaded;
+      var optionsRevision = transactionEntryState.optionsRevision;
+      transactionEntryState = createInitialTransactionEntryState();
+      transactionEntryState.entryOptions = cachedOptions;
+      transactionEntryState.optionsLoaded = optionsLoaded;
+      transactionEntryState.optionsRevision = optionsRevision;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      entry.dialog.setAttribute("data-mode", "create");
+      entry.dialog.removeAttribute("data-entry-type");
+      entry.form.reset();
+      entry.form.hidden = false;
+      entry.submitRegion.hidden = false;
+      entry.success.hidden = true;
+      entry.success.querySelector("h3").innerText = "Transaction saved";
+      entry.success.querySelector(".transaction-entry-success-actions").innerHTML = '<button type="button" class="transaction-entry-primary" onclick="resetTransactionEntryForAnother()">Add Another</button><button type="button" class="transaction-entry-secondary" onclick="closeTransactionEntry()">Close</button>';
+      entry.title.innerText = "New Transaction";
+      entry.description.innerText = "Choose a transaction type to begin.";
+      entry.typeFieldset.hidden = false;
+      entry.typeSales.disabled = false;
+      entry.typeExpense.disabled = false;
+      entry.correctionWorkspace.hidden = true;
+      entry.correctionReasonRegion.hidden = true;
+      entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
+      entry.salesFields.hidden = true;
+      entry.expenseFields.hidden = true;
+      entry.typeSales.setAttribute("aria-checked", "false");
+      entry.typeExpense.setAttribute("aria-checked", "false");
+      entry.typeHot.setAttribute("aria-checked", "false");
+      entry.typeCold.setAttribute("aria-checked", "false");
+      entry.productMeta.innerText = ""; entry.expenseMeta.innerText = "";
+      entry.productError.innerText = ""; entry.expenseError.innerText = "";
+      entry.salesTypeError.innerText = ""; entry.qtyError.innerText = "";
+      entry.amountError.innerText = ""; entry.generalError.innerText = "";
+      entry.optionsState.innerText = optionsLoaded ? "Entry options ready." : "Select Sales or Expense.";
+      updateTransactionEntryOptionsPresentation();
+      renderTransactionEntryPricing();
+      updateTransactionEntrySubmitState();
+      if (shouldFocusType !== false) entry.typeSales.focus();
+    }

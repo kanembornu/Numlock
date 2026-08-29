@@ -1,0 +1,422 @@
+    function submitTransactionEntry(event)
+    {
+      event.preventDefault();
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      if (state.submitting || entry.submit.disabled) return;
+      var payload = state.transactionType === "SALES"
+        ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty }
+        : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount };
+      if (state.mode === "correction") {
+        payload.transactionId = state.originalDetail.id;
+        payload.reason = state.correctionReason.trim();
+        if (state.correctionStage !== "review") {
+          previewTransactionCorrection(payload);
+        } else {
+          submitTransactionCorrection(payload);
+        }
+        return;
+      }
+      state.submitting = true;
+      entry.generalError.innerText = "";
+      updateTransactionEntrySubmitState();
+      google.script.run
+        .withSuccessHandler(function(response)
+        {
+          state.submitting = false;
+          if (!response || response.success !== true) {
+            showTransactionEntryApiError(response && response.error, "submit"); return;
+          }
+          state.submissionComplete = true;
+          state.successResult = response.data;
+          showTransactionEntrySuccess(response.data);
+          invalidateTransactionsClientCaches();
+          refreshTransactionEntryAfterSuccess();
+        })
+        .withFailureHandler(function(error)
+        {
+          console.error("Canonical transaction submission failed", error);
+          state.submitting = false;
+          entry.generalError.innerText = "Transaction could not be saved. Please try again.";
+          updateTransactionEntrySubmitState();
+        })
+        .submitCanonicalTransaction(payload);
+    }
+
+    function previewTransactionCorrection(payload)
+    {
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      if (state.mode !== "correction" || !state.originalDetail) return;
+      state.submitting = true;
+      entry.generalError.innerText = "";
+      updateTransactionEntrySubmitState();
+      google.script.run.withSuccessHandler(function(response) {
+        if (transactionEntryState !== state || state.mode !== "correction" || !state.originalDetail) return;
+        state.submitting = false;
+        if (!response || response.success !== true) { showTransactionEntryApiError(response && response.error, "correction"); return; }
+        state.correctionPreview = response.data;
+        state.correctionStage = "review";
+        renderCorrectionComparison(response.data);
+        entry.correctionReview.hidden = false;
+        entry.correctionReview.parentElement.classList.add("has-review");
+        entry.correctionReview.scrollIntoView({ block: "nearest" });
+        updateTransactionEntrySubmitState();
+      }).withFailureHandler(function(error) {
+        if (transactionEntryState !== state || state.mode !== "correction" || !state.originalDetail) return;
+        console.error("Transaction correction preview failed", error);
+        state.submitting = false;
+        entry.generalError.innerText = "Correction preview could not be loaded.";
+        updateTransactionEntrySubmitState();
+      }).previewCanonicalTransactionCorrection(payload);
+    }
+
+    function renderCorrectionComparison(preview)
+    {
+      var type = preview.transactionType;
+      function summary(label, detail) {
+        if (type === "SALES") return "<h4>" + label + "</h4><p>" + escapeUiHtml(detail.product) + " · " + escapeUiHtml(detail.type) + " · Qty " + detail.qty + "</p><p>Revenue " + formatEntryCurrency(detail.revenue) + "</p><p>COGS " + formatEntryCurrency(detail.cogs) + "</p><p>Margin " + formatEntryCurrency(detail.margin) + "</p>";
+        return "<h4>" + label + "</h4><p>" + escapeUiHtml(detail.item) + "</p><p>Amount " + formatEntryCurrency(detail.amount) + "</p>";
+      }
+      var delta = type === "SALES"
+        ? "<h4>DELTA</h4><p>Revenue " + formatSignedCurrency(preview.delta.revenue) + "</p><p>COGS " + formatSignedCurrency(preview.delta.cogs) + "</p><p>Margin " + formatSignedCurrency(preview.delta.margin) + "</p>"
+        : "<h4>DELTA</h4><p>Amount " + formatSignedCurrency(preview.delta.amount) + "</p>";
+      initializeStableDashboardElements().transactionEntry.correctionComparison.innerHTML =
+        '<div class="transaction-comparison-columns"><section class="transaction-comparison-column">' + summary("BEFORE", preview.before) + '</section><section class="transaction-comparison-column">' + summary("AFTER", preview.after) + '</section><section class="transaction-comparison-column">' + delta + '</section></div>';
+    }
+
+    function formatSignedCurrency(value)
+    {
+      var amount = Number(value || 0);
+      return (amount > 0 ? "+" : amount < 0 ? "−" : "") + formatEntryCurrency(Math.abs(amount));
+    }
+
+    function submitTransactionCorrection(payload)
+    {
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      state.submitting = true;
+      updateTransactionEntrySubmitState();
+      google.script.run.withSuccessHandler(function(response) {
+        state.submitting = false;
+        if (!response || response.success !== true) { showLifecycleConcurrencyError(response && response.error, entry.generalError); return; }
+        state.submissionComplete = true;
+        state.successResult = response.data;
+        showTransactionCorrectionSuccess(response.data);
+        invalidateTransactionsClientCaches();
+        refreshTransactionEntryAfterSuccess();
+      }).withFailureHandler(function(error) {
+        console.error("Canonical transaction correction failed", error);
+        state.submitting = false;
+        entry.generalError.innerText = "Transaction could not be corrected. Please try again.";
+        updateTransactionEntrySubmitState();
+      }).correctCanonicalTransaction(payload);
+    }
+
+    function showTransactionCorrectionSuccess(result)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      entry.form.hidden = true;
+      entry.correctionReasonRegion.hidden = true;
+      entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
+      entry.submitRegion.hidden = true;
+      entry.success.querySelector("h3").innerText = "Transaction corrected";
+      entry.successDetails.innerHTML = '<div><dt>Original</dt><dd>' + escapeUiHtml(result.original.id) + ' — Voided</dd></div><div><dt>Replacement</dt><dd>' + escapeUiHtml(result.replacement.id) + ' — Active</dd></div>';
+      entry.success.querySelector(".transaction-entry-success-actions").innerHTML = '<button type="button" class="transaction-entry-primary" onclick="viewCorrectionReplacement()">View Replacement</button><button type="button" class="transaction-entry-secondary" onclick="closeTransactionEntry()">Close</button>';
+      entry.success.hidden = false;
+      entry.success.focus();
+    }
+
+    function viewCorrectionReplacement()
+    {
+      var result = transactionEntryState.successResult;
+      if (!result || !result.replacement) return;
+      closeTransactionEntry();
+      openTransactionDetail(result.replacement.id);
+    }
+
+    function refreshTransactionEntryAfterSuccess()
+    {
+      if (!lastDashboardRequest) return;
+      try
+      {
+        activeDashboardRequestToken = ++dashboardRequestSequence;
+        dashboardRequestInFlight = false;
+        requestDashboardData(lastDashboardRequest);
+      }
+      catch (error)
+      {
+        console.error("Post-save dashboard refresh failed", error);
+      }
+    }
+
+    function showTransactionEntrySuccess(result)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var state = transactionEntryState;
+      var rows = state.transactionType === "SALES"
+        ? [["Product", result.product], ["Type", result.type], ["Qty", result.qty], ["Revenue", formatEntryCurrency(result.revenue)], ["Transaction ID", result.id]]
+        : [["Item", result.item], ["Amount", formatEntryCurrency(result.amount)], ["Transaction ID", result.id]];
+      entry.form.hidden = true;
+      entry.submitRegion.hidden = true;
+      entry.successDetails.innerHTML = "";
+      rows.forEach(function(row) {
+        var wrapper = document.createElement("div"), term = document.createElement("dt"), detail = document.createElement("dd");
+        term.innerText = row[0]; detail.innerText = row[1]; wrapper.appendChild(term); wrapper.appendChild(detail); entry.successDetails.appendChild(wrapper);
+      });
+      entry.success.hidden = false;
+      entry.success.focus();
+    }
+    function runTransactionRowAction(action, transactionId, trigger)
+    {
+      transactionLifecycleState.trigger = trigger;
+      if (!transactionId) return;
+      var diagnosticAction = action === "detail" ? "view" : action;
+      if (diagnosticAction === "view") transactionDiagnostics.actions.viewEventCount++;
+      if (diagnosticAction === "correct") transactionDiagnostics.actions.correctEventCount++;
+      if (diagnosticAction === "void") transactionDiagnostics.actions.voidEventCount++;
+      transactionDiagnosticPending[diagnosticAction] = { startedAt: performance.now() };
+      if (action === "detail") openTransactionDetail(transactionId);
+      else loadTransactionForMutation(transactionId, action);
+    }
+
+    function openTransactionDetail(transactionId)
+    {
+      openTransactionLifecycleDialog("detail");
+      loadCanonicalTransactionDetail(transactionId, function(detail) {
+        transactionLifecycleState.detail = detail;
+        renderTransactionDetail(detail);
+      });
+    }
+
+    function loadTransactionForMutation(transactionId, mode)
+    {
+      openTransactionLifecycleDialog(mode);
+      loadCanonicalTransactionDetail(transactionId, function(detail) {
+        transactionLifecycleState.detail = detail;
+        if (mode === "correct") openTransactionCorrection(detail);
+        else renderTransactionVoidConfirmation(detail);
+      });
+    }
+
+    function openTransactionLifecycleDialog(mode)
+    {
+      var elements = initializeStableDashboardElements();
+      var lifecycle = elements.lifecycle;
+      var overlay = lifecycle.overlay;
+      transactionLifecycleState.mode = mode;
+      transactionLifecycleState.submitting = false;
+      lifecycle.title.innerText = mode === "void" ? "Void Transaction" : "Transaction Details";
+      lifecycle.description.innerText = mode === "void" ? "Review the impact and provide a reason." : "Loading canonical server data.";
+      lifecycle.state.innerText = "Loading transaction…";
+      lifecycle.content.innerHTML = "";
+      lifecycle.voidRegion.hidden = true;
+      lifecycle.footer.innerHTML = "";
+      lifecycle.dialog.removeAttribute("data-view-layout");
+      document.body.appendChild(overlay);
+      overlay.hidden = false;
+      elements.appShell.inert = true;
+      document.body.classList.add("overflow-hidden");
+      lifecycle.dialog.focus();
+    }
+
+    function closeTransactionLifecycleDialog()
+    {
+      var overlay = initializeStableDashboardElements().lifecycle.overlay;
+      if (overlay) overlay.hidden = true;
+      initializeStableDashboardElements().appShell.inert = false;
+      document.body.classList.remove("overflow-hidden");
+      if (transactionLifecycleState.trigger && typeof transactionLifecycleState.trigger.focus === "function") transactionLifecycleState.trigger.focus();
+    }
+
+    function loadCanonicalTransactionDetail(transactionId, onSuccess)
+    {
+      if (transactionDetailCache[transactionId]) {
+        initializeStableDashboardElements().lifecycle.state.innerText = "";
+        onSuccess(transactionDetailCache[transactionId]);
+        transactionDetailSources[transactionId] = "cache";
+        return;
+      }
+      google.script.run.withSuccessHandler(function(response) {
+        if (!response || response.success !== true) { renderLifecycleLoadError(response && response.error); return; }
+        initializeStableDashboardElements().lifecycle.state.innerText = "";
+        transactionDetailCache[transactionId] = response.data;
+        transactionDetailSources[transactionId] = "server";
+        onSuccess(response.data);
+      }).withFailureHandler(function(error) {
+        console.error("Canonical transaction detail failed", error);
+        renderLifecycleLoadError(null);
+      }).getCanonicalTransactionDetail(transactionId);
+    }
+    function renderLifecycleLoadError(error)
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = lifecycleDetailErrorMessage(error && error.code);
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+    }
+
+    function lifecycleDetailErrorMessage(code)
+    {
+      return code === "TRANSACTION_NOT_FOUND"
+        ? "Transaction could not be found."
+        : "Transaction details could not be loaded. Please try again.";
+    }
+
+    function sourceDisplayLabel(source)
+    {
+      return { APP_ENTRY: "App Entry", LEGACY_GOOGLE: "Legacy Form", XLSM: "Historical Import" }[source] || "Historical record";
+    }
+
+    function detailRowsHtml(rows)
+    {
+      return rows.filter(function(row) { return row[1] !== null && row[1] !== undefined && row[1] !== ""; }).map(function(row) {
+        return "<div><dt>" + escapeUiHtml(row[0]) + "</dt><dd>" + escapeUiHtml(row[1]) + "</dd></div>";
+      }).join("");
+    }
+
+    function formatLifecycleDate(value)
+    {
+      if (!value) return "";
+      var date = new Date(value);
+      return isNaN(date.getTime()) ? String(value) : date.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" });
+    }
+
+    function renderTransactionDetail(detail)
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      var sales = Boolean(detail.productId);
+      var identity = [["Transaction ID", detail.id], ["Date / Time", formatLifecycleDate(detail.date)], ["Type", sales ? "Sales" : "Expense"], ["Status", detail.status]];
+      var business = sales
+        ? [["Product", detail.product], ["Serving Type", detail.type], ["Qty", detail.qty], ["Amount", formatEntryCurrency(detail.revenue)]]
+        : [["Expense Item", detail.item], ["Category", detail.category], ["Kind", detail.kind], ["Group", detail.group], ["Amount", formatEntryCurrency(detail.amount)]];
+      var audit = [["Source", sourceDisplayLabel(detail.source)], ["CreatedBy", detail.createdBy], ["CreatedAt", formatLifecycleDate(detail.createdAt)], ["UpdatedBy", detail.updatedBy], ["UpdatedAt", formatLifecycleDate(detail.updatedAt)]];
+      var lifecycleRows = [["Lifecycle Status", detail.status], ["Original Transaction", detail.originalId], ["Replacement Transaction", detail.replacementId]];
+      var showLifecycle = detail.status === "VOIDED" || Boolean(detail.originalId || detail.replacementId);
+      var transactionCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--identity"><h3>Transaction</h3><dl>' + detailRowsHtml(identity) + '</dl></section>';
+      var businessCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--business"><h3>' + (sales ? "Sales" : "Expense") + '</h3><dl>' + detailRowsHtml(business) + '</dl></section>';
+      var auditCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--audit"><h3>Audit</h3><dl>' + detailRowsHtml(audit) + '</dl></section>';
+      var lifecycleCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--relations"><h3>Lifecycle</h3><dl>' + detailRowsHtml(lifecycleRows) + '</dl></section>';
+      lifecycle.title.innerText = sales ? "Sales Details" : "Expense Details";
+      lifecycle.description.innerText = detail.status === "VOIDED" ? "Voided record retained in the audit history." : "Canonical server record.";
+      lifecycle.dialog.setAttribute("data-view-layout", showLifecycle ? "history" : "active");
+      lifecycle.content.innerHTML = showLifecycle
+        ? '<div class="transaction-lifecycle-grid transaction-lifecycle-grid--history">' + transactionCard + lifecycleCard + businessCard + auditCard + '</div>'
+        : '<div class="transaction-lifecycle-grid transaction-lifecycle-grid--active">' + transactionCard + businessCard + auditCard + '</div>';
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+      completeTransactionActionDiagnostic("view", detail.id);
+    }
+
+    function renderTransactionVoidConfirmation(detail)
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      if (!detail.canVoid) { showLifecycleConcurrencyError({ code: detail.status === "VOIDED" ? "TRANSACTION_ALREADY_VOIDED" : "TRANSACTION_READ_ONLY" }, lifecycle.state); return; }
+      var impact = detail.productId
+        ? [["Product", detail.product], ["Qty", detail.qty], ["Revenue", formatEntryCurrency(detail.revenue)], ["COGS", formatEntryCurrency(detail.cogs)], ["Margin", formatEntryCurrency(detail.margin)]]
+        : [["Item", detail.item], ["Amount", formatEntryCurrency(detail.amount)]];
+      lifecycle.state.innerText = "";
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Impact on active reporting</h3><dl>' + detailRowsHtml(impact) + '</dl></section>';
+      lifecycle.voidRegion.hidden = false;
+      lifecycle.voidReason.value = "";
+      updateVoidReason();
+      completeTransactionActionDiagnostic("void", detail.id);
+    }
+
+    function updateVoidReason()
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      var reason = lifecycle.voidReason;
+      var error = lifecycle.voidReasonError;
+      var valid = reason.value.trim().length >= 3;
+      error.innerText = valid || !reason.value ? "" : "Enter a meaningful void reason.";
+      reason.setAttribute("aria-invalid", String(!valid));
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary transaction-action-destructive" onclick="submitTransactionVoid()" ' + (valid ? "" : "disabled") + '>Void Transaction</button>';
+    }
+
+    function submitTransactionVoid()
+    {
+      if (transactionLifecycleState.submitting || !transactionLifecycleState.detail) return;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      var reason = lifecycle.voidReason.value.trim();
+      if (reason.length < 3) { updateVoidReason(); return; }
+      transactionLifecycleState.submitting = true;
+      lifecycle.state.innerText = "Voiding transaction…";
+      google.script.run.withSuccessHandler(function(response) {
+        transactionLifecycleState.submitting = false;
+        if (!response || response.success !== true) {
+          if (response && response.error && response.error.code === "INVALID_VOID_REASON") lifecycle.voidReasonError.innerText = transactionEntryErrorMessage("INVALID_VOID_REASON");
+          else showLifecycleConcurrencyError(response && response.error, lifecycle.state);
+          return;
+        }
+        lifecycle.voidRegion.hidden = true;
+        lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Transaction voided</h3><p class="ui-theme-secondary">' + escapeUiHtml(response.data.id) + ' remains available in audit history.</p></section>';
+        lifecycle.state.innerText = "Transaction voided successfully.";
+        lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+        invalidateTransactionsClientCaches();
+        refreshTransactionEntryAfterSuccess();
+      }).withFailureHandler(function(error) {
+        console.error("Canonical transaction void failed", error);
+        transactionLifecycleState.submitting = false;
+        lifecycle.state.innerText = "Transaction could not be voided. Please try again.";
+      }).voidCanonicalTransaction({ transactionId: transactionLifecycleState.detail.id, reason: reason });
+    }
+
+    function showLifecycleConcurrencyError(error, target)
+    {
+      var code = error && error.code;
+      if (code === "TRANSACTION_ALREADY_VOIDED" || code === "TRANSACTION_READ_ONLY") {
+        target.innerText = "This transaction changed after you opened it. Refreshing the current status.";
+        refreshTransactionEntryAfterSuccess();
+        if (transactionLifecycleState.detail) loadCanonicalTransactionDetail(transactionLifecycleState.detail.id, renderTransactionDetail);
+        return;
+      }
+      target.innerText = transactionEntryErrorMessage(code);
+    }
+
+    function openTransactionCorrection(detail)
+    {
+      if (!detail.canCorrect) { showLifecycleConcurrencyError({ code: detail.status === "VOIDED" ? "TRANSACTION_ALREADY_VOIDED" : "TRANSACTION_READ_ONLY" }, initializeStableDashboardElements().lifecycle.state); return; }
+      closeTransactionLifecycleDialog();
+      var cachedOptions = transactionEntryState.entryOptions;
+      var optionsLoaded = transactionEntryState.optionsLoaded;
+      var optionsRevision = transactionEntryState.optionsRevision;
+      transactionEntryState = createInitialTransactionEntryState();
+      transactionEntryState.entryOptions = cachedOptions;
+      transactionEntryState.optionsLoaded = optionsLoaded;
+      transactionEntryState.optionsRevision = optionsRevision;
+      transactionEntryState.mode = "correction";
+      transactionEntryState.originalDetail = detail;
+      transactionEntryState.transactionType = detail.productId ? "SALES" : "EXPENSE";
+      var entry = initializeStableDashboardElements().transactionEntry;
+      entry.dialog.setAttribute("data-mode", "correction");
+      entry.dialog.setAttribute("data-entry-type", detail.productId ? "sales" : "expense");
+      entry.form.reset(); entry.form.hidden = false; entry.success.hidden = true; entry.submitRegion.hidden = false;
+      entry.title.innerText = "Correct Transaction";
+      entry.description.innerText = detail.id + " · The original will be voided after confirmation.";
+      entry.typeFieldset.hidden = true;
+      entry.typeSales.disabled = true; entry.typeExpense.disabled = true;
+      entry.correctionWorkspace.hidden = false;
+      entry.correctionReasonRegion.hidden = false; entry.correctionReview.hidden = true;
+      entry.correctionReview.parentElement.classList.remove("has-review");
+      entry.correctionReason.value = ""; entry.correctionReasonError.innerText = "";
+      entry.salesFields.hidden = transactionEntryState.transactionType !== "SALES";
+      entry.expenseFields.hidden = transactionEntryState.transactionType !== "EXPENSE";
+      if (detail.productId) {
+        var cachedProductOption = optionsLoaded && cachedOptions && cachedOptions.sales
+          ? cachedOptions.sales.find(function(option) { return option.productId === detail.productId; }) : null;
+        transactionEntryState.selectedProduct = cachedProductOption ||
+          { productId: detail.productId, product: detail.product, category: detail.category, kind: detail.kind };
+        transactionEntryState.selectedType = detail.type; transactionEntryState.qty = detail.qty;
+        entry.productSearch.value = detail.product; entry.productMeta.innerText = [detail.category, detail.kind].filter(Boolean).join(" · ");
+        entry.qty.value = detail.qty; entry.typeHot.setAttribute("aria-checked", String(detail.type === "Hot")); entry.typeCold.setAttribute("aria-checked", String(detail.type === "Cold"));
+        requestTransactionEntryPricing();
+      } else {
+        transactionEntryState.selectedExpense = { expenseItemId: detail.expenseItemId, item: detail.item, category: detail.category, group: detail.group };
+        transactionEntryState.amount = detail.amount; entry.expenseSearch.value = detail.item; entry.expenseMeta.innerText = [detail.category, detail.group].filter(Boolean).join(" · "); entry.amount.value = Number(detail.amount).toLocaleString("id-ID");
+      }
+      transactionEntryLastFocus = transactionLifecycleState.trigger;
+      document.body.appendChild(entry.overlay); entry.overlay.hidden = false; initializeStableDashboardElements().appShell.inert = true; document.body.classList.add("overflow-hidden"); entry.dialog.focus();
+      if (!optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
+      updateTransactionEntrySubmitState();
+      completeTransactionActionDiagnostic("correct", detail.id);
+    }

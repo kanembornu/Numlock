@@ -8,6 +8,14 @@ function normalizeLayoutDebugParameter(event) {
 
 }
 
+function include(filename) {
+
+  return HtmlService
+    .createHtmlOutputFromFile(filename)
+    .getContent();
+
+}
+
 function doGet(e) {
 
   var template =

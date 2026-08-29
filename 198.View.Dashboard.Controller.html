@@ -1,0 +1,754 @@
+  let dashboardRequestInFlight = false;
+  let dashboardRequestSequence = 0;
+  let activeDashboardRequestToken = 0;
+  let lastDashboardRequest = null;
+  let pendingDashboardRenderFrame = null;
+  let dashboardRetryInProgress = false;
+  let dashboardTabsInitialized = false;
+  let activeDashboardTab = "overview";
+  let availableDashboardMonths = [];
+  let availableDashboardYears = [];
+
+    function setActiveDashboardTab(tabName, moveFocus)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedIndex = -1;
+
+      elements.dashboardTabs.forEach(function(tab, index)
+      {
+        var isSelected =
+          tab.getAttribute("data-dashboard-tab") === tabName;
+
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.setAttribute("tabindex", isSelected ? "0" : "-1");
+        tab.classList.toggle("border-indigo-600", isSelected);
+        tab.classList.toggle("text-indigo-700", isSelected);
+        tab.classList.toggle("border-transparent", !isSelected);
+        tab.classList.toggle("text-slate-600", !isSelected);
+
+        if (isSelected)
+        {
+          selectedIndex = index;
+        }
+      });
+
+      if (selectedIndex === -1)
+      {
+        return;
+      }
+
+      elements.dashboardPanels.forEach(function(panel)
+      {
+        panel.hidden =
+          panel.getAttribute("data-dashboard-panel") !== tabName;
+      });
+
+      activeDashboardTab = tabName;
+
+      if (moveFocus)
+      {
+        elements.dashboardTabs[selectedIndex].focus();
+      }
+
+      resizeVisibleDashboardCharts(tabName);
+    }
+
+    function initializeDashboardTabs()
+    {
+      if (dashboardTabsInitialized)
+      {
+        return;
+      }
+
+      dashboardTabsInitialized = true;
+
+      var elements = initializeStableDashboardElements();
+      var staging = elements.dashboardSectionStaging;
+      var overviewEvidenceRow = staging.querySelector("#overviewEvidenceRow");
+      var topProductsSection = staging.querySelector("#topProductsSection");
+      var performanceSignalGrid = staging.querySelector("#performanceSignalGrid");
+      var forecastSection = staging.querySelector("#forecastSection");
+      var productConcentrationSection = staging.querySelector("#productConcentrationSection");
+
+      overviewEvidenceRow.appendChild(topProductsSection);
+      performanceSignalGrid.appendChild(forecastSection);
+      performanceSignalGrid.appendChild(productConcentrationSection);
+      var sectionOwnership = {
+        overview: [
+          elements.dashboardHeaderRegion,
+          staging.querySelector("#keyMetricsSection"),
+          overviewEvidenceRow,
+          staging.querySelector("#overviewContextRow"),
+          staging.querySelector("#executiveSummarySection")
+        ],
+        performance: [
+          staging.querySelector("#performanceSnapshotSection"),
+          staging.querySelector("#productProfitabilitySection"),
+          staging.querySelector("#performanceSecondaryGrid"),
+          staging.querySelector("#performanceDecisionRow")
+        ],
+        insights: []
+      };
+
+      var insightsColumn = document.createElement("section");
+      insightsColumn.id = "insightsColumn";
+      insightsColumn.className = "insights-plans-column";
+      insightsColumn.setAttribute("aria-labelledby", "insightsColumnTitle");
+      insightsColumn.innerHTML = '<header class="insights-plans-header insights-header"><span class="insights-plans-header-icon" aria-hidden="true"><i class="fas fa-lightbulb"></i></span><div><h2 id="insightsColumnTitle">INSIGHTS</h2><p>Key findings from current performance</p></div></header>';
+      insightsColumn.appendChild(staging.querySelector("#businessPriorityRegion"));
+      insightsColumn.appendChild(staging.querySelector("#diagnosisSection"));
+      insightsColumn.appendChild(staging.querySelector("#riskOpportunitySection"));
+      insightsColumn.appendChild(staging.querySelector("#businessMaturityCard"));
+
+      var plansColumn = document.createElement("section");
+      plansColumn.id = "plansColumn";
+      plansColumn.className = "insights-plans-column";
+      plansColumn.setAttribute("aria-labelledby", "plansColumnTitle");
+      plansColumn.innerHTML = '<header class="insights-plans-header plans-header"><span class="insights-plans-header-icon" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span><div><h2 id="plansColumnTitle">PLANS</h2><p>Recommended actions and execution roadmap</p></div></header>';
+      plansColumn.appendChild(staging.querySelector("#recommendationsSection"));
+      plansColumn.appendChild(staging.querySelector("#actionRoadmapCard"));
+      plansColumn.appendChild(staging.querySelector("#kpiTargetReference"));
+      sectionOwnership.insights.push(insightsColumn, plansColumn);
+
+      elements.dashboardPanels.forEach(function(panel)
+      {
+        var panelName = panel.getAttribute("data-dashboard-panel");
+
+        sectionOwnership[panelName].forEach(function(section)
+        {
+          if (!section)
+          {
+            throw new Error(
+              "Dashboard tab section ownership is incomplete"
+            );
+          }
+
+          panel.appendChild(section);
+        });
+      });
+
+      staging.remove();
+
+      elements.dashboardTabs.forEach(function(tab, index)
+      {
+        tab.addEventListener("click", function()
+        {
+          setActiveDashboardTab(
+            tab.getAttribute("data-dashboard-tab"),
+            false
+          );
+        });
+
+        tab.addEventListener("keydown", function(event)
+        {
+          var targetIndex = index;
+
+          if (event.key === "ArrowRight")
+          {
+            targetIndex = (index + 1) % elements.dashboardTabs.length;
+          }
+          else if (event.key === "ArrowLeft")
+          {
+            targetIndex =
+              (index - 1 + elements.dashboardTabs.length) %
+              elements.dashboardTabs.length;
+          }
+          else if (event.key === "Home")
+          {
+            targetIndex = 0;
+          }
+          else if (event.key === "End")
+          {
+            targetIndex = elements.dashboardTabs.length - 1;
+          }
+          else
+          {
+            return;
+          }
+
+          event.preventDefault();
+          setActiveDashboardTab(
+            elements.dashboardTabs[targetIndex]
+              .getAttribute("data-dashboard-tab"),
+            true
+          );
+        });
+      });
+
+      document.addEventListener("click", function(event)
+      {
+        if (
+          elements.dataQualityDetailsButton.getAttribute("aria-expanded") === "true" &&
+          !elements.dataQualityInformation.contains(event.target)
+        )
+        {
+          closeDataQualityDetails();
+        }
+      });
+      document.addEventListener("keydown", function(event)
+      {
+        if (
+          event.key === "Escape" &&
+          elements.dataQualityDetailsButton.getAttribute("aria-expanded") === "true"
+        )
+        {
+          closeDataQualityDetails();
+          elements.dataQualityDetailsButton.focus();
+        }
+      });
+
+      setActiveDashboardTab(activeDashboardTab, false);
+    }
+
+    function setDashboardControlsDisabled(disabled)
+    {
+      var elements = initializeStableDashboardElements();
+      elements.filter.disabled = disabled;
+      var filter = elements.filter.value;
+      elements.customMonth.disabled = disabled || filter !== "customMonth";
+      elements.customYear.disabled = disabled || (
+        filter !== "customMonth" && filter !== "customYear"
+      );
+      elements.customStart.disabled = disabled || filter !== "custom";
+      elements.customEnd.disabled = disabled || filter !== "custom";
+      synchronizeAllCustomSelects();
+    }
+
+    function setDashboardState(state, message)
+    {
+      var elements = initializeStableDashboardElements();
+      var status = elements.dashboardStatus;
+      var statusText = elements.dashboardStatusText;
+      var retryButton = elements.dashboardRetryButton;
+      var content = elements.dashboardContent;
+
+      dashboardRequestInFlight =
+        state === "loading";
+
+      if (dashboardRequestInFlight)
+      {
+        visibleTransactionRowCount = 0;
+      }
+
+      setDashboardControlsDisabled(
+        dashboardRequestInFlight
+      );
+
+      elements.printReportButton.disabled =
+        state !== "success";
+
+      elements.exportCsvButton.disabled =
+        state !== "success" || visibleTransactionRowCount === 0;
+
+      status.classList.toggle(
+        "hidden",
+        state === "success"
+      );
+      status.classList.toggle(
+        "sr-only",
+        state === "loading"
+      );
+
+      retryButton.classList.toggle(
+        "hidden",
+        state !== "error"
+      );
+
+      content.classList.toggle(
+        "hidden",
+        state === "error"
+      );
+
+      content.style.opacity =
+        state === "loading"
+          ? "0.45"
+          : "";
+
+      content.style.pointerEvents =
+        state === "loading"
+          ? "none"
+          : "";
+
+      content.setAttribute(
+        "aria-busy",
+        state === "loading" ? "true" : "false"
+      );
+
+      status.setAttribute(
+        "role",
+        state === "error" ? "alert" : "status"
+      );
+
+      if (state === "loading")
+      {
+        statusText.classList.add("sr-only");
+        statusText.innerText = "Loading dashboard data.";
+        showBusinessOverviewSkeleton();
+        showChartSkeleton();
+      }
+      else if (state === "empty")
+      {
+        status.classList.add("sr-only");
+        statusText.classList.add("sr-only");
+        statusText.innerText =
+          "No data available for the selected period.";
+        hideChartSkeleton();
+      }
+      else if (state === "error")
+      {
+        statusText.classList.remove("sr-only");
+        statusText.innerText =
+          message || "Unable to load dashboard data.";
+        hideChartSkeleton();
+      }
+      else
+      {
+        statusText.classList.remove("sr-only");
+        statusText.innerText = "";
+        hideChartSkeleton();
+      }
+    }
+
+    function updateCustomDateVisibility()
+    {
+      var elements = initializeStableDashboardElements();
+      var filter = elements.filter.value;
+      var isCustom = filter === "custom";
+      var isCustomMonth = filter === "customMonth";
+      var isCustomYear = filter === "customYear";
+
+      elements.customDateRange.classList.toggle(
+        "hidden",
+        !isCustom && !isCustomMonth && !isCustomYear
+      );
+      elements.customMonth.classList.toggle("hidden", !isCustomMonth);
+      elements.customYear.classList.toggle("hidden", !isCustomMonth && !isCustomYear);
+      elements.customStart.classList.toggle("hidden", !isCustom);
+      elements.customEnd.classList.toggle("hidden", !isCustom);
+      synchronizeAllCustomSelects();
+
+      if (!dashboardRequestInFlight)
+      {
+        elements.customMonth.disabled = !isCustomMonth;
+        elements.customYear.disabled = !isCustomMonth && !isCustomYear;
+        elements.customStart.disabled = !isCustom;
+        elements.customEnd.disabled = !isCustom;
+      }
+    }
+
+    function setDateFilterValidation(message)
+    {
+      var elements = initializeStableDashboardElements();
+      var validation = elements.dateFilterValidation;
+
+      var hasError = Boolean(message);
+
+      validation.innerText = message || "";
+      validation.classList.toggle("hidden", !hasError);
+      elements.customStart.setAttribute(
+        "aria-invalid",
+        String(hasError)
+      );
+      elements.customEnd.setAttribute(
+        "aria-invalid",
+        String(hasError)
+      );
+      elements.customMonth.setAttribute(
+        "aria-invalid",
+        String(hasError)
+      );
+      elements.customYear.setAttribute(
+        "aria-invalid",
+        String(hasError)
+      );
+    }
+
+    function getDashboardFilterRequest()
+    {
+      var elements = initializeStableDashboardElements();
+      var filter = elements.filter.value;
+
+      var customStart = elements.customStart.value;
+      var customEnd = elements.customEnd.value;
+
+      if (filter === "customMonth")
+      {
+        customStart = elements.customYear.value && elements.customMonth.value
+          ? elements.customYear.value + "-" + elements.customMonth.value
+          : "";
+        customEnd = null;
+
+        if (!customStart)
+        {
+          setDateFilterValidation("Select a custom month");
+          return null;
+        }
+      }
+
+      if (filter === "customYear")
+      {
+        customStart = elements.customYear.value;
+        customEnd = null;
+
+        if (!/^\d{4}$/.test(customStart))
+        {
+          setDateFilterValidation("Select an available year");
+          return null;
+        }
+      }
+
+      if (filter === "custom")
+      {
+        if (!customStart || !customEnd)
+        {
+          setDateFilterValidation("Select both custom dates");
+          return null;
+        }
+
+        if (customStart > customEnd)
+        {
+          setDateFilterValidation(
+            "Start date must not be after end date"
+          );
+          return null;
+        }
+      }
+
+      setDateFilterValidation("");
+
+      return {
+        filter: filter,
+        customStart:
+          filter === "custom" || filter === "customMonth" || filter === "customYear"
+            ? customStart
+            : null,
+        customEnd: filter === "custom" ? customEnd : null
+      };
+    }
+
+    function handleDateFilterChange(event)
+    {
+      var elements = initializeStableDashboardElements();
+      updateCustomDateVisibility();
+
+      if (
+        elements.filter.value === "customMonth" &&
+        event &&
+        event.target &&
+        event.target.id === "customYear"
+      )
+      {
+        renderAvailableMonthOptions("");
+      }
+
+      loadData();
+    }
+
+    function renderAvailablePeriodOptions(dateFilter)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedMonth = elements.customMonth.value;
+      var selectedYear = elements.customYear.value;
+      var monthNames = [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      availableDashboardMonths = Array.isArray(dateFilter.availableMonths)
+        ? dateFilter.availableMonths
+        : [];
+      availableDashboardYears = Array.isArray(dateFilter.availableYears)
+        ? dateFilter.availableYears
+        : [];
+      var scopedParts = String(dateFilter.endDate || "").split("-");
+      var scopedYear = scopedParts[0];
+      var scopedMonth = scopedParts[1];
+      var nextYear = availableDashboardYears.indexOf(selectedYear) !== -1
+        ? selectedYear
+        : availableDashboardYears.indexOf(scopedYear) !== -1
+          ? scopedYear
+          : availableDashboardYears[availableDashboardYears.length - 1] || "";
+
+      elements.customYear.innerHTML = availableDashboardYears.map(function(year)
+      {
+        return '<option value="' + year + '">' + year + "</option>";
+      }).join("");
+      elements.customYear.value = nextYear;
+      synchronizeCustomSelect("customYear", true);
+
+      renderAvailableMonthOptions(
+        selectedMonth || (nextYear === scopedYear ? scopedMonth : ""),
+        monthNames
+      );
+    }
+
+    function renderAvailableMonthOptions(preferredMonth, monthNames)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedYear = elements.customYear.value;
+      var names = monthNames || [
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      ];
+      var representedMonths = availableDashboardMonths
+        .filter(function(monthKey)
+        {
+          return monthKey.slice(0, 4) === selectedYear;
+        })
+        .map(function(monthKey)
+        {
+          return monthKey.slice(5, 7);
+        });
+
+      elements.customMonth.innerHTML = representedMonths.map(function(month)
+      {
+        return '<option value="' + month + '">' +
+          names[Number(month) - 1] +
+          "</option>";
+      }).join("");
+      elements.customMonth.value = representedMonths.indexOf(preferredMonth) !== -1
+        ? preferredMonth
+        : representedMonths[representedMonths.length - 1] || "";
+      synchronizeCustomSelect("customMonth", true);
+    }
+
+    function loadData()
+    {
+      if (dashboardRequestInFlight)
+      {
+        return;
+      }
+
+      var request =
+        getDashboardFilterRequest();
+
+      if (!request)
+      {
+        return;
+      }
+
+      requestDashboardData(request);
+    }
+
+    function retryDashboardData()
+    {
+      if (
+        dashboardRequestInFlight ||
+        !lastDashboardRequest
+      )
+      {
+        return;
+      }
+
+      logClientEvent(
+        "Info",
+        "Retry",
+        "Retrying the last dashboard request."
+      );
+      dashboardRetryInProgress = true;
+      requestDashboardData(lastDashboardRequest);
+    }
+
+    function requestDashboardData(request)
+    {
+      if (dashboardRequestInFlight)
+      {
+        return;
+      }
+
+      lastDashboardRequest = {
+        filter: request.filter,
+        customStart: request.customStart,
+        customEnd: request.customEnd
+      };
+
+      var requestToken =
+        ++dashboardRequestSequence;
+
+      activeDashboardRequestToken =
+        requestToken;
+
+      if (pendingDashboardRenderFrame !== null)
+      {
+        window.cancelAnimationFrame(
+          pendingDashboardRenderFrame
+        );
+        pendingDashboardRenderFrame = null;
+      }
+
+      setDashboardState("loading");
+      var requestStartedAt = performance.now();
+
+      google.script.run
+        .withSuccessHandler(function(res)
+        {
+          if (
+            requestToken !== activeDashboardRequestToken ||
+            !dashboardRequestInFlight
+          )
+          {
+            return;
+          }
+
+          try
+          {
+            var responseReceivedAt = performance.now();
+            render(res, requestToken);
+            var renderCompletedAt = performance.now();
+            var serverMs = Number(res && res.dashboardPerformance && res.dashboardPerformance.totalMs) || 0;
+            console.info("DashboardTiming", {
+              serverMs: serverMs,
+              transportApproxMs: Math.max(0, Math.round(responseReceivedAt - requestStartedAt - serverMs)),
+              renderMs: Math.round(renderCompletedAt - responseReceivedAt),
+              totalObservedMs: Math.round(renderCompletedAt - requestStartedAt),
+              cacheHit: Boolean(res && res.dashboardPerformance && res.dashboardPerformance.cacheHit)
+            });
+
+            var isEmpty =
+              res &&
+              res.dateFilter &&
+              res.dateFilter.rowCount === 0;
+
+            setDashboardState(
+              isEmpty ? "empty" : "success"
+            );
+            logClientEvent(
+              "Info",
+              dashboardRetryInProgress ? "Retry" : "Dashboard load",
+              dashboardRetryInProgress
+                ? "Dashboard retry completed successfully."
+                : isEmpty
+                  ? "Dashboard loaded with no rows for the active period."
+                  : "Dashboard loaded successfully."
+            );
+            dashboardRetryInProgress = false;
+          }
+          catch (error)
+          {
+            console.error(
+              "Dashboard render failed",
+              error
+            );
+
+            setDashboardState(
+              "error",
+              "Unable to load dashboard data."
+            );
+            logClientEvent(
+              "Error",
+              dashboardRetryInProgress ? "Retry" : "Dashboard load",
+              dashboardRetryInProgress
+                ? "Dashboard retry rendering failed."
+                : "Dashboard rendering failed."
+            );
+            dashboardRetryInProgress = false;
+          }
+        })
+        .withFailureHandler(function(err)
+        {
+          if (
+            requestToken !== activeDashboardRequestToken ||
+            !dashboardRequestInFlight
+          )
+          {
+            return;
+          }
+
+          console.error(
+            "Dashboard request failed",
+            err
+          );
+
+          setDashboardState(
+            "error",
+            "Unable to load dashboard data."
+          );
+          logClientEvent(
+            "Error",
+            dashboardRetryInProgress ? "Retry" : "Dashboard load",
+            dashboardRetryInProgress
+              ? "Dashboard retry request failed."
+              : "Dashboard request failed."
+          );
+          dashboardRetryInProgress = false;
+        })
+        .getDashboardData(
+          lastDashboardRequest.filter,
+          lastDashboardRequest.customStart,
+          lastDashboardRequest.customEnd
+        );
+    }
+
+    function scheduleDeferredDashboardRender(res, requestToken)
+    {
+      pendingDashboardRenderFrame =
+        window.requestAnimationFrame(function()
+        {
+          pendingDashboardRenderFrame = null;
+
+          if (requestToken !== activeDashboardRequestToken)
+          {
+            return;
+          }
+
+          try
+          {
+            renderDeferredDashboardContent(res);
+          }
+          catch (error)
+          {
+            console.error(
+              "Dashboard deferred render failed",
+              error
+            );
+            logClientEvent(
+              "Error",
+              "Dashboard load",
+              "Deferred dashboard rendering failed."
+            );
+
+            setDashboardState(
+              "error",
+              "Unable to load dashboard data."
+            );
+          }
+        });
+    }
+
+    function render(res, requestToken)
+    {
+      if (!res)
+      {
+        throw new Error(
+          "Dashboard response is missing"
+        );
+      }
+      if (!res.summary)
+      {
+        throw new Error(
+          "Dashboard summary is missing"
+        );
+      }
+
+      renderBusinessOverview(res);
+      renderReportingMetadata(res);
+      renderOverviewContext(res);
+      renderKpiTargets(res.kpiTargets);
+      renderCharts(res);
+      renderExecutiveSummary(res);
+
+      scheduleDeferredDashboardRender(
+        res,
+        requestToken
+      );
+    }
+
+    function renderDeferredDashboardContent(res)
+    {
+      renderBusinessIntelligence(res);
+      renderExecutiveCenter(res);
+      renderTransactions(res);
+
+      renderDeferredDashboardPresentation(res);
+
+    hideChartSkeleton();
+    }

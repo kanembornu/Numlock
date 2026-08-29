@@ -90,6 +90,39 @@ function assertSourceContains(source, token, scenarioName)
   }
 }
 
+function getAssembledFrontendSource(includeDiagnostics)
+{
+  var transactionsStateSource =
+    HtmlService.createHtmlOutputFromFile("192.View.Transactions.State").getContent();
+  var transactionsRenderSource =
+    HtmlService.createHtmlOutputFromFile("193.View.Transactions.Render").getContent();
+  var transactionsFormsSource =
+    HtmlService.createHtmlOutputFromFile("194.View.Transactions.Forms").getContent();
+  var transactionsActionsSource =
+    HtmlService.createHtmlOutputFromFile("195.View.Transactions.Actions").getContent();
+  var dashboardRenderSource =
+    HtmlService.createHtmlOutputFromFile("196.View.Dashboard.Render").getContent();
+  var dashboardChartsSource =
+    HtmlService.createHtmlOutputFromFile("197.View.Dashboard.Charts").getContent();
+  var dashboardControllerSource =
+    HtmlService.createHtmlOutputFromFile("198.View.Dashboard.Controller").getContent();
+  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent()
+    .replace("<?!= include('192.View.Transactions.State'); ?>", transactionsStateSource)
+    .replace("<?!= include('193.View.Transactions.Render'); ?>", transactionsRenderSource)
+    .replace("<?!= include('194.View.Transactions.Forms'); ?>", transactionsFormsSource)
+    .replace("<?!= include('195.View.Transactions.Actions'); ?>", transactionsActionsSource)
+    .replace("<?!= include('196.View.Dashboard.Render'); ?>", dashboardRenderSource)
+    .replace("<?!= include('197.View.Dashboard.Charts'); ?>", dashboardChartsSource)
+    .replace("<?!= include('198.View.Dashboard.Controller'); ?>", dashboardControllerSource);
+
+  return includeDiagnostics
+    ? source.replace(
+      "<?!= include('191.View.Diagnostics'); ?>",
+      HtmlService.createHtmlOutputFromFile("191.View.Diagnostics").getContent()
+    )
+    : source;
+}
+
 function assertSourceContainsOnce(source, token, scenarioName)
 {
   var firstIndex = source.indexOf(token);

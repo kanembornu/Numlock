@@ -1,0 +1,416 @@
+  let latestLifecycleTransactions = [];
+  let transactionsLifecycleState = "active";
+  let transactionsDateFilter = null;
+  const TRANSACTIONS_DEFAULT_PAGE_SIZE = 15;
+  const TRANSACTIONS_ALLOWED_PAGE_SIZES = { 15: true, 25: true, 50: true };
+  let transactionsPageSize = TRANSACTIONS_DEFAULT_PAGE_SIZE;
+  let transactionsPages = { recent: 1, sales: 1, expenses: 1 };
+  let transactionsPageResult = { rows: [], totalRows: 0, page: 1, pageSize: TRANSACTIONS_DEFAULT_PAGE_SIZE, totalPages: 0 };
+  let transactionsRequestSequence = 0;
+  let transactionsSearchQuery = "";
+  let transactionsSearchTimer = null;
+  let transactionsResultCache = {};
+  let transactionsResultCacheOrder = [];
+  let transactionsSearchIndex = null;
+  let transactionsCacheRevision = "";
+  let transactionsPerformanceEvidence = null;
+  let transactionsPendingKey = "";
+  let transactionDetailCache = {};
+  let transactionDetailPending = {};
+  let transactionDetailSources = {};
+  let activeTransactionDrilldown = null;
+  let transactionsTabsInitialized = false;
+  let activeTransactionsTab = "recent";
+  let transactionEntryState = createInitialTransactionEntryState();
+  let transactionEntryLastFocus = null;
+  let transactionLifecycleState = { detail: null, mode: "detail", trigger: null, submitting: false };
+    function setTransactionsLifecycleState(value)
+    {
+      transactionsLifecycleState = { active: true, all: true, voided: true }[value] ? value : "active";
+      initializeStableDashboardElements().transactionsIsActive.value = transactionsLifecycleState;
+      transactionsPages[activeTransactionsTab] = 1;
+      requestTransactionsPage();
+    }
+
+    function setTransactionsPageSize(value)
+    {
+      var pageSize = Number(value);
+      transactionsPageSize = TRANSACTIONS_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : TRANSACTIONS_DEFAULT_PAGE_SIZE;
+      var elements = initializeStableDashboardElements();
+      elements.transactionsPageSize.value = String(transactionsPageSize);
+      elements.transactionsPageSizeFooter.value = String(transactionsPageSize);
+      elements.transactionsTableCard.classList.toggle("is-scrollable", transactionsPageSize > 15);
+      transactionsPages = { recent: 1, sales: 1, expenses: 1 };
+      transactionsResultCache = {};
+      transactionsResultCacheOrder = [];
+      try { window.localStorage.setItem("numlock.transactions.pageSize", String(transactionsPageSize)); } catch (error) {}
+      if (transactionsDateFilter) requestTransactionsPage();
+    }
+
+    function initializeTransactionsPageSize()
+    {
+      var saved = "";
+      try { saved = window.localStorage.getItem("numlock.transactions.pageSize") || ""; } catch (error) {}
+      setTransactionsPageSize(saved || TRANSACTIONS_DEFAULT_PAGE_SIZE);
+    }
+
+    function scheduleTransactionsSearch(value)
+    {
+      window.clearTimeout(transactionsSearchTimer);
+      transactionDiagnostics.search.eventCount++;
+      transactionDiagnosticPending.search = { startedAt: performance.now(), serverCalls: 0 };
+      transactionsSearchTimer = window.setTimeout(function()
+      {
+        transactionsSearchQuery = String(value || "").trim();
+        transactionsPages[activeTransactionsTab] = 1;
+        initializeStableDashboardElements().clearTransactionsSearch.disabled = !transactionsSearchQuery;
+        requestTransactionsPage();
+      }, 300);
+    }
+
+    function clearTransactionsSearch()
+    {
+      window.clearTimeout(transactionsSearchTimer);
+      transactionDiagnostics.search.eventCount++;
+      transactionDiagnosticPending.search = { startedAt: performance.now(), serverCalls: 0 };
+      transactionsSearchQuery = "";
+      transactionsPages[activeTransactionsTab] = 1;
+      var elements = initializeStableDashboardElements();
+      elements.transactionsSearch.value = "";
+      elements.clearTransactionsSearch.disabled = true;
+      requestTransactionsPage();
+    }
+
+
+    function transactionsCacheKey(tabName, pageNumber)
+    {
+      return [
+        transactionsDateFilter.filter, transactionsDateFilter.customStart, transactionsDateFilter.customEnd,
+        tabName, pageNumber, transactionsPageSize, transactionsLifecycleState,
+        transactionsSearchQuery, activeTransactionDrilldown && activeTransactionDrilldown.type || "",
+        activeTransactionDrilldown && activeTransactionDrilldown.value || ""
+      ].join("|");
+    }
+
+    function cacheTransactionsResult(cacheKey, result)
+    {
+      if (!Object.prototype.hasOwnProperty.call(transactionsResultCache, cacheKey)) transactionsResultCacheOrder.push(cacheKey);
+      transactionsResultCache[cacheKey] = result;
+      while (transactionsResultCacheOrder.length > 24) delete transactionsResultCache[transactionsResultCacheOrder.shift()];
+    }
+
+    function filterTransactionsSearchIndex(lifecycleStateOverride)
+    {
+      var query = transactionsSearchQuery.toLowerCase();
+      var lifecycleState = typeof lifecycleStateOverride === "string" ? lifecycleStateOverride : transactionsLifecycleState;
+      return (transactionsSearchIndex || []).filter(function(row) {
+        if (lifecycleState === "active" && row.isActive === false) return false;
+        if (lifecycleState === "voided" && row.isActive !== false) return false;
+        if (activeTransactionsTab === "sales" && row.transactionType !== "Sales") return false;
+        if (activeTransactionsTab === "expenses" && row.transactionType !== "Expense") return false;
+        if (row.transactionType !== "Sales" && row.transactionType !== "Expense") return false;
+        if (activeTransactionsTab === "recent" && activeTransactionDrilldown) {
+          if (activeTransactionDrilldown.type === "sales" && row.transactionType !== "Sales") return false;
+          if (activeTransactionDrilldown.type === "purchase" && row.transactionType !== "Expense") return false;
+          if (activeTransactionDrilldown.type === "month" && String(row.date || "").slice(0, 7) !== activeTransactionDrilldown.value) return false;
+          if (activeTransactionDrilldown.type === "expenseCategory" &&
+              (row.transactionType !== "Expense" || row.purchaseCategory !== activeTransactionDrilldown.value)) return false;
+        }
+        if (!query) return true;
+        return [row.id, row.product, row.purchaseCategory, row.transactionType].some(function(value) {
+          return String(value || "").toLowerCase().indexOf(query) !== -1;
+        });
+      });
+    }
+
+    function buildLocalTransactionsPage(pageNumber)
+    {
+      var rows = filterTransactionsSearchIndex();
+      var totalRows = rows.length;
+      var totalPages = totalRows ? Math.ceil(totalRows / transactionsPageSize) : 0;
+      var page = totalPages ? Math.min(Math.max(1, pageNumber), totalPages) : 1;
+      var offset = (page - 1) * transactionsPageSize;
+      return { rows: rows.slice(offset, offset + transactionsPageSize), totalRows: totalRows,
+        page: page, pageSize: transactionsPageSize, totalPages: totalPages,
+        rangeStart: totalRows ? offset + 1 : 0, rangeEnd: totalRows ? Math.min(offset + transactionsPageSize, totalRows) : 0 };
+    }
+
+    function prefetchAdjacentTransactionPages(result)
+    {
+      if (!transactionsSearchIndex) return;
+      [result.page - 1, result.page + 1].forEach(function(page) {
+        if (page < 1 || page > result.totalPages) return;
+        var key = transactionsCacheKey(activeTransactionsTab, page);
+        if (!transactionsResultCache[key]) {
+          cacheTransactionsResult(key, buildLocalTransactionsPage(page));
+          transactionDiagnosticPrefetchKeys[key] = true;
+        }
+      });
+    }
+
+    function requestTransactionsPage()
+    {
+      if (!transactionsDateFilter) return;
+      var requestStartedAt = performance.now();
+      var cacheKey = transactionsCacheKey(activeTransactionsTab, transactionsPages[activeTransactionsTab]);
+      if (transactionsResultCache[cacheKey]) {
+        transactionsRequestSequence++;
+        transactionsPendingKey = "";
+        var cachedRenderStartedAt = performance.now();
+        transactionDiagnosticPageSource = transactionDiagnosticPrefetchKeys[cacheKey] ? "prefetch" : "cache";
+        delete transactionDiagnosticPrefetchKeys[cacheKey];
+        applyTransactionsPageResult(transactionsResultCache[cacheKey]);
+        transactionsPerformanceEvidence = {
+          source: "client-cache",
+          totalMs: performance.now() - requestStartedAt,
+          renderMs: performance.now() - cachedRenderStartedAt,
+          payloadBytes: 0
+        };
+        return;
+      }
+      if (transactionsSearchIndex) {
+        transactionsRequestSequence++;
+        transactionsPendingKey = "";
+        var localResult = buildLocalTransactionsPage(transactionsPages[activeTransactionsTab]);
+        cacheTransactionsResult(cacheKey, localResult);
+        transactionDiagnosticPageSource = "local-index";
+        applyTransactionsPageResult(localResult);
+        prefetchAdjacentTransactionPages(localResult);
+        transactionsPerformanceEvidence = { source: "client-index", totalMs: performance.now() - requestStartedAt, payloadBytes: 0 };
+        return;
+      }
+      if (transactionsPendingKey === cacheKey) return;
+      transactionsPendingKey = cacheKey;
+      var requestToken = ++transactionsRequestSequence;
+      var resultHeading = initializeStableDashboardElements().transactionsResultHeading;
+      if (!visibleTransactionRowCount) {
+        resultHeading.innerText = "Loading transactions…";
+        initializeStableDashboardElements().tableBody.innerHTML = '<tr><td colspan="8" class="p-8 text-center text-sm ui-theme-muted">Loading transactions…</td></tr>';
+        initializeStableDashboardElements().exportCsvButton.disabled = true;
+      }
+      google.script.run.withSuccessHandler(function(result) {
+        var safeResult = result || { rows: [], totalRows: 0, page: 1, pageSize: transactionsPageSize, totalPages: 0, rangeStart: 0, rangeEnd: 0 };
+        if (safeResult.searchIndex) {
+          if (transactionsCacheRevision && transactionsCacheRevision !== String(safeResult.cacheRevision || "")) transactionDetailCache = {};
+          transactionsCacheRevision = String(safeResult.cacheRevision || "");
+          transactionsSearchIndex = safeResult.searchIndex.slice();
+        }
+        cacheTransactionsResult(cacheKey, safeResult);
+        if (safeResult.prefetchedPages) {
+          ["sales", "expenses"].forEach(function(tabName) {
+            var prefetchKey = [transactionsDateFilter.filter, transactionsDateFilter.customStart, transactionsDateFilter.customEnd, tabName, 1, transactionsPageSize, "active", "", "", ""].join("|");
+            cacheTransactionsResult(prefetchKey, safeResult.prefetchedPages[tabName]);
+          });
+        }
+        if (requestToken !== transactionsRequestSequence) {
+          if (safeResult.searchIndex) preloadTransactionEntryOptions();
+          return;
+        }
+        transactionsPendingKey = "";
+        var renderStartedAt = performance.now();
+        transactionDiagnosticPageSource = "server";
+        applyTransactionsPageResult(safeResult);
+        transactionsPerformanceEvidence = {
+          source: safeResult.cacheHit ? "server-cache" : "spreadsheet",
+          totalMs: performance.now() - requestStartedAt,
+          renderMs: performance.now() - renderStartedAt,
+          serverMs: Number(safeResult.executionMs) || 0,
+          payloadBytes: Number(safeResult.payloadBytes) || 0
+        };
+        prefetchAdjacentTransactionPages(safeResult);
+        preloadTransactionEntryOptions();
+      }).withFailureHandler(function(error) {
+        if (requestToken !== transactionsRequestSequence) return;
+        transactionsPendingKey = "";
+        console.error("Transactions page failed", error);
+        transactionsPageResult = { rows: [], totalRows: 0, page: 1, pageSize: transactionsPageSize, totalPages: 0 };
+        renderTransactionRows([]);
+        resultHeading.innerText = "Transactions unavailable";
+        initializeStableDashboardElements().transactionsScopeText.innerText = "Unable to load this page. Try again.";
+      }).getTransactionsPage({
+        tab: activeTransactionsTab,
+        page: transactionsPages[activeTransactionsTab],
+        pageSize: transactionsPageSize,
+        includeVoided: transactionsLifecycleState !== "active",
+        lifecycleState: transactionsLifecycleState,
+        filter: transactionsDateFilter.filter,
+        customStart: transactionsDateFilter.customStart,
+        customEnd: transactionsDateFilter.customEnd,
+        drilldownType: activeTransactionDrilldown && activeTransactionDrilldown.type,
+        drilldownValue: activeTransactionDrilldown && activeTransactionDrilldown.value,
+        search: transactionsSearchQuery
+      });
+    }
+
+    function applyTransactionsPageResult(result)
+    {
+      transactionsPageResult = result;
+      transactionsPages[activeTransactionsTab] = result.page;
+      latestLifecycleTransactions = result.rows.slice();
+      renderTransactionRows(result.rows);
+      updateTransactionsViewPresentation(result);
+      updateTransactionLifecycleDiagnostics();
+      prefetchVisibleTransactionDetails(result.rows);
+    }
+
+    function changeTransactionsPage(delta)
+    {
+      var nextPage = transactionsPages[activeTransactionsTab] + Number(delta || 0);
+      if (nextPage < 1 || (transactionsPageResult.totalPages && nextPage > transactionsPageResult.totalPages)) return;
+      transactionDiagnostics.pagination.eventCount++;
+      transactionDiagnosticPending.pagination = { startedAt: performance.now() };
+      transactionsPages[activeTransactionsTab] = nextPage;
+      requestTransactionsPage();
+    }
+
+
+    function prefetchVisibleTransactionDetails(rows)
+    {
+      var ids = rows.filter(function(row) {
+        return row.source === "APP_ENTRY" && row.isActive !== false && !transactionDetailCache[row.id] && !transactionDetailPending[row.id];
+      }).map(function(row) { transactionDetailPending[row.id] = true; return row.id; });
+      if (!ids.length) return;
+      google.script.run.withSuccessHandler(function(response) {
+        ids.forEach(function(id) { delete transactionDetailPending[id]; });
+        if (!response || response.success !== true || !response.data || !Array.isArray(response.data.details)) return;
+        var revision = String(response.data.revision || "");
+        if (transactionsCacheRevision && revision && transactionsCacheRevision !== revision) transactionDetailCache = {};
+        if (revision) transactionsCacheRevision = revision;
+        response.data.details.forEach(function(detail) {
+          transactionDetailCache[detail.id] = detail;
+          transactionDetailSources[detail.id] = "preload";
+        });
+      }).withFailureHandler(function(error) {
+        ids.forEach(function(id) { delete transactionDetailPending[id]; });
+        console.error("Transaction detail prefetch failed", error);
+      }).getCanonicalTransactionDetails(ids);
+    }
+
+    function invalidateTransactionsClientCaches()
+    {
+      transactionsResultCache = {};
+      transactionsResultCacheOrder = [];
+      transactionsSearchIndex = null;
+      transactionsCacheRevision = "";
+      transactionDetailCache = {};
+      transactionDetailPending = {};
+      transactionDetailSources = {};
+      transactionDiagnosticPrefetchKeys = {};
+      transactionsPendingKey = "";
+    }
+
+
+    function renderTransactions(res)
+    {
+      transactionsDateFilter = {
+        filter: lastDashboardRequest && lastDashboardRequest.filter || "currentYear",
+        customStart: lastDashboardRequest && lastDashboardRequest.customStart || "",
+        customEnd: lastDashboardRequest && lastDashboardRequest.customEnd || ""
+      };
+      transactionsPages = { recent: 1, sales: 1, expenses: 1 };
+      invalidateTransactionsClientCaches();
+      requestTransactionsPage();
+    }
+
+    function setActiveTransactionsTab(tabName)
+    {
+      var elements = initializeStableDashboardElements();
+      var selectedTab = null;
+      var selectedPanel = null;
+
+      Array.prototype.forEach.call(elements.transactionsTabs, function(tab)
+      {
+        var isSelected =
+          tab.getAttribute("data-transactions-tab") === tabName;
+
+        tab.setAttribute("aria-selected", String(isSelected));
+        tab.classList.toggle("is-active", isSelected);
+
+        if (isSelected)
+        {
+          selectedTab = tab;
+        }
+      });
+
+      Array.prototype.forEach.call(elements.transactionsPanels, function(panel)
+      {
+        var isSelected =
+          panel.getAttribute("data-transactions-panel") === tabName;
+
+        panel.hidden = !isSelected;
+
+        if (isSelected)
+        {
+          selectedPanel = panel;
+        }
+      });
+
+      if (!selectedTab || !selectedPanel)
+      {
+        return;
+      }
+
+      activeTransactionsTab = tabName;
+      selectedPanel.appendChild(elements.transactionsEvidenceRegion);
+      requestTransactionsPage();
+    }
+
+    function initializeTransactionsTabs()
+    {
+      if (transactionsTabsInitialized)
+      {
+        return;
+      }
+
+      var elements = initializeStableDashboardElements();
+
+      Array.prototype.forEach.call(elements.transactionsTabs, function(tab)
+      {
+        tab.addEventListener("click", function()
+        {
+          setActiveTransactionsTab(tab.getAttribute("data-transactions-tab"));
+        });
+      });
+
+      transactionsTabsInitialized = true;
+      initializeTransactionsPageSize();
+    }
+
+    function filterTransactionDrilldown(transactions, drilldown)
+    {
+      if (!drilldown || drilldown.type === "all")
+      {
+        return transactions.slice();
+      }
+
+      return transactions.filter(function(transaction)
+      {
+        if (drilldown.type === "sales")
+        {
+          return transaction.transactionType === "Sales";
+        }
+
+        if (drilldown.type === "purchase")
+        {
+          return transaction.transactionType === "Expense";
+        }
+
+        if (drilldown.type === "month")
+        {
+          return String(transaction.date || "").slice(0, 7) === drilldown.value;
+        }
+
+        if (drilldown.type === "expenseCategory")
+        {
+          return transaction.transactionType === "Expense" &&
+            transaction.purchaseCategory === drilldown.value;
+        }
+
+        return false;
+      });
+    }
+
+    function findLifecycleTransaction(transactionId)
+    {
+      return latestLifecycleTransactions.find(function(transaction) { return transaction.id === transactionId; }) || null;
+    }
