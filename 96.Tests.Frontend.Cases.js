@@ -2218,7 +2218,7 @@ function testClientRenderPerformanceContract()
     source.slice(
       stableCacheStart,
       source.indexOf(
-        "function setActiveDashboardTab",
+        "function toggleFinancialModulesDisclosure",
         stableCacheStart
       )
     );
@@ -2392,11 +2392,14 @@ function testClientRenderPerformanceContract()
     ".splice("
   ].forEach(function(token)
   {
-    assertSourceExcludes(
-      source,
-      token,
-      "in-place frontend response mutation"
-    );
+    [immediateSource, deferredSource].forEach(function(renderSource)
+    {
+      assertSourceExcludes(
+        renderSource,
+        token,
+        "in-place Dashboard response mutation"
+      );
+    });
   });
 
   [
@@ -2473,8 +2476,8 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   assertSourceOccurrenceCount(transactionsRegion, 'data-transactions-tab="', 3, "three Transactions tabs");
-  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 7, "six data columns plus lifecycle actions");
-  [">Transaction ID</th>", ">Date</th>", ">Type</th>", ">Item</th>", ">Qty</th>", ">Amount</th>"].forEach(function(token)
+  assertSourceOccurrenceCount(transactionsRegion, 'scope="col"', 8, "eight Transactions columns");
+  [">Transaction ID</th>", ">Date</th>", ">Type</th>", ">Item</th>", ">Qty</th>", ">Amount</th>", ">IsActive</th>", ">Actions</th>"].forEach(function(token)
   {
     assertSourceContains(transactionsRegion, token, "authoritative Transactions column");
   });
@@ -2516,7 +2519,7 @@ function testSecondaryDestinationsHighFidelityContract()
 
   [
     "#transactionsTableScroll th { height: 38px;",
-    "#transactionsTableScroll td { height: 38px;",
+    "#transactionsTableScroll td { height: 40px;",
     "#transactionsTableScroll table { width: 100%; table-layout: fixed; }",
     "font-variant-numeric: tabular-nums",
     "min-w-[680px]",
@@ -2617,7 +2620,18 @@ function testSecondaryDestinationsHighFidelityContract()
   {
     assertSourceExcludes(navigationSource, token, "secondary navigation backend request");
   });
-  var transactionsClientSource = getSourceRegion(source, "function toggleVoidedTransactions()", "function scheduleDeferredDashboardRender", "Transactions client rendering");
+  var transactionsClientSource =
+    HtmlService.createHtmlOutputFromFile("192.View.Transactions.State").getContent() +
+    HtmlService.createHtmlOutputFromFile("193.View.Transactions.Render").getContent();
+  [
+    "function setTransactionsLifecycleState(value)",
+    "transactionsPages[activeTransactionsTab] = 1;",
+    "requestTransactionsPage();",
+    "getTransactionsPage({"
+  ].forEach(function(token)
+  {
+    assertSourceContains(transactionsClientSource, token, "server-backed Transactions lifecycle filtering");
+  });
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(transactionsClientSource, token, "Transactions response mutation");
@@ -2640,7 +2654,7 @@ function testSecondaryDestinationsHighFidelityContract()
     scenarios: scenariosPassed,
     destinations: 3,
     transactionTabs: 4,
-    columns: 5,
+    columns: 8,
     maxRows: 10,
     backendRequests: 0,
     idQueries: idQueryCount,
@@ -3325,7 +3339,18 @@ function testBoundedUiRefactorContract()
   });
   scenariosPassed++;
 
-  var transactionsRenderSource = getSourceRegion(source, "function toggleVoidedTransactions()", "function scheduleDeferredDashboardRender", "bounded Transactions rendering");
+  var transactionsRenderSource =
+    HtmlService.createHtmlOutputFromFile("192.View.Transactions.State").getContent() +
+    HtmlService.createHtmlOutputFromFile("193.View.Transactions.Render").getContent();
+  [
+    "function setTransactionsLifecycleState(value)",
+    "transactionsPages[activeTransactionsTab] = 1;",
+    "requestTransactionsPage();",
+    "getTransactionsPage({"
+  ].forEach(function(token)
+  {
+    assertSourceContains(transactionsRenderSource, token, "server-backed Transactions lifecycle filtering");
+  });
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(transactionsRenderSource, token, "Transactions response mutation");
@@ -3353,7 +3378,7 @@ function testBoundedUiRefactorContract()
     "#appShell[data-sidebar-collapsed=\"true\"] #dashboardSidebar { width: 64px;",
     "#topUtilityBar { height: 76px;", "#topUtilityBar { height: 68px;",
     "#dashboardTabList { height: 44px;", "#transactionsTabList { width: max-content; height: 44px;", "#transactionsTableScroll th { height: 38px;",
-    "#transactionsTableScroll td { height: 38px;"
+    "#transactionsTableScroll td { height: 40px;"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "unchanged visual geometry");
