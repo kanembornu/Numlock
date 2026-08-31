@@ -106,6 +106,9 @@ function getAssembledFrontendSource(includeDiagnostics)
     include("197.View.Dashboard.Charts");
   var dashboardControllerSource =
     include("198.View.Dashboard.Controller");
+  var financeStateSource = include("199.View.Finance.State");
+  var financeRenderSource = include("200.View.Finance.Render");
+  var financeControllerSource = include("201.View.Finance.Controller");
   var source = HtmlService.createTemplateFromFile("190.View.Index").getRawContent()
     .replace("<?!= include('192.View.Transactions.State'); ?>", transactionsStateSource)
     .replace("<?!= include('193.View.Transactions.Render'); ?>", transactionsRenderSource)
@@ -113,7 +116,10 @@ function getAssembledFrontendSource(includeDiagnostics)
     .replace("<?!= include('195.View.Transactions.Actions'); ?>", transactionsActionsSource)
     .replace("<?!= include('196.View.Dashboard.Render'); ?>", dashboardRenderSource)
     .replace("<?!= include('197.View.Dashboard.Charts'); ?>", dashboardChartsSource)
-    .replace("<?!= include('198.View.Dashboard.Controller'); ?>", dashboardControllerSource);
+    .replace("<?!= include('198.View.Dashboard.Controller'); ?>", dashboardControllerSource)
+    .replace("<?!= include('199.View.Finance.State'); ?>", financeStateSource)
+    .replace("<?!= include('200.View.Finance.Render'); ?>", financeRenderSource)
+    .replace("<?!= include('201.View.Finance.Controller'); ?>", financeControllerSource);
 
   return includeDiagnostics
     ? source.replace(

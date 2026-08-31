@@ -1,0 +1,18 @@
+    let financeState = {
+      filter: "currentYear",
+      customStart: null,
+      customEnd: null,
+      loading: false,
+      data: null,
+      error: null,
+      requestSequence: 0,
+      activeRequestId: 0,
+      hasLoaded: false
+    };
+    let financeElementCache = {};
+
+    function getFinanceElement(id)
+    {
+      if (!financeElementCache[id]) throw new Error("Required Finance element missing: #" + id);
+      return financeElementCache[id];
+    }

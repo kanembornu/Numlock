@@ -98,7 +98,8 @@ function buildCanonicalTransactionData(source) {
   var expenseItems = buildCanonicalMasterMap(source.expenseItems, "ID_Ops", "ExpenseItems");
   var records = [], lifecycleRecords = [];
   var quality = { sourceRows: source.sales.length + source.expenses.length,
-    invalidDateRowIndexes: [], inactiveLedgerRows: 0, malformedRows: 0, unresolvedForeignKeys: 0 };
+    invalidDateRowIndexes: [], inactiveLedgerRows: 0, malformedRows: 0, unresolvedForeignKeys: 0,
+    unresolvedProducts: [], unresolvedExpenseItems: [] };
 
   source.sales.forEach(function(row) {
     var active = isCanonicalActive(row.IsActive);
@@ -108,7 +109,12 @@ function buildCanonicalTransactionData(source) {
     var master = products[id];
     var qty = Number(row.Qty), hpp = Number(row.HPP), price = Number(row.HJ);
     if (!date) { quality.invalidDateRowIndexes.push("tabsal:" + row.sourceRowIndex); return; }
-    if (!master) { quality.unresolvedForeignKeys++; return; }
+    if (!master) {
+      quality.unresolvedForeignKeys++;
+      quality.unresolvedProducts.push({ transactionId: String(row.ID_Trx || ""), productId: id,
+        dateKey: canonicalDateKey(date), reason: "UNKNOWN_PRODUCT" });
+      return;
+    }
     if (!isFinite(qty) || !isFinite(hpp) || !isFinite(price)) { quality.malformedRows++; return; }
     var revenue = qty * price, cogs = qty * hpp;
     var dateKey = canonicalDateKey(date);
@@ -117,6 +123,9 @@ function buildCanonicalTransactionData(source) {
       year: date.getFullYear(), month: date.getMonth() + 1,
       transactionType: "Sales", canonicalTransactionType: "Sales", type: String(row.Tipe || "").trim(),
       productId: id, product: String(master.Produk || "").trim(),
+      productIsActive: isCanonicalActive(master.IsActive),
+      revenueAccountCode: String(master.RevenueAccountCode || "").trim(),
+      cogsAccountCode: String(master.COGSAccountCode || "").trim(),
       productCategory: String(master.Kategori || "").trim(), category: String(row.Tipe || "").trim(),
       kind: String(master.Kind || "").trim(), group: null, purchaseCategory: "",
       qty: qty, hpp: hpp, price: price, revenue: revenue, cogs: cogs,
@@ -135,7 +144,12 @@ function buildCanonicalTransactionData(source) {
     var master = expenseItems[id];
     var amount = Number(row.Nilai);
     if (!date) { quality.invalidDateRowIndexes.push("tabops:" + row.sourceRowIndex); return; }
-    if (!master) { quality.unresolvedForeignKeys++; return; }
+    if (!master) {
+      quality.unresolvedForeignKeys++;
+      quality.unresolvedExpenseItems.push({ transactionId: String(row.ID_Trx || ""), expenseItemId: id,
+        dateKey: canonicalDateKey(date), reason: "UNKNOWN_EXPENSE_ITEM" });
+      return;
+    }
     if (!isFinite(amount)) { quality.malformedRows++; return; }
     var dateKey = canonicalDateKey(date);
     var expenseRecord = { id: String(row.ID_Trx || ""), timestamp: date, date: date, dateKey: dateKey,
@@ -145,6 +159,8 @@ function buildCanonicalTransactionData(source) {
       productId: null, product: "", productCategory: "", category: String(master.Kategori || "").trim(),
       kind: String(master.Kind || "").trim(), group: String(master.Group || "").trim(),
       purchaseCategory: String(master.Item || "").trim(), expenseId: id,
+      expenseItemIsActive: isCanonicalActive(master.IsActive),
+      expenseAccountCode: String(master.AccountCode || "").trim(),
       qty: 0, hpp: 0, price: 0, revenue: 0, cogs: 0, margin: -amount,
       amount: amount, expense: amount, source: String(row.Source || "").trim(), isActive: active,
       sourceRowIndex: row.sourceRowIndex, sourceSheet: "tabops",

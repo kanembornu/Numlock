@@ -1,0 +1,86 @@
+    function getFinanceRequestFromControls()
+    {
+      var filter = getFinanceElement("financeFilter").value;
+      var customStart = getFinanceElement("financeCustomStart").value || null;
+      var customEnd = getFinanceElement("financeCustomEnd").value || null;
+      return { filter: filter, customStart: customStart, customEnd: customEnd };
+    }
+
+    function updateFinanceCustomDateVisibility()
+    {
+      var isCustom = getFinanceElement("financeFilter").value === "custom";
+      var range = getFinanceElement("financeCustomRange");
+      range.hidden = !isCustom;
+      getFinanceElement("financeCustomStart").disabled = !isCustom;
+      getFinanceElement("financeCustomEnd").disabled = !isCustom;
+    }
+
+    function handleFinancePeriodChange()
+    {
+      updateFinanceCustomDateVisibility();
+      var request = getFinanceRequestFromControls();
+      if (request.filter === "custom" && (!request.customStart || !request.customEnd || request.customStart > request.customEnd)) {
+        getFinanceElement("financePeriodValidation").textContent = "Choose a valid start and end date.";
+        return;
+      }
+      getFinanceElement("financePeriodValidation").textContent = "";
+      requestFinanceData(request);
+    }
+
+    function requestFinanceData(request)
+    {
+      financeState.filter = request.filter;
+      financeState.customStart = request.customStart;
+      financeState.customEnd = request.customEnd;
+      var requestId = ++financeState.requestSequence;
+      financeState.activeRequestId = requestId;
+      setFinanceViewState("loading");
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          if (requestId !== financeState.activeRequestId) return;
+          try {
+            financeState.data = response;
+            financeState.hasLoaded = true;
+            renderFinanceProfitAndLoss(response);
+            var summary = response && response.summary || {};
+            var isEmpty = [summary.revenue, summary.cogs, summary.grossProfit,
+              summary.operatingExpenses, summary.operatingNetProfit]
+              .every(function(value) { return financeFiniteNumber(value) === 0; });
+            setFinanceViewState(isEmpty ? "empty" : "success");
+          } catch (error) {
+            console.error("Finance render failed", error);
+            setFinanceViewState("error", "Unable to display Profit & Loss.");
+          }
+        })
+        .withFailureHandler(function(error) {
+          if (requestId !== financeState.activeRequestId) return;
+          console.error("Finance request failed", error);
+          setFinanceViewState("error", "Unable to load Profit & Loss.");
+        })
+        .getFinanceData(request.filter, request.customStart, request.customEnd);
+    }
+
+    function ensureFinanceData()
+    {
+      if (!financeState.hasLoaded && !financeState.loading) {
+        requestFinanceData(getFinanceRequestFromControls());
+      }
+    }
+
+    function retryFinanceData()
+    {
+      requestFinanceData({
+        filter: financeState.filter,
+        customStart: financeState.customStart,
+        customEnd: financeState.customEnd
+      });
+    }
+
+    function initializeFinancePage()
+    {
+      updateFinanceCustomDateVisibility();
+      setFinanceViewState("loading");
+      financeState.loading = false;
+    }
+

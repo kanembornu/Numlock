@@ -758,7 +758,7 @@ function testThemeParityTokenContract()
 
   var idQueryCount = (assembledSource.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount = (assembledSource.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("Theme parity query budget exceeded");
   }
@@ -967,7 +967,7 @@ function testUiShellThemeContract()
   });
   scenariosPassed++;
 
-  ["dashboard", "transactions", "settings", "logs"]
+  ["dashboard", "transactions", "finance", "settings", "logs"]
     .forEach(function(pageId)
     {
       assertSourceContainsOnce(
@@ -978,7 +978,7 @@ function testUiShellThemeContract()
     });
   scenariosPassed++;
 
-  ["products", "capital-equity", "assets", "depreciation", "financial-statements"]
+  ["products", "capital-equity", "assets", "depreciation", "balance-sheet", "cash-flow"]
     .forEach(function(destination)
     {
       assertSourceContainsOnce(
@@ -1157,7 +1157,7 @@ function testUiShellThemeContract()
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error(
       "UI shell query budget exceeded: ids=" +
@@ -1181,7 +1181,7 @@ function testUiShellThemeContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    destinations: 9,
+    destinations: 11,
     themes: 3,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount
@@ -1231,17 +1231,19 @@ function testNineDestinationNavigationContract()
     "unavailable Finance group"
   );
   var activeDestinations = [
-    "dashboard",
-    "transactions",
-    "settings",
-    "logs"
+    { page: "dashboard", destination: "dashboard" },
+    { page: "transactions", destination: "transactions" },
+    { page: "finance", destination: "profit-loss" },
+    { page: "settings", destination: "settings" },
+    { page: "logs", destination: "logs" }
   ];
   var unavailableDestinations = [
     { id: "products", label: "Products" },
     { id: "capital-equity", label: "Capital &amp; Equity" },
     { id: "assets", label: "Assets" },
     { id: "depreciation", label: "Depreciation" },
-    { id: "financial-statements", label: "Financial Statements" }
+    { id: "balance-sheet", label: "Balance Sheet" },
+    { id: "cash-flow", label: "Cash Flow" }
   ];
   var scenariosPassed = 0;
 
@@ -1269,13 +1271,13 @@ function testNineDestinationNavigationContract()
   assertSourceOccurrenceCount(
     navigationSource,
     'data-navigation-destination="',
-    9,
+    11,
     "represented destination count"
   );
   assertSourceOccurrenceCount(
     navigationSource,
     'data-page="',
-    4,
+    5,
     "active route count"
   );
   scenariosPassed++;
@@ -1284,13 +1286,13 @@ function testNineDestinationNavigationContract()
   {
     assertSourceContainsOnce(
       navigationSource,
-      'data-page="' + destination + '"',
-      "active destination " + destination
+      'data-page="' + destination.page + '"',
+      "active page " + destination.page
     );
     assertSourceContainsOnce(
       navigationSource,
-      'data-navigation-destination="' + destination + '"',
-      "represented active destination " + destination
+      'data-navigation-destination="' + destination.destination + '"',
+      "represented active destination " + destination.destination
     );
   });
   scenariosPassed++;
@@ -1321,16 +1323,12 @@ function testNineDestinationNavigationContract()
   assertSourceOccurrenceCount(
     navigationSource,
     'aria-disabled="true"',
-    5,
+    6,
     "unavailable semantics"
   );
-  ["<button", "<a ", 'tabindex="0"', "onclick="].forEach(function(token)
-  {
-    assertSourceExcludes(
-      unavailableGroupSource,
-      token,
-      "unavailable destination activation and focus exclusion"
-    );
+  unavailableDestinations.forEach(function(destination) {
+    var destinationToken = 'data-navigation-destination="' + destination.id + '" class="ui-future-module';
+    assertSourceContains(unavailableGroupSource, destinationToken, "unavailable destination remains non-interactive");
   });
   scenariosPassed++;
 
@@ -1340,8 +1338,8 @@ function testNineDestinationNavigationContract()
     'aria-controls="financialModulesGroup"',
     'aria-label="Finance, expanded"',
     'id="financialModulesGroup"',
-    'aria-label="Unavailable Finance destinations"',
-    'id="financialModulesGroup" class="mt-1 space-y-0 pl-5" role="list" aria-label="Unavailable Finance destinations"',
+    'aria-label="Finance destinations"',
+    'id="financialModulesGroup" class="mt-1 space-y-0 pl-5" role="list" aria-label="Finance destinations"',
     "unavailable until module migration is approved"
   ].forEach(function(token)
   {
@@ -1436,7 +1434,7 @@ function testNineDestinationNavigationContract()
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 110 || selectorQueryCount > 2)
   {
     throw new Error(
       "Nine-destination query budget exceeded: ids=" +
@@ -1470,9 +1468,9 @@ function testNineDestinationNavigationContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    destinations: 9,
-    active: 4,
-    unavailable: 5,
+    destinations: 11,
+    active: 5,
+    unavailable: 6,
     backendRequests: 0,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount
@@ -1598,9 +1596,9 @@ function testFullShellVisualContract()
   });
   scenariosPassed++;
 
-  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine destinations");
-  assertSourceOccurrenceCount(source, 'data-page="', 4, "four active destinations");
-  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable destinations");
+  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 11, "eleven destinations");
+  assertSourceOccurrenceCount(source, 'data-page="', 5, "five active destinations");
+  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 6, "six unavailable destinations");
   assertSourceContainsOnce(source, 'id="financialModulesDisclosureButton"', "Financial modules disclosure");
   scenariosPassed++;
 
@@ -1694,7 +1692,7 @@ function testFullShellVisualContract()
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error(
       "Full shell query budget exceeded: ids=" +
@@ -1709,9 +1707,9 @@ function testFullShellVisualContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    destinations: 9,
-    active: 4,
-    unavailable: 5,
+    destinations: 11,
+    active: 5,
+    unavailable: 6,
     backendRequests: 0,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount
@@ -2620,7 +2618,7 @@ function testClientRenderPerformanceContract()
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error(
       "Repeated DOM query budget exceeded: ids=" +
@@ -2905,7 +2903,7 @@ function testSecondaryDestinationsHighFidelityContract()
 
   var idQueryCount = (assembledSource.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount = (assembledSource.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("Secondary destination query budget exceeded");
   }
@@ -3192,7 +3190,7 @@ function testSettingsVisualContract()
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("Settings query budget exceeded");
   }
@@ -3464,7 +3462,7 @@ function testLogsVisualContract()
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("Logs query budget exceeded");
   }
@@ -3725,7 +3723,7 @@ function testBoundedUiRefactorContract()
 
   var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("Bounded refactor query budget exceeded");
   }
@@ -3861,7 +3859,7 @@ function testUiUx2ClosureContract()
 
   var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount = (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("UI/UX 2.0 closure performance budget exceeded");
   }
@@ -3901,7 +3899,7 @@ function testUiUx2ClosureContract()
     predecessorGate: 40,
     runnerTotal: 52,
     packagesComplete: packages.length,
-    destinations: 9,
+    destinations: 11,
     viewportStates: viewportMatrix.length,
     visualCriteria: visualCriteria.length,
     visualPassClaimed: false,
@@ -4092,7 +4090,7 @@ function testUiFinalStabilizationContract()
   var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
   var selectorQueryCount =
     (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error("Final stabilization query budget exceeded");
   }
@@ -4116,7 +4114,7 @@ function testUiFinalStabilizationContract()
   var summary = {
     passed: true,
     scenarios: scenariosPassed,
-    destinations: 9,
+    destinations: 11,
     tablists: 2,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount,

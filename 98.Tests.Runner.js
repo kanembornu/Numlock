@@ -9,6 +9,8 @@ function runAllBackendTests()
     { name: "testCanonicalTransactionLifecycleService", run: testCanonicalTransactionLifecycleService },
     { name: "testCanonicalLifecycleTransportSerialization", run: testCanonicalLifecycleTransportSerialization },
     { name: "testCanonicalHistoricalAndOverlapControls", run: testCanonicalHistoricalAndOverlapControls },
+    { name: "testFinanceCoreBackendContract", run: testFinanceCoreBackendContract },
+    { name: "testFinanceProfitAndLossUiContract", run: testFinanceProfitAndLossUiContract },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },

@@ -8,6 +8,7 @@
 !25.Data.Processor.js
 !30.Analytics.Aggregate.js
 !35.Analytics.Financial.js
+!36.Finance.Service.js
 !40.Analytics.Summary.js
 !45.Analytics.Trend.js
 !50.Analytics.Product.js
@@ -36,6 +37,8 @@
 !96.Tests.Frontend.Cases.js
 !96.Tests.Transactions.Cases.js
 !96.Tests.Quality.Cases.js
+!96.Tests.Finance.Cases.js
+!96.Tests.Finance.UI.Cases.js
 !98.Tests.Runner.js
 !100.Code.js
 !189.View.Tailwind.html
@@ -48,3 +51,6 @@
 !196.View.Dashboard.Render.html
 !197.View.Dashboard.Charts.html
 !198.View.Dashboard.Controller.html
+!199.View.Finance.State.html
+!200.View.Finance.Render.html
+!201.View.Finance.Controller.html

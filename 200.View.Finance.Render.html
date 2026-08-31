@@ -1,0 +1,123 @@
+    function financeFiniteNumber(value)
+    {
+      var number = Number(value);
+      return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatFinanceCurrency(value)
+    {
+      return new Intl.NumberFormat("id-ID", {
+        style: "currency",
+        currency: "IDR",
+        maximumFractionDigits: 0
+      }).format(financeFiniteNumber(value));
+    }
+
+    function formatFinancePercentage(value)
+    {
+      return new Intl.NumberFormat("id-ID", {
+        style: "percent",
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1
+      }).format(financeFiniteNumber(value));
+    }
+
+    function renderFinanceMetricValue(element, value, formatter)
+    {
+      var number = financeFiniteNumber(value);
+      element.textContent = formatter(number);
+      element.classList.toggle("finance-negative", number < 0);
+    }
+
+    function renderFinanceProfitAndLoss(response)
+    {
+      var summary = response && response.summary || {};
+      var period = response && response.period || {};
+      var policy = response && response.accountingPolicy || {};
+      var quality = response && response.dataQuality || {};
+      var expenseBreakdown = Array.isArray(response && response.expenseBreakdown)
+        ? response.expenseBreakdown
+        : [];
+      var currencyMetrics = {
+        financeRevenue: summary.revenue,
+        financeCogs: summary.cogs,
+        financeGrossProfit: summary.grossProfit,
+        financeOperatingExpenses: summary.operatingExpenses,
+        financeOperatingNetProfit: summary.operatingNetProfit
+      };
+
+      Object.keys(currencyMetrics).forEach(function(id) {
+        renderFinanceMetricValue(getFinanceElement(id), currencyMetrics[id], formatFinanceCurrency);
+      });
+      [
+        ["financeStatementRevenue", summary.revenue],
+        ["financeStatementCogs", summary.cogs],
+        ["financeStatementGrossProfit", summary.grossProfit],
+        ["financeStatementOperatingExpenses", summary.operatingExpenses],
+        ["financeStatementOperatingNetProfit", summary.operatingNetProfit]
+      ].forEach(function(metric) {
+        renderFinanceMetricValue(getFinanceElement(metric[0]), metric[1], formatFinanceCurrency);
+      });
+      renderFinanceMetricValue(
+        getFinanceElement("financeOperatingProfitMargin"),
+        summary.operatingProfitMargin,
+        formatFinancePercentage
+      );
+
+      getFinanceElement("financePeriodLabel").textContent =
+        String(period.label || "Selected period");
+      getFinanceElement("financeRecognitionDisclosure").textContent =
+        policy.recognitionBasis === "TRANSACTION_DATE_OPERATING"
+          ? "Transaction-date operating basis"
+          : "Operating recognition policy";
+      getFinanceElement("financeDepreciationDisclosure").textContent =
+        policy.depreciationIncluded === false
+          ? "Depreciation is excluded because its accounting convention has not yet been approved."
+          : "Depreciation is included.";
+
+      var totalExpenses = financeFiniteNumber(summary.operatingExpenses);
+      var expenseBody = getFinanceElement("financeExpenseBreakdownBody");
+      expenseBody.innerHTML = expenseBreakdown.length
+        ? expenseBreakdown.map(function(item) {
+          var amount = financeFiniteNumber(item.amount);
+          var proportion = totalExpenses === 0 ? 0 : amount / totalExpenses;
+          return "<tr><th scope=\"row\"><span>" + escapeUiHtml(item.AccountCode) + "</span><strong>" +
+            escapeUiHtml(item.AccountName) + "</strong></th><td>" + escapeUiHtml(item.StatementGroup) +
+            "</td><td class=\"finance-number" + (amount < 0 ? " finance-negative" : "") + "\">" +
+            escapeUiHtml(formatFinanceCurrency(amount)) + "</td><td class=\"finance-number\">" +
+            escapeUiHtml(formatFinancePercentage(proportion)) + "</td></tr>";
+        }).join("")
+        : "<tr><td colspan=\"4\" class=\"finance-table-empty\">No operating expenses for this period.</td></tr>";
+
+      var unresolvedCount = ["unresolvedProducts", "unresolvedExpenseItems", "inactiveAccountMappings"]
+        .reduce(function(total, key) {
+          return total + (Array.isArray(quality[key]) ? quality[key].length : 0);
+        }, 0);
+      var inactiveCount = Math.max(0, financeFiniteNumber(quality.excludedInactiveTransactions));
+      getFinanceElement("financeMappingStatus").textContent = unresolvedCount === 0
+        ? "Mappings complete"
+        : unresolvedCount + " mapping item" + (unresolvedCount === 1 ? "" : "s") + " require review";
+      getFinanceElement("financeInactiveStatus").textContent = inactiveCount > 0
+        ? inactiveCount + " inactive transaction" + (inactiveCount === 1 ? " was" : "s were") + " excluded as expected"
+        : "No inactive transactions excluded";
+      getFinanceElement("financeDepreciationStatus").textContent = "Depreciation excluded";
+    }
+
+    function setFinanceViewState(state, message)
+    {
+      var status = getFinanceElement("financeStatus");
+      var content = getFinanceElement("financeContent");
+      var retry = getFinanceElement("financeRetryButton");
+      var isLoading = state === "loading";
+
+      financeState.loading = isLoading;
+      financeState.error = state === "error" ? String(message || "Unable to load Profit & Loss.") : null;
+      getFinanceElement("finance").setAttribute("aria-busy", isLoading ? "true" : "false");
+      status.hidden = state === "success" || state === "empty";
+      content.hidden = state === "loading" || state === "error";
+      retry.hidden = state !== "error";
+      getFinanceElement("financeStatusText").textContent = isLoading
+        ? "Loading Profit & Loss…"
+        : financeState.error || "";
+      getFinanceElement("financeEmptyNotice").hidden = state !== "empty";
+    }
