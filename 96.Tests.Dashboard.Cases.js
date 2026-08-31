@@ -1952,7 +1952,7 @@ function testDashboardTabFrameworkContract()
     'onclick="retryDashboardData()"',
     "if (requestToken !== activeDashboardRequestToken)",
     'id="dataQualityInformation"',
-    'id="printReportButton"',
+    'id="exportDataButton"',
     'id="exportCsvButton"'
   ].forEach(function(token)
   {
@@ -2053,7 +2053,7 @@ function testDashboardOverviewContract()
     '<option value="customMonth">Custom Month</option>',
     '<option value="customYear">Custom Year</option>',
     '<option value="custom">Custom Range</option>',
-    'id="printReportButton"',
+    'id="exportDataButton"',
     'id="dateFilterLabel"',
     'id="latestDataLabel"',
     'id="freshnessStatusBadge"'
@@ -2103,9 +2103,9 @@ function testDashboardOverviewContract()
     "Average Profit Margin",
     ">Quick Actions</h2>",
     "View Transactions</strong>",
-    "Export Report</strong>",
-    "Print Report</strong>",
-    "Data Summary</strong>",
+    "Export Data</strong>",
+    "Open Source Data</strong>",
+    "Copy Summary</strong>",
     'id="businessPriorityRegion"',
     'id="businessPriorityLevel"',
     'id="priorityTitle"',
@@ -2166,7 +2166,7 @@ function testDashboardOverviewContract()
     "res.summary.profit.toLocaleString",
     "res.summary.unitsSold.toLocaleString",
     "res.insights.profitMargin",
-    "applyTransactionDrilldown("
+    'class="hf-kpi-card w-full px-4 py-3 text-left"'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "five KPI cards");
@@ -2273,7 +2273,7 @@ function testDashboardOverviewContract()
     'Array.isArray(dateFilter.availableYears)',
     'renderAvailablePeriodOptions(res.dateFilter);',
     '#dashboardPanelOverview #dataQualityInformation { display: flex !important; min-width: max-content !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }',
-    '#printReportButton .hf-action-copy strong { white-space: nowrap; }',
+    '#exportDataButton .hf-action-copy strong { white-space: nowrap; }',
     'status.classList.add("sr-only");'
   ].forEach(function(token)
   {
@@ -2302,14 +2302,14 @@ function testDashboardOverviewContract()
   [
     '.hf-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }',
     '.hf-quick-actions button { display: grid; width: 100%; min-width: 0;',
-    '#printReportButton .hf-action-copy strong { white-space: nowrap; }',
+    '#exportDataButton .hf-action-copy strong { white-space: nowrap; }',
     'Number(res.summary.averageMonthlyRevenue || 0)',
     'Math.round(averageMonthlyRevenue / 1000) * 1000'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "final runtime defect contract");
   });
-  assertSourceExcludes(source, '#printReportButton {\n      width: 132px', "Print Report fixed content width");
+  assertSourceExcludes(source, "function printDashboardReport()", "retired Print Report handler");
   scenariosPassed++;
 
   [
@@ -2369,7 +2369,7 @@ function testDashboardOverviewContract()
     'id="revenueChartTitle" class="ui-section-title"',
     'id="topProductsTitle" class="ui-section-title"',
     '--section-icon-size: 48px;',
-    '<th scope="col">#</th><th scope="col">Product</th><th scope="col">Units</th><th scope="col">Revenue</th>',
+    'heading("name", "Product") + heading("qty", "Units") + heading("revenue", "Revenue")',
     '.hf-top-products-table { width: 100%; table-layout: fixed; }',
     'white-space: nowrap;',
     '<col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue">',
@@ -2429,6 +2429,23 @@ function testDashboardOverviewContract()
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "shared accessible custom dropdown");
+  });
+  scenariosPassed++;
+
+  [
+    '#filterListbox { position: fixed;',
+    'max-height: none;',
+    'overflow: visible;',
+    'function positionReportingPeriodListbox(state)',
+    'spaceBelow >= estimatedHeight',
+    'grid-template-columns: repeat(var(--filter-option-columns, 1)',
+    'function sortTopProducts(key)',
+    'topProductsSort = { key: "qty", direction: "desc" };',
+    'left.stableIndex - right.stableIndex',
+    'aria-sort="'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Overview filter and Top Products stabilization");
   });
   scenariosPassed++;
 

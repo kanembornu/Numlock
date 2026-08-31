@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./190.View.Index.html'],
+  content: ['./19[0-8].View*.html'],
   safelist: [
     'text-emerald-600',
     'text-amber-500',

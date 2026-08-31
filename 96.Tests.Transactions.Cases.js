@@ -577,10 +577,6 @@ function testInteractiveDrilldownContract()
   scenariosPassed++;
 
   [
-    'renderOverviewKpiCard("Revenue",',
-    'renderOverviewKpiCard("Expense",',
-    'renderOverviewKpiCard("Profit",',
-    'renderOverviewKpiCard("Units Sold",',
     '"month",',
     'expenseCategory: true',
     'showPage("transactions");',
@@ -588,6 +584,14 @@ function testInteractiveDrilldownContract()
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "KPI and chart drill-down wiring");
+  });
+  var kpiRendererSource = source.slice(
+    source.indexOf("function renderOverviewKpiCard("),
+    source.indexOf("function renderBusinessOverview(")
+  );
+  ["onclick=", "applyTransactionDrilldown(", "cursor-pointer", "<button"].forEach(function(token)
+  {
+    assertSourceExcludes(kpiRendererSource, token, "information-only KPI cards");
   });
   scenariosPassed++;
 
@@ -906,16 +910,31 @@ function testTransactionLifecycleUiContract()
     buildDashboardResponse.toString() + buildRecentLifecycleTransactions.toString();
   var transactionPageSource = getTransactionsPage.toString() + filterTransactionsPeriodRows.toString() +
     normalizeTransactionsLifecycleState.toString() + buildTransactionsSearchIndex.toString() +
-    buildTransactionsPageResult.toString() + getTransactionsPeriodRows.toString();
+    buildTransactionsPageResult.toString() + getTransactionsPeriodRows.toString() +
+    formatTransactionsSearchDate.toString();
   var scenarios = 0;
 
   ["function runTransactionRowAction(action, transactionId, trigger)",
     "openTransactionDetail(transactionId)", "loadTransactionForMutation(transactionId, action)",
     '<span>View</span>', '<span>Correct</span>', '<span>Void</span>',
-    'r.source === "APP_ENTRY" && r.isActive !== false', "prefetchVisibleTransactionDetails(result.rows)",
-    ".getCanonicalTransactionDetails(ids)", "transactionDetailCache[transactionId]"].forEach(function(token) {
+    "prefetchVisibleTransactionDetails(result.rows)", ".getCanonicalTransactionDetails(ids)",
+    "transactionDetailCache[transactionId]", "transactionDetailPending[transactionId].success.push(onSuccess)",
+    "requestToken !== transactionLifecycleRequestSequence", "function transactionDetailIdentity(transactionId)",
+    "buildLocalTransactionDetail(findLifecycleTransaction(identity))",
+    "mergeTransactionDetailSnapshot(localDetail, detail)"].forEach(function(token) {
     assertSourceContains(source, token, "direct lifecycle row actions");
   });
+  var detailOpenRegion = getSourceRegion(source, "function openTransactionDetail(transactionId)", "function buildLocalTransactionDetail(row)", "local-first detail open");
+  var localRenderIndex = detailOpenRegion.indexOf("renderTransactionDetail(localDetail)");
+  var enrichmentIndex = detailOpenRegion.indexOf("loadCanonicalTransactionDetail(identity");
+  if (localRenderIndex === -1 || enrichmentIndex === -1 || localRenderIndex > enrichmentIndex) {
+    throw new Error("Visible transaction snapshot must render before canonical enrichment starts");
+  }
+  ["if (!localDetail) renderLifecycleLoadError(error);", "transactionDetailIdentity(transaction.id) === identity",
+    "transactionDetailCache[identity] = detail", "transactionDetailPending[identity] = { success: [], failure: [] }"] .forEach(function(token) {
+    assertSourceContains(source, token, "stable local-first detail identity");
+  });
+  assertSourceExcludes(source, 'row.source === "APP_ENTRY" && row.isActive !== false', "historical detail preload exclusion");
   ["transactionIds.slice(0, 50)", 'readCanonicalTable(ss, "tabsal"', 'readCanonicalTable(ss, "tabops"',
     'readCanonicalTable(ss, "Logs"', "details: details"].forEach(function(token) {
     assertSourceContains(detailBatchSource, token, "bounded canonical detail prefetch");
@@ -930,6 +949,27 @@ function testTransactionLifecycleUiContract()
     'lifecycleState === "active" && row.isActive === false', 'lifecycleState === "voided" && row.isActive !== false',
     "cache.getAll(keys)", "cache.putAll(cacheEntries", "searchIndex", "prefetchedPages", "rangeStart:", "rangeEnd:"].forEach(function(token) {
     assertSourceContains(transactionPageSource, token, "server pagination cache and search contract");
+  });
+  var searchRows = [
+    { id: "SAL-APP-1", date: "2026-08-30", transactionType: "Sales", product: "Americano", purchaseCategory: "", isActive: true },
+    { id: "OPS-XLSM-2", date: "2026-08-29", transactionType: "Expense", product: "", purchaseCategory: "Electricity", isActive: false }
+  ];
+  if (filterTransactionsPeriodRows(searchRows, { search: "sal-app" }, "recent").length !== 1 ||
+      filterTransactionsPeriodRows(searchRows, { search: "americano" }, "recent").length !== 1 ||
+      filterTransactionsPeriodRows(searchRows, { search: "2026-08-30" }, "recent").length !== 1 ||
+      filterTransactionsPeriodRows(searchRows, { search: "30 aug 2026" }, "recent").length !== 1 ||
+      filterTransactionsPeriodRows(searchRows, { search: "sales" }, "recent").length !== 0 ||
+      filterTransactionsPeriodRows(searchRows, { search: "2026", lifecycleState: "voided" }, "recent").length !== 1 ||
+      buildTransactionsPageResult(searchRows, 2, 1).page !== 2) {
+    throw new Error("Transactions ID, item, date, type-removal, lifecycle, or pagination search contract mismatch");
+  }
+  ['placeholder="Search ID, item, or date"',
+    '[row.id, row.product, row.purchaseCategory, row.date, formatTransactionDate(row.date)]',
+    '[row.id, row.product, row.purchaseCategory, row.date, formatTransactionsSearchDate(row.date)]'].forEach(function(token) {
+    assertSourceContains(token.indexOf("formatTransactionsSearchDate") !== -1 ? transactionPageSource : source, token, "Transactions date search contract");
+  });
+  ['row.transactionType].some', 'row.purchaseCategory, type].some', 'placeholder="Search ID, item, or type"'].forEach(function(token) {
+    assertSourceExcludes(token.indexOf("row.purchaseCategory") === 0 ? transactionPageSource : source, token, "Transactions Type search removal");
   });
   ['.transaction-lifecycle-dialog{display:flex;width:min(100%,760px)',
     '.transaction-lifecycle-dialog .transaction-entry-scroll{padding:16px 18px}',

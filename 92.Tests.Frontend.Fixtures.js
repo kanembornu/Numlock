@@ -81,7 +81,7 @@ function createFrontendDependencyContractFixtures()
       { name: "single actionable diagnostic", tokens: ['"Chart.js unavailable; chart rendering was skipped."', "chartUnavailableDiagnosticLogged = true;"] },
       { name: "safe existing instance destruction", tokens: ["revenueChart = destroyChartInstance(revenueChart);", "hotColdChart = destroyChartInstance(hotColdChart);", "expenseChart = destroyChartInstance(expenseChart);"] },
       { name: "accessible summaries retained", tokens: ['id="revenueChartSummary"', 'id="hotColdChartSummary"', 'id="expenseChartSummary"'] },
-      { name: "non-chart continuation", tokens: ['document.getElementById("topProductsContainer").innerHTML'] },
+      { name: "non-chart continuation", tokens: ['container.innerHTML = sorted.length'] },
       { name: "Chart available constructors", tokens: ["revenueChart = new Chart(", "productProfitabilityChart = new Chart(", "categoryPerformanceChart = new Chart(", "expenseChart = new Chart("] },
       { name: "responsive contract retained", tokens: ['id="mainChartWrapper" class="relative h-72 min-w-0 sm:h-96"'] },
       { name: "chart contract retained", tokens: ["renderRevenueChart(revenueTrend);", "renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);", "renderExpenseChart(Array.isArray(latestPerformanceAnalytics.expenseGroups) ? latestPerformanceAnalytics.expenseGroups : []);"] },

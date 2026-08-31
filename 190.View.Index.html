@@ -187,6 +187,10 @@
       .ui-custom-select { position: relative; width: 148px; min-width: 148px; font-family: var(--font-sans); }
       .ui-custom-select-trigger { display: flex; width: 100%; height: 30px; align-items: center; justify-content: space-between; gap: var(--space-4); border: 1px solid var(--card-border); border-radius: 9px; padding: 0 12px 0 14px; background: var(--surface-1); color: var(--text-primary); text-align: left; }
       .ui-custom-select-listbox { position: absolute; z-index: 80; top: calc(100% + var(--space-3)); left: 0; width: max-content; min-width: 100%; max-height: 280px; overflow-y: auto; border: 1px solid var(--card-border); border-radius: var(--radius-control); padding: var(--space-3); background: var(--surface-1); box-shadow: var(--shadow-2); }
+      #filterListbox { position: absolute; top: calc(100% + 8px); right: auto; bottom: auto; left: 0; box-sizing: border-box; display: grid; width: 100%; min-width: 100%; max-width: 100%; max-height: none; grid-template-columns: 1fr; overflow: visible; }
+      #filterListbox[data-columns="2"] { width: 200%; min-width: 200%; max-width: calc(100vw - 32px); grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      #filterListbox .ui-custom-select-option { box-sizing: border-box; width: 100%; min-width: 0; gap: 6px; padding: 0 8px !important; }
+      #filterListbox[hidden] { display: none; }
       .ui-custom-select-option { display: flex; width: 100%; min-width: 150px; min-height: 40px; align-items: center; gap: var(--space-4); border-radius: 6px; padding: 0 12px; color: var(--text-secondary); text-align: left; white-space: nowrap; }
       .ui-custom-select-option:hover,
       .ui-custom-select-option[data-active="true"] { background: var(--hover); color: var(--text-primary); }
@@ -195,6 +199,10 @@
       .ui-custom-select-trigger:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
       .ui-custom-select-check { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; align-self: center; transform: none; font-size: 12px; line-height: 1; visibility: hidden; }
       .ui-custom-select-option[aria-selected="true"] .ui-custom-select-check { visibility: visible; }
+      .hf-top-products-sort { display: inline-flex; width: 100%; align-items: center; gap: 5px; color: inherit; font: inherit; text-align: left; }
+      .hf-top-products-sort::after { content: "\2195"; color: var(--text-muted); font-size: 11px; opacity: .55; }
+      th[aria-sort="ascending"] .hf-top-products-sort::after { content: "\2191"; color: var(--brand); opacity: 1; }
+      th[aria-sort="descending"] .hf-top-products-sort::after { content: "\2193"; color: var(--brand); opacity: 1; }
       .ui-native-select { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; }
       .hf-executive-plane { background: var(--surface-1); border-bottom: 1px solid var(--divider); }
       .hf-summary-action-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 18px; }
@@ -212,7 +220,7 @@
       .hf-action-copy strong,
       .hf-action-copy span { display: block; }
       .hf-action-copy strong { color: var(--text-primary); font-size: 12px; line-height: 17px; }
-      #printReportButton .hf-action-copy strong { white-space: nowrap; }
+      #exportDataButton .hf-action-copy strong { white-space: nowrap; }
       .hf-action-copy span { color: var(--text-muted); font-size: 11px; line-height: 14px; }
       .hf-action-chevron { color: var(--text-muted); font-size: 11px; }
       .hf-executive-fact { min-width: 0; padding: 12px 16px; }
@@ -1974,8 +1982,6 @@
         #actionRoadmapCard .text-xl { transition: none; }
       }
 
-      #printReportHeader { display: none; }
-
       @page
       {
         size: A4 portrait;
@@ -2068,27 +2074,6 @@
           padding: 0 !important;
           opacity: 1 !important;
           overflow: visible !important;
-        }
-
-        #printReportHeader
-        {
-          display: block !important;
-          margin: 0 0 8mm;
-          padding-bottom: 5mm;
-          border-bottom: 1px solid var(--print-border);
-        }
-
-        #printReportHeader h1
-        {
-          margin: 0 0 2mm;
-          font-size: 22pt;
-          line-height: 1.15;
-        }
-
-        #printReportHeader p
-        {
-          margin: 1mm 0;
-          font-size: 9pt;
         }
 
         #reportingInformation
@@ -2215,6 +2200,7 @@
       .hf-top-products-table tbody td,
       .hf-top-products-table tbody th { font-size: var(--text-caption-size); font-weight: var(--font-weight-normal); line-height: var(--text-label-line); }
       .hf-top-products-table tbody th { font-weight: var(--font-weight-semibold); }
+      .hf-top-products-table tbody td.hf-top-products-units { text-align: left !important; }
       .hf-top-products-table thead th { color: var(--text-muted); font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); text-align: left !important; text-transform: none; letter-spacing: 0; }
       .hf-top-products-table .hf-col-rank { width: 8%; }
       .hf-top-products-table .hf-col-product { width: 45%; }
@@ -2623,13 +2609,6 @@
       </div>
     </div>
 
-    <header id="printReportHeader" aria-label="Printed report information">
-      <h1>NUMLOCK Executive Report</h1>
-      <p><strong>Active period:</strong> <span id="printReportPeriod">Not available</span></p>
-      <p><strong>Generated:</strong> <span id="printReportGenerated">Not available</span></p>
-      <p><strong>NUMLOCK version:</strong> <span id="printReportVersion" data-version-source="template.version"><?= version ?></span></p>
-    </header>
-
     <div
       id="dashboardStatus"
       class="hidden mb-6 rounded-2xl border border-slate-200 bg-white p-6"
@@ -2694,10 +2673,11 @@
         </div>
         <div class="hf-quick-actions mt-2">
           <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="showPage('transactions')"><i class="fas fa-receipt" aria-hidden="true"></i><span class="hf-action-copy"><strong>View Transactions</strong><span>Review latest activity</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
-          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="showPage('transactions'); initializeStableDashboardElements().exportCsvButton.click()"><i class="fas fa-download" aria-hidden="true"></i><span class="hf-action-copy"><strong>Export Report</strong><span>Download visible CSV</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
-          <button id="printReportButton" type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="printDashboardReport()" aria-label="Print current dashboard report" disabled><i class="fas fa-print" aria-hidden="true"></i><span class="hf-action-copy"><strong>Print Report</strong><span>Open print layout</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
-          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="this.closest('#executiveSummarySection').querySelector('#executiveSummaryTitle').focus()"><i class="fas fa-table-list" aria-hidden="true"></i><span class="hf-action-copy"><strong>Data Summary</strong><span>Review yearly totals</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+          <button id="exportDataButton" type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="exportDashboardData(this)" disabled><i class="fas fa-download" aria-hidden="true"></i><span class="hf-action-copy"><strong>Export Data</strong><span>Sales + expenses for this period</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="openDashboardSourceData()"><i class="fas fa-database" aria-hidden="true"></i><span class="hf-action-copy"><strong>Open Source Data</strong><span>Inspect this period</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
+          <button type="button" class="rounded-lg border border-slate-200 px-2.5 py-1.5 text-left" onclick="copyDashboardSummary(this)"><i class="fas fa-copy" aria-hidden="true"></i><span class="hf-action-copy"><strong>Copy Summary</strong><span>Copy business snapshot</span></span><i class="fas fa-chevron-right hf-action-chevron" aria-hidden="true"></i></button>
         </div>
+        <p id="copySummaryStatus" class="sr-only" role="status" aria-live="polite"></p>
         <div id="quickActionsSkeleton" class="hidden absolute inset-0 skeleton rounded-xl p-4" aria-hidden="true"><div class="flex items-center gap-3"><span class="h-11 w-11 rounded-lg bg-white/40"></span><span class="space-y-2"><span class="block h-4 w-28 rounded bg-white/50"></span><span class="block h-3 w-36 rounded bg-white/40"></span></span></div><div class="mt-4 grid grid-cols-2 gap-2"><span class="h-12 rounded-lg bg-white/40"></span><span class="h-12 rounded-lg bg-white/40"></span><span class="h-12 rounded-lg bg-white/40"></span><span class="h-12 rounded-lg bg-white/40"></span></div></div>
       </section>
     </section>
@@ -2722,7 +2702,7 @@
     <section id="keyMetricsSection" aria-labelledby="keyMetricsTitle">
       <div class="sr-only">
         <h2 id="keyMetricsTitle">Key Metrics</h2>
-        <p>Select a metric for transactions</p>
+        <p>Current reporting-period metrics</p>
       </div>
       <div id="businessOverview" class="hf-kpi-strip"></div>
     </section>
@@ -3032,7 +3012,7 @@
               </div>
               <div class="transactions-toolbar-controls">
                 <div class="transactions-search">
-                  <input id="transactionsSearch" type="search" autocomplete="off" placeholder="Search ID, item, or type" oninput="scheduleTransactionsSearch(this.value)">
+                  <input id="transactionsSearch" type="search" autocomplete="off" placeholder="Search ID, item, or date" oninput="scheduleTransactionsSearch(this.value)">
                   <button id="clearTransactionsSearch" type="button" onclick="clearTransactionsSearch()" disabled><i class="fas fa-xmark" aria-hidden="true"></i><span>Clear</span></button>
                 </div>
                 <label class="transaction-lifecycle-filter" for="transactionsIsActive"><span>IsActive</span><select id="transactionsIsActive" name="isActive" onchange="setTransactionsLifecycleState(this.value)"><option value="active" selected>Active</option><option value="all">All</option><option value="voided">Voided</option></select></label>
@@ -3428,6 +3408,11 @@
       state.trigger.setAttribute("aria-expanded", "true");
       state.listbox.hidden = false;
 
+      if (state.select.id === "filter")
+      {
+        positionReportingPeriodListbox(state);
+      }
+
       if (focusSelected)
       {
         focusCustomSelectOption(
@@ -3438,6 +3423,22 @@
           }))
         );
       }
+    }
+
+    function positionReportingPeriodListbox(state)
+    {
+      var rect = state.trigger.getBoundingClientRect();
+      var spaceBelow = window.innerHeight - rect.bottom - 8;
+      var spaceAbove = rect.top - 8;
+      var singleColumnHeight = state.options.length * 40 + 16;
+      var columns = singleColumnHeight <= Math.max(spaceBelow, spaceAbove) ? 1 : 2;
+      var estimatedHeight = Math.ceil(state.options.length / columns) * 40 + 16;
+      var opensBelow = spaceBelow >= estimatedHeight;
+      state.listbox.setAttribute("data-columns", String(columns));
+      state.listbox.style.top = opensBelow ? "calc(100% + 8px)" : "auto";
+      state.listbox.style.bottom = opensBelow ? "auto" : "calc(100% + 8px)";
+      state.listbox.style.left = columns === 2 && rect.left + rect.width * 2 > window.innerWidth - 16 ? "auto" : "0";
+      state.listbox.style.right = state.listbox.style.left === "auto" ? "0" : "auto";
     }
 
     function selectCustomSelectOption(state, option)
@@ -3649,8 +3650,8 @@
         "dataQualitySkeleton", "dataQualityInformation", "dataQualityDetailsButton", "dataQualityDetails", "quickActionsSkeleton", "filter", "performanceGrouping",
         "customDateRange", "customMonth", "customYear", "customStart", "customEnd", "dateFilterValidation",
         "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
-        "dashboardContent", "tableBody", "printReportButton",
-        "printReportHeader", "transactions", "transactionsHeading",
+        "dashboardContent", "tableBody", "exportDataButton", "copySummaryStatus",
+        "transactions", "transactionsHeading",
         "transactionsDescription", "transactionsTabList",
         "transactionsPanelGroup", "transactionsEvidenceRegion",
         "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
@@ -3733,8 +3734,8 @@
         dashboardRetryButton: required.dashboardRetryButton,
         dashboardContent: required.dashboardContent,
         tableBody: required.tableBody,
-        printReportButton: required.printReportButton,
-        printReportHeader: required.printReportHeader,
+        exportDataButton: required.exportDataButton,
+        copySummaryStatus: required.copySummaryStatus,
         transactionsPage: required.transactions,
         transactionsHeading: required.transactionsHeading,
         transactionsDescription: required.transactionsDescription,
@@ -4524,39 +4525,154 @@
       elements.dataQualityDetails.classList.add("hidden");
     }
 
-    function printDashboardReport()
+    function openDashboardSourceData()
     {
-      try
+      activeTransactionDrilldown = null;
+      transactionsDateFilter = {
+        filter: lastDashboardRequest && lastDashboardRequest.filter || "currentYear",
+        customStart: lastDashboardRequest && lastDashboardRequest.customStart || "",
+        customEnd: lastDashboardRequest && lastDashboardRequest.customEnd || ""
+      };
+      transactionsPages.recent = 1;
+      setActiveTransactionsTab("recent");
+      showPage("transactions");
+    }
+
+    function exportDashboardData(button)
+    {
+      if (!lastDashboardRequest || !latestDashboardResponse || !latestDashboardResponse.dateFilter) return;
+      var activePeriod = latestDashboardResponse.dateFilter;
+      button.disabled = true;
+      button.setAttribute("aria-busy", "true");
+      google.script.run.withSuccessHandler(function(response)
       {
-        var elements = initializeStableDashboardElements();
-        var printMetadata =
-          elements.printReportHeader.getElementsByTagName("span");
-        var activePeriod =
-          elements.filter.parentElement
-            .querySelector("#dateFilterLabel")
-            .innerText;
-
-        printMetadata[0].innerText =
-          activePeriod || "Not available";
-
-        printMetadata[1].innerText =
-          new Date().toLocaleString("en-GB", {
-            dateStyle: "long",
-            timeStyle: "short"
-          });
-
-        window.print();
-        logClientEvent(
-          "Info",
-          "Print report",
-          "Print report dialog opened."
-        );
-      }
-      catch (error)
+        button.disabled = false;
+        button.setAttribute("aria-busy", "false");
+        if (!response || response.success !== true || !response.data || !Array.isArray(response.data.rows))
+        {
+          logClientEvent("Error", "CSV export", "Dashboard data export could not be prepared.");
+          return;
+        }
+        downloadDashboardTransactionsCsv(response.data.rows, activePeriod.startDate, activePeriod.endDate);
+      }).withFailureHandler(function(error)
       {
-        console.error("Print report failed", error);
-        logClientEvent("Error", "Print report", error);
+        button.disabled = false;
+        button.setAttribute("aria-busy", "false");
+        console.error("Dashboard data export failed", error);
+        logClientEvent("Error", "CSV export", "Dashboard data export failed.");
+      }).getTransactionsExport({
+        tab: "recent",
+        lifecycleState: "active",
+        filter: lastDashboardRequest.filter,
+        customStart: lastDashboardRequest.customStart,
+        customEnd: lastDashboardRequest.customEnd
+      });
+    }
+
+    function formatDashboardTransactionsFilename(startDate, endDate)
+    {
+      return "numlock-transactions-" + startDate + "-to-" + endDate + ".csv";
+    }
+
+    function downloadDashboardTransactionsCsv(rows, startDate, endDate)
+    {
+      var headers = ["Date", "Type", "ID", "Item", "Qty", "Amount"];
+      var csvRows = [headers.map(function(header) { return escapeCsvCell(header, false); }).join(",")];
+      rows.forEach(function(row) {
+        csvRows.push([
+          escapeCsvCell(row.date, false),
+          escapeCsvCell(row.transactionType, false),
+          escapeCsvCell(row.id, false),
+          escapeCsvCell(row.item, false),
+          escapeCsvCell(row.transactionType === "Sales" ? row.qty : "", true),
+          escapeCsvCell(row.amount, true)
+        ].join(","));
+      });
+      var blob = new Blob(["\uFEFF" + csvRows.join("\r\n")], { type: "text/csv;charset=utf-8" });
+      var downloadUrl = URL.createObjectURL(blob);
+      var downloadLink = document.createElement("a");
+      downloadLink.href = downloadUrl;
+      downloadLink.download = formatDashboardTransactionsFilename(startDate, endDate);
+      downloadLink.hidden = true;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      downloadLink.remove();
+      URL.revokeObjectURL(downloadUrl);
+      logClientEvent("Info", "CSV export", rows.length + " Dashboard transaction rows were exported successfully.");
+    }
+
+    function formatDashboardSummaryCurrency(value)
+    {
+      if (value == null || value === "") return "No data";
+      var number = Number(value);
+      return isFinite(number) ? "Rp " + number.toLocaleString("id-ID") : "No data";
+    }
+
+    function formatDashboardSummaryPercent(value)
+    {
+      if (value == null || value === "") return "No data";
+      var number = Number(value);
+      return isFinite(number) ? number.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + "%" : "No data";
+    }
+
+    function buildDashboardSummaryText(res)
+    {
+      var summary = res && res.summary || {};
+      var insights = res && res.insights || {};
+      var performanceAnalytics = res && res.performanceAnalytics || {};
+      var products = Array.isArray(performanceAnalytics.productProfitability) ? performanceAnalytics.productProfitability : [];
+      var expenses = Array.isArray(performanceAnalytics.expenseGroups) ? performanceAnalytics.expenseGroups : [];
+      var topProfit = products.length ? products[0] : null;
+      var bestMargin = products.reduce(function(best, item)
+      {
+        return !best || Number(item.grossMarginPercent || 0) > Number(best.grossMarginPercent || 0) ? item : best;
+      }, null);
+      var largestExpense = expenses.length ? expenses[0] : null;
+      var period = document.getElementById("dateFilterLabel").innerText || (res.dateFilter && res.dateFilter.label) || "Active period";
+      function text(value) { return value == null || value === "" ? "No data" : String(value); }
+      return [
+        "NUMLOCK — " + period,
+        "",
+        "Reporting Period: " + period,
+        "Revenue: " + formatDashboardSummaryCurrency(summary.revenue),
+        "Gross Margin: " + formatDashboardSummaryCurrency(performanceAnalytics.totalGrossMargin),
+        "Profit: " + formatDashboardSummaryCurrency(summary.profit),
+        "Profit Margin: " + formatDashboardSummaryPercent(insights.profitMargin),
+        "Expense: " + formatDashboardSummaryCurrency(summary.expense),
+        "Units Sold: " + (isFinite(Number(summary.unitsSold)) ? Number(summary.unitsSold).toLocaleString("id-ID") : "No data"),
+        "Best Seller: " + text(summary.bestSeller),
+        "Top Revenue Product: " + text(summary.topRevenueProduct),
+        "Top Profit Product: " + text(topProfit && topProfit.label),
+        "Best Margin Item: " + text(bestMargin && bestMargin.label) + (bestMargin ? " (" + formatDashboardSummaryPercent(bestMargin.grossMarginPercent) + ")" : ""),
+        "Largest Expense Driver: " + text(largestExpense && largestExpense.group),
+        "Revenue Concentration: " + formatDashboardSummaryPercent(res && res.revenueConcentration && res.revenueConcentration.contribution)
+      ].join("\n");
+    }
+
+    function copyDashboardSummary(button)
+    {
+      if (!latestDashboardResponse)
+      {
+        initializeStableDashboardElements().copySummaryStatus.innerText = "Summary is not available yet.";
+        logClientEvent("Warning", "Dashboard load", "Summary is not available yet.");
+        return;
       }
+      var strong = button.querySelector("strong");
+      var original = strong.innerText;
+      navigator.clipboard.writeText(buildDashboardSummaryText(latestDashboardResponse)).then(function()
+      {
+        strong.innerText = "Copied";
+        initializeStableDashboardElements().copySummaryStatus.innerText = "Dashboard summary copied.";
+        logClientEvent("Info", "Dashboard load", "Dashboard summary copied.");
+        window.setTimeout(function() { strong.innerText = original; }, 1600);
+      }).catch(function(error)
+      {
+        console.error("Copy summary failed", error);
+        strong.innerText = "Copy failed";
+        initializeStableDashboardElements().copySummaryStatus.innerText = "Dashboard summary could not be copied.";
+        logClientEvent("Warning", "Dashboard load", "Summary could not be copied.");
+        window.setTimeout(function() { strong.innerText = original; }, 2000);
+      });
     }
 
     function sanitizeCsvCellValue(value, isNumericColumn)
@@ -4596,14 +4712,14 @@
       return '"' + safeValue.replace(/"/g, '""') + '"';
     }
 
-    function formatCsvFilename(date)
+    function formatCsvFilename(date, datasetLabel)
     {
       function pad(value)
       {
         return String(value).padStart(2, "0");
       }
 
-      return "NUMLOCK_Transactions_" +
+      return "NUMLOCK_" + (datasetLabel || "Transactions") + "_" +
         date.getFullYear() +
         pad(date.getMonth() + 1) +
         pad(date.getDate()) + "_" +
@@ -4651,7 +4767,7 @@
       });
     }
 
-    function downloadTransactionsCsv(rows, matchingRows)
+    function downloadTransactionsCsv(rows, matchingRows, datasetLabel)
     {
       var pendingExport = transactionDiagnosticPending.export || {};
       transactionDiagnostics.export = {
@@ -4681,7 +4797,7 @@
       var downloadLink = document.createElement("a");
 
       downloadLink.href = downloadUrl;
-      downloadLink.download = formatCsvFilename(new Date());
+      downloadLink.download = formatCsvFilename(new Date(), datasetLabel);
       downloadLink.hidden = true;
       document.body.appendChild(downloadLink);
       downloadLink.click();

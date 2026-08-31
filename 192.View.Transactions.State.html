@@ -18,6 +18,7 @@
   let transactionDetailCache = {};
   let transactionDetailPending = {};
   let transactionDetailSources = {};
+  let transactionLifecycleRequestSequence = 0;
   let activeTransactionDrilldown = null;
   let transactionsTabsInitialized = false;
   let activeTransactionsTab = "recent";
@@ -117,7 +118,7 @@
               (row.transactionType !== "Expense" || row.purchaseCategory !== activeTransactionDrilldown.value)) return false;
         }
         if (!query) return true;
-        return [row.id, row.product, row.purchaseCategory, row.transactionType].some(function(value) {
+        return [row.id, row.product, row.purchaseCategory, row.date, formatTransactionDate(row.date)].some(function(value) {
           return String(value || "").toLowerCase().indexOf(query) !== -1;
         });
       });
@@ -267,21 +268,40 @@
     function prefetchVisibleTransactionDetails(rows)
     {
       var ids = rows.filter(function(row) {
-        return row.source === "APP_ENTRY" && row.isActive !== false && !transactionDetailCache[row.id] && !transactionDetailPending[row.id];
-      }).map(function(row) { transactionDetailPending[row.id] = true; return row.id; });
+        var identity = transactionDetailIdentity(row.id);
+        return identity && !transactionDetailCache[identity] && !transactionDetailPending[identity];
+      }).map(function(row) {
+        var identity = transactionDetailIdentity(row.id);
+        transactionDetailPending[identity] = { success: [], failure: [] };
+        return identity;
+      });
       if (!ids.length) return;
       google.script.run.withSuccessHandler(function(response) {
-        ids.forEach(function(id) { delete transactionDetailPending[id]; });
-        if (!response || response.success !== true || !response.data || !Array.isArray(response.data.details)) return;
+        if (!response || response.success !== true || !response.data || !Array.isArray(response.data.details)) {
+          ids.forEach(function(id) {
+            var pending = transactionDetailPending[id];
+            delete transactionDetailPending[id];
+            if (pending) pending.failure.forEach(function(callback) { callback(); });
+          });
+          return;
+        }
         var revision = String(response.data.revision || "");
         if (transactionsCacheRevision && revision && transactionsCacheRevision !== revision) transactionDetailCache = {};
         if (revision) transactionsCacheRevision = revision;
         response.data.details.forEach(function(detail) {
-          transactionDetailCache[detail.id] = detail;
-          transactionDetailSources[detail.id] = "preload";
+          var identity = transactionDetailIdentity(detail.id);
+          var pending = transactionDetailPending[identity];
+          delete transactionDetailPending[identity];
+          transactionDetailCache[identity] = detail;
+          transactionDetailSources[identity] = "preload";
+          if (pending) pending.success.forEach(function(callback) { callback(detail); });
         });
       }).withFailureHandler(function(error) {
-        ids.forEach(function(id) { delete transactionDetailPending[id]; });
+        ids.forEach(function(id) {
+          var pending = transactionDetailPending[id];
+          delete transactionDetailPending[id];
+          if (pending) pending.failure.forEach(function(callback) { callback(); });
+        });
         console.error("Transaction detail prefetch failed", error);
       }).getCanonicalTransactionDetails(ids);
     }
@@ -412,5 +432,13 @@
 
     function findLifecycleTransaction(transactionId)
     {
-      return latestLifecycleTransactions.find(function(transaction) { return transaction.id === transactionId; }) || null;
+      var identity = transactionDetailIdentity(transactionId);
+      return latestLifecycleTransactions.find(function(transaction) {
+        return transactionDetailIdentity(transaction.id) === identity;
+      }) || null;
+    }
+
+    function transactionDetailIdentity(transactionId)
+    {
+      return String(transactionId || "").trim();
     }

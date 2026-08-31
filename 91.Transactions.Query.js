@@ -47,7 +47,7 @@ function filterTransactionsPeriodRows(periodRows, request, tabName) {
     if (tab === "expenses" && type !== "Expense") return false;
     if (type !== "Sales" && type !== "Expense") return false;
     if (!search) return true;
-    return [row.id, row.product, row.purchaseCategory, type].some(function(value) {
+    return [row.id, row.product, row.purchaseCategory, row.date, formatTransactionsSearchDate(row.date)].some(function(value) {
       return String(value || "").toLowerCase().indexOf(search) !== -1;
     });
   });
@@ -64,6 +64,13 @@ function filterTransactionsPeriodRows(periodRows, request, tabName) {
   }
 
   return rows;
+}
+
+function formatTransactionsSearchDate(value) {
+  var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return match[3] + " " + months[Number(match[2]) - 1] + " " + match[1];
 }
 
 function normalizeTransactionsLifecycleState(request) {

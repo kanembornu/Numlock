@@ -1125,7 +1125,7 @@ function testUiShellThemeContract()
     'id="dashboard" class="page active"',
     'id="transactions" class="page"',
     'id="filter"',
-    'id="printReportButton"',
+    'id="exportDataButton"',
     'id="exportCsvButton"',
     'id="dashboardStatus"',
     'id="dataQualityInformation"',
@@ -1810,10 +1810,231 @@ function testAccessibilityContract()
   return summary;
 }
 
-function testPrintReportContract()
+function testDashboardOverviewStabilizationContract()
 {
   var source = getAssembledFrontendSource();
   var scenariosPassed = 0;
+
+  [
+    "Open Source Data",
+    "function openDashboardSourceData()",
+    'setActiveTransactionsTab("recent");',
+    'showPage("transactions");',
+    "Export Data",
+    "Sales + expenses for this period",
+    "function exportDashboardData(button)",
+    'onclick="exportDashboardData(this)"',
+    "Copy Summary",
+    "function buildDashboardSummaryText(res)",
+    "function copyDashboardSummary(button)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Dashboard Overview stabilization action");
+  });
+  scenariosPassed++;
+
+  [
+    "Print Report",
+    "Data Summary",
+    "function printDashboardReport()",
+    "window.print();",
+    'id="printReportButton"',
+    'id="printReportHeader"'
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "retired Dashboard Overview action");
+  });
+  scenariosPassed++;
+
+  [
+    'tab: "recent",',
+    'lifecycleState: "active"',
+    "filter: lastDashboardRequest.filter",
+    "customStart: lastDashboardRequest.customStart",
+    "customEnd: lastDashboardRequest.customEnd",
+    'var headers = ["Date", "Type", "ID", "Item", "Qty", "Amount"];',
+    'escapeCsvCell(row.transactionType === "Sales" ? row.qty : "", true)',
+    'downloadDashboardTransactionsCsv(response.data.rows, activePeriod.startDate, activePeriod.endDate);',
+    "sanitizeCsvCellValue(value, isNumericColumn)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "Dashboard ledger export contract");
+  });
+  var dashboardExportSource = getSourceRegion(
+    source,
+    "function exportDashboardData(button)",
+    "function formatDashboardSummaryCurrency",
+    "one-click Dashboard export"
+  );
+  var dashboardExportServerSource = getTransactionsExport.toString() + getTransactionsPeriodRows.toString() +
+    getCanonicalTransactionData.toString();
+  [
+    'return "numlock-transactions-" + startDate + "-to-" + endDate + ".csv";',
+    'escapeCsvCell(row.date, false)', 'escapeCsvCell(row.transactionType, false)',
+    'escapeCsvCell(row.id, false)', 'escapeCsvCell(row.item, false)',
+    '["\\uFEFF" + csvRows.join("\\r\\n")]', '{ type: "text/csv;charset=utf-8" }'
+  ].forEach(function(token)
+  {
+    assertSourceContains(dashboardExportSource, token, "combined Dashboard CSV projection");
+  });
+  ['timedRead("salesReadMs", "tabsal"', 'timedRead("expenseReadMs", "tabops"',
+    'filterTransactionsPeriodRows(periodResult.rows'].forEach(function(token)
+  {
+    assertSourceContains(dashboardExportServerSource, token, "canonical period export source");
+  });
+  ["Purchase", 'getSheetByName("Transaction")', "toggleDashboardExportMenu", "role=\"menuitem\""].forEach(function(token)
+  {
+    assertSourceExcludes(dashboardExportSource, token, "retired or non-canonical Dashboard export path");
+  });
+  var downloadStart = source.indexOf("function formatDashboardTransactionsFilename(");
+  var downloadEnd = source.indexOf("function formatDashboardSummaryCurrency", downloadStart);
+  var capturedCsv = "";
+  var downloadClicks = 0;
+  var dashboardDownload = Function(
+    "escapeCsvCell", "Blob", "URL", "document", "logClientEvent",
+    source.slice(downloadStart, downloadEnd) +
+      "; return { download: downloadDashboardTransactionsCsv, filename: formatDashboardTransactionsFilename };"
+  )(
+    function(value) { return '"' + String(value).replace(/"/g, '""') + '"'; },
+    function(parts) { capturedCsv = parts[0]; },
+    { createObjectURL: function() { return "blob:test"; }, revokeObjectURL: function() {} },
+    { body: { appendChild: function() {} }, createElement: function() {
+      return { hidden: false, click: function() { downloadClicks++; }, remove: function() {} };
+    } },
+    function() {}
+  );
+  dashboardDownload.download([
+    { date: "2026-08-01", transactionType: "Sales", id: "SAL-1", item: "Latte", qty: 2, amount: 40000 },
+    { date: "2026-08-02", transactionType: "Expense", id: "OPS-1", item: "Rent", qty: 0, amount: 100000 }
+  ], "2026-08-01", "2026-08-31");
+  if (downloadClicks !== 1 ||
+      dashboardDownload.filename("2026-08-01", "2026-08-31") !== "numlock-transactions-2026-08-01-to-2026-08-31.csv" ||
+      capturedCsv.indexOf('"Date","Type","ID","Item","Qty","Amount"') === -1 ||
+      capturedCsv.indexOf('"2026-08-01","Sales","SAL-1","Latte","2","40000"') === -1 ||
+      capturedCsv.indexOf('"2026-08-02","Expense","OPS-1","Rent","","100000"') === -1) {
+    throw new Error("Combined Dashboard CSV projection mismatch");
+  }
+  scenariosPassed++;
+
+  [
+    "Reporting Period: ", "Revenue: ", "Gross Margin: ", "Profit: ",
+    "Profit Margin: ", "Expense: ", "Units Sold: ", "Best Seller: ",
+    "Top Revenue Product: ", "Top Profit Product: ", "Best Margin Item: ",
+    "Largest Expense Driver: ", "Revenue Concentration: "
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "ordered Copy Summary item");
+  });
+  scenariosPassed++;
+
+  [
+    "performanceAnalytics.totalGrossMargin",
+    "insights.profitMargin",
+    "performanceAnalytics.productProfitability",
+    "performanceAnalytics.expenseGroups",
+    "res.revenueConcentration.contribution",
+    "navigator.clipboard.writeText",
+    'strong.innerText = "Copied";',
+    'strong.innerText = "Copy failed";'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "canonical Copy Summary source and feedback");
+  });
+  scenariosPassed++;
+
+  var kpiSource = getSourceRegion(
+    source,
+    "function renderOverviewKpiCard(",
+    "function renderBusinessOverview(",
+    "information-only KPI renderer"
+  );
+  ["<button", "onclick=", "applyTransactionDrilldown(", "cursor-pointer"].forEach(function(token)
+  {
+    assertSourceExcludes(kpiSource, token, "information-only KPI renderer");
+  });
+  scenariosPassed++;
+
+  [
+    '<option value="currentMonth">This Month</option>',
+    '<option value="previousMonth">Previous Month</option>',
+    '<option value="currentYear" selected>This Year</option>',
+    '<option value="previousYear">Previous Year</option>',
+    '<option value="customMonth">Custom Month</option>',
+    '<option value="customYear">Custom Year</option>',
+    '<option value="custom">Custom Range</option>',
+    '#filterListbox { position: absolute;',
+    "max-height: none;",
+    "overflow: visible;",
+    "singleColumnHeight <= Math.max(spaceBelow, spaceAbove) ? 1 : 2",
+    'width: 100%; min-width: 100%; max-width: 100%;',
+    'state.listbox.setAttribute("data-columns", String(columns));',
+    "spaceBelow >= estimatedHeight"
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "unclipped reporting-period options");
+  });
+  var periodSelectSource = getSourceRegion(
+    source,
+    '<select id="filter"',
+    '</select>',
+    "reporting period option source"
+  );
+  assertSourceOccurrenceCount(periodSelectSource, '<option value="', 7, "established reporting period options");
+  assertSourceExcludes(periodSelectSource, ".slice(", "reporting period option truncation");
+  assertSourceExcludes(periodSelectSource, "overflow", "reporting period option clipping");
+  [
+    '#filterListbox .ui-custom-select-option { box-sizing: border-box; width: 100%; min-width: 0;',
+    '<td class="hf-top-products-units tabular-nums">',
+    '.hf-top-products-table tbody td.hf-top-products-units { text-align: left !important; }',
+    'heading("name", "Product") + heading("qty", "Units") + heading("revenue", "Revenue")'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "compact period width and Units body alignment");
+  });
+  assertSourceExcludes(source, '<th scope="col" class="hf-top-products-units"', "Units header alignment change");
+  assertSourceExcludes(source, '<td class="hf-top-products-units font-semibold', "Revenue alignment change");
+  [
+    "function toggleDashboardExportMenu(", "dashboard-export-menu", 'role="menuitem"',
+    "Sales, Expenses, or All", "All Data</button>", "state.listbox.style.width"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(source, token, "retired chooser or competing period width owner");
+  });
+  scenariosPassed++;
+
+  [
+    'topProductsSort = { key: "qty", direction: "desc" };',
+    "latestTopProducts = topProducts.slice();",
+    "function compareTopProductValues(left, right, key)",
+    "String(left.name || \"\").localeCompare",
+    "Number(left[key] || 0) - Number(right[key] || 0)",
+    "left.stableIndex - right.stableIndex",
+    'direction: topProductsSort.direction === "asc" ? "desc" : "asc"',
+    'aria-sort="'
+  ].forEach(function(token)
+  {
+    assertSourceContains(source, token, "stable sortable Top Products");
+  });
+  scenariosPassed++;
+
+  var summaryOrder = [
+    "Reporting Period: ", "Revenue: ", "Gross Margin: ", "Profit: ",
+    "Profit Margin: ", "Expense: ", "Units Sold: ", "Best Seller: ",
+    "Top Revenue Product: ", "Top Profit Product: ", "Best Margin Item: ",
+    "Largest Expense Driver: ", "Revenue Concentration: "
+  ];
+  summaryOrder.reduce(function(previousIndex, token)
+  {
+    var index = source.indexOf(token, previousIndex + 1);
+    if (index <= previousIndex) throw new Error("Copy Summary order mismatch at " + token);
+    return index;
+  }, -1);
+  scenariosPassed++;
+
+  Logger.log("PASS: testDashboardOverviewStabilizationContract | scenarios=" + scenariosPassed);
+  return { passed: true, scenarios: scenariosPassed };
+
+  /* Historical Print Report contract retained below for release archaeology. */
 
   [
     'id="printReportButton"',
@@ -1986,7 +2207,7 @@ function testPrintReportContract()
   };
 
   Logger.log(
-    "PASS: testPrintReportContract | scenarios=" +
+    "PASS: historical testPrintReportContract | scenarios=" +
     summary.scenarios +
     " | printReady=" +
     summary.printReady
@@ -2025,7 +2246,7 @@ function testCsvExportContract()
   scenariosPassed++;
 
   [
-    '"NUMLOCK_Transactions_"',
+    '"NUMLOCK_" + (datasetLabel || "Transactions") + "_"',
     'pad(date.getMonth() + 1)',
     'pad(date.getDate()) + "_"',
     'pad(date.getHours())',
@@ -2158,7 +2379,7 @@ function testCsvExportContract()
     'new Blob(',
     'URL.createObjectURL(blob)',
     'document.createElement("a")',
-    'downloadLink.download = formatCsvFilename(new Date());',
+    'downloadLink.download = formatCsvFilename(new Date(), datasetLabel);',
     'downloadLink.click();',
     'URL.revokeObjectURL(downloadUrl);'
   ].forEach(function(token)
@@ -2308,8 +2529,8 @@ function testClientRenderPerformanceContract()
     "hotColdSkeleton", "expenseSkeleton", "topProductSkeleton", "filter",
     "customDateRange", "customMonth", "customYear", "customStart", "customEnd", "dateFilterValidation",
     "dashboardStatus", "dashboardStatusText", "dashboardRetryButton",
-    "dashboardContent", "tableBody", "printReportButton",
-    "printReportHeader", "transactions", "transactionsHeading",
+    "dashboardContent", "tableBody", "exportDataButton", "copySummaryStatus",
+    "transactions", "transactionsHeading",
     "transactionsDescription", "transactionsTabList",
     "transactionsPanelGroup", "transactionsEvidenceRegion",
     "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
@@ -3334,7 +3555,7 @@ function testBoundedUiRefactorContract()
   );
   [
     'id="sidebarDataStatus"',
-    'id="aboutVersion"', 'id="printReportVersion"'
+    'id="aboutVersion"', 'id="copySummaryStatus"'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "semantic metadata ownership marker");

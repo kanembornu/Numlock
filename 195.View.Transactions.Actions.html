@@ -183,20 +183,70 @@
 
     function openTransactionDetail(transactionId)
     {
+      var identity = transactionDetailIdentity(transactionId);
+      var requestToken = ++transactionLifecycleRequestSequence;
+      var localDetail = buildLocalTransactionDetail(findLifecycleTransaction(identity));
       openTransactionLifecycleDialog("detail");
-      loadCanonicalTransactionDetail(transactionId, function(detail) {
-        transactionLifecycleState.detail = detail;
-        renderTransactionDetail(detail);
+      if (localDetail) {
+        transactionLifecycleState.detail = localDetail;
+        renderTransactionDetail(localDetail);
+      }
+      loadCanonicalTransactionDetail(identity, function(detail) {
+        if (requestToken !== transactionLifecycleRequestSequence) return;
+        var enrichedDetail = mergeTransactionDetailSnapshot(localDetail, detail);
+        transactionLifecycleState.detail = enrichedDetail;
+        renderTransactionDetail(enrichedDetail);
+      }, function(error) {
+        if (requestToken !== transactionLifecycleRequestSequence) return;
+        if (!localDetail) renderLifecycleLoadError(error);
       });
+    }
+
+    function buildLocalTransactionDetail(row)
+    {
+      if (!row || !transactionDetailIdentity(row.id)) return null;
+      var sales = row.transactionType === "Sales";
+      return {
+        id: transactionDetailIdentity(row.id),
+        date: row.date,
+        transactionType: sales ? "Sales" : "Expense",
+        status: row.isActive === false ? "VOIDED" : "ACTIVE",
+        source: row.source,
+        localSnapshot: true,
+        isActive: row.isActive !== false,
+        product: sales ? row.product : "",
+        qty: sales ? row.qty : null,
+        revenue: sales ? row.revenue : null,
+        item: sales ? "" : row.purchaseCategory,
+        amount: sales ? null : row.expense,
+        canCorrect: false,
+        canVoid: false
+      };
+    }
+
+    function mergeTransactionDetailSnapshot(localDetail, serverDetail)
+    {
+      var merged = {};
+      Object.keys(localDetail || {}).forEach(function(key) { merged[key] = localDetail[key]; });
+      Object.keys(serverDetail || {}).forEach(function(key) {
+        if (serverDetail[key] !== null && serverDetail[key] !== undefined && serverDetail[key] !== "") merged[key] = serverDetail[key];
+      });
+      if (serverDetail) merged.localSnapshot = false;
+      return merged;
     }
 
     function loadTransactionForMutation(transactionId, mode)
     {
+      var requestToken = ++transactionLifecycleRequestSequence;
       openTransactionLifecycleDialog(mode);
       loadCanonicalTransactionDetail(transactionId, function(detail) {
+        if (requestToken !== transactionLifecycleRequestSequence) return;
         transactionLifecycleState.detail = detail;
         if (mode === "correct") openTransactionCorrection(detail);
         else renderTransactionVoidConfirmation(detail);
+      }, function(error) {
+        if (requestToken !== transactionLifecycleRequestSequence) return;
+        renderLifecycleLoadError(error);
       });
     }
 
@@ -223,6 +273,7 @@
 
     function closeTransactionLifecycleDialog()
     {
+      transactionLifecycleRequestSequence++;
       var overlay = initializeStableDashboardElements().lifecycle.overlay;
       if (overlay) overlay.hidden = true;
       initializeStableDashboardElements().appShell.inert = false;
@@ -230,23 +281,41 @@
       if (transactionLifecycleState.trigger && typeof transactionLifecycleState.trigger.focus === "function") transactionLifecycleState.trigger.focus();
     }
 
-    function loadCanonicalTransactionDetail(transactionId, onSuccess)
+    function loadCanonicalTransactionDetail(transactionId, onSuccess, onFailure)
     {
+      transactionId = transactionDetailIdentity(transactionId);
+      onFailure = typeof onFailure === "function" ? onFailure : renderLifecycleLoadError;
       if (transactionDetailCache[transactionId]) {
         initializeStableDashboardElements().lifecycle.state.innerText = "";
         onSuccess(transactionDetailCache[transactionId]);
         transactionDetailSources[transactionId] = "cache";
         return;
       }
+      if (transactionDetailPending[transactionId]) {
+        transactionDetailPending[transactionId].success.push(onSuccess);
+        transactionDetailPending[transactionId].failure.push(onFailure);
+        return;
+      }
+      transactionDetailPending[transactionId] = {
+        success: [onSuccess],
+        failure: [onFailure]
+      };
       google.script.run.withSuccessHandler(function(response) {
-        if (!response || response.success !== true) { renderLifecycleLoadError(response && response.error); return; }
+        var pending = transactionDetailPending[transactionId];
+        delete transactionDetailPending[transactionId];
+        if (!response || response.success !== true) {
+          if (pending) pending.failure.forEach(function(callback) { callback(response && response.error); });
+          return;
+        }
         initializeStableDashboardElements().lifecycle.state.innerText = "";
         transactionDetailCache[transactionId] = response.data;
         transactionDetailSources[transactionId] = "server";
-        onSuccess(response.data);
+        if (pending) pending.success.forEach(function(callback) { callback(response.data); });
       }).withFailureHandler(function(error) {
+        var pending = transactionDetailPending[transactionId];
+        delete transactionDetailPending[transactionId];
         console.error("Canonical transaction detail failed", error);
-        renderLifecycleLoadError(null);
+        if (pending) pending.failure.forEach(function(callback) { callback(); });
       }).getCanonicalTransactionDetail(transactionId);
     }
     function renderLifecycleLoadError(error)
@@ -285,7 +354,7 @@
     function renderTransactionDetail(detail)
     {
       var lifecycle = initializeStableDashboardElements().lifecycle;
-      var sales = Boolean(detail.productId);
+      var sales = detail.transactionType === "Sales" || Boolean(detail.productId);
       var identity = [["Transaction ID", detail.id], ["Date / Time", formatLifecycleDate(detail.date)], ["Type", sales ? "Sales" : "Expense"], ["Status", detail.status]];
       var business = sales
         ? [["Product", detail.product], ["Serving Type", detail.type], ["Qty", detail.qty], ["Amount", formatEntryCurrency(detail.revenue)]]
@@ -298,7 +367,9 @@
       var auditCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--audit"><h3>Audit</h3><dl>' + detailRowsHtml(audit) + '</dl></section>';
       var lifecycleCard = '<section class="transaction-lifecycle-group transaction-lifecycle-group--relations"><h3>Lifecycle</h3><dl>' + detailRowsHtml(lifecycleRows) + '</dl></section>';
       lifecycle.title.innerText = sales ? "Sales Details" : "Expense Details";
-      lifecycle.description.innerText = detail.status === "VOIDED" ? "Voided record retained in the audit history." : "Canonical server record.";
+      lifecycle.description.innerText = detail.localSnapshot
+        ? "Visible transaction snapshot. Additional details are loading."
+        : detail.status === "VOIDED" ? "Voided record retained in the audit history." : "Canonical server record.";
       lifecycle.dialog.setAttribute("data-view-layout", showLifecycle ? "history" : "active");
       lifecycle.content.innerHTML = showLifecycle
         ? '<div class="transaction-lifecycle-grid transaction-lifecycle-grid--history">' + transactionCard + lifecycleCard + businessCard + auditCard + '</div>'

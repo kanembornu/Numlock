@@ -8,6 +8,9 @@
   let activeDashboardTab = "overview";
   let availableDashboardMonths = [];
   let availableDashboardYears = [];
+  let latestDashboardResponse = null;
+  let latestTopProducts = [];
+  let topProductsSort = { key: "qty", direction: "desc" };
 
     function setActiveDashboardTab(tabName, moveFocus)
     {
@@ -234,7 +237,7 @@
         dashboardRequestInFlight
       );
 
-      elements.printReportButton.disabled =
+      elements.exportDataButton.disabled =
         state !== "success";
 
       elements.exportCsvButton.disabled =
@@ -728,6 +731,8 @@
           "Dashboard summary is missing"
         );
       }
+
+      latestDashboardResponse = res;
 
       renderBusinessOverview(res);
       renderReportingMetadata(res);

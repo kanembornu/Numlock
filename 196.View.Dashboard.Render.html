@@ -441,7 +441,7 @@
     //--------------------------------------------------
     // Render Business Overview
     //--------------------------------------------------
-    function renderOverviewKpiCard(label, value, type, drilldownLabel, delta, status, valueClass)
+    function renderOverviewKpiCard(label, value, delta, status, valueClass)
     {
       var supportingText =
         status === "No Comparison"
@@ -462,15 +462,11 @@
             : "text-slate-500";
 
       return `
-        <button
-          type="button"
-          class="hf-kpi-card w-full px-4 py-3 text-left"
-          onclick="applyTransactionDrilldown('${type}', '', '${drilldownLabel}')"
-          aria-label="View transactions for ${label}">
+        <div class="hf-kpi-card w-full px-4 py-3 text-left">
           <span class="flex items-center gap-2"><span class="hf-kpi-icon"><i class="fas ${iconByLabel[label]}" aria-hidden="true"></i></span><span class="hf-section-label">${label}</span></span>
           <strong class="overview-kpi-value mt-2 block truncate text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
           <span class="hf-kpi-comparison"><span>vs Last Period</span><strong class="${comparisonClass}">${supportingText}</strong></span>
-        </button>`;
+        </div>`;
     }
 
     function renderBusinessOverview(res)
@@ -486,11 +482,11 @@
       var negativeClass = "text-red-600";
 
       initializeStableDashboardElements().businessOverview.innerHTML = [
-        renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), "sales", "Revenue transactions", formatPeriodComparisonValue(comparison.changes.revenuePercent, comparison.status.revenue), comparison.status.revenue, res.summary.revenue < 0 ? negativeClass : ""),
-        renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), "purchase", "Expense transactions", formatPeriodComparisonValue(comparison.changes.expensePercent, comparison.status.expense), comparison.status.expense, res.summary.expense < 0 ? negativeClass : ""),
-        renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), "all", "Profit supporting transactions", formatPeriodComparisonValue(comparison.changes.profitPercent, comparison.status.profit), comparison.status.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
-        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", "all", "Profit margin supporting transactions", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : ""),
-        renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), "sales", "Units sold transactions", formatPeriodComparisonValue(comparison.changes.unitsSoldPercent, comparison.status.unitsSold), comparison.status.unitsSold, res.summary.unitsSold < 0 ? negativeClass : "")
+        renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.revenuePercent, comparison.status.revenue), comparison.status.revenue, res.summary.revenue < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.expensePercent, comparison.status.expense), comparison.status.expense, res.summary.expense < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.profitPercent, comparison.status.profit), comparison.status.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
+        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : ""),
+        renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.unitsSoldPercent, comparison.status.unitsSold), comparison.status.unitsSold, res.summary.unitsSold < 0 ? negativeClass : "")
       ].join("");
       scheduleLayoutDebugMeasurement();
     }
@@ -498,6 +494,53 @@
     //--------------------------------------------------
     // Render Charts
     //--------------------------------------------------
+    function compareTopProductValues(left, right, key)
+    {
+      if (key === "name")
+      {
+        return String(left.name || "").localeCompare(String(right.name || ""), "id", { sensitivity: "base" });
+      }
+      return Number(left[key] || 0) - Number(right[key] || 0);
+    }
+
+    function renderTopProductsTable()
+    {
+      var container = document.getElementById("topProductsContainer");
+      var sorted = latestTopProducts.map(function(product, index)
+      {
+        return { product: product, stableIndex: index };
+      }).sort(function(left, right)
+      {
+        var comparison = compareTopProductValues(left.product, right.product, topProductsSort.key);
+        return (topProductsSort.direction === "asc" ? comparison : -comparison) || left.stableIndex - right.stableIndex;
+      }).map(function(entry) { return entry.product; });
+      function heading(key, label)
+      {
+        var active = topProductsSort.key === key;
+        return '<th scope="col" aria-sort="' + (active ? (topProductsSort.direction === "asc" ? "ascending" : "descending") : "none") + '"><button type="button" class="hf-top-products-sort" onclick="sortTopProducts(\'' + key + '\')">' + label + '</button></th>';
+      }
+      container.innerHTML = sorted.length
+        ? '<table class="hf-top-products-table ui-table-body"><colgroup><col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue"></colgroup>' +
+          '<thead><tr><th scope="col">#</th>' + heading("name", "Product") + heading("qty", "Units") + heading("revenue", "Revenue") + '</tr></thead>' +
+          '<tbody>' + sorted.slice(0, 10).map(function(p, index)
+          {
+            return '<tr><td>' + (index + 1) + '</td>' +
+              '<th scope="row" class="text-left font-semibold">' + escapeUiHtml(p.name) + '</th>' +
+              '<td class="hf-top-products-units tabular-nums">' + Number(p.qty || 0).toLocaleString("id-ID") + '</td>' +
+              '<td class="font-semibold tabular-nums ' + (Number(p.revenue || 0) < 0 ? 'text-red-600' : '') + '">Rp ' + Number(p.revenue || 0).toLocaleString("id-ID") + '</td></tr>';
+          }).join("") + '</tbody></table>'
+        : '<p class="ui-empty-state py-6 text-center">No product sales for the selected period.</p>';
+    }
+
+    function sortTopProducts(key)
+    {
+      if ({ name: true, qty: true, revenue: true }[key] !== true) return;
+      topProductsSort = topProductsSort.key === key
+        ? { key: key, direction: topProductsSort.direction === "asc" ? "desc" : "asc" }
+        : { key: key, direction: "asc" };
+      renderTopProductsTable();
+    }
+
     function renderDiagnosisCard(item)
     {
       const config =
@@ -1831,17 +1874,9 @@
         logClientEvent("Error", "Dashboard load", "Performance analytics rendering failed.");
       }
 
-      document.getElementById("topProductsContainer").innerHTML = topProducts.length
-        ? '<table class="hf-top-products-table ui-table-body"><colgroup><col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue"></colgroup>' +
-          '<thead><tr><th scope="col">#</th><th scope="col">Product</th><th scope="col">Units</th><th scope="col">Revenue</th></tr></thead>' +
-          '<tbody>' + topProducts.slice(0, 10).map(function(p, index)
-          {
-            return '<tr><td>' + (index + 1) + '</td>' +
-              '<th scope="row" class="text-left font-semibold">' + p.name + '</th>' +
-              '<td class="tabular-nums">' + Number(p.qty || 0).toLocaleString("id-ID") + '</td>' +
-              '<td class="font-semibold tabular-nums ' + (Number(p.revenue || 0) < 0 ? 'text-red-600' : '') + '">Rp ' + Number(p.revenue || 0).toLocaleString("id-ID") + '</td></tr>';
-          }).join("") + '</tbody></table>'
-        : '<p class="ui-empty-state py-6 text-center">No product sales for the selected period.</p>';
+      topProductsSort = { key: "qty", direction: "desc" };
+      latestTopProducts = topProducts.slice();
+      renderTopProductsTable();
     }
 
     //--------------------------------------------------
