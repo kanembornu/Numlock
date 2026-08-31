@@ -54,6 +54,7 @@
         ["financeStatementCogs", summary.cogs],
         ["financeStatementGrossProfit", summary.grossProfit],
         ["financeStatementOperatingExpenses", summary.operatingExpenses],
+        ["financeStatementDepreciation", summary.depreciationExpense],
         ["financeStatementOperatingNetProfit", summary.operatingNetProfit]
       ].forEach(function(metric) {
         renderFinanceMetricValue(getFinanceElement(metric[0]), metric[1], formatFinanceCurrency);
@@ -71,9 +72,9 @@
           ? "Transaction-date operating basis"
           : "Operating recognition policy";
       getFinanceElement("financeDepreciationDisclosure").textContent =
-        policy.depreciationIncluded === false
-          ? "Depreciation is excluded because its accounting convention has not yet been approved."
-          : "Depreciation is included.";
+        policy.depreciationIncluded === true && policy.depreciationSource === "DepreciationLedger"
+          ? "Depreciation is included from the authoritative DepreciationLedger."
+          : "Depreciation source is unavailable.";
 
       var totalExpenses = financeFiniteNumber(summary.operatingExpenses);
       var expenseBody = getFinanceElement("financeExpenseBreakdownBody");
@@ -89,7 +90,9 @@
         }).join("")
         : "<tr><td colspan=\"4\" class=\"finance-table-empty\">No operating expenses for this period.</td></tr>";
 
-      var unresolvedCount = ["unresolvedProducts", "unresolvedExpenseItems", "inactiveAccountMappings"]
+      var unresolvedCount = ["unresolvedProducts", "unresolvedExpenseItems", "inactiveAccountMappings",
+        "duplicateDepreciationLogicalKeys", "invalidDepreciationRows", "invalidDepreciationPeriods",
+        "unresolvedDepreciationAssets", "depreciationOverlapTransactions"]
         .reduce(function(total, key) {
           return total + (Array.isArray(quality[key]) ? quality[key].length : 0);
         }, 0);
@@ -100,7 +103,8 @@
       getFinanceElement("financeInactiveStatus").textContent = inactiveCount > 0
         ? inactiveCount + " inactive transaction" + (inactiveCount === 1 ? " was" : "s were") + " excluded as expected"
         : "No inactive transactions excluded";
-      getFinanceElement("financeDepreciationStatus").textContent = "Depreciation excluded";
+      getFinanceElement("financeDepreciationStatus").textContent =
+        policy.depreciationIncluded === true ? "Depreciation included from ledger" : "Depreciation unavailable";
     }
 
     function setFinanceViewState(state, message)

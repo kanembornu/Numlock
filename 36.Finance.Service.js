@@ -1,12 +1,15 @@
 var FINANCE_ACCOUNTING_POLICY = Object.freeze({
   recognitionBasis: "TRANSACTION_DATE_OPERATING",
-  depreciationIncluded: false,
-  depreciationDisclosure: "Operating profit excludes depreciation because depreciation conventions are not approved.",
+  depreciationIncluded: true,
+  depreciationSource: "DepreciationLedger",
+  depreciationDisclosure: "Monthly depreciation is included from the authoritative DepreciationLedger.",
   cashBalanceAvailable: false,
   inventoryBalanceAvailable: false,
   balanceSheetAvailable: false,
   cashFlowAvailable: false
 });
+
+var FINANCE_DEPRECIATION_EXPECTED_ROWS = 2679;
 
 function getFinanceData(filter, customStart, customEnd) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -14,8 +17,62 @@ function getFinanceData(filter, customStart, customEnd) {
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
   ]);
+  var depreciationSource = getFinanceDepreciationSource(ss);
   var period = resolveDashboardDateRange(filter, customStart, customEnd);
-  return buildFinanceProfitAndLoss(canonicalData, accounts, period);
+  return buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+}
+
+function financeDepreciationPeriodKey(value) {
+  if (value instanceof Date && !isNaN(value.getTime())) return canonicalDateKey(value).slice(0, 7) + "-01";
+  var match = String(value == null ? "" : value).trim().match(/^(\d{4})-(\d{2})-01$/);
+  if (!match) return null;
+  var year = Number(match[1]), month = Number(match[2]), date = new Date(year, month - 1, 1);
+  return date.getFullYear() === year && date.getMonth() === month - 1 ? match[1] + "-" + match[2] + "-01" : null;
+}
+
+function buildFinanceDepreciationSource(ledgerRows, assets) {
+  var assetIds = {}, logicalKeys = {}, rows = [];
+  var quality = { duplicateLogicalKeys: [], invalidDepreciationRows: [],
+    invalidPeriodRows: [], unresolvedAssetReferences: [] };
+  (assets || []).forEach(function(asset) {
+    var id = String(asset.ID_Asset || "").trim();
+    if (id) assetIds[id] = true;
+  });
+  (ledgerRows || []).forEach(function(row) {
+    var id = String(row.ID_Asset || "").trim(), period = financeDepreciationPeriodKey(row.Period);
+    var depreciation = Number(row.Depreciation), rowIdentity = String(row.ID_Dep || row.sourceRowIndex || "UNKNOWN");
+    if (!period) { quality.invalidPeriodRows.push({ row: rowIdentity, value: row.Period }); return; }
+    if (!isFinite(depreciation) || depreciation < 0 || Math.round(depreciation) !== depreciation) {
+      quality.invalidDepreciationRows.push({ row: rowIdentity, value: row.Depreciation }); return;
+    }
+    if (!id || !assetIds[id]) quality.unresolvedAssetReferences.push({ row: rowIdentity, assetId: id });
+    var key = id + "|" + period;
+    if (logicalKeys[key]) { quality.duplicateLogicalKeys.push(key); return; }
+    logicalKeys[key] = true;
+    rows.push({ ID_Dep: String(row.ID_Dep || ""), ID_Asset: id, Period: period, Depreciation: depreciation });
+  });
+  return { physicalRowCount: (ledgerRows || []).length, rows: rows, quality: quality };
+}
+
+function getFinanceDepreciationSource(ss) {
+  var ledger = readCanonicalTable(ss, "DepreciationLedger", ["ID_Dep", "Period", "ID_Asset",
+    "OpeningBookValue", "Depreciation", "AccumulatedDepreciation", "ClosingBookValue", "GeneratedAt"]);
+  var assets = readCanonicalTable(ss, "Assets", ["ID_Asset"]);
+  return buildFinanceDepreciationSource(ledger, assets);
+}
+
+function scopeFinanceDepreciation(source, period) {
+  var depreciationExpense = (source.rows || []).reduce(function(total, row) {
+    var parts = row.Period.split("-"), year = Number(parts[0]), month = Number(parts[1]);
+    var monthEnd = financeDateKey(year, month, new Date(year, month, 0).getDate());
+    return row.Period <= period.endDate && monthEnd >= period.startDate ? total + row.Depreciation : total;
+  }, 0);
+  var quality = source.quality || {};
+  return { depreciationExpense: depreciationExpense, quality: {
+    duplicateLogicalKeys: quality.duplicateLogicalKeys || [],
+    invalidDepreciationRows: quality.invalidDepreciationRows || [],
+    invalidPeriodRows: quality.invalidPeriodRows || [],
+    unresolvedAssetReferences: quality.unresolvedAssetReferences || [] } };
 }
 
 function validateFinanceProductionRuntime() {
@@ -28,21 +85,25 @@ function validateFinanceProductionRuntime() {
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
   ]);
+  var depreciationSource = getFinanceDepreciationSource(ss);
   var accountMasterReadMs = Date.now() - accountReadStartedAt;
   var periods = buildFinanceRuntimeValidationPeriods(canonicalData);
   var results = periods.map(function(period) {
     var buildStartedAt = Date.now();
-    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period);
+    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
     var expenseTotal = finance.expenseBreakdown.reduce(function(total, item) {
       return total + Number(item.amount || 0);
     }, 0);
     var summary = finance.summary;
     var formulaReconciles = financeAmountsMatch(summary.grossProfit, summary.revenue - summary.cogs) &&
-      financeAmountsMatch(summary.operatingNetProfit, summary.grossProfit - summary.operatingExpenses);
+      financeAmountsMatch(summary.operatingNetProfit,
+        summary.grossProfit - summary.operatingExpenses - summary.depreciationExpense);
     var expenseReconciles = financeAmountsMatch(expenseTotal, summary.operatingExpenses);
     var quality = finance.dataQuality;
     var unresolvedCount = quality.unresolvedProducts.length + quality.unresolvedExpenseItems.length +
-      quality.inactiveAccountMappings.length;
+      quality.inactiveAccountMappings.length + quality.duplicateDepreciationLogicalKeys.length +
+      quality.invalidDepreciationRows.length + quality.invalidDepreciationPeriods.length +
+      quality.unresolvedDepreciationAssets.length + quality.depreciationOverlapTransactions.length;
 
     return {
       name: period.validationName,
@@ -58,6 +119,10 @@ function validateFinanceProductionRuntime() {
     };
   });
   var failures = [];
+  if (depreciationSource.physicalRowCount !== FINANCE_DEPRECIATION_EXPECTED_ROWS) {
+    failures.push("LEDGER_ROWS:expected=" + FINANCE_DEPRECIATION_EXPECTED_ROWS +
+      ",actual=" + depreciationSource.physicalRowCount);
+  }
 
   results.forEach(function(result) {
     if (result.expenseReconciliation !== "PASS" || result.formulaReconciliation !== "PASS") {
@@ -73,6 +138,10 @@ function validateFinanceProductionRuntime() {
     });
     result.dataQuality.inactiveAccountMappings.forEach(function(item) {
       failures.push(result.name + ":INACTIVE_ACCOUNT:" + String(item.accountCode || "UNKNOWN"));
+    });
+    ["duplicateDepreciationLogicalKeys", "invalidDepreciationRows", "invalidDepreciationPeriods",
+      "unresolvedDepreciationAssets", "depreciationOverlapTransactions"].forEach(function(key) {
+      if (result.dataQuality[key].length) failures.push(result.name + ":" + key + ":" + result.dataQuality[key].length);
     });
   });
 
@@ -93,6 +162,49 @@ function validateFinanceProductionRuntime() {
   if (failures.length) {
     throw new Error("Finance production validation failed: " + failures.join(", "));
   }
+  return report;
+}
+
+function validateFinanceDepreciationProductionRuntime() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var canonicalData = getCanonicalTransactionData(ss);
+  var accounts = readCanonicalTable(ss, "Accounts", [
+    "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
+  ]);
+  var depreciationSource = getFinanceDepreciationSource(ss);
+  var periods = [
+    { validationName: "august2026", filter: "custom", startDate: "2026-08-01", endDate: "2026-08-31", label: "2026-08" },
+    { validationName: "full2026", filter: "custom", startDate: "2026-01-01", endDate: "2026-12-31", label: "2026" },
+    { validationName: "historical2025", filter: "custom", startDate: "2025-01-01", endDate: "2025-12-31", label: "2025" },
+    { validationName: "empty2027", filter: "custom", startDate: "2027-01-01", endDate: "2027-12-31", label: "2027" }
+  ];
+  var failures = [];
+  var results = periods.map(function(period) {
+    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+    var summary = finance.summary, quality = finance.dataQuality;
+    if (!financeAmountsMatch(summary.operatingNetProfit,
+        summary.grossProfit - summary.operatingExpenses - summary.depreciationExpense)) {
+      failures.push(period.validationName + ":FORMULA");
+    }
+    ["duplicateDepreciationLogicalKeys", "invalidDepreciationRows", "invalidDepreciationPeriods",
+      "unresolvedDepreciationAssets", "depreciationOverlapTransactions"].forEach(function(key) {
+      if (quality[key].length) failures.push(period.validationName + ":" + key + ":" + quality[key].length);
+    });
+    return { name: period.validationName, period: finance.period, summary: summary,
+      depreciationQuality: {
+        duplicateLogicalKeys: quality.duplicateDepreciationLogicalKeys.length,
+        invalidRows: quality.invalidDepreciationRows.length,
+        invalidPeriods: quality.invalidDepreciationPeriods.length,
+        unresolvedAssets: quality.unresolvedDepreciationAssets.length,
+        transactionalOverlap: quality.depreciationOverlapTransactions.length
+      } };
+  });
+  var report = { status: failures.length ? "FAIL" : "PASS", readOnly: true,
+    depreciationSource: FINANCE_ACCOUNTING_POLICY.depreciationSource,
+    depreciationIncluded: FINANCE_ACCOUNTING_POLICY.depreciationIncluded,
+    ledgerRows: depreciationSource.physicalRowCount, periods: results, failures: failures };
+  Logger.log(JSON.stringify(report));
+  if (failures.length) throw new Error("Finance depreciation production validation failed: " + failures.join(", "));
   return report;
 }
 
@@ -148,7 +260,8 @@ function buildFinanceAccountMap(accounts) {
   return buildCanonicalMasterMap(accounts || [], "AccountCode", "Accounts");
 }
 
-function buildFinanceProfitAndLoss(canonicalData, accounts, period) {
+function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource) {
+  if (!depreciationSource) throw new Error("Finance requires the authoritative DepreciationLedger read model");
   var accountMap = buildFinanceAccountMap(accounts);
   var scopedRecords = filterTransactionsByDateRange(canonicalData.records || [], period);
   var scopedLifecycle = filterTransactionsByDateRange(canonicalData.lifecycleRecords || [], period);
@@ -164,6 +277,8 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period) {
   var revenue = 0;
   var cogs = 0;
   var operatingExpenses = 0;
+  var depreciationOverlapTransactions = [];
+  var depreciation = scopeFinanceDepreciation(depreciationSource, period);
 
   function resolveAccount(code, mappingType, row, unresolvedTarget) {
     var normalizedCode = String(code || "").trim();
@@ -205,8 +320,12 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period) {
     var expenseAccount = resolveAccount(row.expenseAccountCode, "EXPENSE", row, unresolvedExpenseItems);
     if (!expenseAccount || String(expenseAccount.AccountType || "").trim() !== "Expense") return;
     var amount = Number(row.expense) || 0;
-    operatingExpenses += amount;
     var accountCode = String(expenseAccount.AccountCode || "").trim();
+    if (accountCode === "6900") {
+      depreciationOverlapTransactions.push({ transactionId: String(row.id || ""), accountCode: accountCode });
+      return;
+    }
+    operatingExpenses += amount;
     if (!expenseTotals[accountCode]) {
       expenseTotals[accountCode] = { AccountCode: accountCode,
         AccountName: String(expenseAccount.AccountName || "").trim(),
@@ -216,19 +335,28 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period) {
   });
 
   var grossProfit = revenue - cogs;
-  var operatingNetProfit = grossProfit - operatingExpenses;
+  var depreciationExpense = depreciation.depreciationExpense;
+  var operatingNetProfit = grossProfit - operatingExpenses - depreciationExpense;
   var excludedInactiveTransactions = scopedLifecycle.filter(function(row) { return row.isActive === false; }).length;
   var issueCount = unresolvedProducts.length + unresolvedExpenseItems.length +
-    inactiveAccountMappings.length + excludedInactiveTransactions;
+    inactiveAccountMappings.length + excludedInactiveTransactions + depreciationOverlapTransactions.length +
+    depreciation.quality.duplicateLogicalKeys.length + depreciation.quality.invalidDepreciationRows.length +
+    depreciation.quality.invalidPeriodRows.length + depreciation.quality.unresolvedAssetReferences.length;
 
   return {
     period: { filter: period.filter, startDate: period.startDate, endDate: period.endDate, label: period.label },
     summary: { revenue: revenue, cogs: cogs, grossProfit: grossProfit,
-      operatingExpenses: operatingExpenses, operatingNetProfit: operatingNetProfit,
+      operatingExpenses: operatingExpenses, depreciationExpense: depreciationExpense,
+      operatingNetProfit: operatingNetProfit,
       operatingProfitMargin: revenue === 0 ? 0 : operatingNetProfit / revenue },
     expenseBreakdown: Object.keys(expenseTotals).sort().map(function(code) { return expenseTotals[code]; }),
     dataQuality: { unresolvedProducts: unresolvedProducts, unresolvedExpenseItems: unresolvedExpenseItems,
       inactiveAccountMappings: inactiveAccountMappings,
+      duplicateDepreciationLogicalKeys: depreciation.quality.duplicateLogicalKeys,
+      invalidDepreciationRows: depreciation.quality.invalidDepreciationRows,
+      invalidDepreciationPeriods: depreciation.quality.invalidPeriodRows,
+      unresolvedDepreciationAssets: depreciation.quality.unresolvedAssetReferences,
+      depreciationOverlapTransactions: depreciationOverlapTransactions,
       excludedInactiveTransactions: excludedInactiveTransactions,
       status: issueCount === 0 ? "GOOD" : "ATTENTION" },
     accountingPolicy: FINANCE_ACCOUNTING_POLICY

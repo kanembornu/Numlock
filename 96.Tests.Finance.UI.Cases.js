@@ -31,7 +31,10 @@ function testFinanceProfitAndLossUiContract()
     throw new Error("Finance desktop hierarchy retains a duplicate title or lacks subtotal/final-total distinction");
   }
   requireToken(render, "financeExpenseBreakdownBody", "expense breakdown renderer");
-  requireToken(shell, "accounting convention has not yet been approved", "depreciation disclosure");
+  requireToken(shell, "authoritative DepreciationLedger", "depreciation source disclosure");
+  requireToken(shell, 'id="financeStatementDepreciation"', "statement depreciation row");
+  requireToken(render, "summary.depreciationExpense", "depreciation renderer");
+  forbidToken(shell + render, "Depreciation excluded", "obsolete depreciation exclusion");
   requireToken(shell, "Transaction-date operating basis", "recognition-basis disclosure");
   requireToken(render, 'state === "empty"', "empty state");
   requireToken(render, 'state === "loading"', "loading state");

@@ -45,7 +45,7 @@
             renderFinanceProfitAndLoss(response);
             var summary = response && response.summary || {};
             var isEmpty = [summary.revenue, summary.cogs, summary.grossProfit,
-              summary.operatingExpenses, summary.operatingNetProfit]
+              summary.operatingExpenses, summary.depreciationExpense, summary.operatingNetProfit]
               .every(function(value) { return financeFiniteNumber(value) === 0; });
             setFinanceViewState(isEmpty ? "empty" : "success");
           } catch (error) {
@@ -83,4 +83,3 @@
       setFinanceViewState("loading");
       financeState.loading = false;
     }
-

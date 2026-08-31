@@ -11,6 +11,7 @@ function runAllBackendTests()
     { name: "testCanonicalHistoricalAndOverlapControls", run: testCanonicalHistoricalAndOverlapControls },
     { name: "testFinanceCoreBackendContract", run: testFinanceCoreBackendContract },
     { name: "testFinanceProfitAndLossUiContract", run: testFinanceProfitAndLossUiContract },
+    { name: "testDepreciationEngineContract", run: testDepreciationEngineContract },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },

@@ -3071,7 +3071,7 @@
         </header>
         <div class="finance-policy" role="note" aria-label="Accounting policy">
           <strong id="financeRecognitionDisclosure">Transaction-date operating basis</strong>
-          <span id="financeDepreciationDisclosure">Depreciation is excluded because its accounting convention has not yet been approved.</span>
+          <span id="financeDepreciationDisclosure">Depreciation is included from the authoritative DepreciationLedger.</span>
         </div>
         <div id="financeStatus" class="finance-surface p-5" role="status" aria-live="polite">
           <span id="financeStatusText">Loading Profit &amp; Loss…</span>
@@ -3095,6 +3095,7 @@
                 <div class="finance-statement-row"><dt>(−) Cost of Goods Sold</dt><dd id="financeStatementCogs">—</dd></div>
                 <div class="finance-statement-row finance-total finance-subtotal"><dt>= Gross Profit</dt><dd id="financeStatementGrossProfit">—</dd></div>
                 <div class="finance-statement-row finance-deduction-after-subtotal"><dt>(−) Operating Expenses</dt><dd id="financeStatementOperatingExpenses">—</dd></div>
+                <div class="finance-statement-row"><dt>(−) Depreciation Expense</dt><dd id="financeStatementDepreciation">—</dd></div>
                 <div class="finance-statement-row finance-total finance-final-total"><dt>= Operating Net Profit</dt><dd id="financeStatementOperatingNetProfit">—</dd></div>
               </dl>
             </section>
@@ -3108,7 +3109,7 @@
           <dl class="finance-status-strip finance-surface" aria-label="Finance report status">
             <div><dt>Mapping status</dt><dd id="financeMappingStatus">Mappings complete</dd></div>
             <div><dt>Inactive transactions</dt><dd id="financeInactiveStatus">No inactive transactions excluded</dd></div>
-            <div><dt>Accounting scope</dt><dd id="financeDepreciationStatus">Depreciation excluded</dd></div>
+            <div><dt>Accounting scope</dt><dd id="financeDepreciationStatus">Depreciation included from ledger</dd></div>
           </dl>
         </div>
       </div>
@@ -3809,7 +3810,7 @@
         "financeStatus", "financeStatusText", "financeRetryButton", "financeContent", "financeEmptyNotice",
         "financeRevenue", "financeCogs", "financeGrossProfit", "financeOperatingExpenses", "financeOperatingNetProfit",
         "financeOperatingProfitMargin", "financeStatementRevenue", "financeStatementCogs", "financeStatementGrossProfit",
-        "financeStatementOperatingExpenses", "financeStatementOperatingNetProfit", "financeExpenseBreakdownBody",
+        "financeStatementOperatingExpenses", "financeStatementDepreciation", "financeStatementOperatingNetProfit", "financeExpenseBreakdownBody",
         "financeMappingStatus", "financeInactiveStatus", "financeDepreciationStatus",
         "snapshotTopProfit", "snapshotBestMargin", "snapshotTopRevenue", "snapshotExpenseDriver", "snapshotTotalMargin", "snapshotConcentration",
         "categoryMixCenter", "categoryMixLegend", "hotColdComparison", "hotColdChartSummary", "hotColdChartEmpty",

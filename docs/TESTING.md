@@ -1,10 +1,10 @@
 # NUMLOCK Testing
 
-## Finance Phase 5 UI gate
+## Finance Phase 7C depreciation P&L gate
 
-Finance Phase 5 extends the ordered suite to 54 entries with `testFinanceProfitAndLossUiContract()` immediately after the 18-scenario Finance backend contract; the current unified requirement is 54/54. The focused Finance UI contract covers the active Profit & Loss route, gated unsupported statements, Finance-owned state and backend request, six KPIs, statement hierarchy, expense breakdown, accounting-policy and data-quality disclosures, deterministic states, numeric presentation, theme/responsive structure, and forbidden legacy dependencies.
+Finance Phase 7C keeps the ordered suite at 55 entries. The 41-scenario depreciation contract preserves the engine/backfill rules and now verifies authoritative-ledger Finance ownership without asset recalculation. Finance Core covers 35 scenarios including monthly, annual, custom-range, future-empty, duplicate-quality, and account-6900 overlap behavior; Finance UI covers 29 scenarios including the statement depreciation row, six-card preservation, and updated source disclosure.
 
-Run `testFinanceCoreBackendContract()` and `testFinanceProfitAndLossUiContract()` first, then `runAllBackendTests()`; require 54/54. The existing Dashboard, Transactions, frontend, quality, and intelligence contracts remain unchanged and ordered fail-fast.
+Run `testDepreciationEngineContract()`, `testFinanceCoreBackendContract()`, and `testFinanceProfitAndLossUiContract()` first, then `runAllBackendTests()`; require 55/55. Production Finance depreciation totals require the separate read-only `validateFinanceDepreciationProductionRuntime()` diagnostic. The existing Dashboard, Transactions, frontend, quality, and intelligence contracts remain unchanged and ordered fail-fast.
 
 Local/static PASS does not establish Apps Script live, upload, deployment, browser, screenshot, production-health, or rollback PASS. Visual acceptance requires real deployed-browser captures for Dashboard Overview, Dashboard Performance, Transactions, Settings, and Logs across all 16 required viewport/theme/sidebar-or-drawer states: 80 captures total, each scored exactly 18/18.
 
@@ -151,11 +151,13 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testSourceDataQualityPipeline()` validates valid, one-invalid, multiple-invalid, mixed source/scoped, out-of-period, all-invalid, empty, and header-only inputs; scope counts; source immutability; analytics isolation; empty analytics with Critical quality; stable row-identity deduplication; the single-read pipeline order; and frontend non-disclosure. It logs `PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true`.
 
-`testFinanceCoreBackendContract()` validates 18 deterministic Finance scenarios covering the approved P&L formulas, master-to-account resolution, account 6310 inclusion based on `AccountType=Expense`, inactive and unresolved mappings, inactive transaction exclusion, inclusive and empty periods, zero revenue, depreciation exclusion, unavailable statements, and absence of Dashboard, Transaction, or Helper coupling. It logs `PASS: testFinanceCoreBackendContract | scenarios=18`.
+`testFinanceCoreBackendContract()` validates 35 deterministic Finance scenarios covering the approved P&L formulas, authoritative DepreciationLedger aggregation, month-intersection semantics, master-to-account resolution, account 6900 overlap exclusion, ledger integrity signals, inactive and unresolved mappings, inclusive and empty periods, unavailable statements, and absence of Dashboard, Transaction, Helper, or asset-depreciation calculation coupling. It logs `PASS: testFinanceCoreBackendContract | scenarios=35`.
 
-`testFinanceProfitAndLossUiContract()` validates 26 focused Finance UI scenarios covering route truthfulness, independent request/state ownership, statement content, all view states, formatting, disclosures, responsive/theme structure, and unsupported/legacy exclusions. It logs `PASS: testFinanceProfitAndLossUiContract | scenarios=26`.
+`testFinanceProfitAndLossUiContract()` validates 29 focused Finance UI scenarios covering route truthfulness, independent request/state ownership, six KPI cards, the depreciation statement row, all view states, formatting, authoritative-ledger disclosure, responsive/theme structure, and unsupported/legacy exclusions. It logs `PASS: testFinanceProfitAndLossUiContract | scenarios=29`.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `54/54` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+`testDepreciationEngineContract()` validates the deterministic engine, read-only dry-run, and controlled Phase 7B persistence contract. It must run before the unified suite; the production write requires separate authorization for one Apps Script execution of `backfillDepreciationLedgerThrough202608()`.
+
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `55/55` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -172,7 +174,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `54/54`, including Finance Core and Profit & Loss UI plus the existing deterministic feature, response, accessibility, UI, chart, theme, performance, navigation, shell, composition, and data-quality coverage. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `55/55`, including depreciation, Finance Core and Profit & Loss UI plus the existing deterministic feature, response, accessibility, UI, chart, theme, performance, navigation, shell, composition, and data-quality coverage. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 
