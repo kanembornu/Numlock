@@ -11,8 +11,8 @@ function normalizeLayoutDebugParameter(event) {
 function include(filename) {
 
   return HtmlService
-    .createHtmlOutputFromFile(filename)
-    .getContent();
+    .createTemplateFromFile(filename)
+    .getRawContent();
 
 }
 

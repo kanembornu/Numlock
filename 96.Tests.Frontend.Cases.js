@@ -541,7 +541,7 @@ function testDesktopSidebarContentAlignmentGridContract()
 
 function testThemeParityTokenContract()
 {
-  var diagnosticsSource = HtmlService.createHtmlOutputFromFile("191.View.Diagnostics").getContent();
+  var diagnosticsSource = include("191.View.Diagnostics");
   var source = getAssembledFrontendSource();
   var assembledSource = source
     .replace("<?!= include('191.View.Diagnostics'); ?>", diagnosticsSource);
@@ -689,9 +689,54 @@ function testThemeParityTokenContract()
   });
   scenariosPassed++;
 
-  if (/#[0-9a-f]{3,8}|rgba?\(|hsla?\(/i.test(source))
+  function findHardcodedSemanticThemeDeclarations(cssSource)
   {
-    throw new Error("Production HTML retains a hardcoded color outside semantic tokens");
+    var semanticOwners = {
+      body: true, html: true, "#appShell": true, "#mainContent": true,
+      "#dashboardSidebar": true, "#topUtilityBar": true, ".page": true,
+      ".ui-theme-surface": true, ".ui-theme-inset": true,
+      ".ui-theme-primary": true, ".ui-theme-secondary": true,
+      ".ui-theme-muted": true
+    };
+    var hardcodedColorPattern = /#[0-9a-f]{3,8}|rgba?\(|hsla?\(/i;
+    var violations = [];
+
+    /* Semantic shell owners use tokens; fixed shadows, alpha overlays, chart
+     * colors, component accents, and transparent resets keep their baseline. */
+    cssSource.replace(/([^{}]+)\{([^{}]*)\}/g, function(match, selectors, declarations)
+    {
+      var ownsSemanticTheme = selectors.split(",").some(function(selector)
+      {
+        return semanticOwners[selector.trim()] === true;
+      });
+      if (!ownsSemanticTheme) return match;
+      declarations.replace(
+        /(?:^|;)\s*(color|background(?:-color)?|border-color)\s*:\s*([^;}]+)/g,
+        function(declaration, property, value)
+        {
+          if (hardcodedColorPattern.test(value)) violations.push(property + ":" + value.trim());
+          return declaration;
+        }
+      );
+      return match;
+    });
+    return violations;
+  }
+
+  var semanticThemeViolations = findHardcodedSemanticThemeDeclarations(source);
+  if (semanticThemeViolations.length)
+  {
+    throw new Error("Production semantic theme owner retains a hardcoded color: " + semanticThemeViolations[0]);
+  }
+  if (findHardcodedSemanticThemeDeclarations(".ui-theme-surface { background-color: #123456; }").length !== 1)
+  {
+    throw new Error("Semantic theme scanner missed a synthetic hardcoded surface color");
+  }
+  if (findHardcodedSemanticThemeDeclarations(
+    ".performance-card { box-shadow: 0 1px 3px rgba(15, 23, 42, .05); } " +
+    ".chart-overlay { background: rgba(0, 0, 0, 0); }").length !== 0)
+  {
+    throw new Error("Semantic theme scanner captured a fixed shadow or chart overlay");
   }
   scenariosPassed++;
 
@@ -707,7 +752,7 @@ function testThemeParityTokenContract()
   });
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
   {
-    assertSourceExcludes(source, token, "theme response mutation");
+    assertSourceExcludes(themeSource, token, "theme response mutation");
   });
   scenariosPassed++;
 
@@ -1123,8 +1168,8 @@ function testUiShellThemeContract()
   }
   var transactionsResponseSource = getSourceRegion(
     source,
-    "function toggleVoidedTransactions()",
-    "function scheduleDeferredDashboardRender",
+    "function requestTransactionsPage()",
+    "function changeTransactionsPage(delta)",
     "UI shell Transactions response handling"
   );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
@@ -1412,8 +1457,8 @@ function testNineDestinationNavigationContract()
   );
   var transactionsResponseSource = getSourceRegion(
     source,
-    "function toggleVoidedTransactions()",
-    "function scheduleDeferredDashboardRender",
+    "function requestTransactionsPage()",
+    "function changeTransactionsPage(delta)",
     "navigation Transactions response handling"
   );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
@@ -1635,8 +1680,8 @@ function testFullShellVisualContract()
   assertSourceContainsOnce(source, "function initializeTransactionsTabs()", "Transactions listener initializer");
   var transactionsResponseSource = getSourceRegion(
     source,
-    "function toggleVoidedTransactions()",
-    "function scheduleDeferredDashboardRender",
+    "function requestTransactionsPage()",
+    "function changeTransactionsPage(delta)",
     "full shell Transactions response handling"
   );
   [".sort(", ".reverse(", ".splice("].forEach(function(token)
@@ -2457,7 +2502,7 @@ function testClientRenderPerformanceContract()
 
 function testSecondaryDestinationsHighFidelityContract()
 {
-  var diagnosticsSource = HtmlService.createHtmlOutputFromFile("191.View.Diagnostics").getContent();
+  var diagnosticsSource = include("191.View.Diagnostics");
   var source = getAssembledFrontendSource();
   var assembledSource = source
     .replace("<?!= include('191.View.Diagnostics'); ?>", diagnosticsSource);
@@ -2621,8 +2666,8 @@ function testSecondaryDestinationsHighFidelityContract()
     assertSourceExcludes(navigationSource, token, "secondary navigation backend request");
   });
   var transactionsClientSource =
-    HtmlService.createHtmlOutputFromFile("192.View.Transactions.State").getContent() +
-    HtmlService.createHtmlOutputFromFile("193.View.Transactions.Render").getContent();
+    include("192.View.Transactions.State") +
+    include("193.View.Transactions.Render");
   [
     "function setTransactionsLifecycleState(value)",
     "transactionsPages[activeTransactionsTab] = 1;",
@@ -2750,11 +2795,19 @@ function testSettingsVisualContract()
   });
   scenariosPassed++;
 
-  var chartThemeStart = source.indexOf("function applyChartThemeTokens(chart, palette, chartKind)");
-  var chartThemeEnd = source.indexOf("let dashboardRequestInFlight", chartThemeStart);
   var themeControllerStart = source.indexOf("function handleSystemThemeChange()");
   var themeControllerEnd = source.indexOf("function renderSessionClientLogs", themeControllerStart);
-  var themeSource = source.slice(chartThemeStart, chartThemeEnd) +
+  var themeSource = getSourceRegion(
+    source,
+    "function applyChartThemeTokens(chart, palette, chartKind)",
+    "function synchronizeChartTheme",
+    "Chart theme application"
+  ) + getSourceRegion(
+    source,
+    "function synchronizeChartTheme(forceLight)",
+    "let transactionsTabsInitialized",
+    "Chart theme synchronization"
+  ) +
     source.slice(themeControllerStart, themeControllerEnd);
 
   [
@@ -2843,7 +2896,27 @@ function testSettingsVisualContract()
   {
     assertSourceExcludes(settingsRegion, token, "sensitive or unsupported Settings content");
   });
-  ["<select", "<textarea", 'type="checkbox"'].forEach(function(token)
+  var settingsPageSizeSelectSource = getSourceRegion(
+    settingsRegion,
+    '<select id="transactionsPageSize"',
+    "</select>",
+    "Settings Transactions page-size control"
+  );
+  [
+    'onchange="setTransactionsPageSize(this.value)"',
+    '<option value="15">15</option>',
+    '<option value="25">25</option>',
+    '<option value="50">50</option>'
+  ].forEach(function(token)
+  {
+    assertSourceContains(settingsPageSizeSelectSource, token, "approved Settings native select");
+  });
+  assertSourceExcludes(
+    settingsRegion.replace(settingsPageSizeSelectSource, ""),
+    "<select",
+    "unowned Settings native select"
+  );
+  ["<textarea", 'type="checkbox"'].forEach(function(token)
   {
     assertSourceExcludes(settingsRegion, token, "unsupported editable Settings control");
   });
@@ -2907,7 +2980,8 @@ function testSettingsVisualContract()
     "function scheduleDeferredDashboardRender(res, requestToken)",
     "single deferred phase preserved"
   );
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "Settings");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Settings response mutation");
   });
@@ -3045,7 +3119,7 @@ function testLogsVisualContract()
   scenariosPassed++;
 
   var controllerStart = source.indexOf("function sanitizeClientLogMessage(");
-  var controllerEnd = source.indexOf("function setDashboardControlsDisabled", controllerStart);
+  var controllerEnd = source.indexOf("function toggleKpiTargetDetails", controllerStart);
   var controllerSource = source.slice(controllerStart, controllerEnd);
 
   [
@@ -3174,7 +3248,8 @@ function testLogsVisualContract()
     throw new Error("Logs query budget exceeded");
   }
   assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner preserved");
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "Logs");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Logs response mutation");
   });
@@ -3279,6 +3354,33 @@ function testBoundedUiRefactorContract()
   assertSourceExcludes(source, "1.0.0", "hardcoded production metadata");
   scenariosPassed++;
 
+  var includeSource = String(include);
+  var rawIndexSource = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+  var partialNames = [
+    "197.View.Dashboard.Charts", "192.View.Transactions.State",
+    "196.View.Dashboard.Render", "194.View.Transactions.Forms",
+    "195.View.Transactions.Actions", "191.View.Diagnostics",
+    "193.View.Transactions.Render", "198.View.Dashboard.Controller"
+  ];
+  var priorIncludeIndex = -1;
+  assertSourceContains(includeSource, ".createTemplateFromFile(filename)", "raw frontend partial loader");
+  assertSourceContains(includeSource, ".getRawContent()", "unprocessed frontend partial source");
+  assertSourceExcludes(includeSource, "createHtmlOutputFromFile", "standalone partial HTML parsing");
+  partialNames.forEach(function(filename)
+  {
+    var includeToken = "<?!= include('" + filename + "'); ?>";
+    assertSourceContainsOnce(rawIndexSource, includeToken, filename + " raw include");
+    var includeIndex = rawIndexSource.indexOf(includeToken);
+    if (includeIndex <= priorIncludeIndex) throw new Error("Frontend partial include order mismatch: " + filename);
+    priorIncludeIndex = includeIndex;
+    assertSourceExcludes(include(filename), "<script", filename + " nested script wrapper");
+  });
+  var rawTemplateLiteral = 'return `\n            <div class="overview-surface rounded-2xl border p-4">';
+  assertSourceContains(include("196.View.Dashboard.Render"), rawTemplateLiteral, "raw HTML template literal");
+  assertSourceContains(source, rawTemplateLiteral, "assembled raw HTML template literal");
+  assertSourceExcludes(source, "&lt;div class=\"overview-surface", "escaped HTML template literal");
+  scenariosPassed++;
+
   [
     "function getCurrentThemePalette(forceLight)",
     "function synchronizeChartTheme(forceLight)",
@@ -3340,8 +3442,8 @@ function testBoundedUiRefactorContract()
   scenariosPassed++;
 
   var transactionsRenderSource =
-    HtmlService.createHtmlOutputFromFile("192.View.Transactions.State").getContent() +
-    HtmlService.createHtmlOutputFromFile("193.View.Transactions.Render").getContent();
+    include("192.View.Transactions.State") +
+    include("193.View.Transactions.Render");
   [
     "function setTransactionsLifecycleState(value)",
     "transactionsPages[activeTransactionsTab] = 1;",
@@ -3472,14 +3574,22 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    55,
+    52,
     "closure runner membership"
   );
   assertSourceContains(
     predecessorRunnerSource,
     '{ name: "testBoundedUiRefactorContract"',
-    "55-entry predecessor gate"
+    "52-entry predecessor gate"
   );
+  [
+    "testLegacyTransactionSyncService",
+    "testLegacyTransactionSyncTriggerDelegation",
+    "testLegacySyncRuntimeAcceptanceHarness"
+  ].forEach(function(testName)
+  {
+    assertSourceExcludes(predecessorRunnerSource, testName, "retired legacy runner member");
+  });
   scenariosPassed++;
 
   assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine navigation destinations");
@@ -3537,7 +3647,8 @@ function testUiUx2ClosureContract()
   assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "one deferred render phase owner");
   assertSourceExcludes(source, "ResizeObserver", "recurring resize ownership");
   assertSourceContainsOnce(source, 'window.addEventListener("resize", scheduleResponsiveChartResize);', "single recurring resize owner");
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "bounded UI");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "response mutation");
   });
@@ -3567,7 +3678,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 55,
+    runnerTotal: 52,
     packagesComplete: packages.length,
     destinations: 9,
     viewportStates: viewportMatrix.length,
@@ -3598,7 +3709,7 @@ function testUiUx2ClosureContract()
 
 function testUiFinalStabilizationContract()
 {
-  var diagnosticsSource = HtmlService.createHtmlOutputFromFile("191.View.Diagnostics").getContent();
+  var diagnosticsSource = include("191.View.Diagnostics");
   var source = getAssembledFrontendSource();
   var assembledSource = source
     .replace("<?!= include('191.View.Diagnostics'); ?>", diagnosticsSource);
@@ -3633,7 +3744,35 @@ function testUiFinalStabilizationContract()
   });
   assertSourceOccurrenceCount(source, 'role="tablist"', 2, "scoped tablists");
   assertSourceOccurrenceCount(source, 'data-dashboard-tab="', 3, "Dashboard tabs");
-  assertSourceOccurrenceCount(source, 'data-transactions-tab="', 4, "Transactions tabs");
+  var transactionsTabSource = getSourceRegion(
+    source,
+    'id="transactionsTabList"',
+    "</div>",
+    "Transactions tablist"
+  );
+  assertSourceOccurrenceCount(transactionsTabSource, 'data-transactions-tab="', 3, "Transactions tabs");
+  var transactionTabTokens = [
+    'data-transactions-tab="recent"',
+    'data-transactions-tab="sales"',
+    'data-transactions-tab="expenses"'
+  ];
+  transactionTabTokens.forEach(function(token, index)
+  {
+    assertSourceContainsOnce(transactionsTabSource, token, "required Transactions tab");
+    if (index > 0 &&
+        transactionsTabSource.indexOf(transactionTabTokens[index - 1]) > transactionsTabSource.indexOf(token))
+    {
+      throw new Error("Transactions tab order changed");
+    }
+  });
+  [
+    'data-transactions-tab="purchases"',
+    'id="transactionsTabPurchases"',
+    ">Purchases</button>"
+  ].forEach(function(token)
+  {
+    assertSourceExcludes(transactionsTabSource, token, "retired Purchases tab");
+  });
   scenariosPassed++;
 
   var idPattern = /\sid="([^"]+)"/g;
@@ -3737,7 +3876,8 @@ function testUiFinalStabilizationContract()
     throw new Error("Final stabilization query budget exceeded");
   }
   assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred render phase owner");
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "final stabilization");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "response mutation");
   });

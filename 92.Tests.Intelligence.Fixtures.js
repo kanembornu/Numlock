@@ -300,15 +300,12 @@ function createKpiTargetFixtures()
     publicKeys: ["revenue", "profit", "units", "margin"],
     frontendTokens: [
       'id="kpiTargetReference"',
-      'id="kpiTargetDetailsButton"',
-      'type="button"',
-      'aria-expanded="false"',
-      'aria-controls="kpiTargetDetails"',
-      'onclick="toggleKpiTargetDetails()"',
-      'id="kpiTargetDetails"',
-      "System-defined targets",
+      '<ul id="kpiTargetDetails"></ul>',
+      'plansColumn.appendChild(staging.querySelector("#kpiTargetReference"))',
+      "System-defined targets from current decision rules.",
       "function renderKpiTargets(kpiTargets)",
-      "formatKpiTargetValue(target)",
+      'document.getElementById("kpiTargetDetails").innerHTML =',
+      "approvedTargetPresentation.map(function(target)",
       "renderKpiTargets(res.kpiTargets);"
     ],
     frontendExcludedTokens: [

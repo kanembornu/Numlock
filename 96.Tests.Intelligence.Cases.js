@@ -272,8 +272,13 @@ function testBusinessPriorityContract()
     "authoritative Insights Business Priority render target"
   );
 
-  var insightsOwnershipStart = source.indexOf("insights: [");
-  var insightsOwnershipEnd = source.indexOf("]", insightsOwnershipStart);
+  var insightsOwnershipStart = source.indexOf(
+    'insightsColumn.id = "insightsColumn"'
+  );
+  var insightsOwnershipEnd = source.indexOf(
+    'plansColumn.id = "plansColumn"',
+    insightsOwnershipStart
+  );
   var insightsOwnershipSource = source.slice(
     insightsOwnershipStart,
     insightsOwnershipEnd
@@ -281,7 +286,7 @@ function testBusinessPriorityContract()
 
   assertSourceContains(
     insightsOwnershipSource,
-    'staging.querySelector("#businessPriorityRegion")',
+    'insightsColumn.appendChild(staging.querySelector("#businessPriorityRegion"))',
     "Insights Business Priority owner"
   );
 
@@ -832,15 +837,39 @@ function testIntelligencePlanningVisualContract()
   });
   scenariosPassed++;
 
-  var resizeFunctionStart = source.indexOf("function resizeVisibleDashboardCharts(tabName)");
-  var resizeFunctionEnd = source.indexOf("function scheduleResponsiveChartResize", resizeFunctionStart);
-  var tabFunctionStart = source.indexOf("function setActiveDashboardTab(tabName, moveFocus)");
-  var tabFunctionEnd = source.indexOf("function toggleFinancialModulesDisclosure", tabFunctionStart);
-  var tabFunctionSource = source.slice(resizeFunctionStart, resizeFunctionEnd) +
-    source.slice(tabFunctionStart, tabFunctionEnd);
+  var tabFunctionSource = getSourceRegion(
+    source,
+    "function resizeVisibleDashboardCharts(tabName)",
+    "function scheduleResponsiveChartResize",
+    "visible Dashboard chart resize"
+  ) + getSourceRegion(
+    source,
+    "function setActiveDashboardTab(tabName, moveFocus)",
+    "function initializeDashboardTabs",
+    "Dashboard tab activation"
+  );
   ["google.script.run", "getDashboardData(", "requestDashboardData("].forEach(function(token)
   {
     assertSourceExcludes(tabFunctionSource, token, "Insights tab backend request");
+  });
+  var dashboardRequestSource = getSourceRegion(
+    source,
+    "function requestDashboardData(request)",
+    "function scheduleDeferredDashboardRender",
+    "centralized Dashboard request owner"
+  );
+  [
+    "google.script.run",
+    ".withSuccessHandler(function(res)",
+    ".withFailureHandler(function(err)",
+    ".getDashboardData("
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(
+      dashboardRequestSource,
+      token,
+      "centralized Dashboard request owner"
+    );
   });
   var insightsRenderSource = getSourceRegion(
     source,
@@ -848,7 +877,14 @@ function testIntelligencePlanningVisualContract()
     "function createInitialTransactionEntryState",
     "Insights render ownership"
   );
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  [
+    ".sort(",
+    ".reverse(",
+    ".splice(",
+    "google.script.run",
+    "getDashboardData(",
+    "requestDashboardData("
+  ].forEach(function(token)
   {
     assertSourceExcludes(insightsRenderSource, token, "Insights response mutation");
   });
@@ -1079,7 +1115,8 @@ function testIntelligencePlanningVisualContract()
     );
   });
 
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "Insights");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Insights response mutation");
   });

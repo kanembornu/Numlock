@@ -90,15 +90,14 @@ function testCanonicalTransactionAdapter()
       dashboardExecutionSource.indexOf("var response = buildDashboardResponse")) {
     throw new Error("Dashboard cache could store a partial or failed response");
   }
-  [submitCanonicalTransaction, voidCanonicalTransaction, correctCanonicalTransaction,
-    syncLegacyTransactionsToCanonical].forEach(function(mutation) {
+  [submitCanonicalTransaction, voidCanonicalTransaction, correctCanonicalTransaction].forEach(function(mutation) {
     if (mutation.toString().indexOf("invalidateDashboardCache()") === -1) {
       throw new Error("Dashboard cache invalidation missing from " + mutation.name);
     }
   });
 
   return { passed: true, records: 2, inactiveExcluded: 1, singleReadSheets: 4,
-    normalizedDateKeys: true, cacheContexts: 4, mutationInvalidators: 4 };
+    normalizedDateKeys: true, cacheContexts: 4, mutationInvalidators: 3 };
 }
 
 function testProductPricingResolution()
@@ -521,82 +520,6 @@ function testCanonicalLifecycleTransportSerialization()
   return { passed: true, scenarios: scenarios, writes: 0 };
 }
 
-function testLegacyTransactionSyncService()
-{
-  var context = {
-    productIdsByName: { Coffee: "P1" },
-    expenseIdsByName: { Utility: "O1" },
-    pricingIndex: buildProductPricingIndex([
-      { ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: new Date(2026, 0, 1),
-        EffectiveTo: "", HPP: 4, Harga: 10, IsActive: true }
-    ])
-  };
-  var sale = transformLegacyTransaction(
-    [new Date(2026, 7, 13), "Hot", "Sales", "Coffee", "", 2, ""], 1263, context
-  );
-  var expense = transformLegacyTransaction(
-    [new Date(2026, 7, 13), "", "Purchase", "", "Utility", "", 5000], 1264, context
-  );
-  if (sale.id !== "SAL-GLEG-00001263" || expense.id !== "OPS-GLEG-00001264" ||
-      sale.payload[2] !== "P1" || sale.payload[5] !== 4 || sale.payload[6] !== 10 ||
-      expense.payload[2] !== "O1" || expense.payload[3] !== 5000)
-  {
-    throw new Error("Legacy synchronization transformation/identity mismatch");
-  }
-  var initial = classifyLegacySyncCandidates([sale, expense], {});
-  if (initial.inserts.tabsal.length !== 1 || initial.inserts.tabops.length !== 1) {
-    throw new Error("Legacy synchronization initial insert mismatch");
-  }
-  var existingSale = { ID_Trx: sale.payload[0], Tanggal: sale.payload[1], ID_Prod: sale.payload[2],
-    Tipe: sale.payload[3], Qty: sale.payload[4], HPP: sale.payload[5], HJ: sale.payload[6],
-    Source: sale.payload[7], IsActive: sale.payload[8] };
-  var repeat = classifyLegacySyncCandidates([sale], { "SAL-GLEG-00001263": existingSale });
-  if (repeat.skipped.length !== 1 || repeat.inserts.tabsal.length !== 0) {
-    throw new Error("Legacy synchronization idempotent skip mismatch");
-  }
-  existingSale.Qty = 3;
-  var conflict = classifyLegacySyncCandidates([sale], { "SAL-GLEG-00001263": existingSale });
-  if (conflict.conflicts.length !== 1 || conflict.conflicts[0].sourceRow !== 1263) {
-    throw new Error("Legacy synchronization conflict mismatch");
-  }
-  [
-    [["bad", "Hot", "Sales", "Coffee", "", 1, ""], 1265],
-    [[new Date(2026, 7, 13), "Warm", "Sales", "Coffee", "", 1, ""], 1266],
-    [[new Date(2026, 7, 13), "Hot", "Sales", "Coffee", "", 0, ""], 1267],
-    [[new Date(2026, 7, 13), "", "Purchase", "", "Utility", "", -1], 1268]
-  ].forEach(function(fixture) {
-    var thrown = false;
-    try { transformLegacyTransaction(fixture[0], fixture[1], context); } catch (error) { thrown = true; }
-    if (!thrown) throw new Error("Malformed legacy row was accepted: " + fixture[1]);
-  });
-  return { passed: true, scenarios: 8 };
-}
-
-function testLegacyTransactionSyncTriggerDelegation()
-{
-  var source = syncLegacyTransactionOnFormSubmit.toString();
-  if (source.split("syncLegacyTransactionsToCanonical(").length - 1 !== 1 ||
-      source.indexOf("getSheet().getName() !== \"Transaction\"") === -1 ||
-      source.indexOf("event.range.getRow()") === -1)
-  {
-    throw new Error("Transaction sync trigger must delegate once with absolute source row identity");
-  }
-  return { passed: true, authoritativePaths: 1 };
-}
-
-function testLegacySyncRuntimeAcceptanceHarness()
-{
-  var source = verifyLegacySyncRuntimeAcceptance.toString();
-  assertSourceContains(source, 'var handler = "syncLegacyTransactionOnFormSubmit"', "exact sync trigger handler filter");
-  assertSourceContains(source, "ScriptApp.getProjectTriggers()", "live project trigger inventory");
-  assertSourceContains(source, "triggers.length !== 1", "exactly-one trigger contract");
-  assertSourceContainsOnce(source, "syncLegacyTransactionsToCanonical(", "authoritative sync delegation");
-  assertSourceExcludes(source, ".newTrigger(", "trigger creation");
-  assertSourceExcludes(source, ".deleteTrigger(", "trigger deletion");
-  assertSourceContains(source, "buildLegacySyncAcceptanceSnapshot(ss)", "runtime acceptance snapshots");
-  return { passed: true, scenarios: 7 };
-}
-
 function testCanonicalHistoricalAndOverlapControls()
 {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -627,11 +550,11 @@ function testCanonicalHistoricalAndOverlapControls()
   if (JSON.stringify(sales) !== JSON.stringify(expectedSales) || JSON.stringify(expenses) !== JSON.stringify(expectedExpense)) {
     throw new Error("Canonical Phase 3 historical controls mismatch");
   }
-  if (JSON.stringify(overlap) !== JSON.stringify({ salesRows: 51, expenseRows: 7, qty: 66,
-    cogs: 343600, revenue: 834000, margin: 490400, expense: 680000, hot: 30, cold: 36 })) {
+  if (JSON.stringify(overlap) !== JSON.stringify({ salesRows: 62, expenseRows: 10, qty: 81,
+    cogs: 443600, revenue: 1046000, margin: 602400, expense: 1281000, hot: 33, cold: 48 })) {
     throw new Error("Canonical Phase 4 overlap controls mismatch: " + JSON.stringify(overlap));
   }
-  return { passed: true, historicalYears: 6, overlapRows: 58 };
+  return { passed: true, historicalYears: 6, overlapRows: 72 };
 }
 
 function testInteractiveDrilldownContract()

@@ -5,7 +5,6 @@
 !20.Data.Source.js
 !21.Transaction.Entry.js
 !22.Transaction.Lifecycle.js
-!23.Transaction.LegacySync.js
 !25.Data.Processor.js
 !30.Analytics.Aggregate.js
 !35.Analytics.Financial.js

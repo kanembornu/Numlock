@@ -1574,8 +1574,13 @@ function testExecutivePresentationContract()
   );
   assertSourceContains(
     source,
-    "index < items.length - 1",
+    "#dashboardPanelInsights #recommendationContainer::before { position: absolute; top: 18px; bottom: 18px;",
     "recommendation timeline ending"
+  );
+  assertSourceContains(
+    source,
+    "#dashboardPanelInsights .recommendation-node { position: relative; z-index: 1; }",
+    "recommendation timeline node ownership"
   );
 
   [
@@ -1743,7 +1748,6 @@ function testDashboardTabFrameworkContract()
       "diagnosisSection",
       "recommendationsSection",
       "riskOpportunitySection",
-      "executiveCenter",
       "kpiTargetReference"
     ]
   };
@@ -1833,12 +1837,17 @@ function testDashboardTabFrameworkContract()
   });
   scenariosPassed++;
 
-  var tabFunctionStart =
-    source.indexOf("function resizeVisibleDashboardCharts(tabName)");
-  var tabFunctionEnd =
-    source.indexOf("function setDesktopSidebarCollapsed", tabFunctionStart);
-  var tabFunctionSource =
-    source.slice(tabFunctionStart, tabFunctionEnd);
+  var tabFunctionSource = getSourceRegion(
+    source,
+    "function resizeVisibleDashboardCharts(tabName)",
+    "function scheduleResponsiveChartResize",
+    "visible Dashboard chart resize"
+  ) + getSourceRegion(
+    source,
+    "function setActiveDashboardTab(tabName, moveFocus)",
+    "function initializeDashboardTabs",
+    "Dashboard tab activation"
+  );
 
   [
     "google.script.run",
@@ -1851,6 +1860,25 @@ function testDashboardTabFrameworkContract()
       tabFunctionSource,
       token,
       "tab switch backend request"
+    );
+  });
+  var dashboardRequestSource = getSourceRegion(
+    source,
+    "function requestDashboardData(request)",
+    "function scheduleDeferredDashboardRender",
+    "centralized Dashboard request owner"
+  );
+  [
+    "google.script.run",
+    ".withSuccessHandler(function(res)",
+    ".withFailureHandler(function(err)",
+    ".getDashboardData("
+  ].forEach(function(token)
+  {
+    assertSourceContainsOnce(
+      dashboardRequestSource,
+      token,
+      "centralized Dashboard request owner"
     );
   });
   scenariosPassed++;
@@ -1947,7 +1975,27 @@ function testDashboardTabFrameworkContract()
     );
   }
 
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  var categoryLabelLayoutSource = getSourceRegion(
+    source,
+    "var categoryMixLeaderLabelPlugin = {",
+    "categoryPerformanceChart = new Chart(",
+    "Category Mix label layout"
+  );
+  [
+    "var leftLabels = [];",
+    "var rightLabels = [];",
+    "(side > 0 ? rightLabels : leftLabels).push(point);",
+    "items.sort(function(a, b)"
+  ].forEach(function(token)
+  {
+    assertSourceContains(
+      categoryLabelLayoutSource,
+      token,
+      "derived Category Mix label ordering"
+    );
+  });
+  assertNoDirectDashboardResponseSort(source, "Dashboard tab");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Dashboard tab response mutation");
   });
@@ -1984,9 +2032,7 @@ function testDashboardTabFrameworkContract()
 function testDashboardOverviewContract()
 {
   var diagnosticsSource =
-    HtmlService.createHtmlOutputFromFile(
-      "191.View.Diagnostics"
-    ).getContent();
+    include("191.View.Diagnostics");
   var source = getAssembledFrontendSource();
   var assembledSource = source
     .replace("<?!= include('191.View.Diagnostics'); ?>", diagnosticsSource);
@@ -2015,7 +2061,26 @@ function testDashboardOverviewContract()
   {
     assertSourceContains(source, token, "Overview reporting toolbar");
   });
-  assertSourceExcludes(source, "Source:", "Overview source label");
+  var overviewSourceBoundary = getSourceRegion(
+    source,
+    'id="executiveSummarySection"',
+    'id="performanceSnapshotSection"',
+    "Overview markup ownership"
+  ) + getSourceRegion(
+    source,
+    "function renderReportingMetadata(res)",
+    "function formatPeriodComparisonValue",
+    "Overview reporting metadata ownership"
+  ) + getSourceRegion(
+    source,
+    "function renderBusinessOverview(res)",
+    "function renderDiagnosisCard",
+    "Overview KPI render ownership"
+  );
+  assertNoDashboardSourceLeak(
+    overviewSourceBoundary,
+    "Overview"
+  );
   [
     'id="dashboardTabInsights"',
     'Insights &amp; Plans',
@@ -2049,14 +2114,33 @@ function testDashboardOverviewContract()
     'id="priorityMeta"',
     ".hf-summary-action-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 18px; }",
     ".hf-priority-action { border-left: 1px solid var(--divider); }",
-    ".hf-priority-action #businessPriorityLevel { border-bottom: 2px solid currentColor; padding-bottom: 2px; }",
-    '"text-xs font-semibold " +',
     '"Next action: " + priority.action',
     "priority.evidence.metric"
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "executive action hierarchy");
   });
+  var businessPriorityRegionSource = getSourceRegion(
+    source,
+    '<section id="businessPriorityRegion"',
+    "</section>",
+    "Business Priority region ownership"
+  );
+  assertSourceContainsOnce(
+    businessPriorityRegionSource,
+    'id="businessPriorityLevel"',
+    "Business Priority level within its region"
+  );
+  assertSourceContainsOnce(
+    source,
+    'insightsColumn.appendChild(staging.querySelector("#businessPriorityRegion"))',
+    "Business Priority Insights owner"
+  );
+  assertSourceContainsOnce(
+    source,
+    'priorityLevel.className =\n          "insights-status-badge " +',
+    "Business Priority level status presentation owner"
+  );
   assertSourceExcludes(source, 'id="executiveAlertCard"', "Overview alert presentation");
   assertSourceExcludes(source, "Attention ·", "Overview alert strip");
   assertSourceExcludes(
@@ -2366,8 +2450,11 @@ function testDashboardOverviewContract()
     '.ui-custom-select-option[aria-selected="true"]:hover,',
     '#topProductWrapper { margin-top: var(--card-header-content-gap); }',
     '#dashboardContent { gap: var(--overview-section-gap) !important; }',
-    '#dashboardPanelInsights #riskOpportunitySection { min-height: 0 !important; overflow-y: auto !important; }',
-    '#dashboardPanelInsights #riskOpportunitySection > div { flex: 0 0 auto !important; overflow-wrap: anywhere; }'
+    '#dashboardPanelInsights #riskOpportunitySection { min-height: 0 !important; overflow: hidden !important; }',
+    '#dashboardPanelInsights #riskOpportunitySection > div { overflow-wrap: anywhere; }',
+    'insightsColumn.appendChild(staging.querySelector("#riskOpportunitySection"))',
+    "sectionOwnership.insights.push(insightsColumn, plansColumn)",
+    'panel.getAttribute("data-dashboard-panel") !== tabName'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "runtime visual enforcement contract");
@@ -2576,7 +2663,8 @@ function testDashboardOverviewContract()
     );
   }
 
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "Overview");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Overview response mutation");
   });
@@ -2860,7 +2948,8 @@ function testDashboardHighFidelityCompositionContract()
     {
       assertSourceExcludes(tabFunctionSource, token, "Dashboard tab backend request");
     });
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "Dashboard");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "Dashboard response mutation");
   });
@@ -3236,7 +3325,8 @@ function testPerformanceAnalyticsVisualContract()
     );
   });
 
-  [".sort(", ".reverse(", ".splice("].forEach(function(token)
+  assertNoDirectDashboardResponseSort(source, "visual");
+  [".reverse(", ".splice("].forEach(function(token)
   {
     assertSourceExcludes(source, token, "visual response mutation");
   });

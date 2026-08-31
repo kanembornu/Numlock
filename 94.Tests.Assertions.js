@@ -93,20 +93,20 @@ function assertSourceContains(source, token, scenarioName)
 function getAssembledFrontendSource(includeDiagnostics)
 {
   var transactionsStateSource =
-    HtmlService.createHtmlOutputFromFile("192.View.Transactions.State").getContent();
+    include("192.View.Transactions.State");
   var transactionsRenderSource =
-    HtmlService.createHtmlOutputFromFile("193.View.Transactions.Render").getContent();
+    include("193.View.Transactions.Render");
   var transactionsFormsSource =
-    HtmlService.createHtmlOutputFromFile("194.View.Transactions.Forms").getContent();
+    include("194.View.Transactions.Forms");
   var transactionsActionsSource =
-    HtmlService.createHtmlOutputFromFile("195.View.Transactions.Actions").getContent();
+    include("195.View.Transactions.Actions");
   var dashboardRenderSource =
-    HtmlService.createHtmlOutputFromFile("196.View.Dashboard.Render").getContent();
+    include("196.View.Dashboard.Render");
   var dashboardChartsSource =
-    HtmlService.createHtmlOutputFromFile("197.View.Dashboard.Charts").getContent();
+    include("197.View.Dashboard.Charts");
   var dashboardControllerSource =
-    HtmlService.createHtmlOutputFromFile("198.View.Dashboard.Controller").getContent();
-  var source = HtmlService.createHtmlOutputFromFile("190.View.Index").getContent()
+    include("198.View.Dashboard.Controller");
+  var source = HtmlService.createTemplateFromFile("190.View.Index").getRawContent()
     .replace("<?!= include('192.View.Transactions.State'); ?>", transactionsStateSource)
     .replace("<?!= include('193.View.Transactions.Render'); ?>", transactionsRenderSource)
     .replace("<?!= include('194.View.Transactions.Forms'); ?>", transactionsFormsSource)
@@ -118,7 +118,7 @@ function getAssembledFrontendSource(includeDiagnostics)
   return includeDiagnostics
     ? source.replace(
       "<?!= include('191.View.Diagnostics'); ?>",
-      HtmlService.createHtmlOutputFromFile("191.View.Diagnostics").getContent()
+      include("191.View.Diagnostics")
     )
     : source;
 }
@@ -154,6 +154,43 @@ function assertSourceOccurrenceCount(source, token, expectedCount, scenarioName)
       token +
       ", actual=" +
       actualCount
+    );
+  }
+}
+
+function assertNoDirectDashboardResponseSort(source, scenarioName)
+{
+  var directResponseSortPattern = /\b(?:res|performanceAnalytics|latestPerformanceAnalytics|revenueTrend|topProducts|expenseBreakdown)(?:\s*\.\s*[A-Za-z_$][\w$]*|\s*\[[^\]]+\])*\s*\.sort\s*\(/;
+
+  if (
+    directResponseSortPattern.test(source) ||
+    !directResponseSortPattern.test("res.items.sort(function(a, b) { return a.rank - b.rank; });")
+  )
+  {
+    throw new Error(
+      "Source contract permits direct " +
+      scenarioName +
+      " response-owned sorting"
+    );
+  }
+}
+
+function assertNoDashboardSourceLeak(source, scenarioName)
+{
+  var visibleSourceLabelPattern = /(?:>\s*Source\s*:|["'`]Source\s*:)/;
+  var responseSourceFieldPattern = /\bres(?:\s*\.\s*[A-Za-z_$][\w$]*)*\s*\.\s*(?:source|Source)\b/;
+
+  if (
+    visibleSourceLabelPattern.test(source) ||
+    responseSourceFieldPattern.test(source) ||
+    !visibleSourceLabelPattern.test('<span>Source: APP_ENTRY</span>') ||
+    !responseSourceFieldPattern.test("res.summary.Source")
+  )
+  {
+    throw new Error(
+      "Source contract exposes " +
+      scenarioName +
+      " source metadata"
     );
   }
 }
