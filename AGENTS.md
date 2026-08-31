@@ -20,6 +20,18 @@ NUMLOCK is a Google Apps Script V8 web application and business-intelligence das
 5. Validate the changed files and repository state before completion.
 6. Stop immediately once the requested scope and validation are complete.
 
+## Agent Skills Policy
+
+- `AGENTS.md` is the authoritative project-specific contract. User scope and this contract override generic skill guidance.
+- Route skills selectively; do not invoke them unnecessarily for simple isolated tasks. For small isolated patches, follow `AGENTS.md` alone unless extra workflow guidance is materially useful.
+- For multi-file or non-trivial implementation, prefer `@incremental-implementation`.
+- For bugs, failing tests, or unexpected runtime behavior, prefer `@debugging-and-error-recovery`; add `@test-driven-development` when the behavior can be covered by tests.
+- For significant new features or architectural changes, use `@spec-driven-development` before implementation.
+- For non-trivial completed changes, use `@code-review-and-quality` when an additional review gate is warranted.
+- Use `@context-engineering` for complex session starts, major task switches, or when project constraints risk being lost.
+- Skills must not broaden scope, modify frozen UI boundaries, trigger unrelated refactors, or introduce unrequested work.
+- Existing NUMLOCK validation, Git, `clasp`, deployment, and completion rules remain authoritative.
+
 ## Change Rules
 
 - Never modify files unrelated to the current task.
