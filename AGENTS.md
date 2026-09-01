@@ -69,3 +69,20 @@ Every completed task must report:
 2. Validation performed and result
 3. Remaining risks or blockers
 4. Recommended Git commands, with every path listed explicitly; state `None` when no Git action is appropriate
+
+### CodeGraph
+
+For structural code inspection, use CodeGraph first when `.codegraph/`
+is available, especially before modifying shared logic.
+
+Before editing shared Dashboard or Performance logic:
+- inspect relevant symbols and callers/callees;
+- check blast radius into frozen or out-of-scope sections;
+- identify relevant tests.
+
+CodeGraph is advisory. Source code, explicit scope/freeze rules,
+runtime behavior, and tests remain authoritative.
+
+For HTML/CSS, Apps Script client/server runtime boundaries, and visual
+work, use targeted source/runtime inspection where CodeGraph cannot
+establish the relationship confidently.
