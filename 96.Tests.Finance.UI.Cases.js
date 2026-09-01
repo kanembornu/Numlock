@@ -17,13 +17,27 @@ function testFinanceProfitAndLossUiContract()
   }
 
   requireToken(shell, 'data-page="finance"', "active Profit & Loss route");
+  requireToken(shell, 'data-page="finance" data-navigation-destination="capital-equity"', "active Capital & Equity route");
   requireToken(shell, 'data-navigation-destination="balance-sheet" class="ui-future-module', "gated Balance Sheet");
   requireToken(shell, 'data-navigation-destination="cash-flow" class="ui-future-module', "gated Cash Flow");
   requireToken(controller, ".getFinanceData(", "Finance backend request");
   forbidToken(financeSource, "getDashboardData(", "Dashboard request coupling");
   requireToken(shell, 'aria-label="Profit and Loss summary"', "six-metric summary");
   scenarios++;
-  if ((shell.match(/class="finance-kpi finance-surface"/g) || []).length !== 6) throw new Error("Finance UI must render six KPI cards");
+  if ((shell.match(/class="finance-kpi finance-surface"/g) || []).length !== 11) throw new Error("Finance UI must render six P&L and five Capital & Equity KPI cards");
+  requireToken(shell, 'class="finance-kpis finance-equity-kpis"', "five-card Capital & Equity summary");
+  requireToken(shell, 'id="financeOwnerReconciliationBody"', "owner reconciliation");
+  requireToken(shell, 'id="financeRetainedBridgeHeading"', "retained earnings bridge");
+  requireToken(render, 'Not established for this date', "pre-cutoff unavailable state");
+  requireToken(render, 'finance-negative', "negative retained earnings presentation");
+  requireToken(shell, '>Return of Capital<', "Return of Capital label");
+  requireToken(shell, '>(−) Owner Draw<', "distinct Owner Draw label");
+  requireToken(shell, 'aria-label="Capital and Equity accounting status"', "accounting status strip");
+  requireToken(shell, 'grid-template-columns: repeat(5, minmax(0, 1fr))', "bounded five-column desktop layout");
+  requireToken(shell, 'overflow-x: auto', "bounded owner table overflow");
+  requireToken(shell, '.finance-layout[hidden] { display: none; }', "exclusive Finance panel visibility");
+  requireToken(controller, '"Owner capital and retained earnings as of the selected date"', "Capital & Equity utility identity");
+  forbidToken(financeSource, 'runCapitalEquityMigration(', "migration execution");
   requireToken(shell, "finance-statement-row finance-total", "statement hierarchy");
   if (shell.indexOf('<p class="hf-section-label">Finance</p>') !== -1 ||
       shell.indexOf('id="financeHeading" class="ui-page-heading') !== -1 ||

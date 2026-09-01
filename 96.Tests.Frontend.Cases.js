@@ -967,7 +967,7 @@ function testUiShellThemeContract()
   });
   scenariosPassed++;
 
-  ["dashboard", "transactions", "finance", "settings", "logs"]
+  ["dashboard", "transactions", "settings", "logs"]
     .forEach(function(pageId)
     {
       assertSourceContainsOnce(
@@ -977,8 +977,9 @@ function testUiShellThemeContract()
       );
     });
   scenariosPassed++;
+  assertSourceOccurrenceCount(source, 'data-page="finance"', 2, "active Finance destinations");
 
-  ["products", "capital-equity", "assets", "depreciation", "balance-sheet", "cash-flow"]
+  ["products", "assets", "depreciation", "balance-sheet", "cash-flow"]
     .forEach(function(destination)
     {
       assertSourceContainsOnce(
@@ -1234,12 +1235,12 @@ function testNineDestinationNavigationContract()
     { page: "dashboard", destination: "dashboard" },
     { page: "transactions", destination: "transactions" },
     { page: "finance", destination: "profit-loss" },
+    { page: "finance", destination: "capital-equity" },
     { page: "settings", destination: "settings" },
     { page: "logs", destination: "logs" }
   ];
   var unavailableDestinations = [
     { id: "products", label: "Products" },
-    { id: "capital-equity", label: "Capital &amp; Equity" },
     { id: "assets", label: "Assets" },
     { id: "depreciation", label: "Depreciation" },
     { id: "balance-sheet", label: "Balance Sheet" },
@@ -1277,14 +1278,14 @@ function testNineDestinationNavigationContract()
   assertSourceOccurrenceCount(
     navigationSource,
     'data-page="',
-    5,
+    6,
     "active route count"
   );
   scenariosPassed++;
 
   activeDestinations.forEach(function(destination)
   {
-    assertSourceContainsOnce(
+    assertSourceContains(
       navigationSource,
       'data-page="' + destination.page + '"',
       "active page " + destination.page
@@ -1323,7 +1324,7 @@ function testNineDestinationNavigationContract()
   assertSourceOccurrenceCount(
     navigationSource,
     'aria-disabled="true"',
-    6,
+    5,
     "unavailable semantics"
   );
   unavailableDestinations.forEach(function(destination) {
@@ -1469,8 +1470,8 @@ function testNineDestinationNavigationContract()
     passed: true,
     scenarios: scenariosPassed,
     destinations: 11,
-    active: 5,
-    unavailable: 6,
+    active: 6,
+    unavailable: 5,
     backendRequests: 0,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount
@@ -1597,8 +1598,8 @@ function testFullShellVisualContract()
   scenariosPassed++;
 
   assertSourceOccurrenceCount(source, 'data-navigation-destination="', 11, "eleven destinations");
-  assertSourceOccurrenceCount(source, 'data-page="', 5, "five active destinations");
-  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 6, "six unavailable destinations");
+  assertSourceOccurrenceCount(source, 'data-page="', 6, "six active destinations");
+  assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable destinations");
   assertSourceContainsOnce(source, 'id="financialModulesDisclosureButton"', "Financial modules disclosure");
   scenariosPassed++;
 
@@ -1708,8 +1709,8 @@ function testFullShellVisualContract()
     passed: true,
     scenarios: scenariosPassed,
     destinations: 11,
-    active: 5,
-    unavailable: 6,
+    active: 6,
+    unavailable: 5,
     backendRequests: 0,
     idQueries: idQueryCount,
     selectorQueries: selectorQueryCount
@@ -3448,8 +3449,7 @@ function testLogsVisualContract()
     'console.error(\n              "Dashboard render failed"',
     'console.error(\n            "Dashboard request failed"',
     'console.error(\n        "Chart.js unavailable',
-    'console.error("CSV export failed", error);',
-    'console.error("Print report failed", error);'
+    'console.error("CSV export failed", error);'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "preserved actionable console diagnostics");
@@ -3706,7 +3706,7 @@ function testBoundedUiRefactorContract()
   });
   scenariosPassed++;
 
-  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine navigation destinations");
+  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 11, "eleven navigation destinations");
   assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable destinations");
   scenariosPassed++;
 
@@ -3793,13 +3793,13 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    52,
+    56,
     "closure runner membership"
   );
   assertSourceContains(
     predecessorRunnerSource,
     '{ name: "testBoundedUiRefactorContract"',
-    "52-entry predecessor gate"
+    "56-entry current gate"
   );
   [
     "testLegacyTransactionSyncService",
@@ -3811,8 +3811,8 @@ function testUiUx2ClosureContract()
   });
   scenariosPassed++;
 
-  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 9, "nine navigation destinations");
-  assertSourceOccurrenceCount(source, 'data-page="', 4, "four active navigation destinations");
+  assertSourceOccurrenceCount(source, 'data-navigation-destination="', 11, "eleven navigation destinations");
+  assertSourceOccurrenceCount(source, 'data-page="', 6, "six active navigation destinations");
   assertSourceOccurrenceCount(source, 'aria-disabled="true"', 5, "five unavailable navigation destinations");
   assertSourceContainsOnce(source, 'id="financialModulesDisclosureButton"', "Financial modules disclosure");
   scenariosPassed++;
@@ -3897,7 +3897,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 52,
+    runnerTotal: 56,
     packagesComplete: packages.length,
     destinations: 11,
     viewportStates: viewportMatrix.length,

@@ -42,11 +42,7 @@
           try {
             financeState.data = response;
             financeState.hasLoaded = true;
-            renderFinanceProfitAndLoss(response);
-            var summary = response && response.summary || {};
-            var isEmpty = [summary.revenue, summary.cogs, summary.grossProfit,
-              summary.operatingExpenses, summary.depreciationExpense, summary.operatingNetProfit]
-              .every(function(value) { return financeFiniteNumber(value) === 0; });
+            var isEmpty = renderActiveFinanceDestination(response);
             setFinanceViewState(isEmpty ? "empty" : "success");
           } catch (error) {
             console.error("Finance render failed", error);
@@ -59,6 +55,41 @@
           setFinanceViewState("error", "Unable to load Profit & Loss.");
         })
         .getFinanceData(request.filter, request.customStart, request.customEnd);
+    }
+
+    function renderActiveFinanceDestination(response)
+    {
+      if (financeState.destination === "capital-equity") {
+        renderFinanceCapitalEquity(response);
+        var equity = response.capitalEquity;
+        return !equity.owners.length && [equity.ownerContributions, equity.returnOfCapital, equity.ownerDraws]
+          .every(function(value) { return financeFiniteNumber(value) === 0; });
+      }
+      renderFinanceProfitAndLoss(response);
+      var summary = response && response.summary || {};
+      return [summary.revenue, summary.cogs, summary.grossProfit,
+        summary.operatingExpenses, summary.depreciationExpense, summary.operatingNetProfit]
+        .every(function(value) { return financeFiniteNumber(value) === 0; });
+    }
+
+    function setFinanceDestination(destination)
+    {
+      financeState.destination = destination === "capital-equity" ? "capital-equity" : "profit-loss";
+      var isEquity = financeState.destination === "capital-equity";
+      getFinanceElement("financeHeading").textContent = isEquity ? "Capital & Equity" : "Profit & Loss";
+      getFinanceElement("utilityPageTitle").textContent = isEquity ? "Capital & Equity" : "Profit & Loss";
+      getFinanceElement("utilityPageContext").textContent = isEquity ? "Owner capital and retained earnings as of the selected date" : "Transaction-date operating statement";
+      getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : "Transaction-date operating basis";
+      getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : "Depreciation is included from the authoritative DepreciationLedger.";
+      if (financeState.hasLoaded && financeState.data) {
+        try {
+          var isEmpty = renderActiveFinanceDestination(financeState.data);
+          setFinanceViewState(isEmpty ? "empty" : "success");
+        } catch (error) {
+          console.error("Finance render failed", error);
+          setFinanceViewState("error", isEquity ? "Unable to display Capital & Equity." : "Unable to display Profit & Loss.");
+        }
+      }
     }
 
     function ensureFinanceData()

@@ -29,6 +29,25 @@
       element.classList.toggle("finance-negative", number < 0);
     }
 
+    function formatFinanceDate(value)
+    {
+      var match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!match) return "—";
+      var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return Number(match[3]) + " " + months[Number(match[2]) - 1] + " " + match[1];
+    }
+
+    function renderFinanceOptionalCurrency(element, value)
+    {
+      if (value === null || value === undefined) {
+        element.textContent = "Not established for this date";
+        element.classList.remove("finance-negative");
+        return;
+      }
+      if (!Number.isFinite(Number(value))) throw new Error("Capital & Equity contains a malformed amount");
+      renderFinanceMetricValue(element, value, formatFinanceCurrency);
+    }
+
     function renderFinanceProfitAndLoss(response)
     {
       var summary = response && response.summary || {};
@@ -107,21 +126,84 @@
         policy.depreciationIncluded === true ? "Depreciation included from ledger" : "Depreciation unavailable";
     }
 
+    function renderFinanceCapitalEquity(response)
+    {
+      var equity = response && response.capitalEquity;
+      if (!equity || !Array.isArray(equity.owners) || !equity.accountingPolicy || !equity.dataQuality ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(String(equity.asOfDate || ""))) {
+        throw new Error("Capital & Equity response is unavailable or malformed");
+      }
+      var established = equity.retainedEarningsStatus === "ESTABLISHED";
+      if (!established && equity.retainedEarningsStatus !== "NOT_ESTABLISHED") {
+        throw new Error("Capital & Equity retained earnings status is malformed");
+      }
+      [
+        ["financeEquityContributions", equity.ownerContributions],
+        ["financeEquityReturns", equity.returnOfCapital],
+        ["financeEquityClosingCapital", equity.contributedCapital],
+        ["financeCompositionCapital", equity.contributedCapital],
+        ["financeCompositionDraw", equity.ownerDraws]
+      ].forEach(function(metric) {
+        if (!Number.isFinite(Number(metric[1]))) throw new Error("Capital & Equity contains a malformed amount");
+        renderFinanceMetricValue(getFinanceElement(metric[0]), metric[1], formatFinanceCurrency);
+      });
+      [
+        ["financeEquityRetainedEarnings", equity.retainedEarnings],
+        ["financeEquityTotal", equity.totalEquity],
+        ["financeCompositionRetained", equity.retainedEarnings],
+        ["financeCompositionTotal", equity.totalEquity],
+        ["financeRetainedOpening", equity.retainedEarningsOpening],
+        ["financeRetainedPostCutoff", equity.retainedEarningsPostCutoffProfit],
+        ["financeRetainedCurrent", equity.retainedEarnings]
+      ].forEach(function(metric) {
+        renderFinanceOptionalCurrency(getFinanceElement(metric[0]), metric[1]);
+      });
+
+      getFinanceElement("financeOwnerReconciliationBody").innerHTML = equity.owners.length
+        ? equity.owners.map(function(owner) {
+          if (!owner || !String(owner.owner || "").trim() ||
+              [owner.ownerContributions, owner.returnOfCapital, owner.ownerDraws, owner.contributedCapital]
+                .some(function(value) { return !Number.isFinite(Number(value)); })) {
+            throw new Error("Capital & Equity owner reconciliation is malformed");
+          }
+          return "<tr><th scope=\"row\">" + escapeUiHtml(owner.owner) + "</th>" +
+            [owner.ownerContributions, owner.returnOfCapital, owner.ownerDraws, owner.contributedCapital]
+              .map(function(value) {
+                return "<td class=\"finance-number" + (Number(value) < 0 ? " finance-negative" : "") + "\">" +
+                  escapeUiHtml(formatFinanceCurrency(value)) + "</td>";
+              }).join("") + "</tr>";
+        }).join("")
+        : "<tr><td colspan=\"5\" class=\"finance-table-empty\">No owner capital movements are available as of this date.</td></tr>";
+
+      var openingDate = equity.accountingPolicy.retainedEarningsOpeningDate;
+      var accumulationStart = equity.accountingPolicy.postCutoffProfitAndLossStarts;
+      getFinanceElement("financeRetainedOpeningDate").textContent = established ? "as of " + formatFinanceDate(openingDate) : "Opening balance not yet effective";
+      getFinanceElement("financeRetainedPostCutoffDate").textContent = established ? "from " + formatFinanceDate(accumulationStart) + " through selected date" : "Post-cutoff accumulation not yet started";
+      getFinanceElement("financeRetainedAsOfDate").textContent = "as of " + formatFinanceDate(equity.asOfDate);
+      getFinanceElement("financeEquityAsOfStatus").textContent = "As of " + formatFinanceDate(equity.asOfDate);
+      getFinanceElement("financeEquityOpeningStatus").textContent = "Sibuta migrated opening balance effective " + formatFinanceDate(openingDate) + "; subsequent profit starts " + formatFinanceDate(accumulationStart);
+      getFinanceElement("financeEquityCapitalPolicy").textContent = "Return of Capital is distinct from Owner Draw; no cash balance is asserted";
+      getFinanceElement("financeCapitalEquityEmptyNotice").hidden = equity.owners.length > 0 ||
+        [equity.ownerContributions, equity.returnOfCapital, equity.ownerDraws].some(function(value) { return Number(value) !== 0; });
+    }
+
     function setFinanceViewState(state, message)
     {
       var status = getFinanceElement("financeStatus");
       var content = getFinanceElement("financeContent");
+      var equityContent = getFinanceElement("financeCapitalEquityContent");
       var retry = getFinanceElement("financeRetryButton");
       var isLoading = state === "loading";
 
       financeState.loading = isLoading;
-      financeState.error = state === "error" ? String(message || "Unable to load Profit & Loss.") : null;
+      financeState.error = state === "error" ? String(message || "Unable to load Finance data.") : null;
       getFinanceElement("finance").setAttribute("aria-busy", isLoading ? "true" : "false");
       status.hidden = state === "success" || state === "empty";
-      content.hidden = state === "loading" || state === "error";
+      content.hidden = state === "loading" || state === "error" || financeState.destination !== "profit-loss";
+      equityContent.hidden = state === "loading" || state === "error" || financeState.destination !== "capital-equity";
       retry.hidden = state !== "error";
       getFinanceElement("financeStatusText").textContent = isLoading
-        ? "Loading Profit & Loss…"
+        ? (financeState.destination === "capital-equity" ? "Loading Capital & Equity…" : "Loading Profit & Loss…")
         : financeState.error || "";
       getFinanceElement("financeEmptyNotice").hidden = state !== "empty";
     }

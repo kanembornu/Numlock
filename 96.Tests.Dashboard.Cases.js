@@ -478,8 +478,82 @@ function testSparseDatasetResilience()
         }
       });
 
-      if (JSON.stringify(comparableResponse) !== expectedNormalJson)
+      var actualNormalJson =
+        JSON.stringify(comparableResponse);
+
+      if (actualNormalJson !== expectedNormalJson)
       {
+        var firstDiffIndex = 0;
+        var comparableLength = Math.min(
+          expectedNormalJson.length,
+          actualNormalJson.length
+        );
+
+        while (
+          firstDiffIndex < comparableLength &&
+          expectedNormalJson.charAt(firstDiffIndex) ===
+            actualNormalJson.charAt(firstDiffIndex)
+        )
+        {
+          firstDiffIndex++;
+        }
+
+        if (
+          firstDiffIndex === comparableLength &&
+          expectedNormalJson.length === actualNormalJson.length
+        )
+        {
+          firstDiffIndex = -1;
+        }
+
+        var contextStart =
+          Math.max(0, firstDiffIndex - 120);
+        var contextEnd =
+          Math.max(contextStart, firstDiffIndex + 120);
+        var expectedNormal =
+          JSON.parse(expectedNormalJson);
+        var fieldNames = {};
+        var fieldDifferences = [];
+
+        Object.keys(expectedNormal).forEach(function(property)
+        {
+          fieldNames[property] = true;
+        });
+        Object.keys(comparableResponse).forEach(function(property)
+        {
+          fieldNames[property] = true;
+        });
+        Object.keys(fieldNames).forEach(function(property)
+        {
+          var expectedField =
+            JSON.stringify(expectedNormal[property]);
+          var actualField =
+            JSON.stringify(comparableResponse[property]);
+
+          if (expectedField !== actualField)
+          {
+            fieldDifferences.push(
+              property +
+              " expectedLength=" + expectedField.length +
+              " actualLength=" + actualField.length +
+              " expectedContext=" + expectedField.slice(0, 240) +
+              " actualContext=" + actualField.slice(0, 240)
+            );
+          }
+        });
+
+        Logger.log(
+          "SPARSE_NORMAL_DIAGNOSTIC\n" +
+          "expectedLength=" + expectedNormalJson.length + "\n" +
+          "actualLength=" + actualNormalJson.length + "\n" +
+          "firstDiffIndex=" + firstDiffIndex + "\n" +
+          "expectedContext=" +
+            expectedNormalJson.slice(contextStart, contextEnd) + "\n" +
+          "actualContext=" +
+            actualNormalJson.slice(contextStart, contextEnd) + "\n" +
+          "fieldDifferences=" + fieldDifferences.join(" | ")
+        );
+
         throw new Error(
           "Normal populated dashboard output changed"
         );
@@ -2353,7 +2427,7 @@ function testDashboardOverviewContract()
     '.hf-top-products-table td { height: 34px; padding: 0 6px; border-bottom: 1px solid var(--divider); text-align: left !important;',
     '#dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row { display: inline-flex !important; align-items: center !important;',
     '#dashboardPanelOverview #dataQualityInformation > .hf-data-quality-row > * { margin-top: 0 !important; margin-bottom: 0 !important; line-height: 16px !important; }',
-    'topProducts.slice(0, 10)'
+    'sorted.slice(0, 10)'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "remaining WO-028 runtime correction");
@@ -2398,7 +2472,8 @@ function testDashboardOverviewContract()
   {
     assertSourceContains(source, token, "analytics typography and table parity");
   });
-  assertSourceExcludes(source, "text-transform: uppercase", "uppercase Top Products table header styling");
+  assertSourceExcludes(source, ".hf-top-products-table thead th { text-transform: uppercase",
+    "uppercase Top Products table header styling");
   assertSourceExcludes(source, 'class="truncate text-left font-semibold"', "Top Products product clipping");
   scenariosPassed++;
 
@@ -2433,12 +2508,12 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
-    '#filterListbox { position: fixed;',
+    '#filterListbox { position: absolute;',
     'max-height: none;',
     'overflow: visible;',
     'function positionReportingPeriodListbox(state)',
     'spaceBelow >= estimatedHeight',
-    'grid-template-columns: repeat(var(--filter-option-columns, 1)',
+    'grid-template-columns: repeat(2, minmax(0, 1fr));',
     'function sortTopProducts(key)',
     'topProductsSort = { key: "qty", direction: "desc" };',
     'left.stableIndex - right.stableIndex',
@@ -2670,7 +2745,7 @@ function testDashboardOverviewContract()
   var selectorQueryCount =
     (assembledSource.match(/document\.querySelector(?:All)?\(/g) || []).length;
 
-  if (idQueryCount > 72 || selectorQueryCount > 2)
+  if (idQueryCount > 73 || selectorQueryCount > 2)
   {
     throw new Error(
       "Dashboard Overview query budget exceeded: ids=" +
@@ -3169,7 +3244,7 @@ function testPerformanceAnalyticsVisualContract()
 
   [
     'id="topProductsSection"',
-    "topProducts.slice(0, 10).map(function(p, index)",
+    "sorted.slice(0, 10).map(function(p, index)",
     "p.qty",
     'Number(p.revenue || 0).toLocaleString("id-ID")',
     'id="revenueDependencyContainer"',

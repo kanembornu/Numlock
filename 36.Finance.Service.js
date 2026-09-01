@@ -19,7 +19,22 @@ function getFinanceData(filter, customStart, customEnd) {
   ]);
   var depreciationSource = getFinanceDepreciationSource(ss);
   var period = resolveDashboardDateRange(filter, customStart, customEnd);
-  return buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+  var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+  var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
+  var openingRows = readCanonicalTable(ss, FINANCE_OPENING_BALANCE_POLICY.SHEET,
+    FINANCE_OPENING_BALANCE_POLICY.HEADERS);
+  var postCutoffProfit = 0;
+  if (period.endDate >= FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START) {
+    postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
+      filter: "custom",
+      startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
+      endDate: period.endDate,
+      label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + period.endDate
+    }, depreciationSource).summary.operatingNetProfit;
+  }
+  finance.capitalEquity = buildCapitalEquityReadModel(
+    capitalRows, openingRows, accounts, period.endDate, postCutoffProfit);
+  return finance;
 }
 
 function financeDepreciationPeriodKey(value) {

@@ -522,39 +522,66 @@ function testCanonicalLifecycleTransportSerialization()
 
 function testCanonicalHistoricalAndOverlapControls()
 {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var canonical = getCanonicalTransactionData(ss).records;
-  var expectedSales = {
-    2021: [1711, 4411, 20700100, 43760000, 23059900],
-    2022: [2049, 5889, 26243500, 54966000, 28722500],
-    2023: [2151, 5834, 26231600, 54330000, 28098400],
-    2024: [2153, 4782, 22651600, 47077000, 24425400],
-    2025: [1634, 2942, 13512800, 33259000, 19746200],
-    2026: [874, 1268, 6981200, 15997000, 9015800]
-  };
-  var expectedExpense = { 2021: [447, 33257000], 2022: [408, 38937000], 2023: [366, 41174000],
-    2024: [337, 39619000], 2025: [266, 31856000], 2026: [125, 15370000] };
-  var sales = {}, expenses = {}, overlap = { salesRows: 0, expenseRows: 0, qty: 0, cogs: 0, revenue: 0, margin: 0, expense: 0, hot: 0, cold: 0 };
-  canonical.forEach(function(row) {
-    if (row.source === "XLSM" && row.transactionType === "Sales") {
-      sales[row.year] = sales[row.year] || [0, 0, 0, 0, 0];
-      sales[row.year][0]++; sales[row.year][1] += row.qty; sales[row.year][2] += row.cogs;
-      sales[row.year][3] += row.revenue; sales[row.year][4] += row.margin;
-    } else if (row.source === "XLSM") {
-      expenses[row.year] = expenses[row.year] || [0, 0]; expenses[row.year][0]++; expenses[row.year][1] += row.expense;
-    } else if (row.source === "LEGACY_GOOGLE" && row.transactionType === "Sales") {
-      overlap.salesRows++; overlap.qty += row.qty; overlap.cogs += row.cogs; overlap.revenue += row.revenue;
-      overlap.margin += row.margin; overlap[row.category.toLowerCase()] += row.qty;
-    } else if (row.source === "LEGACY_GOOGLE") { overlap.expenseRows++; overlap.expense += row.expense; }
+  var canonical = buildCanonicalTransactionData({
+    sales: [
+      { ID_Trx: "SAL-XLSM-00000001", Tanggal: new Date(2021, 0, 1), ID_Prod: "P1", Tipe: "Hot",
+        Qty: 2, HPP: 4, HJ: 10, Source: "XLSM", IsActive: true, sourceRowIndex: 1 },
+      { ID_Trx: "SAL-GLEG-00000001", Tanggal: new Date(2026, 7, 1), ID_Prod: "P1", Tipe: "Cold",
+        Qty: 3, HPP: 5, HJ: 12, Source: "LEGACY_GOOGLE", IsActive: true, sourceRowIndex: 2 },
+      { ID_Trx: "SAL-APP-20260801-AAAAAAAAAAAA", Tanggal: new Date(2026, 7, 1), ID_Prod: "P1", Tipe: "Hot",
+        Qty: 1, HPP: 6, HJ: 14, Source: "APP_ENTRY", IsActive: true, sourceRowIndex: 3 },
+      { ID_Trx: "SAL-GLEG-00000002", Tanggal: new Date(2026, 7, 1), ID_Prod: "P1", Tipe: "Hot",
+        Qty: 99, HPP: 99, HJ: 199, Source: "LEGACY_GOOGLE", IsActive: false, sourceRowIndex: 4 }
+    ],
+    expenses: [
+      { ID_Trx: "OPS-XLSM-00000001", Tanggal: new Date(2021, 0, 2), ID_Ops: "O1", Nilai: 100,
+        Source: "XLSM", IsActive: true, sourceRowIndex: 1 },
+      { ID_Trx: "OPS-GLEG-00000001", Tanggal: new Date(2026, 7, 1), ID_Ops: "O1", Nilai: 200,
+        Source: "LEGACY_GOOGLE", IsActive: true, sourceRowIndex: 2 },
+      { ID_Trx: "OPS-APP-20260801-BBBBBBBBBBBB", Tanggal: new Date(2026, 7, 1), ID_Ops: "O1", Nilai: 300,
+        Source: "APP_ENTRY", IsActive: true, sourceRowIndex: 3 },
+      { ID_Trx: "OPS-GLEG-00000002", Tanggal: new Date(2026, 7, 1), ID_Ops: "O1", Nilai: 999,
+        Source: "LEGACY_GOOGLE", IsActive: false, sourceRowIndex: 4 }
+    ],
+    products: [{ ID_Prod: "P1", Produk: "Coffee", Kategori: "Coffee", Kind: "Beverage", IsActive: true }],
+    expenseItems: [{ ID_Ops: "O1", Item: "Operating", Kategori: "Operating", Kind: "Support",
+      Group: "Operating", IsActive: true }]
   });
-  if (JSON.stringify(sales) !== JSON.stringify(expectedSales) || JSON.stringify(expenses) !== JSON.stringify(expectedExpense)) {
-    throw new Error("Canonical Phase 3 historical controls mismatch");
+  var controls = {};
+  canonical.records.forEach(function(row) {
+    controls[row.source] = controls[row.source] ||
+      { salesRows: 0, expenseRows: 0, qty: 0, cogs: 0, revenue: 0, margin: 0, expense: 0, hot: 0, cold: 0 };
+    var control = controls[row.source];
+    if (row.transactionType === "Sales") {
+      control.salesRows++; control.qty += row.qty; control.cogs += row.cogs; control.revenue += row.revenue;
+      control.margin += row.margin; control[row.category.toLowerCase()] += row.qty;
+    } else { control.expenseRows++; control.expense += row.expense; }
+  });
+  var expected = {
+    XLSM: { salesRows: 1, expenseRows: 1, qty: 2, cogs: 8, revenue: 20, margin: 12, expense: 100, hot: 2, cold: 0 },
+    LEGACY_GOOGLE: { salesRows: 1, expenseRows: 1, qty: 3, cogs: 15, revenue: 36, margin: 21, expense: 200, hot: 0, cold: 3 },
+    APP_ENTRY: { salesRows: 1, expenseRows: 1, qty: 1, cogs: 6, revenue: 14, margin: 8, expense: 300, hot: 1, cold: 0 }
+  };
+  var controlsMatch = Object.keys(expected).every(function(source) {
+    return JSON.stringify(controls[source]) === JSON.stringify(expected[source]);
+  }) && Object.keys(controls).sort().join(",") === Object.keys(expected).sort().join(",");
+  if (!controlsMatch || canonical.records.length !== 6 || canonical.lifecycleRecords.length !== 8 ||
+      canonical.sourceQuality.inactiveLedgerRows !== 2) {
+    throw new Error("Canonical historical source controls mismatch: " + JSON.stringify(controls));
   }
-  if (JSON.stringify(overlap) !== JSON.stringify({ salesRows: 62, expenseRows: 10, qty: 81,
-    cogs: 443600, revenue: 1046000, margin: 602400, expense: 1281000, hot: 33, cold: 48 })) {
-    throw new Error("Canonical Phase 4 overlap controls mismatch: " + JSON.stringify(overlap));
+  var activeIds = {};
+  canonical.records.forEach(function(row) { activeIds[row.id] = (activeIds[row.id] || 0) + 1; });
+  if (Object.keys(activeIds).some(function(id) { return activeIds[id] !== 1; })) {
+    throw new Error("Canonical historical row was ingested more than once");
   }
-  return { passed: true, historicalYears: 6, overlapRows: 72 };
+  var canonicalSource = getCanonicalTransactionData.toString();
+  ["tabsal", "tabops"].forEach(function(sheetName) {
+    assertSourceContains(canonicalSource, '"' + sheetName + '"', "canonical transaction source ownership");
+  });
+  ['"Transaction"', '"Helper"', "syncLegacyTransactionsToCanonical"].forEach(function(token) {
+    assertSourceExcludes(canonicalSource, token, "retired legacy ingestion path");
+  });
+  return { passed: true, activeRows: 6, historicalRows: 4, inactiveExcluded: 2, duplicateIngestion: 0 };
 }
 
 function testInteractiveDrilldownContract()

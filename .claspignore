@@ -10,6 +10,7 @@
 !35.Analytics.Financial.js
 !36.Finance.Service.js
 !37.Depreciation.Service.js
+!38.CapitalEquity.Service.js
 !40.Analytics.Summary.js
 !45.Analytics.Trend.js
 !50.Analytics.Product.js
@@ -41,6 +42,7 @@
 !96.Tests.Finance.Cases.js
 !96.Tests.Finance.UI.Cases.js
 !96.Tests.Depreciation.Cases.js
+!96.Tests.CapitalEquity.Cases.js
 !98.Tests.Runner.js
 !100.Code.js
 !189.View.Tailwind.html
