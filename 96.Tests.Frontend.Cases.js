@@ -3793,13 +3793,13 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    56,
+    57,
     "closure runner membership"
   );
   assertSourceContains(
     predecessorRunnerSource,
     '{ name: "testBoundedUiRefactorContract"',
-    "56-entry current gate"
+    "57-entry current gate"
   );
   [
     "testLegacyTransactionSyncService",
@@ -3897,7 +3897,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 56,
+    runnerTotal: 57,
     packagesComplete: packages.length,
     destinations: 11,
     viewportStates: viewportMatrix.length,

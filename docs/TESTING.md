@@ -1,5 +1,113 @@
 # NUMLOCK Testing
 
+## Finance Phase 10F.5 Cash cutover evidence contract — complete and frozen
+
+Phase 10F.5 freezes the evidence package for the three physical Cash authorities. The cutover is the verified
+end-of-day Cash position on **2026-09-30** in **Asia/Jakarta**, equivalent to the opening financial position for
+2026-10-01. Operational Cash movements in `BalanceLedger` begin strictly on 2026-10-01: a movement dated
+2026-09-30 is outside the post-cutover ledger, and a movement already reflected in the observed balance must not be
+recreated. Pending or same-day items must be documented without a guessed timing adjustment or double counting.
+Cash openings later use `EffectiveDate = 2026-09-30`; the independent retained-earnings opening for Account 3200
+remains unchanged at `EffectiveDate = 2026-07-31`.
+
+The account-specific primary-evidence requirements are:
+
+- **1000 Cash on Hand:** a 2026-09-30 physical count, observation timestamp, denomination-level or equivalently
+  auditable count sheet, observed total, preparer/count performer, reviewer, evidence reference, discrepancy note
+  when applicable, and confirmation that the Cash belongs to NUMLOCK. Estimates are prohibited. A verified zero
+  requires a physical count that explicitly produces Rp0.
+- **1010 DANA Business:** the observable cutover balance with date/time, screenshot/export/report or equivalent
+  primary evidence, identified available balance, separately reviewed pending/held/in-process items, confirmed
+  NUMLOCK ownership, evidence identifier, and reviewer. The opening is the independently verified NUMLOCK DANA
+  balance; inference is prohibited.
+- **1020 Cash in Owner Custody - BluBCA:** a NUMLOCK-specific identifiable amount observed at cutover, supported by
+  a dedicated NUMLOCK folder/sub-balance or equivalent evidence, with personal owner funds excluded, date/time,
+  evidence identifier, same-day NUMLOCK-movement reconciliation, and reviewer. The owner's entire personal BluBCA
+  balance must never be treated as business Cash.
+
+The canonical evidence worksheet contains exactly these capture fields:
+`AccountCode`, `AccountName`, `CutoverDate`, `ObservedAt`, `ObservedBalance`, `EvidenceType`, `EvidenceRef`,
+`PreparedBy`, `ReviewedBy`, `VerificationStatus`, `PendingAdjustment`, `VerifiedOpeningBalance`, and `Notes`.
+`VerificationStatus` is one of `VERIFIED`, `FAILED`, or `MISSING`. Future monetary values must not be populated
+before the cutover evidence exists.
+
+For each canonical Cash account, a positive opening requires `Debit > 0`, `Credit = 0`, a non-empty `ExternalRef`,
+and a non-empty `Keterangan`. An explicit verified zero requires `Debit = 0`, `Credit = 0`, a non-empty
+`ExternalRef`, and a `Keterangan` containing the accepted case-insensitive phrase `observed balance = 0`. Missing
+evidence leaves the opening unavailable and is never converted to zero. Contradictory or contract-invalid evidence
+is `INVALID` and blocks authority/readiness. The frozen opening-row contract requires one active
+`FinanceOpeningBalances` row per `EffectiveDate + AccountCode`, an explicit AccountCode, a Source identifying the
+verified Cash cutover, an `ExternalRef` to accepted evidence, and a `Keterangan` describing the observed opening.
+One row per physical Cash authority is required; an aggregate Cash opening is prohibited.
+
+Reconciliation is account-level and independent: 1000 equals the verified physical count, 1010 equals the verified
+DANA Business balance, and 1020 equals the verified NUMLOCK BluBCA custody balance. A cross-account balancing plug
+or movement of unexplained differences between Cash accounts is prohibited. Any unresolved discrepancy blocks
+activation.
+
+Cash posting and reporting remain fail-closed until all of these gates pass together: `CASH_TAXONOMY_READY`, valid
+Settlements storage, valid BalanceLedger storage, accepted evidence, accepted Cash opening rows, fresh-read opening
+validation, account-level reconciliation, and cutover-boundary validation. Partial activation is prohibited.
+
+The future cutover runbook is fixed in this order:
+
+1. Establish the end-of-day observation window.
+2. Perform the 1000 physical count.
+3. Capture 1010 DANA evidence.
+4. Capture 1020 NUMLOCK BluBCA evidence.
+5. Identify pending and same-day movements.
+6. Review all evidence.
+7. Classify each account `VERIFIED`, `FAILED`, or `MISSING`.
+8. Determine the exact verified opening amounts.
+9. Run the read-only opening preflight.
+10. Obtain explicit production-write authorization.
+11. Insert the accepted openings exactly once.
+12. Fresh-read `FinanceOpeningBalances`.
+13. Reconcile each account.
+14. Validate the cutover boundary.
+15. Only after every gate passes, authorize post-cutover Cash posting and reporting.
+
+Any `FAILED` or `MISSING` required evidence stops the runbook; no opening may be guessed. As of the Phase 10F.5
+freeze on 2026-09-03, the actual cutover evidence is not yet available, balances for 1000/1010/1020 are `UNKNOWN`,
+opening insertion is prohibited, Cash posting is disabled, and Cash reporting is unavailable. Phase 10F.6 remains
+`WAITING_FOR_2026-09-30_EVIDENCE`.
+
+Phase 10F.5.2 supplied the live code evidence: `testCashFoundationContracts()` passed once in Apps Script runtime
+with 121 scenarios and no production mutation, followed by one `runAllBackendTests()` pass at 57/57. That runtime
+acceptance validated code only; it did not supply accounting evidence, authorize production writes, or activate Cash.
+
+## Finance Phase 10F.5.1 Cash opening evidence validation
+
+The existing 57-entry ordered suite retains `testCashFoundationContracts()` as its Cash owner. The focused test now
+validates 121 scenarios covering the 2026-09-30 Cash cutover boundary, evidence-backed positive and explicit verified
+zero openings, fail-closed Cash opening classification and read availability,
+Accounts/Settlements/BalanceLedger/FinanceOpeningBalances classification, the exact three-write current-production
+plan, header-only storage creation, populated-ledger preservation, fresh-read acceptance, idempotency, exact snapshots,
+controlled recovery, hard rollback failure, and the parameterless disposable runtime harness's identity, fixture,
+orchestration, production-fingerprint, and cleanup contracts. The test invokes only injected local runtimes; it does
+not execute `runCashFoundationSchemaMigration()`, `runCashFoundationSchemaRecovery()`, or
+`runCashFoundationDisposableRuntimeProof()`.
+
+Run `testCashFoundationContracts()`, `testBalanceFoundationContracts()`,
+`testCapitalEquityMigrationContract()`, `testFinanceCoreBackendContract()`,
+`testFinanceProfitAndLossUiContract()`, `testCanonicalTransactionEntryService()`,
+`testCanonicalTransactionLifecycleService()`, and `testUiUx2ClosureContract()` first, then
+`runAllBackendTests()`; require 57/57.
+
+## Finance Phase 10D Cash foundation contracts
+
+Finance Phase 10D raises the ordered suite to 57 entries. The focused
+`testCashFoundationContracts()` validates the read-only Accounts candidates for 1000/1010/1020, the canonical
+Settlements contract, paid-at-recognition Sales and Expense journals, all supported Cash transfer routes,
+`SourceType + SourceID` idempotency, append-only full reversals, verified-opening Cash balances, and account-level
+reconciliation states. Candidate builders are pure and report `writeCount: 0`; they create no sheet, mutate no
+production row, and refuse delayed or partial accrual settlement semantics.
+
+Run `testCashFoundationContracts()`, `testBalanceFoundationContracts()`,
+`testCapitalEquityMigrationContract()`, `testFinanceCoreBackendContract()`,
+`testFinanceProfitAndLossUiContract()`, `testCanonicalTransactionEntryService()`, and
+`testCanonicalTransactionLifecycleService()` first, then `runAllBackendTests()`; require 57/57.
+
 ## Finance Phase 9F.6 migration failure reproduction
 
 `testBalanceFoundationContracts()` uses exact 8-column/11-column physical-grid fixtures whose fresh reads clone
@@ -23,15 +131,15 @@ authorization; local tests must not invoke that runtime wrapper.
 
 ## Finance Phase 9C balance foundation contracts
 
-Finance Phase 9C keeps the ordered suite at 56 entries. The focused
+Finance Phase 9C kept the ordered suite at 56 entries. The focused
 `testBalanceFoundationContracts()` is invoked by the existing Capital Equity runner entry and validates the Accounts
 taxonomy overlay, compatible FinanceOpeningBalances V2 candidates, lossless Account 3200 conversion, read-only
 BalanceLedger journal candidates, and read-only InventoryLedger moving-weighted-average candidates. It creates no
 sheet, writes no row, does not post journals, and preserves `tabsal.HPP` as the production COGS authority.
 
-Run `testBalanceFoundationContracts()`, `testCapitalEquityMigrationContract()`,
+At that phase, run `testBalanceFoundationContracts()`, `testCapitalEquityMigrationContract()`,
 `testFinanceCoreBackendContract()`, `testFinanceProfitAndLossUiContract()`, and `testDepreciationEngineContract()`
-first, then `runAllBackendTests()`; require 56/56.
+first, then `runAllBackendTests()`; the Phase 9C recorded requirement was 56/56.
 
 ## Finance Phase 8D capital and equity migration dry-run gate
 
@@ -193,7 +301,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testCapitalEquityMigrationContract()` validates the approved Phase 8D capital, return-of-capital, owner-draw, retained-earnings opening-balance, cutoff, deterministic identity, duplicate, reconciliation, inactive-row, no-P&L, no-cash, and read-only diagnostic contracts.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `56/56` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `57/57` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -210,7 +318,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `56/56`, including CapitalEquity migration, depreciation, Finance Core and Profit & Loss UI plus the existing deterministic feature, response, accessibility, UI, chart, theme, performance, navigation, shell, composition, and data-quality coverage. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `57/57`, including Cash Foundation, CapitalEquity migration, depreciation, Finance Core and Profit & Loss UI plus the existing deterministic feature, response, accessibility, UI, chart, theme, performance, navigation, shell, composition, and data-quality coverage. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 

@@ -13,6 +13,7 @@ function runAllBackendTests()
     { name: "testFinanceProfitAndLossUiContract", run: testFinanceProfitAndLossUiContract },
     { name: "testDepreciationEngineContract", run: testDepreciationEngineContract },
     { name: "testCapitalEquityMigrationContract", run: testCapitalEquityMigrationContract },
+    { name: "testCashFoundationContracts", run: testCashFoundationContracts },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },
