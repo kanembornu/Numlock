@@ -1,4 +1,5 @@
 function testCapitalEquityMigrationContract() {
+  testBalanceFoundationContracts();
   var scenarios = 0;
   function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
   function rejected(row, code) {
@@ -193,6 +194,13 @@ function testCapitalEquityMigrationContract() {
   var rerun = initializeFinanceOpeningBalancesSchemaWithRuntime(schemaSpreadsheet, function() { flushes++; });
   check(rerun.created === false && rerun.writeCount === 0 && flushes === 1 &&
     schemaSpreadsheet.insertCount === 1, "schema initialization idempotency");
+  var v2Schema = capitalEquitySchemaTestSpreadsheet([
+    capitalEquitySchemaTestSheet("FinanceOpeningBalances", [BALANCE_FOUNDATION_POLICY.OPENING_V2_HEADERS])
+  ]);
+  var v2Existing = initializeFinanceOpeningBalancesSchemaWithRuntime(v2Schema, function() {});
+  check(v2Existing.created === false && v2Existing.writeCount === 0 &&
+    JSON.stringify(v2Existing.headers) === JSON.stringify(BALANCE_FOUNDATION_POLICY.OPENING_V2_HEADERS),
+    "schema initializer accepts existing V2 without Amount");
   var incompatible = capitalEquitySchemaTestSpreadsheet([
     capitalEquitySchemaTestSheet("FinanceOpeningBalances", [["WrongHeader"]])
   ]), incompatibleRejected = false;
@@ -222,6 +230,12 @@ function testCapitalEquityMigrationContract() {
     migrationRowsToObjects(migration.capital, CAPITAL_EQUITY_POLICY.HEADERS),
     migrationRowsToObjects(migration.opening, FINANCE_OPENING_BALANCE_POLICY.HEADERS),
     capitalEquityTestAccounts()).status === "PASS", "successful physical acceptance");
+  var physicalV2Opening = buildFinanceOpeningBalanceV2Candidates(
+    migrationRowsToObjects(migration.opening, FINANCE_OPENING_BALANCE_POLICY.HEADERS),
+    capitalEquityTestAccounts());
+  check(validateCapitalEquityMigrationAcceptance(
+    migrationRowsToObjects(migration.capital, CAPITAL_EQUITY_POLICY.HEADERS), physicalV2Opening,
+    capitalEquityTestAccounts()).status === "PASS", "V2 physical acceptance has no Amount dependency");
   var secondRun = executeCapitalEquityMigrationWithRuntime(migration.runtime);
   check(secondRun.status === "REFUSED" && secondRun.writeCount === 0 &&
     migration.capital.values.length === 11 && migration.opening.values.length === 2,
@@ -279,30 +293,118 @@ function testCapitalEquityMigrationContract() {
   check(runCapitalEquityMigration.toString().indexOf("LockService.getScriptLock()") !== -1 &&
     runCapitalEquityMigration.toString().indexOf("lock.waitLock(30000)") !== -1,
     "migration executor script lock");
+  check(runBalanceFoundationSchemaMigration.toString().indexOf("LockService.getScriptLock()") !== -1 &&
+    runBalanceFoundationSchemaMigration.toString().indexOf("lock.waitLock(30000)") !== -1,
+    "balance schema migration executor script lock");
+  check(runBalanceFoundationPartialAccountsRecovery.toString().indexOf("LockService.getScriptLock()") !== -1 &&
+    runBalanceFoundationPartialAccountsRecovery.toString().indexOf("lock.waitLock(30000)") !== -1,
+    "partial Accounts recovery script lock");
 
   Logger.log("PASS: testCapitalEquityMigrationContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
 
 function capitalEquitySchemaTestSheet(name, initialValues, writeLog, options) {
+  options = options || {};
+  var initial = (initialValues || []).map(function(row) { return row.slice(); });
+  var initialFormulas = (options.formulas || []).map(function(row) { return row.slice(); });
+  var initialColumns = initial.reduce(function(maximum, row) { return Math.max(maximum, row.length); }, 0);
   return {
-    name: name, values: (initialValues || []).map(function(row) { return row.slice(); }),
+    name: name, values: initial, formulas: initialFormulas,
+    maxRows: options.maxRows || Math.max(initial.length, 1000),
+    maxColumns: options.maxColumns || initialColumns,
     getName: function() { return this.name; },
-    getLastRow: function() { return this.values.length; },
-    getLastColumn: function() { return this.values.length ? this.values[0].length : 0; },
+    getLastRow: function() {
+      var last = 0;
+      this.values.forEach(function(row, index) {
+        if (row.some(function(value) { return value !== "" && value != null; })) last = index + 1;
+      });
+      return last;
+    },
+    getLastColumn: function() {
+      return this.values.reduce(function(last, row) {
+        row.forEach(function(value, index) {
+          if (value !== "" && value != null) last = Math.max(last, index + 1);
+        });
+        return last;
+      }, 0);
+    },
+    getMaxRows: function() { return this.maxRows; },
+    getMaxColumns: function() { return this.maxColumns; },
     getDataRange: function() { return this.getRange(1, 1, this.getLastRow(), this.getLastColumn()); },
-    deleteRows: function(start, count) { this.values.splice(start - 1, count); },
+    deleteRows: function(start, count) { this.values.splice(start - 1, count); this.maxRows -= count; },
+    insertRowsAfter: function(after, count) {
+      for (var index = 0; index < count; index++) this.values.splice(after, 0, []);
+      this.maxRows += count;
+    },
+    deleteColumns: function(start, count) {
+      if (writeLog) writeLog.push(this.name + ":deleteColumns:" + start + ":" + count);
+      if (options.failDeleteColumns) throw new Error("simulated dimension rollback failure");
+      this.values.forEach(function(row) { row.splice(start - 1, count); });
+      this.formulas.forEach(function(row) { row.splice(start - 1, count); });
+      this.maxColumns -= count;
+    },
+    insertColumnsAfter: function(after, count) {
+      if (writeLog) writeLog.push(this.name + ":insertColumnsAfter:" + after + ":" + count);
+      if (options.failInsertColumns) throw new Error("simulated structural mutation failure");
+      this.values.forEach(function(row) {
+        while (row.length < after) row.push("");
+        for (var index = 0; index < count; index++) row.splice(after, 0, "");
+      });
+      this.formulas.forEach(function(row) {
+        while (row.length < after) row.push("");
+        for (var index = 0; index < count; index++) row.splice(after, 0, "");
+      });
+      this.maxColumns += count;
+    },
     getRange: function(row, column, rowCount, columnCount) {
       var self = this;
+      if (row < 1 || column < 1 || row + rowCount - 1 > self.maxRows ||
+          column + columnCount - 1 > self.maxColumns) {
+        throw new Error("Range exceeds sheet grid limits");
+      }
       return {
+        clearContent: function() {
+          for (var rowIndex = row - 1; rowIndex < row - 1 + rowCount; rowIndex++) {
+            if (!self.values[rowIndex]) continue;
+            for (var columnIndex = column - 1; columnIndex < column - 1 + columnCount; columnIndex++) {
+              self.values[rowIndex][columnIndex] = "";
+            }
+          }
+        },
         getValues: function() {
-          return self.values.slice(row - 1, row - 1 + rowCount).map(function(source) {
-            return source.slice(column - 1, column - 1 + columnCount);
+          var result = [];
+          for (var rowOffset = 0; rowOffset < rowCount; rowOffset++) {
+            var source = self.values[row - 1 + rowOffset] || [], target = [];
+            for (var columnOffset = 0; columnOffset < columnCount; columnOffset++) {
+              var value = source[column - 1 + columnOffset];
+              target.push(value === undefined ? "" : value);
+            }
+            result.push(target);
+          }
+          return result.map(function(source) {
+            return source.map(function(value) {
+              return value instanceof Date ? new Date(value.getTime()) : value;
+            });
           });
+        },
+        getFormulas: function() {
+          var result = [];
+          for (var rowOffset = 0; rowOffset < rowCount; rowOffset++) {
+            var source = self.formulas[row - 1 + rowOffset] || [], target = [];
+            for (var columnOffset = 0; columnOffset < columnCount; columnOffset++) {
+              target.push(source[column - 1 + columnOffset] || "");
+            }
+            result.push(target);
+          }
+          return result;
         },
         setValues: function(values) {
           if (writeLog) writeLog.push(self.name);
-          if (options && options.failSheet === self.name) throw new Error("simulated write failure");
+          if (options.failSheet === self.name && (!options.failOnce || !options.failureTriggered)) {
+            options.failureTriggered = true;
+            throw new Error("simulated write failure");
+          }
           values.forEach(function(source, rowOffset) {
             while (self.values.length < row + rowOffset) self.values.push([]);
             source.forEach(function(value, columnOffset) {
@@ -317,14 +419,16 @@ function capitalEquitySchemaTestSheet(name, initialValues, writeLog, options) {
 
 function capitalEquitySchemaTestSpreadsheet(initialSheets) {
   return {
+    id: NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID,
     sheets: (initialSheets || []).slice(), insertCount: 0,
+    getId: function() { return this.id; },
     getSheets: function() { return this.sheets.slice(); },
     getSheetByName: function(name) {
       return this.sheets.filter(function(sheet) { return sheet.getName() === name; })[0] || null;
     },
     insertSheet: function(name) {
       this.insertCount++;
-      var sheet = capitalEquitySchemaTestSheet(name, []);
+      var sheet = capitalEquitySchemaTestSheet(name, [], null, { maxColumns: 26, maxRows: 1000 });
       this.sheets.push(sheet);
       return sheet;
     }

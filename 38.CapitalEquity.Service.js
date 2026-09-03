@@ -31,14 +31,20 @@ function financeOpeningBalancesSheetMetadata(ss) {
 }
 
 function requireExactFinanceOpeningBalancesHeaders(sheet) {
-  if (!sheet || sheet.getLastColumn() !== FINANCE_OPENING_BALANCE_POLICY.HEADERS.length) {
+  if (!sheet) {
     throw new Error("FinanceOpeningBalances has incompatible schema");
   }
-  var actual = sheet.getRange(1, 1, 1, FINANCE_OPENING_BALANCE_POLICY.HEADERS.length)
+  var width = sheet.getLastColumn();
+  var actual = sheet.getRange(1, 1, 1, width)
     .getValues()[0].map(function(value) { return String(value); });
-  if (JSON.stringify(actual) !== JSON.stringify(FINANCE_OPENING_BALANCE_POLICY.HEADERS)) {
+  var supported = [FINANCE_OPENING_BALANCE_POLICY.HEADERS];
+  if (typeof BALANCE_FOUNDATION_POLICY !== "undefined") {
+    supported.push(BALANCE_FOUNDATION_POLICY.OPENING_V2_HEADERS);
+  }
+  if (!supported.some(function(headers) { return JSON.stringify(actual) === JSON.stringify(headers); })) {
     throw new Error("FinanceOpeningBalances has incompatible schema");
   }
+  return actual;
 }
 
 function initializeFinanceOpeningBalancesSchemaWithRuntime(ss, flush) {
@@ -46,9 +52,9 @@ function initializeFinanceOpeningBalancesSchemaWithRuntime(ss, flush) {
   var sheet = ss.getSheetByName(FINANCE_OPENING_BALANCE_POLICY.SHEET);
   var created = false;
   if (sheet) {
-    requireExactFinanceOpeningBalancesHeaders(sheet);
+    var existingHeaders = requireExactFinanceOpeningBalancesHeaders(sheet);
     return { status: "PASS", sheet: FINANCE_OPENING_BALANCE_POLICY.SHEET,
-      headers: FINANCE_OPENING_BALANCE_POLICY.HEADERS.slice(), dataRows: Math.max(0, sheet.getLastRow() - 1),
+      headers: existingHeaders, dataRows: Math.max(0, sheet.getLastRow() - 1),
       created: false, writeCount: 0 };
   }
 
@@ -163,12 +169,15 @@ function buildRetainedEarningsBalance(openingRows, profitAndLossPeriods, asOfDat
   (openingRows || []).forEach(function(row) {
     if (!isCanonicalActive(row.IsActive)) { excludedInactiveRows++; return; }
     var effective = capitalEquityDateKey(row.EffectiveDate);
+    var sideErrors = financeOpeningBalanceSideErrors(row);
     if (!effective || String(row.AccountCode || "").trim() !== "3200" ||
         String(row.Source || "").trim() !== CAPITAL_EQUITY_POLICY.SOURCE ||
-        !isFinite(Number(row.Amount)) || Math.round(Number(row.Amount)) !== Number(row.Amount)) {
+        sideErrors.length ||
+        !isFinite(financeOpeningBalanceAmount(row)) ||
+        Math.round(financeOpeningBalanceAmount(row)) !== financeOpeningBalanceAmount(row)) {
       throw new Error("Invalid FinanceOpeningBalances retained earnings row");
     }
-    if (effective <= asOf) openingAmount += Number(row.Amount);
+    if (effective <= asOf) openingAmount += financeOpeningBalanceAmount(row);
   });
   (profitAndLossPeriods || []).forEach(function(period) {
     var start = capitalEquityDateKey(period.startDate), end = capitalEquityDateKey(period.endDate);
@@ -252,8 +261,16 @@ function buildCapitalEquityReadModel(rows, openingRows, accounts, asOfDate, post
 
   var activeOpenings = (openingRows || []).filter(function(row) { return isCanonicalActive(row.IsActive); });
   var invalidOpeningBalances = [];
+  var openingV2Rows = activeOpenings.filter(function(row) {
+    return Object.prototype.hasOwnProperty.call(row, "Debit") || Object.prototype.hasOwnProperty.call(row, "Credit");
+  });
+  if (openingV2Rows.length) {
+    validateFinanceOpeningBalanceCandidates(openingV2Rows, accounts).errors.forEach(function(item) {
+      invalidOpeningBalances.push({ id: item.id, errors: item.errors.slice() });
+    });
+  }
   activeOpenings.forEach(function(row) {
-    var errors = [], amount = Number(row.Amount);
+    var errors = [], amount = financeOpeningBalanceAmount(row);
     var effectiveDate = capitalEquityDateKey(row.EffectiveDate);
     if (!effectiveDate) errors.push("INVALID_DATE");
     else if (effectiveDate !== FINANCE_OPENING_BALANCE_POLICY.EFFECTIVE_DATE) errors.push("EFFECTIVE_DATE_MISMATCH");
@@ -296,7 +313,7 @@ function buildCapitalEquityReadModel(rows, openingRows, accounts, asOfDate, post
   }
 
   var movements = buildCapitalEquitySummary(activeRows, { startDate: "1000-01-01", endDate: asOf });
-  var retainedOpening = retainedEstablished ? Number(retainedOpenings[0].Amount) : null;
+  var retainedOpening = retainedEstablished ? financeOpeningBalanceAmount(retainedOpenings[0]) : null;
   var retainedPostCutoffProfit = retainedEstablished ? Number(postCutoffProfit || 0) : null;
   if (retainedEstablished && (!isFinite(retainedPostCutoffProfit) ||
       asOf === FINANCE_OPENING_BALANCE_POLICY.EFFECTIVE_DATE && retainedPostCutoffProfit !== 0)) {
@@ -343,7 +360,8 @@ function buildCapitalEquityMigrationDryRun(existingRows, accounts) {
   var missingAccounts = ["3000", "3100", "3200"].filter(function(code) { return !accountMap[code]; });
   var totals = buildCapitalEquitySummary(candidates, { startDate: "2021-01-01", endDate: "2024-12-31" });
   var openingValid = opening.ID === "FOB-3200-20260731" && capitalEquityDateKey(opening.EffectiveDate) &&
-    opening.AccountCode === "3200" && opening.Amount === 7407000 && opening.Source === CAPITAL_EQUITY_POLICY.SOURCE &&
+    opening.AccountCode === "3200" && financeOpeningBalanceAmount(opening) === 7407000 &&
+    opening.Source === CAPITAL_EQUITY_POLICY.SOURCE &&
     isCanonicalActive(opening.IsActive);
   var reconciliationPass = totals.ownerContributions === 21270000 && totals.returnOfCapital === 21270000 &&
     totals.ownerDraws === 0 && totals.closingContributedCapital === 0;
@@ -442,7 +460,8 @@ function validateCapitalEquityMigrationAcceptance(capitalRows, openingRows, acco
   var exactCandidates = JSON.stringify(physicalCandidates) === JSON.stringify(expectedCandidates);
   var openingValid = openingRows.length === 1 && String(opening.ID || "").trim() === "FOB-3200-20260731" &&
     capitalEquityDateKey(opening.EffectiveDate) === "2026-07-31" &&
-    String(opening.AccountCode || "").trim() === "3200" && Number(opening.Amount) === 7407000 &&
+    String(opening.AccountCode || "").trim() === "3200" && financeOpeningBalanceSideErrors(opening).length === 0 &&
+    financeOpeningBalanceAmount(opening) === 7407000 &&
     String(opening.Source || "").trim() === CAPITAL_EQUITY_POLICY.SOURCE && isCanonicalActive(opening.IsActive);
   var exact = exactCandidates && capitalRows.length === 10 && contributions.length === 2 && returns.length === 8 &&
     draws.length === 0 && hendy.length === 0 && invalidRows.length === 0 &&

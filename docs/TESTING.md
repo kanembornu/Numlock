@@ -1,5 +1,38 @@
 # NUMLOCK Testing
 
+## Finance Phase 9F.6 migration failure reproduction
+
+`testBalanceFoundationContracts()` uses exact 8-column/11-column physical-grid fixtures whose fresh reads clone
+Apps Script `Date` values and whose ranges refuse to exceed `getMaxColumns()`. The migration must explicitly expand
+Accounts to 9 columns and FinanceOpeningBalances to 13 columns before writing. Physical acceptance compares audit
+dates by timestamp rather than object identity. Forced failures after Accounts expansion, after Accounts write,
+during opening-schema expansion, after opening write, and during acceptance must restore both logical values and
+physical dimensions while preserving the original error and reporting any rollback error separately. This is
+deterministic local evidence only; a disposable real Apps Script runtime test remains a separate evidence class.
+
+## Finance Phase 9E schema migration readiness
+
+The existing Capital Equity runner entry also exercises the guarded Phase 9E schema executor. The deterministic
+contract accepts only the exact eight-column production Accounts schema, preserves its `StatementGroup` and audit
+columns while appending only `NormalBalance`, converts the single Account 3200 opening row from legacy `Amount` to
+V2 `Debit`/`Credit`, preserves identity, description, and audit values, and proves the retained-earnings result remains
+Rp7,407,000. It covers Accounts and opening-schema write
+failures, post-write physical-acceptance failure, exact rollback, exact V2 `ALREADY_MIGRATED` with zero writes, and
+mixed-state refusal. Production execution of `runBalanceFoundationSchemaMigration()` requires separate explicit
+authorization; local tests must not invoke that runtime wrapper.
+
+## Finance Phase 9C balance foundation contracts
+
+Finance Phase 9C keeps the ordered suite at 56 entries. The focused
+`testBalanceFoundationContracts()` is invoked by the existing Capital Equity runner entry and validates the Accounts
+taxonomy overlay, compatible FinanceOpeningBalances V2 candidates, lossless Account 3200 conversion, read-only
+BalanceLedger journal candidates, and read-only InventoryLedger moving-weighted-average candidates. It creates no
+sheet, writes no row, does not post journals, and preserves `tabsal.HPP` as the production COGS authority.
+
+Run `testBalanceFoundationContracts()`, `testCapitalEquityMigrationContract()`,
+`testFinanceCoreBackendContract()`, `testFinanceProfitAndLossUiContract()`, and `testDepreciationEngineContract()`
+first, then `runAllBackendTests()`; require 56/56.
+
 ## Finance Phase 8D capital and equity migration dry-run gate
 
 Finance Phase 8D raises the ordered suite to 56 entries. The focused CapitalEquity contract validates canonical owners and movement types, account mapping, active/date/source validation, period summaries, deterministic migration identities, exact 10-row capital migration reconciliation, the dedicated retained-earnings opening authority, and the read-only zero-write diagnostic. Existing Finance, depreciation, Dashboard, Transactions, frontend, quality, and intelligence contracts remain unchanged.

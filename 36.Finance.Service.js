@@ -9,10 +9,31 @@ var FINANCE_ACCOUNTING_POLICY = Object.freeze({
   cashFlowAvailable: false
 });
 
+var NUMLOCK_PRODUCTION_STORAGE_POLICY = Object.freeze({
+  SPREADSHEET_ID: "1ubfWtRVdrToBYZIxewgT9H-scIeszZHDUHDrLd64e9M"
+});
+
+function resolveNumlockProductionSpreadsheetWithRuntime(runtime) {
+  var spreadsheet;
+  try { spreadsheet = runtime.openById(NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID); }
+  catch (error) { return null; }
+  if (!spreadsheet || typeof spreadsheet.getId !== "function" ||
+      String(spreadsheet.getId()) !== NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID) return null;
+  return spreadsheet;
+}
+
+function requireNumlockProductionSpreadsheet() {
+  var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime({
+    openById: function(id) { return SpreadsheetApp.openById(id); }
+  });
+  if (!spreadsheet) throw new Error("NUMLOCK canonical production storage is unavailable");
+  return spreadsheet;
+}
+
 var FINANCE_DEPRECIATION_EXPECTED_ROWS = 2679;
 
 function getFinanceData(filter, customStart, customEnd) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = requireNumlockProductionSpreadsheet();
   var canonicalData = getCanonicalTransactionData(ss);
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
@@ -21,8 +42,7 @@ function getFinanceData(filter, customStart, customEnd) {
   var period = resolveDashboardDateRange(filter, customStart, customEnd);
   var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
   var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
-  var openingRows = readCanonicalTable(ss, FINANCE_OPENING_BALANCE_POLICY.SHEET,
-    FINANCE_OPENING_BALANCE_POLICY.HEADERS);
+  var openingRows = readFinanceOpeningBalancesCompat(ss);
   var postCutoffProfit = 0;
   if (period.endDate >= FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START) {
     postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
