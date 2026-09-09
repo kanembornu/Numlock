@@ -1,4 +1,4 @@
-# NUMLOCK Codex Operating Contract
+# NUMLOCK OpenCode Operating Contract
 
 ## Project
 
@@ -98,8 +98,8 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 | numlock-explore | Read-only exploration, audit, trace | No |
 | numlock-light | L1/R1 trivial local | Yes (bounded) |
 | numlock-medium | L2/R1-R2 bounded multi-file | Yes (bounded) |
-| numlock-heavy | L3+ and L4/R1-R3 | No (context only) |
-| numlock-critical | ANY/R4 | No (context + human gate) |
+| numlock-heavy | L3-L4/R1-R3 | Yes (local implementation + validation) |
+| numlock-critical | ANY/R4 | Local preparation; risky action only within explicit human authorization |
 | numlock-commit | Local Git staging/commit only | No (explicit-path staging + commit) |
 
 ### Routing
@@ -107,7 +107,7 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 - Explicit read-only → numlock-explore
 - L1/R1 → numlock-light
 - L2/R1-R2 → numlock-medium
-- L3/R1-R2 → numlock-heavy
+- L3/R1-R3 → numlock-heavy
 - L4/R1-R3 → numlock-heavy
 - ANY/R4 → numlock-critical
 - Explicitly authorized local commit → numlock-commit
@@ -118,6 +118,20 @@ R4 overrides complexity. Heavy floor applies when the task may CHANGE (not merel
 
 Specialists must return `ESCALATION_REQUIRED` with reason, target class, modification status, and validation performed when task exceeds assigned scope.
 
-### Phase 1 Fail-Closed
+### Execution architecture
 
-HEAVY and CRITICAL return `PREMIUM_BACKEND_REQUIRED` (and `HUMAN_GATE_REQUIRED` for CRITICAL). No implementation in Phase 1.
+OpenCode is the sole execution and agent coordination application. All model requests, including helper agents, use the project 9router provider. Codex, ChatGPT, and OpenAI agents are not required backends, reviewers, or escalation destinations. An OpenAI-compatible HTTP client is a protocol adapter, not an OpenAI agent.
+
+The existing alias `9router/numlock-explore-free` currently routes to `oc/mimo-v2.5-free`, then `oc/big-pickle` (verified 2026-09-10). Its name is retained for compatibility; class names describe scope/risk, not model quality. Do not claim premium capability or switch providers silently. Recheck the 9router combo before changing backend policy; unavailable routes return `BACKEND_UNAVAILABLE`.
+
+HEAVY performs authorized local implementation in small validated steps. CRITICAL prepares the exact files, target, operation count, expected write footprint, checks and reconciliation first. If the risky action is not already explicitly authorized, return `HUMAN_GATE_REQUIRED` for that concrete action. Existing specific authorization persists within its stated scope and count; do not ask again merely because the class is CRITICAL. Ambiguous or stale authorization is not permission.
+
+Never downgrade financial semantics to MEDIUM to evade a boundary. No deployment, production write, migration, credential mutation, destructive Git operation, or historical backfill is authorized by classification alone. Shell approval is an additional enforcement layer; generic shell/interpreter commands must not bypass these rules.
+
+CodeGraph remains a local code tool. Use the allowed `codegraph explore`/`codegraph status` commands when no MCP is configured. Do not initialize/reindex as part of routine exploration.
+
+### Upload manifest gate
+
+Before any separately authorized `clasp push --force`, capture actual `clasp status` from the exact clean deployment workspace. Verify the full upload manifest, required runtime/test inventory and exclusions before the human gate. File presence, an archive, and source diff alone are insufficient. An upload is not an immutable deployment or authenticated runtime proof.
+
+See `docs/AGENT-ARCHITECTURE.md` for the executable routing contract and evidence limits.

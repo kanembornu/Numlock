@@ -7,6 +7,8 @@ permission:
   bash:
     "*": deny
     "pwd": allow
+    "codegraph explore*": allow
+    "codegraph status*": allow
     "git status*": allow
     "git branch*": allow
     "git log*": allow
@@ -15,9 +17,10 @@ permission:
     "git ls-files*": allow
     "git add *": allow
     "git commit *": allow
-    "node -e*": allow
-    "npx*": allow
-    "npm run*": allow
+    "node *": ask
+    "node --check *": allow
+    "npx*": ask
+    "npm run*": ask
   read: allow
   glob: allow
   grep: allow

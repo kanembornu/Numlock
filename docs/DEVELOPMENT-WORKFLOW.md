@@ -18,6 +18,10 @@ Run `npm run build:tailwind` after any class change in `190.View.Index.html` and
 
 For releases, `docs/RELEASE.md` owns the complete preflight, upload, live-validation, deployment, browser-acceptance, Git-completion, and rollback sequence.
 
+## Agent execution
+
+Use OpenCode with the project `numlock` entrypoint and 9router provider. Read [Agent Architecture](AGENT-ARCHITECTURE.md) for routing and authorization boundaries. HEAVY/CRITICAL are scope and risk classes, not requests to switch applications.
+
 ## Safe loop
 
 1. Read `AGENTS.md` and `.ai/PROJECT_CONTEXT.md`.

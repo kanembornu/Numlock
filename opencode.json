@@ -1,33 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "numlock",
-  "agent": {
-    "numlock": {
-      "mode": "primary",
-      "model": "9router/numlock-explore-free",
-      "description": "NUMLOCK primary classifier and delegation agent. Read-only. Routes to specialist agents by complexity and risk.",
-      "permission": {
-        "edit": "deny",
-        "bash": "deny",
-        "read": "allow",
-        "glob": "allow",
-        "grep": "allow",
-        "list": "allow",
-        "lsp": "allow",
-        "webfetch": "deny",
-        "websearch": "deny",
-        "task": {
-          "*": "deny",
-          "numlock-explore": "allow",
-          "numlock-light": "allow",
-          "numlock-medium": "allow",
-          "numlock-heavy": "allow",
-          "numlock-critical": "allow",
-          "numlock-commit": "allow"
-        }
-      }
-    }
-  },
   "provider": {
     "9router": {
       "npm": "@ai-sdk/openai-compatible",
@@ -41,5 +14,13 @@
         }
       }
     }
-  }
+  },
+  "model": "9router/numlock-explore-free",
+  "small_model": "9router/numlock-explore-free",
+  "enabled_providers": [
+    "9router"
+  ],
+  "instructions": [
+    "AGENTS.md"
+  ]
 }

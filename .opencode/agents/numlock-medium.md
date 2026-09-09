@@ -7,18 +7,21 @@ permission:
   bash:
     "*": deny
     "pwd": allow
+    "codegraph explore*": allow
+    "codegraph status*": allow
     "git status*": allow
     "git branch*": allow
     "git log*": allow
     "git diff*": allow
     "git rev-parse*": allow
     "git ls-files*": allow
-    "node -e*": allow
-    "npx*": allow
-    "npm run*": allow
-    "npx jest*": allow
-    "npx vitest*": allow
-    "npx tsc*": allow
+    "node *": ask
+    "node --check *": allow
+    "npx*": ask
+    "npm run*": ask
+    "npx jest*": ask
+    "npx vitest*": ask
+    "npx tsc*": ask
   read: allow
   glob: allow
   grep: allow

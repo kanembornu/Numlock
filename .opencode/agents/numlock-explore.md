@@ -7,6 +7,8 @@ permission:
   bash:
     "*": deny
     "pwd": allow
+    "codegraph explore*": allow
+    "codegraph status*": allow
     "git status*": allow
     "git branch*": allow
     "git log*": allow

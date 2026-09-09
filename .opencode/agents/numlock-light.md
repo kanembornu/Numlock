@@ -7,14 +7,17 @@ permission:
   bash:
     "*": deny
     "pwd": allow
+    "codegraph explore*": allow
+    "codegraph status*": allow
     "git status*": allow
     "git branch*": allow
     "git log*": allow
     "git diff*": allow
     "git rev-parse*": allow
     "git ls-files*": allow
-    "node -e*": allow
-    "npx*": allow
+    "node *": ask
+    "node --check *": allow
+    "npx*": ask
   read: allow
   glob: allow
   grep: allow
