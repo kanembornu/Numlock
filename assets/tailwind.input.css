@@ -311,6 +311,16 @@
     #transactionEntryDialog[data-mode="correction"] .transaction-comparison-column p { margin-top: 2px; }
     #transactionEntryDialog[data-mode="correction"] .transaction-lifecycle-notice { margin-top: 9px; padding: 9px 10px; line-height: 17px; }
   }
+  #transactionTypeFieldset .transaction-entry-segments { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #receiptEntryFields { grid-template-columns: minmax(0, 1fr); }
+  #receiptEntryControls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  #receiptEntryFields .transaction-entry-error:empty { display: none; }
+  #receiptEntryFields button[hidden] { display: none; }
+  #receiptEntryControls .transaction-entry-control:last-child { grid-column: 1 / -1; }
+  #receiptEntryControls select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  @media (max-width: 767px) { #receiptEntryControls { grid-template-columns: minmax(0, 1fr); } }
+  #receiptEntryFields input[type="checkbox"] { width: 24px; min-height: 24px; }
+  .transaction-entry-control select,
   .transaction-entry-control input { width: 100%; min-height: 48px; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-primary); padding: 10px 12px; font-size: 16px; }
   .transaction-entry-control textarea { width: 100%; min-height: 96px; resize: vertical; border: 1px solid var(--card-border); border-radius: var(--radius-control); background: var(--surface-1); color: var(--text-primary); padding: 10px 12px; font-size: 16px; }
   .transaction-entry-combobox { position: relative; }

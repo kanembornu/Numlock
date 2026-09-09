@@ -3338,6 +3338,10 @@
 
               <section id="expenseEntryFields" class="transaction-entry-fields" aria-labelledby="expenseEntryHeading" hidden>
                 <h3 id="expenseEntryHeading"><span><i class="fas fa-wallet" aria-hidden="true"></i> Expense details</span><span id="expenseEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>
+                <div id="expensePolicyFields" class="transaction-entry-control">
+                  <label for="expenseCostType">Cost Type</label><select id="expenseCostType" onchange="setExpenseCostType(this.value)"><option value="FIXED_COST">Fixed Cost</option><option value="VARIABLE_COST">Variable Cost</option></select>
+                  <label for="expenseDate">Expense date</label><input id="expenseDate" type="date" aria-describedby="expenseDateError"><p id="expenseDateError" class="transaction-entry-error" role="alert"></p>
+                </div>
                 <div class="transaction-entry-control">
                   <label for="expenseEntrySearch">Expense item</label>
                   <div class="transaction-entry-combobox">
@@ -3352,6 +3356,23 @@
                   <div class="transaction-entry-money"><span aria-hidden="true">Rp</span><input id="expenseEntryAmount" type="text" inputmode="numeric" autocomplete="off" aria-describedby="expenseEntryAmountError" placeholder="0" oninput="updateExpenseEntryAmount()"></div>
                   <p id="expenseEntryAmountError" class="transaction-entry-error" role="alert"></p>
                 </div>
+              </section>
+
+              <section id="receiptEntryFields" class="transaction-entry-fields" aria-labelledby="receiptEntryHeading" hidden>
+                <h3 id="receiptEntryHeading">Purchase details</h3>
+                <p>Purchase recording is not active yet.</p>
+                <fieldset id="receiptEntryControls" class="transaction-entry-fieldset">
+                <div class="transaction-entry-control"><label for="receiptDate">Receipt date (if different)</label><input id="receiptDate" type="date" aria-describedby="receiptDateError"><p id="receiptDateError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptQty">Received quantity (leave blank if unknown)</label><input id="receiptQty" type="text" inputmode="decimal" onchange="validateReceiptEntry(true)" aria-describedby="receiptQtyError"><p id="receiptQtyError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptUom">Package/UOM</label><input id="receiptUom" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptUomError" placeholder="Actual unit or package; leave blank if unknown"><p id="receiptUomError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptCost">Total acquisition cost (IDR)</label><input id="receiptCost" type="text" inputmode="numeric" onchange="validateReceiptEntry(true)" aria-describedby="receiptCostError"><p id="receiptCostError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptSupplier">Supplier/source</label><input id="receiptSupplier" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptSupplierError"><p id="receiptSupplierError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptReference">Purchase evidence/reference</label><input id="receiptReference" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptReferenceError"><p id="receiptReferenceError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptUnavailable">Document unavailable</label><input id="receiptUnavailable" type="checkbox" onchange="updateReceiptEntryEvidence()" aria-describedby="receiptUnavailableError"><p id="receiptUnavailableError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control"><label for="receiptAttested">I confirm this purchase information reflects what was actually received.</label><input id="receiptAttested" type="checkbox" onchange="validateReceiptEntry(true)" aria-describedby="receiptAttestedError"><p id="receiptAttestedError" class="transaction-entry-error" role="alert"></p></div>
+                </fieldset>
+                <p id="receiptChoicesState" role="status" aria-live="polite"></p>
+                <button id="receiptRecovery" type="button" class="transaction-entry-secondary" onclick="recoverReceiptEntry()" hidden>Check purchase status</button>
               </section>
 
               <div id="transactionCorrectionWorkspace" class="transaction-correction-workspace">
@@ -3895,6 +3916,12 @@
         "transactionTypeFieldset", "transactionCorrectionWorkspace", "transactionCorrectionReasonRegion", "transactionCorrectionReason",
         "transactionCorrectionReasonError", "transactionCorrectionReview", "transactionCorrectionComparison"
       ];
+      var receiptIds = { fields: "receiptEntryFields", controls: "receiptEntryControls",
+        costType: "expenseCostType", expenseDate: "expenseDate", expenseDateError: "expenseDateError", policyFields: "expensePolicyFields", status: "receiptChoicesState", recovery: "receiptRecovery" };
+      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested"].forEach(function(key) {
+        receiptIds[key] = "receipt" + key; receiptIds[key + "Error"] = "receipt" + key + "Error";
+      });
+      Object.keys(receiptIds).forEach(function(key) { requiredIds.push(receiptIds[key]); });
       var required = {};
 
       requiredIds.forEach(function(id)
@@ -4003,6 +4030,8 @@
         marginHealth: required.marginHealthContainer
       };
 
+      elements.receiptEntry = {};
+      Object.keys(receiptIds).forEach(function(key) { elements.receiptEntry[key] = required[receiptIds[key]]; });
       elements.transactionEntry = {
         trigger: required.newTransactionButton, overlay: required.transactionEntryOverlay,
         dialog: required.transactionEntryDialog, closeButton: required.closeTransactionEntryButton,

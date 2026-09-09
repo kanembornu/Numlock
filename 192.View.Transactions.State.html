@@ -109,16 +109,16 @@
         if (lifecycleState === "voided" && row.isActive !== false) return false;
         if (activeTransactionsTab === "sales" && row.transactionType !== "Sales") return false;
         if (activeTransactionsTab === "expenses" && row.transactionType !== "Expense") return false;
-        if (row.transactionType !== "Sales" && row.transactionType !== "Expense") return false;
+        if (row.transactionType !== "Sales" && row.transactionType !== "Expense" && row.transactionType !== "InventoryReceipt" && row.transactionType !== "PurchaseEvent") return false;
         if (activeTransactionsTab === "recent" && activeTransactionDrilldown) {
           if (activeTransactionDrilldown.type === "sales" && row.transactionType !== "Sales") return false;
-          if (activeTransactionDrilldown.type === "purchase" && row.transactionType !== "Expense") return false;
+          if (activeTransactionDrilldown.type === "purchase" && row.transactionType !== "Expense" && row.transactionType !== "PurchaseEvent") return false;
           if (activeTransactionDrilldown.type === "month" && String(row.date || "").slice(0, 7) !== activeTransactionDrilldown.value) return false;
           if (activeTransactionDrilldown.type === "expenseCategory" &&
               (row.transactionType !== "Expense" || row.purchaseCategory !== activeTransactionDrilldown.value)) return false;
         }
         if (!query) return true;
-        return [row.id, row.product, row.purchaseCategory, row.date, formatTransactionDate(row.date)].some(function(value) {
+        return [row.id, row.product, row.purchaseCategory, row.item, row.date, formatTransactionDate(row.date)].some(function(value) {
           return String(value || "").toLowerCase().indexOf(query) !== -1;
         });
       });
@@ -268,6 +268,7 @@
     function prefetchVisibleTransactionDetails(rows)
     {
       var ids = rows.filter(function(row) {
+        if (row.transactionType === "InventoryReceipt" || row.transactionType === "PurchaseEvent") return false;
         var identity = transactionDetailIdentity(row.id);
         return identity && !transactionDetailCache[identity] && !transactionDetailPending[identity];
       }).map(function(row) {
@@ -412,7 +413,7 @@
 
         if (drilldown.type === "purchase")
         {
-          return transaction.transactionType === "Expense";
+          return transaction.transactionType === "Expense" || transaction.transactionType === "PurchaseEvent";
         }
 
         if (drilldown.type === "month")

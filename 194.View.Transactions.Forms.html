@@ -1,7 +1,8 @@
     function createInitialTransactionEntryState()
     {
       return {
-        transactionType: null, entryOptions: null, selectedProduct: null,
+        receiptKey: null, receiptPayload: null, receiptUnresolved: false, receiptChoices: [], receiptChoicesVersion: 0,
+        costType: "FIXED_COST", transactionType: null, entryOptions: null, selectedProduct: null,
         selectedExpense: null, selectedType: null, qty: 1, amount: null,
         pricing: null, pricingSource: "unknown", lastPriceReadyLatencyMs: null,
         loadingOptions: false, loadingPricing: false,
@@ -37,10 +38,10 @@
       var validSales = state.transactionType === "SALES" && state.selectedProduct &&
         state.selectedType && Number.isInteger(state.qty) && state.qty >= 1 && state.pricing;
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
-        Number.isInteger(state.amount) && state.amount > 0;
+        (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0);
       var correctionReasonValid = state.mode !== "correction" || state.correctionReason.trim().length >= 3;
-      entry.submit.disabled = state.submitting || state.submissionComplete || state.loadingOptions ||
-        !(validSales || validExpense) || !correctionReasonValid;
+      entry.submit.disabled = state.receiptUnresolved || state.submitting || state.submissionComplete || state.loadingOptions ||
+        !(validSales || validExpense || state.transactionType === "INVENTORY_RECEIPT" && !state.receiptUnresolved) || !correctionReasonValid;
       entry.submit.setAttribute("aria-busy", String(state.submitting));
       entry.submitLabel.innerText = state.submitting
         ? (state.mode === "correction" ? "Processing…" : "Saving…")
@@ -57,6 +58,7 @@
       var entry = elements.transactionEntry;
       var priorFocus = document.activeElement;
       resetTransactionEntryForAnother(false);
+      restoreReceiptEntryPending();
       transactionEntryLastFocus = priorFocus;
       document.body.appendChild(entry.overlay);
       entry.overlay.hidden = false;
@@ -141,14 +143,27 @@
 
     function setTransactionEntryType(type)
     {
-      if (type !== "SALES" && type !== "EXPENSE") return;
+      if (["SALES", "EXPENSE"].indexOf(type) === -1 || transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
       var entry = initializeStableDashboardElements().transactionEntry;
+      if (transactionEntryState.transactionType !== type) {
+        transactionEntryState.selectedExpense = null; transactionEntryState.amount = null;
+        transactionEntryState.selectedProduct = null; transactionEntryState.selectedType = null;
+        transactionEntryState.pricing = null; transactionEntryState.loadingPricing = false;
+        transactionEntryState.pricingRequestVersion++;
+        entry.expenseSearch.value = ""; entry.amount.value = ""; entry.productSearch.value = "";
+        entry.expenseMeta.innerText = ""; entry.productMeta.innerText = "";
+        entry.typeHot.setAttribute("aria-checked", "false"); entry.typeCold.setAttribute("aria-checked", "false");
+        clearReceiptEntry();
+        renderTransactionEntryPricing();
+      }
       transactionEntryState.transactionType = type;
       entry.dialog.setAttribute("data-entry-type", type.toLowerCase());
       entry.typeSales.setAttribute("aria-checked", String(type === "SALES"));
       entry.typeExpense.setAttribute("aria-checked", String(type === "EXPENSE"));
       entry.salesFields.hidden = type !== "SALES";
       entry.expenseFields.hidden = type !== "EXPENSE";
+      var receipt = receiptEntryElements();
+      updateExpensePurchaseFields();
       entry.generalError.innerText = "";
       entry.optionsState.innerText = transactionEntryState.optionsLoaded ? "Entry options ready." : entry.optionsState.innerText;
       updateTransactionEntryOptionsPresentation();
@@ -162,7 +177,9 @@
       var entry = initializeStableDashboardElements().transactionEntry;
       return type === "product"
         ? { input: entry.productSearch, listbox: entry.productListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.sales : [] }
-        : { input: entry.expenseSearch, listbox: entry.expenseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.expenses : [] };
+        : { input: entry.expenseSearch, listbox: entry.expenseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.expenses.filter(function(option) {
+          return transactionEntryState.mode === "correction" || option.costType === transactionEntryState.costType;
+        }) : [] };
     }
 
     function getFilteredEntryOptions(type)
@@ -216,10 +233,10 @@
 
     function filterTransactionEntryOptions(type)
     {
-      if (!transactionEntryState.optionsLoaded) return;
+      if (!transactionEntryState.optionsLoaded || transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
       transactionEntryState.activeOptionIndex[type] = -1;
       if (type === "product") transactionEntryState.selectedProduct = null;
-      else transactionEntryState.selectedExpense = null;
+      else { transactionEntryState.selectedExpense = null; clearReceiptEntry(); updateExpensePurchaseFields(); }
       renderEntryOptionList(type);
       if (type === "product") requestTransactionEntryPricing();
       invalidateCorrectionReview();
@@ -252,6 +269,7 @@
 
     function selectTransactionEntryOption(type, option)
     {
+      if (transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
       var entry = initializeStableDashboardElements().transactionEntry;
       if (type === "product") {
         transactionEntryState.selectedProduct = option;
@@ -260,7 +278,10 @@
         entry.productError.innerText = "";
         requestTransactionEntryPricing();
       } else {
+        if (transactionEntryState.mode !== "correction" && option.costType !== transactionEntryState.costType) return;
+        clearReceiptEntry();
         transactionEntryState.selectedExpense = option;
+        updateExpensePurchaseFields();
         entry.expenseSearch.value = option.item;
         entry.expenseMeta.innerText = [option.category, option.group].filter(Boolean).join(" · ");
         entry.expenseError.innerText = "";
@@ -448,6 +469,8 @@
 
     function resetTransactionEntryForAnother(shouldFocusType)
     {
+      if (transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
+      clearReceiptEntry();
       var cachedOptions = transactionEntryState.entryOptions;
       var optionsLoaded = transactionEntryState.optionsLoaded;
       var optionsRevision = transactionEntryState.optionsRevision;
@@ -459,6 +482,8 @@
       entry.dialog.setAttribute("data-mode", "create");
       entry.dialog.removeAttribute("data-entry-type");
       entry.form.reset();
+      receiptEntryElements().expenseDate.value = transactionEntryToday();
+      updateExpensePurchaseFields();
       entry.form.hidden = false;
       entry.submitRegion.hidden = false;
       entry.success.hidden = true;
@@ -488,4 +513,106 @@
       renderTransactionEntryPricing();
       updateTransactionEntrySubmitState();
       if (shouldFocusType !== false) entry.typeSales.focus();
+    }
+
+    function receiptEntryElements()
+    {
+      return initializeStableDashboardElements().receiptEntry;
+    }
+
+    function transactionEntryToday()
+    {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+    }
+
+    function isPurchaseExpenseEntry()
+    {
+      var state = transactionEntryState;
+      return state.mode !== "correction" && state.transactionType === "EXPENSE" &&
+        Boolean(state.selectedExpense && state.selectedExpense.purchaseRequired);
+    }
+
+    function setExpenseCostType(value)
+    {
+      var state = transactionEntryState, entry = initializeStableDashboardElements().transactionEntry;
+      if (state.submitting || state.receiptUnresolved || ["FIXED_COST", "VARIABLE_COST"].indexOf(value) === -1) return;
+      state.costType = value; state.selectedExpense = null; state.amount = null;
+      entry.expenseSearch.value = ""; entry.expenseMeta.innerText = ""; entry.amount.value = "";
+      clearReceiptEntry(); updateExpensePurchaseFields(); closeEntryCombobox("expense"); updateTransactionEntrySubmitState();
+    }
+
+    function updateExpensePurchaseFields()
+    {
+      var state = transactionEntryState, e = receiptEntryElements(), entry = initializeStableDashboardElements().transactionEntry;
+      e.costType.value = state.costType;
+      e.policyFields.hidden = state.mode === "correction";
+      e.fields.hidden = !isPurchaseExpenseEntry() && !(state.receiptPayload && state.receiptUnresolved);
+      entry.amount.parentElement.parentElement.hidden = isPurchaseExpenseEntry() || Boolean(state.receiptPayload && state.receiptUnresolved);
+      var frozen = state.submitting || state.receiptUnresolved;
+      e.costType.disabled = frozen; e.expenseDate.disabled = frozen; entry.expenseSearch.disabled = frozen;
+      entry.typeSales.disabled = frozen || state.mode === "correction"; entry.typeExpense.disabled = frozen || state.mode === "correction";
+    }
+
+    function clearReceiptEntry()
+    {
+      var e = receiptEntryElements(), state = transactionEntryState;
+      state.receiptKey = null; state.receiptPayload = null;
+      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested"].forEach(function(key) {
+        e[key].value = ""; e[key].checked = false; e[key].setAttribute("aria-invalid", "false");
+        e[key + "Error"].innerText = "";
+      });
+      e.fields.hidden = true; e.controls.disabled = false; e.Reference.disabled = false;
+      e.recovery.hidden = true; e.status.innerText = ""; e.expenseDateError.innerText = "";
+    }
+
+    function updateReceiptEntryEvidence()
+    {
+      var e = receiptEntryElements();
+      if (e.Unavailable.checked) e.Reference.value = "";
+      e.Reference.disabled = e.Unavailable.checked;
+      validateReceiptEntry(true);
+    }
+
+    function validateReceiptEntry(showErrors)
+    {
+      var e = receiptEntryElements(), errors = {};
+      var date = e.Date.value || e.expenseDate.value, qty = e.Qty.value.trim(), uom = e.Uom.value.trim(), cost = e.Cost.value.trim();
+      function validDate(value) { return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value && value >= "2026-10-01"; }
+      if (!validDate(date)) errors.Date = "Enter a receipt date on or after 1 October 2026.";
+      if (!validDate(e.expenseDate.value)) errors.expenseDate = "Enter an expense date on or after 1 October 2026.";
+      if (qty && (!/^\d+(\.\d{1,6})?$/.test(qty) || Number(qty) <= 0 || !Number.isSafeInteger(Number(qty.replace(".", ""))))) errors.Qty = "Enter a positive quantity with up to six decimal places, or leave blank if unknown.";
+      if (Boolean(qty) !== Boolean(uom)) errors.Uom = "Provide both actual quantity and unit, or leave both blank if unknown.";
+      if (!/^\d+$/.test(cost) || !Number.isSafeInteger(Number(cost)) || Number(cost) <= 0) errors.Cost = "Enter a positive whole Rupiah acquisition cost.";
+      if (!e.Supplier.value.trim()) errors.Supplier = "Enter the supplier or purchase source.";
+      if (!e.Unavailable.checked && !e.Reference.value.trim()) errors.Reference = "Enter an evidence reference or declare the document unavailable.";
+      if (!e.Attested.checked) errors.Attested = "Confirm that these details reflect what was actually received.";
+      if (showErrors) ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "expenseDate"].forEach(function(key) {
+        e[key + "Error"].innerText = errors[key] || ""; e[key].setAttribute("aria-invalid", String(Boolean(errors[key])));
+      });
+      if (Object.keys(errors).length || !isPurchaseExpenseEntry()) return null;
+      return { ExpenseDate: e.expenseDate.value, ReceiptDate: date, PurchaseQty: qty, PurchaseUOM: uom,
+        AcquisitionValue: cost, SupplierSource: e.Supplier.value.trim(), ExternalRef: e.Unavailable.checked ? "" : e.Reference.value.trim(),
+        ExternalDocumentStatus: e.Unavailable.checked ? "EXTERNAL_DOCUMENT_UNAVAILABLE" : "AVAILABLE", Attested: true };
+    }
+
+    function restoreReceiptEntryPending()
+    {
+      if (transactionEntryState.receiptUnresolved || transactionEntryState.submitting) return;
+      var saved;
+      try { saved = JSON.parse(window.sessionStorage.getItem("numlock.receipt.pending") || "null"); }
+      catch (error) { return; }
+      if (!saved || !saved.payload || !saved.payload.input || ["EXPENSE", "INVENTORY_RECEIPT"].indexOf(saved.payload.transactionType) === -1) return;
+      var state = transactionEntryState, e = receiptEntryElements(), input = saved.payload.input;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      state.transactionType = saved.payload.transactionType; state.receiptPayload = saved.payload;
+      state.costType = "VARIABLE_COST";
+      state.selectedExpense = { expenseItemId: saved.payload.expenseItemId, item: saved.item, costType: "VARIABLE_COST", purchaseRequired: true };
+      state.receiptKey = saved.payload.requestKey; state.receiptUnresolved = true;
+      entry.expenseFields.hidden = false; entry.expenseSearch.value = saved.item || "Purchase awaiting verification";
+      entry.typeExpense.setAttribute("aria-checked", "true"); entry.dialog.setAttribute("data-entry-type", "expense");
+      e.expenseDate.value = input.ExpenseDate || input.ReceiptDate;
+      e.Date.value = input.ReceiptDate; e.Qty.value = input.PurchaseQty; e.Uom.value = input.PurchaseUOM; e.Cost.value = input.AcquisitionValue;
+      e.Supplier.value = input.SupplierSource; e.Reference.value = input.ExternalRef;
+      e.Unavailable.checked = input.ExternalDocumentStatus === "EXTERNAL_DOCUMENT_UNAVAILABLE"; e.Attested.checked = input.Attested;
+      handleReceiptEntryResponse({ status: "WRITE_UNCERTAIN" });
     }

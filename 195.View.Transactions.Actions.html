@@ -4,6 +4,7 @@
       var state = transactionEntryState;
       var entry = initializeStableDashboardElements().transactionEntry;
       if (state.submitting || entry.submit.disabled) return;
+      if (isPurchaseExpenseEntry() || state.transactionType === "INVENTORY_RECEIPT") { submitReceiptEntry(); return; }
       var payload = state.transactionType === "SALES"
         ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty }
         : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount };
@@ -16,6 +17,13 @@
           submitTransactionCorrection(payload);
         }
         return;
+      }
+      if (state.transactionType === "EXPENSE") {
+        var date = receiptEntryElements().expenseDate.value;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+          receiptEntryElements().expenseDateError.innerText = "Enter a valid expense date."; return;
+        }
+        payload.expenseDate = date;
       }
       state.submitting = true;
       entry.generalError.innerText = "";
@@ -191,6 +199,7 @@
         transactionLifecycleState.detail = localDetail;
         renderTransactionDetail(localDetail);
       }
+      if (localDetail && (localDetail.transactionType === "InventoryReceipt" || localDetail.transactionType === "PurchaseEvent")) return;
       loadCanonicalTransactionDetail(identity, function(detail) {
         if (requestToken !== transactionLifecycleRequestSequence) return;
         var enrichedDetail = mergeTransactionDetailSnapshot(localDetail, detail);
@@ -205,6 +214,7 @@
     function buildLocalTransactionDetail(row)
     {
       if (!row || !transactionDetailIdentity(row.id)) return null;
+      if (row.transactionType === "InventoryReceipt" || row.transactionType === "PurchaseEvent") return Object.assign({}, row);
       var sales = row.transactionType === "Sales";
       return {
         id: transactionDetailIdentity(row.id),
@@ -353,6 +363,8 @@
 
     function renderTransactionDetail(detail)
     {
+      if (detail.transactionType === "PurchaseEvent") { renderPurchaseEventDetail(detail); return; }
+      if (detail.transactionType === "InventoryReceipt") { renderReceiptTransactionDetail(detail); return; }
       var lifecycle = initializeStableDashboardElements().lifecycle;
       var sales = detail.transactionType === "Sales" || Boolean(detail.productId);
       var identity = [["Transaction ID", detail.id], ["Date / Time", formatLifecycleDate(detail.date)], ["Type", sales ? "Sales" : "Expense"], ["Status", detail.status]];
@@ -446,6 +458,8 @@
 
     function openTransactionCorrection(detail)
     {
+      if (transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
+      clearReceiptEntry();
       if (!detail.canCorrect) { showLifecycleConcurrencyError({ code: detail.status === "VOIDED" ? "TRANSACTION_ALREADY_VOIDED" : "TRANSACTION_READ_ONLY" }, initializeStableDashboardElements().lifecycle.state); return; }
       closeTransactionLifecycleDialog();
       var cachedOptions = transactionEntryState.entryOptions;
@@ -459,6 +473,7 @@
       transactionEntryState.originalDetail = detail;
       transactionEntryState.transactionType = detail.productId ? "SALES" : "EXPENSE";
       var entry = initializeStableDashboardElements().transactionEntry;
+      updateExpensePurchaseFields();
       entry.dialog.setAttribute("data-mode", "correction");
       entry.dialog.setAttribute("data-entry-type", detail.productId ? "sales" : "expense");
       entry.form.reset(); entry.form.hidden = false; entry.success.hidden = true; entry.submitRegion.hidden = false;
@@ -490,4 +505,120 @@
       if (!optionsLoaded && !transactionEntryState.loadingOptions) loadTransactionEntryOptions();
       updateTransactionEntrySubmitState();
       completeTransactionActionDiagnostic("correct", detail.id);
+    }
+
+    function submitReceiptEntry()
+    {
+      var state = transactionEntryState;
+      if (state.submitting || state.submissionComplete || !isPurchaseExpenseEntry() && !state.receiptPayload) return;
+      if (!state.receiptPayload) {
+        var input = validateReceiptEntry(true);
+        if (!input) return;
+        if (!state.receiptKey) state.receiptKey = "receipt-" + Array.from(crypto.getRandomValues(new Uint8Array(16)), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
+        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input };
+      }
+      try {
+        window.sessionStorage.setItem("numlock.receipt.pending", JSON.stringify({ payload: state.receiptPayload,
+          item: state.selectedExpense ? state.selectedExpense.item : "Purchase awaiting verification" }));
+      } catch (error) {
+        if (!state.receiptUnresolved) state.receiptPayload = null;
+        initializeStableDashboardElements().transactionEntry.generalError.innerText = "This browser could not retain the purchase for recovery. Enable session storage before saving.";
+        return;
+      }
+      state.submitting = true;
+      receiptEntryElements().controls.disabled = true;
+      receiptEntryElements().recovery.disabled = true;
+      updateExpensePurchaseFields();
+      updateTransactionEntrySubmitState();
+      google.script.run.withSuccessHandler(function(response) {
+        if (state !== transactionEntryState) return;
+        state.submitting = false;
+        handleReceiptEntryResponse(response);
+      }).withFailureHandler(function() {
+        if (state !== transactionEntryState) return;
+        state.submitting = false;
+        handleReceiptEntryResponse({ status: "WRITE_UNCERTAIN" });
+      }).submitCanonicalTransaction(state.receiptPayload);
+    }
+
+    function recoverReceiptEntry()
+    {
+      if (transactionEntryState.receiptUnresolved && transactionEntryState.receiptPayload) submitReceiptEntry();
+    }
+
+    function handleReceiptEntryResponse(response)
+    {
+      var state = transactionEntryState, e = receiptEntryElements();
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var status = response && response.status, reason = response && response.reason;
+      var priorUnresolved = state.receiptUnresolved;
+      e.recovery.disabled = false;
+      if (["OPERATIONAL_POSTED", "PURCHASE_CAPTURED"].indexOf(status) !== -1 && response.success === true && response.data) {
+        window.sessionStorage.removeItem("numlock.receipt.pending");
+        state.receiptUnresolved = false; state.submissionComplete = true;
+        state.successResult = response.data;
+        var input = state.receiptPayload.input;
+        entry.form.hidden = true; entry.submitRegion.hidden = true;
+        entry.success.querySelector("h3").innerText = "Purchase recorded";
+        entry.successDetails.innerHTML = detailRowsHtml([["Status", response.data.operationalNote || "Purchase recorded."], ["Receipt date", input.ReceiptDate],
+          ["Quantity received", input.PurchaseQty + " " + input.PurchaseUOM], ["Acquisition cost", formatEntryCurrency(input.AcquisitionValue)]]);
+        entry.success.hidden = false; entry.success.focus();
+        invalidateTransactionsClientCaches(); requestTransactionsPage();
+        return;
+      }
+      var definitiveRefusal = !priorUnresolved && response && response.writeCount === 0 &&
+        ["NOT_STARTED", "REFUSED"].indexOf(status) !== -1;
+      state.receiptUnresolved = !definitiveRefusal;
+      e.controls.disabled = state.receiptUnresolved;
+      e.recovery.hidden = !state.receiptUnresolved;
+      if (reason === "PRODUCTION_OPERATIONAL_POSTING_DISABLED" || reason === "PRODUCTION_PURCHASE_DISABLED") {
+        entry.generalError.innerText = "Purchase recording is not active yet." +
+          (priorUnresolved ? " This purchase still needs verification. Keep it open for checking; do not enter it again." : "");
+      } else if (status === "CONFLICT") {
+        entry.generalError.innerText = "This purchase conflicts with an existing request. Keep this purchase for review; do not enter it again.";
+      } else if (status === "RECEIPT_CAPTURED" || status === "PURCHASE_PENDING") {
+        entry.generalError.innerText = "Purchase saved. Further verification is pending. Check this purchase to continue.";
+      } else if (definitiveRefusal) {
+        entry.generalError.innerText = "Purchase was not saved. Review the receipt details.";
+        var fields = { INVALID_PURCHASE_DATE: "expenseDate", INVALID_PURCHASE_QUANTITY: "Qty", INVALID_PURCHASE_COST: "Cost", INVALID_RECEIPT_DATE: "Date",
+          INVALID_RECEIPT_QUANTITY: "Qty", UNGOVERNED_PURCHASE_UOM: "Uom", PACKAGE_AUTHORITY_MISMATCH: "Uom",
+          LEMON_MEASURED_MASS_REQUIRED: "Uom", ZERO_COST_EXCEPTION_REQUIRED: "Cost" };
+        var field = fields[reason];
+        if (field) { e[field + "Error"].innerText = "Review this " + ({ expenseDate: "expense date", Date: "receipt date", Qty: "quantity", Uom: "unit or package", Cost: "acquisition cost" }[field]) + "."; e[field].setAttribute("aria-invalid", "true"); }
+      } else {
+        entry.generalError.innerText = "The purchase result is uncertain. Do not enter a new purchase. Check this purchase status using the same request.";
+      }
+      if (definitiveRefusal) { state.receiptPayload = null; window.sessionStorage.removeItem("numlock.receipt.pending"); }
+      updateExpensePurchaseFields();
+      updateTransactionEntrySubmitState();
+    }
+
+    function renderReceiptTransactionDetail(detail)
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.title.innerText = "Buy & receive Details";
+      lifecycle.description.innerText = "Operational receipt record. Purchase tracking requires verification.";
+      lifecycle.state.innerText = "Receipt captured";
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Receipt details</h3><dl>' + detailRowsHtml([
+        ["Receipt date", formatTransactionDate(detail.date)], ["Item", detail.item || detail.itemId],
+        ["Quantity received", detail.purchaseQuantity + " " + detail.purchaseUOM],
+        ["Acquisition cost", formatEntryCurrency(detail.acquisitionValue)], ["Supplier/source", detail.supplier],
+        ["Purchase evidence/reference", detail.reference]]) + '</dl></section>';
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+    }
+
+    function renderPurchaseEventDetail(detail)
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.title.innerText = "Operational Purchase";
+      lifecycle.description.innerText = "Purchase cost record. Excluded from current financial Expense totals.";
+      lifecycle.state.innerText = detail.operationalNote || "Cost recorded.";
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Purchase details</h3><dl>' + detailRowsHtml([
+        ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
+        ["Receipt date", formatTransactionDate(detail.receiptDate || detail.date)],
+        ["Reported quantity", detail.purchaseQuantity ? detail.purchaseQuantity + " " + detail.purchaseUOM : "Not recorded"],
+        ["Acquisition cost", formatEntryCurrency(detail.acquisitionValue)], ["Supplier/source", detail.supplier],
+        ["Purchase evidence/reference", detail.reference], ["Status", detail.operationalStatus || "Cost recorded"]]) + '</dl></section>';
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+      completeTransactionActionDiagnostic("view", detail.id);
     }
