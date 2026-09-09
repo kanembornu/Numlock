@@ -1,0 +1,13 @@
+{
+  "manifest": "MANIFEST-MOS-ING-018-V01.manifest",
+  "fileId": "1Gyv4scq6wm-VpEKcxcQg3iVxeHmmIiKV",
+  "version": "V01",
+  "sha256": "7f3bf64c2678c0436beeadd317f1dbe0f638b3ee9aeedab6fe1d146f4f4b9ed0",
+  "evidenceRef": "GDRIVE:1Gyv4scq6wm-VpEKcxcQg3iVxeHmmIiKV:V01:SHA256:7f3bf64c2678c0436beeadd317f1dbe0f638b3ee9aeedab6fe1d146f4f4b9ed0",
+  "readback": "EXACT_UTF8_BYTES_MATCH",
+  "governance": "SINGLE_OPERATOR",
+  "preparedBy": "Dekker",
+  "isActive": false,
+  "productionPopulation": false,
+  "immutability": "Version and SHA256 pinned; this is not a claim of WORM storage."
+}

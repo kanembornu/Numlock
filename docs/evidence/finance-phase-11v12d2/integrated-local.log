@@ -1,0 +1,8 @@
+PASS: unresolved cost-only, governed package downstream, retry, PurchaseEvent reader/cache/date/search/filter integration, child receipt suppression and financial exclusion
+PASS: testCanonicalTransactionAdapter
+PASS: testProductPricingResolution
+PASS: testCanonicalTransactionEntryService
+PASS: testCanonicalTransactionLifecycleService
+PASS: testCanonicalLifecycleTransportSerialization
+PASS: testCanonicalHistoricalAndOverlapControls
+{ status: 'PASS', assertions: 482 }

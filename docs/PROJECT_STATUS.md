@@ -8,6 +8,8 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## 2. Current status
 
+**Finance Phase 11U — COMPLETE/FROZEN with a documented preservation-evidence limitation (2026-09-06).** ING-018 Lemon authority is active at 1000 gr to 24 slice from 2026-10-01; 22 accepted active authorities and zero conflicts are verified. InventoryOpenings and InventoryLedger remain header-only. Historical comparisons for unrelated authorities and global no-unrelated-mutation proof remain unproven because no PRE-11U snapshot exists. The [conservative closure and POST-11U baseline](evidence/finance-phase-11u2e/README.md) govern future preservation checks. This finance closure does not update deployment or release evidence below.
+
 **Feature Complete v1.0**
 
 The documented bounded v1.0 feature baseline is implemented, stabilized, and accepted in production. Candidate `658f4ab1011633e86634f14ce838a514c5205df0` passed the repository preflight, Apps Script live 25/25 suite, immutable deployment, deployed-browser acceptance, and production-health verification.

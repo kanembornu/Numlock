@@ -1,0 +1,50 @@
+{
+  "phase": "11V.9",
+  "status": "PASS_LOCAL",
+  "browser": "Chrome with mocked RPC; real reload verified",
+  "viewports": [
+    [
+      1440,
+      1000
+    ],
+    [
+      390,
+      844
+    ]
+  ],
+  "finalUnifiedExecutionsAfterResume": 1,
+  "unifiedPassed": 60,
+  "unifiedTotal": 60,
+  "orchestrationChecks": 165,
+  "receiptFoundationScenarios": 188,
+  "operationalReceiptChecks": 169,
+  "inventoryItems": 22,
+  "ordinaryExpenseChoices": 7,
+  "historicalBlockedExpenseItems": 27,
+  "productionServicesInvoked": false,
+  "productionInventoryReceiptsBusinessWrites": 0,
+  "productionInventoryLedgerMovements": 0,
+  "BalanceLedgerWrites": 0,
+  "Account1100Mutation": false,
+  "CashMutation": false,
+  "operationalActivation": false,
+  "accountingPostingAllowed": false,
+  "recipeConsumptionAllowed": false,
+  "authenticatedRuntime": "NOT_RUN",
+  "deployedBrowser": "NOT_RUN",
+  "claspPush": false,
+  "deployment": false,
+  "gitStageCommitPush": false,
+  "sourceSha256": {
+    "189.View.Tailwind.html": "bfe57ff1fb5fed00fb407050fe7cf764a0a81dbc062a8efde5ccbad014bb193b",
+    "190.View.Index.html": "1b9b8dfd3ff5ef53066380dfcd1372b33aa2ad698ab3e2df31de70383e1d19c0",
+    "192.View.Transactions.State.html": "d85d47f0813143867295a052dbd8eb8082b16ecd6733c9ceb45e4a5c8b48dda1",
+    "193.View.Transactions.Render.html": "1c4f40367bb40d1d8e341d521c2eb0db8227890c36fa47c86e6eb4951b94bdc6",
+    "194.View.Transactions.Forms.html": "634857f628abb9132f8ab1b36d5f0a0aa3bb5638f1c821d0fd5d07394ea6aa55",
+    "195.View.Transactions.Actions.html": "bba02b25c18dd0edbf2fd1deac3609da1f30292adb265025ef490763edc2248d",
+    "91.Transactions.Query.js": "4e69f37584a66cd46bbdba7a925648140098875804045f97ffd8da6d6750be4e",
+    "96.Tests.Frontend.Cases.js": "a5056cca3dce0efd1be52481d639d7ea3899dc29032f458aa417bb9c3b204737",
+    "96.Tests.Transactions.Cases.js": "d8ee7e594a79b607ce692903d703522765350cfe2901cab4d612fa788c5f2634",
+    "assets/tailwind.input.css": "378023fb375fd1ede2cd14e5b77745b1a0797d094dadff947f3f525f3633e037"
+  }
+}

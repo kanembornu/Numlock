@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "checks": {
+    "manifestCount": true,
+    "uniqueConversions": true,
+    "exact24Columns": true,
+    "noLemon": true,
+    "hashes": true,
+    "canonicalUtf8Lf": true,
+    "fixedDates": true,
+    "inactiveApprovedCandidates": true,
+    "validatorPass": true,
+    "riskTiers": true,
+    "readiness": true,
+    "noConflicts": true,
+    "immutableEvidence": true,
+    "startDateUnknown": true
+  },
+  "manifests": 21,
+  "sha256": 21,
+  "risk": {
+    "LOW": 19,
+    "MODERATE": 2,
+    "HIGH": 0
+  },
+  "validator": {
+    "status": "PASS",
+    "errors": 0
+  },
+  "readiness": {
+    "NEEDS_EVIDENCE": 21,
+    "SINGLE_OPERATOR_VERIFIED": 0,
+    "VERIFIED": 0
+  }
+}

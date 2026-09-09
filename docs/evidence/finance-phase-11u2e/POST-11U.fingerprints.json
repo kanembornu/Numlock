@@ -1,0 +1,18 @@
+{
+  "label": "POST-11U",
+  "historicalPreservationProof": false,
+  "snapshotFileSHA256": "c43f02f6ea1abf57d8d928d09bbc13384168fd206f804236e7dc07fc37ffb997",
+  "canonicalization": "Python json sort_keys=True separators comma/colon ensure_ascii=False UTF-8; sparse cells keyed by 1-based row,column; sheet properties included",
+  "sheets": {
+    "InventoryUOMConversions": "ec4fe8d781c8aeb8a06a718231bf0cc6e2e2774a01b150cc46dd668895d19217",
+    "InventoryItems": "c4e5e8140da3c0d36590dba392a4c8318f3752bf7d872b1f0f3178596fd0b027",
+    "InventoryOpenings": "33ed4e4628f473aae66bbabd607ecbcf721dbf098620b96b13b4f9c1ae1307f9",
+    "InventoryLedger": "0aa42e9d190890e726b0a7d536462ffbef7f24c2b37b5a961da17aca4d104f84",
+    "BalanceLedger": "031b4d1d8da5430152ec222a3df1bd2d2c315f75eda21ea51f16ab27464e27bc",
+    "Accounts": "a5e284c82cbddf43258d8c66b9fb39614ef5ae12265dc8d701c4eff2b6d81aa1",
+    "FinanceOpeningBalances": "58dc60af03362659852155f40fbb86b33c697a7df795c9d6f3bc0554514fd781",
+    "COGSRecipes": "605cee780d5262d1c22bb20d92d7de229197437ee5ec9b1b4114016ddf9d4d79",
+    "tabsal": "01244ae74a057adccaee2a7b51d7fc1227c3805fe5b87aca3255cb68210be7bf"
+  },
+  "tabsal.HPP": "13447cfa15c3856c068d20b96482b1192d36025d58c1066fcd138c9db1a6deb3"
+}

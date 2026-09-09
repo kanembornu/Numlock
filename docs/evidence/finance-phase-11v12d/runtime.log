@@ -1,0 +1,13 @@
+Read-only authenticated runtime availability:
+- clasp show-authorized-user: logged in as an unknown user; account identity not established.
+- clasp deployments --json: initial sandbox DNS ENOTFOUND for oauth2.googleapis.com.
+- Same read-only availability check outside network sandbox: exit 0, deploymentCount=2. Identifiers withheld.
+
+Exactly one runtime attempt:
+Command: clasp run testExpensePurchasePolicyContracts
+Result: Exception: We're sorry, a server error occurred while reading from storage. Error code NOT_FOUND. []
+
+No function-startup evidence. No retry, source change, upload or deployment in response to transport failure.
+Local Chromium with the current source and synthetic runtime adapters was used as the available fallback.
+Authenticated editor/browser access was not available to execute the manual fallback.
+Manual runtime remains outstanding: testExpensePurchasePolicyContracts, against reviewed current source in an authorized Apps Script test context. The local 12A-12C source was not uploaded by this acceptance task; do not assume the server contains it.

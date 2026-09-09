@@ -1,0 +1,146 @@
+{"status":"PASS","checks":165}
+PASS: live-read snapshot coverage, 34/34 IDs; 7 approved ordinary and 27 blocked; immutable V2, no crosswalk
+PASS: actual public dispatcher, Sales HPP, ordinary Expense persistence, explicit types, exclusive inventory routing, disabled zero writes
+PASS: 34 real-ID dispatch cases, malformed/unknown/stale refusals, seven-choice selector, 22 direct item choices, old cache isolation, 27 historical blocked IDs resolved unchanged
+PASS: testCanonicalTransactionAdapter
+PASS: testProductPricingResolution
+PASS: testCanonicalTransactionEntryService
+PASS: testCanonicalTransactionLifecycleService
+PASS: testCanonicalLifecycleTransportSerialization
+PASS: testCanonicalHistoricalAndOverlapControls
+PASS: testInventoryFoundationContracts
+PASS: testInventorySchemaMigrationContract
+PASS: testInventoryConversionAuthorityContracts
+PASS: testInventoryOpeningStagingContracts
+PASS: testInventoryReceiptMigrationContracts
+PASS: testFinanceCoreBackendContract
+testInventoryReceiptFoundationContracts {"status":"PASS","scenarios":188}
+testInventoryReceiptOperationalContracts {"status":"PASS","checks":169}
+PASS: receipt persistence and posted correction guards; production, accounting and recipe activation remain disabled
+PASS: testTransactionEntryUiContract (static source only)
+PASS: testTransactionLifecycleUiContract (static source only)
+PASS: testTransactionsVisualContract (static source only)
+DashboardPerf {"acquisitionMs":0,"salesReadMs":0,"expenseReadMs":0,"productReadMs":0,"expenseItemReadMs":0,"normalizeMs":0,"aggregateMs":0,"summaryMs":0,"revenueTrendMs":0,"topProductsMs":0,"expenseBreakdownMs":0,"performanceAnalyticsMs":0,"qualityMs":0,"recentTransactionsMs":0,"responseAssemblyMs":10,"comparisonMs":0,"lifecycleMs":0,"serializationMs":0,"cacheLookupMs":0,"cacheWriteMs":0,"cacheHit":false,"totalMs":10}
+PASS: getDashboardData
+PASS: testAggregate
+PASS: testCanonicalTransactionAdapter
+PASS: testProductPricingResolution
+PASS: testCanonicalTransactionEntryService | scenarios=78
+PASS: testCanonicalTransactionEntryService
+PASS: testCanonicalTransactionLifecycleService | scenarios=66
+PASS: testCanonicalTransactionLifecycleService
+PASS: testCanonicalLifecycleTransportSerialization | scenarios=11
+PASS: testCanonicalLifecycleTransportSerialization
+PASS: testCanonicalHistoricalAndOverlapControls
+PASS: testFinanceCoreBackendContract | scenarios=35
+PASS: testFinanceCoreBackendContract
+PASS: testFinanceProfitAndLossUiContract | scenarios=43
+PASS: testFinanceProfitAndLossUiContract
+PASS: testDepreciationEngineContract | scenarios=41
+PASS: testDepreciationEngineContract
+PASS: testInventoryFoundationContracts | scenarios=39
+PASS: testBalanceFoundationContracts | scenarios=91
+PASS: testCapitalEquityMigrationContract | scenarios=73
+PASS: testCapitalEquityMigrationContract
+PASS: testCashFoundationContracts | scenarios=121
+PASS: testCashFoundationContracts
+PASS: testInventorySchemaMigrationContract | scenarios=22
+PASS: testInventorySchemaMigrationContract
+PASS: testInventoryLemonProductionFlowContracts | scenarios=104
+PASS: testInventoryLemonOperationalStandardContracts | scenarios=42
+PASS: testInventoryOperatorAttestationContracts | scenarios=73
+PASS: testInventoryConversionAuthorityContracts | scenarios=54
+PASS: testInventoryConversionAuthorityContracts
+PASS: testInventoryOpeningStagingContracts | scenarios=56
+PASS: testInventoryOpeningStagingContracts
+PASS: testSummaryFixtures
+PASS: testRevenueTrendFixtures
+PASS: testExpenseBreakdownFixtures
+PASS: testTopProductsFixtures
+PASS: testProfitTrendFixtures
+PASS: testHotColdFixtures
+PerformanceProjectionError deterministic projection failure
+PASS: testDashboardPerformanceAnalytics | assertions=20
+PASS: testDashboardPerformanceAnalytics
+PASS: testPerformanceStabilizationContract | assertions=64 | baseline=4 | secondaryCharts=2
+PASS: testPerformanceStabilizationContract
+PASS: testSparseDatasetResilience | fixtures=7 | requiredProperties=38 | populatedOutputUnchanged=true
+PASS: testSparseDatasetResilience
+PASS: testDashboardDateFilter | scenarios=77 | currentYearRows=9 | customRows=3 | timezone=Asia/Jakarta
+PASS: testDashboardDateFilter
+PASS: testPeriodComparison | scenarios=27 | presets=6 | finite=true
+PASS: testPeriodComparison
+PASS: testBusinessPriorityContract | scenarios=20 | levels=Critical,High,Medium,Low
+PASS: testBusinessPriorityContract
+PASS: testKpiTargetContract | scenarios=20 | centralized=true | editable=false
+PASS: testKpiTargetContract
+PASS: testDashboardStateContract | scenarios=5 | states=loading,success,empty,error,retry
+PASS: testDashboardStateContract
+PASS: testAccessibilityContract | scenarios=22 | keyboard=true | reducedMotion=true
+PASS: testAccessibilityContract
+PASS: testExecutivePresentationContract | scenarios=7 | executiveSummaryFirst=true | accessibilityPreserved=true | responsiveHierarchy=true
+PASS: testExecutivePresentationContract
+PASS: testDashboardOverviewStabilizationContract | scenarios=9
+PASS: testDashboardOverviewStabilizationContract
+PASS: testCsvExportContract | scenarios=14 | csvReady=true
+PASS: testCsvExportContract
+PASS: testClientRenderPerformanceContract | scenarios=7 | idQueries=59 | selectorQueries=2 | deferredPhases=1 | responseMutation=false
+PASS: testClientRenderPerformanceContract
+PASS: testResponsiveShellContract | scenarios=12 | breakpoint=lg | drawer=true
+PASS: testResponsiveShellContract
+PASS: testThemeParityTokenContract | scenarios=15 | pairedTokens=45 | chartInstancesRecreated=false | backendRequests=0 | idQueries=73 | selectorQueries=2
+PASS: testThemeParityTokenContract
+PASS: testChartRuntimeThemeSynchronizationContract | scenarios=13 | chartIdentityPreserved=true | updates=7 | duplicatePlugins=false
+PASS: testChartRuntimeThemeSynchronizationContract
+PASS: testUiShellThemeContract | scenarios=17 | destinations=11 | themes=3 | idQueries=59 | selectorQueries=2
+PASS: testUiShellThemeContract
+PASS: testNineDestinationNavigationContract | scenarios=10 | destinations=11 | active=6 | unavailable=5 | backendRequests=0 | idQueries=59 | selectorQueries=2
+PASS: testNineDestinationNavigationContract
+PASS: testFullShellVisualContract | scenarios=12 | destinations=11 | active=6 | unavailable=5 | backendRequests=0 | idQueries=59 | selectorQueries=2
+PASS: testFullShellVisualContract
+PASS: testDashboardTabFrameworkContract | scenarios=14 | tabs=3 | ownedSections=17 | backendRequests=0 | idQueries=59 | selectorQueries=2
+PASS: testDashboardTabFrameworkContract
+PASS: testDashboardOverviewContract | scenarios=22 | kpiCards=5 | backendRequests=0 | idQueries=73 | selectorQueries=2
+PASS: testDashboardOverviewContract
+PASS: testDashboardOverviewContract | scenarios=22 | kpiCards=5 | backendRequests=0 | idQueries=73 | selectorQueries=2
+PerformanceProjectionError deterministic projection failure
+PASS: testDashboardPerformanceAnalytics | assertions=20
+PASS: testDashboardHighFidelityCompositionContract | scenarios=15 | overviewProtected=true
+PASS: testDashboardHighFidelityCompositionContract
+PerformanceProjectionError deterministic projection failure
+PASS: testDashboardPerformanceAnalytics | assertions=20
+PASS: testPerformanceAnalyticsVisualContract | scenarios=15 | overviewProtected=true
+PASS: testPerformanceAnalyticsVisualContract
+PASS: testIntelligencePlanningVisualContract | scenarios=11 | recommendationOrderPreserved=true | editableTargets=false | backendRequests=0 | idQueries=59 | selectorQueries=2
+PASS: testIntelligencePlanningVisualContract
+PASS: testSecondaryDestinationsHighFidelityContract | scenarios=15 | destinations=3 | transactionTabs=4 | columns=8 | maxRows=10 | backendRequests=0 | idQueries=73 | selectorQueries=2
+PASS: testSecondaryDestinationsHighFidelityContract
+PASS: testTransactionEntryUiContract | scenarios=22
+PASS: testTransactionEntryUiContract
+PASS: testTransactionLifecycleUiContract | scenarios=4
+PASS: testTransactionLifecycleUiContract
+PASS: testTransactionsVisualContract | scenarios=2
+PASS: testTransactionsVisualContract
+PASS: testSettingsVisualContract | scenarios=12 | sections=2 | themes=3 | backendRequests=0 | idQueries=59 | selectorQueries=2
+PASS: testSettingsVisualContract
+PASS: testLogsVisualContract | scenarios=12 | maxEntries=100 | severities=3 | contexts=9 | backendRequests=0 | idQueries=59 | selectorQueries=2
+PASS: testLogsVisualContract
+PASS: testBoundedUiRefactorContract | scenarios=16 | removedSymbols=5 | idQueries=59 | selectorQueries=2 | deferredPhases=1 | backendRequests=0 | responseMutation=false
+PASS: testBoundedUiRefactorContract
+PASS: testUiUx2ClosureContract | scenarios=8 | predecessorGate=40 | runnerTotal=60 | destinations=11 | viewportStates=16 | visualCriteria=18 | visualPassClaimed=false | idQueries=59 | selectorQueries=2 | responseFields=38 | implementationReadyUiBacklog=0
+PASS: testUiUx2ClosureContract
+PASS: testUiFinalStabilizationContract | scenarios=12 | destinations=11 | tablists=2 | duplicateIds=0 | idQueries=59 | selectorQueries=2
+PASS: testUiFinalStabilizationContract
+PerformanceProjectionError deterministic projection failure
+PASS: testDashboardPerformanceAnalytics | assertions=20
+PASS: testChartPresentationContract | scenarios=16 | performanceAnalytics=true
+PASS: testChartPresentationContract
+PASS: testFrontendDependencyContract | scenarios=14 | chartPinned=true | fallback=true
+PASS: testFrontendDependencyContract
+PASS: testReportingMetadata | scenarios=15 | freshness=Current,Stale,No Data
+PASS: testReportingMetadata
+PASS: testDataQualityDiagnostics | scenarios=23 | statuses=Good,Attention,Critical
+PASS: testDataQualityDiagnostics
+PASS: testSourceDataQualityPipeline | scenarios=15 | invalidDateVisibility=true | analyticsIsolation=true
+PASS: testSourceDataQualityPipeline
+===== NUMLOCK BACKEND TEST SUITE PASS: 60/60 =====

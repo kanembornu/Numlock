@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "intakeRows": 21,
+  "batchIdentifier": "INV-OPEN-20261001-V01",
+  "checks": {
+    "intakeScope": true,
+    "batchIdentifier": true,
+    "mainLocation": true,
+    "operatorFieldsPresent": true,
+    "operatorFieldsBlank": true,
+    "economicOriginNotPrefilled": true,
+    "derivedFieldsPresent": true,
+    "separateFlags": true,
+    "authorityMapping": true,
+    "productionSchema": true,
+    "verifiedZeroPath": true,
+    "positiveValuationPath": true,
+    "unresolvedProvenancePath": true,
+    "noFormulaErrors": true,
+    "productionMutationFalse": true
+  },
+  "failed": [],
+  "pathActuals": {
+    "verifiedZero": {
+      "totalValue": 0,
+      "readiness": "COUNT_VERIFIED",
+      "missingValuation": "CLEAR"
+    },
+    "positive": {
+      "totalValue": 101,
+      "readiness": "READY_FOR_ACCOUNTING_REVIEW"
+    },
+    "unresolved": {
+      "readiness": "NEEDS_SOURCE_EVIDENCE",
+      "provenance": "UNRESOLVED_SOURCE_PROVENANCE"
+    }
+  },
+  "postingAllowed": false,
+  "inventoryOpeningRowsWritten": 0,
+  "inventoryLedgerRowsWritten": 0,
+  "balanceLedgerRowsWritten": 0,
+  "account3210Created": false,
+  "productionMutation": false
+}

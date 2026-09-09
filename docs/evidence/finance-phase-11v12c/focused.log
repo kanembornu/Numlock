@@ -1,0 +1,10 @@
+{ status: 'PASS', assertions: 482 }
+{ status: 'PASS', assertions: 172 }
+PASS: testCanonicalTransactionAdapter
+PASS: testProductPricingResolution
+PASS: testCanonicalTransactionEntryService
+PASS: testCanonicalTransactionLifecycleService
+PASS: testCanonicalLifecycleTransportSerialization
+PASS: testCanonicalHistoricalAndOverlapControls
+PASS: testFinanceCoreBackendContract
+PASS: public wrapper ignores extra runtime argument; production purchase disabled, zero writes

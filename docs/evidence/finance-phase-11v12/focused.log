@@ -1,0 +1,4 @@
+{ status: 'PASS', covered: 34 }
+{ status: 'PASS', assertions: 172 }
+PASS: focused policy coverage and approved component relationships
+PASS: business labels, hold, cost-only capture and non-financial projection

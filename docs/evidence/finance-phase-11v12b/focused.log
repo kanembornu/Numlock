@@ -1,0 +1,5 @@
+PASS: testTransactionEntryUiContract
+PASS: testTransactionLifecycleUiContract
+PASS: testTransactionsVisualContract
+PASS: 5/28 choices, 33 canonical labels, hold exclusion, conditional fields, quantity validation, stable key, double-submit, reload/conflict/pending/disabled recovery, normal Expense payloads, Sales payload and 34 historical labels
+PASS: frontend syntax

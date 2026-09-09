@@ -1,0 +1,42 @@
+CanonicalizationVersion="NUMLOCK-ATTESTATION-CANONICAL-V01"
+Encoding="UTF-8"
+LineEndings="LF"
+Serialization="FIXED_ORDER_KEY_EQUALS_JSON_VALUE"
+ManifestID="MANIFEST-MOS-ING-018-V01"
+ManifestVersion="V01"
+ConversionID="CONV-MOS-ING-018-V01"
+ItemID="ING-018"
+ItemName="Lemon"
+BaseUOM="slice"
+FromUOM="gr"
+PackageIdentity="ING-018|INTERNAL-NUMLOCK|Lemon|OPERATIONAL-STANDARD|1000gr-24slice|V01"
+SupplierRef="INTERNAL-NUMLOCK"
+KnowledgeBasis="MANAGEMENT_OPERATIONAL_STANDARD"
+EvidenceType="MANAGEMENT_OPERATIONAL_STANDARD"
+Numerator=24
+Denominator=1000
+ToUOM="slice"
+RatioStatement="1000 gr = 24 slice"
+OperationalBasis="1 kg = 8 fruit-equivalents; 1 fruit-equivalent = 3 slices; 8 fruits/kg x 3 slices/fruit = 24 slices/kg. Fruit-equivalent is a normative management unit, not an observed batch count."
+OperatorSignedStatement="I, Dekker, attest that this is a NUMLOCK management operational standard: 1000 gr = 24 slice, based on 8 fruits/kg x 3 slices/fruit. It is not represented as measured physical yield or a claim that every 1 kg batch contains exactly 8 fruits. No historical reconstruction is claimed. Authority applies prospectively from 2026-10-01."
+AttestationBasis="Explicit management instruction and attestor name supplied by Dekker in Finance Phase 11U.1; prepared electronically by Codex on that instruction. No independent review or cryptographic personal signature is claimed."
+PhysicalObservation=false
+HistoricalReconstruction=false
+Historical21SlicesPerKgAuthoritative=false
+PhysicalVarianceTreatment="Operational variance; no automatic conversion changes."
+BagTreatment="No arbitrary bag weight inferred. A later explicitly governed purchase/receipt rule must establish bag-to-weight conversion."
+EvidenceDate="2026-09-05"
+PreparedBy="Dekker"
+PreparedAt="2026-09-05T21:27:54+07:00"
+ReviewedBy=""
+ReviewedAt=""
+EffectiveFrom="2026-10-01"
+EffectiveTo=""
+GovernancePath="SINGLE_OPERATOR"
+NoIndependentReview=true
+SelfApprovalDisclosed=true
+ApprovalStatus="SINGLE_OPERATOR_APPROVED"
+ApprovalNote="BASIS=MANAGEMENT_OPERATIONAL_STANDARD; METHOD=1_KG_8_FRUITS_1_FRUIT_3_SLICES_SIGNED_FIRST_PERSON_STATEMENT_DETERMINISTIC_ARITHMETIC; PLAUSIBILITY=CONFIRMED; LIMITATIONS=NO_INDEPENDENT_REVIEW_NOT_PHYSICAL_OBSERVATION_OPERATIONAL_VARIANCE; REVIEW=SELF_APPROVAL_DISCLOSED_CONTROLS_CONFIRMED"
+IsActive=false
+ProductionPopulationAuthorized=false
+RecipeAutoConsumption=false

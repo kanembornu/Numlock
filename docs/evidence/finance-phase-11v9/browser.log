@@ -1,0 +1,23 @@
+{"status":"PASS","checks":165}
+PASS: live-read snapshot coverage, 34/34 IDs; 7 approved ordinary and 27 blocked; immutable V2, no crosswalk
+PASS: actual public dispatcher, Sales HPP, ordinary Expense persistence, explicit types, exclusive inventory routing, disabled zero writes
+PASS: 34 real-ID dispatch cases, malformed/unknown/stale refusals, seven-choice selector, 22 direct item choices, old cache isolation, 27 historical blocked IDs resolved unchanged
+PASS: testCanonicalTransactionAdapter
+PASS: testProductPricingResolution
+PASS: testCanonicalTransactionEntryService
+PASS: testCanonicalTransactionLifecycleService
+PASS: testCanonicalLifecycleTransportSerialization
+PASS: testCanonicalHistoricalAndOverlapControls
+PASS: testInventoryFoundationContracts
+PASS: testInventorySchemaMigrationContract
+PASS: testInventoryConversionAuthorityContracts
+PASS: testInventoryOpeningStagingContracts
+PASS: testInventoryReceiptMigrationContracts
+PASS: testFinanceCoreBackendContract
+testInventoryReceiptFoundationContracts {"status":"PASS","scenarios":188}
+testInventoryReceiptOperationalContracts {"status":"PASS","checks":169}
+PASS: receipt persistence and posted correction guards; production, accounting and recipe activation remain disabled
+PASS: testTransactionEntryUiContract (static source only)
+PASS: testTransactionLifecycleUiContract (static source only)
+PASS: testTransactionsVisualContract (static source only)
+PASS: local Chromium three modes, 22 items, 7 expenses, validation, evidence, stable identity, duplicate guard, canonical dispatch, disabled/conflict/pending/uncertain recovery, receipt detail, desktop and narrow containment

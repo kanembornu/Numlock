@@ -8,3 +8,9 @@ node_modules/
 
 # CodeGraph local index
 .codegraph/
+
+# Local audit archive (original bytes preserved; not deployment inputs)
+.local/maintenance/
+# Private source snapshots used by local evidence verifiers; never publish business exports
+/docs/evidence/finance-phase-11u2e/POST-11U.snapshot.json
+/docs/evidence/finance-phase-11v8/expense-items.snapshot.json

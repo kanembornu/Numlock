@@ -1,0 +1,292 @@
+{
+  "method": "local Chromium with shared canonical synthetic dispatcher",
+  "results": [
+    {
+      "name": "Top-level choices",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Sales canonical routing",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Fixed selector",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Fixed ordinary fields",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Fixed canonical routing",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Non-HPP OSK05",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Non-HPP OSK02",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Non-HPP routing",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSK03",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSK03",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSK03",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Unresolved package cost-only",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR04",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR04",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR04",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR19",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR19",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR19",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR03",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR03",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR03",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR21",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR21",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR21",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR07",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR07",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR07",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR08",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR08",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR08",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Purchase form OSR16",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "No technical selectors OSR16",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "One labeled event OSR16",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "28 variable choices / hold absent",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Sirup isolated",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Double submit protection",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "WRITE_UNCERTAIN",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Reopen identity",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Reload frozen payload",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Conflict preserved",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Resume identity",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Narrow no horizontal overflow",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Historical 34 labels",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Projection label",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "PurchaseEvent reaches recent history",
+      "status": "PASS",
+      "detail": "PurchaseEvent retained by current recent-history filter"
+    },
+    {
+      "name": "Financial Expense exclusion",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "PurchaseEvent renderer label",
+      "status": "PASS",
+      "detail": "Current renderer preserves the PurchaseEvent business label"
+    },
+    {
+      "name": "Governed-UOM UI capture",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Evidence-qualified governed downstream",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Actual reader parent/child integration",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "History searchable/filterable",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "History detail",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Final financial-view exclusion",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Activation disabled",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "OTHER_HOLD writes0",
+      "status": "PASS",
+      "detail": ""
+    },
+    {
+      "name": "Browser errors",
+      "status": "PASS",
+      "detail": ""
+    }
+  ],
+  "counts": {
+    "events": 12,
+    "receipts": 1,
+    "movements": 1,
+    "tabops": 3
+  },
+  "productionWrites": 0
+}
