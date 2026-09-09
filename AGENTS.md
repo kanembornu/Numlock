@@ -86,3 +86,36 @@ runtime behavior, and tests remain authoritative.
 For HTML/CSS, Apps Script client/server runtime boundaries, and visual
 work, use targeted source/runtime inspection where CodeGraph cannot
 establish the relationship confidently.
+
+## OpenCode Routing
+
+Primary entrypoint: `numlock` (read-only classifier/delegator).
+
+### Specialist Agents
+
+| Agent | Scope | Implementation |
+|---|---|---|
+| numlock-explore | Read-only exploration, audit, trace | No |
+| numlock-light | L1/R1 trivial local | Yes (bounded) |
+| numlock-medium | L2/R1-R2 bounded multi-file | Yes (bounded) |
+| numlock-heavy | L3+ and L4/R1-R3 | No (context only) |
+| numlock-critical | ANY/R4 | No (context + human gate) |
+
+### Routing
+
+- Explicit read-only → numlock-explore
+- L1/R1 → numlock-light
+- L2/R1-R2 → numlock-medium
+- L3/R1-R2 → numlock-heavy
+- L4/R1-R3 → numlock-heavy
+- ANY/R4 → numlock-critical
+
+R4 overrides complexity. Heavy floor applies when the task may CHANGE (not merely inspect or reason about): financial architecture, transaction semantics, accounting authority, COGS authority, inventory authority, atomicity, concurrency, idempotency/recovery semantics, locking design, cross-core-module production state behavior, or schema/data model affecting financial meaning. Reading or reasoning about financial modules to repair tests, fixtures, or assertions is MEDIUM-eligible provided production source mutation is prohibited, financial authority is unchanged, no production action occurs, and no architectural redesign is requested. Dynamic escalation remains: MEDIUM must return ESCALATION_REQUIRED if inspection reveals the task actually requires changing production financial semantics.
+
+### Escalation
+
+Specialists must return `ESCALATION_REQUIRED` with reason, target class, modification status, and validation performed when task exceeds assigned scope.
+
+### Phase 1 Fail-Closed
+
+HEAVY and CRITICAL return `PREMIUM_BACKEND_REQUIRED` (and `HUMAN_GATE_REQUIRED` for CRITICAL). No implementation in Phase 1.
