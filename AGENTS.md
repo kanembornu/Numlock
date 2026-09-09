@@ -100,6 +100,7 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 | numlock-medium | L2/R1-R2 bounded multi-file | Yes (bounded) |
 | numlock-heavy | L3+ and L4/R1-R3 | No (context only) |
 | numlock-critical | ANY/R4 | No (context + human gate) |
+| numlock-commit | Local Git staging/commit only | No (explicit-path staging + commit) |
 
 ### Routing
 
@@ -109,6 +110,7 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 - L3/R1-R2 → numlock-heavy
 - L4/R1-R3 → numlock-heavy
 - ANY/R4 → numlock-critical
+- Explicitly authorized local commit → numlock-commit
 
 R4 overrides complexity. Heavy floor applies when the task may CHANGE (not merely inspect or reason about): financial architecture, transaction semantics, accounting authority, COGS authority, inventory authority, atomicity, concurrency, idempotency/recovery semantics, locking design, cross-core-module production state behavior, or schema/data model affecting financial meaning. Reading or reasoning about financial modules to repair tests, fixtures, or assertions is MEDIUM-eligible provided production source mutation is prohibited, financial authority is unchanged, no production action occurs, and no architectural redesign is requested. Dynamic escalation remains: MEDIUM must return ESCALATION_REQUIRED if inspection reveals the task actually requires changing production financial semantics.
 

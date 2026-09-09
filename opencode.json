@@ -22,7 +22,8 @@
           "numlock-light": "allow",
           "numlock-medium": "allow",
           "numlock-heavy": "allow",
-          "numlock-critical": "allow"
+          "numlock-critical": "allow",
+          "numlock-commit": "allow"
         }
       }
     }
