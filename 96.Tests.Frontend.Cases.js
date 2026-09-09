@@ -2233,7 +2233,7 @@ function testCsvExportContract()
   });
   scenariosPassed++;
 
-  ["filterTransactionsPeriodRows(periodResult.rows", "rows: rows, totalRows: rows.length", "item: row.product || row.purchaseCategory"].forEach(function(token) {
+  ["filterTransactionsPeriodRows(periodResult.rows", "rows: rows, totalRows: rows.length", "item: row.item || row.product || row.purchaseCategory"].forEach(function(token) {
     assertSourceContains(exportServerSource, token, "server full matching CSV contract");
   });
 
@@ -3793,13 +3793,13 @@ function testUiUx2ClosureContract()
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    57,
+    60,
     "closure runner membership"
   );
   assertSourceContains(
     predecessorRunnerSource,
     '{ name: "testBoundedUiRefactorContract"',
-    "57-entry current gate"
+    "60-entry current gate"
   );
   [
     "testLegacyTransactionSyncService",
@@ -3897,7 +3897,7 @@ function testUiUx2ClosureContract()
     passed: true,
     scenarios: scenariosPassed,
     predecessorGate: 40,
-    runnerTotal: 57,
+    runnerTotal: 60,
     packagesComplete: packages.length,
     destinations: 11,
     viewportStates: viewportMatrix.length,

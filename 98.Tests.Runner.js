@@ -1,6 +1,7 @@
 function runAllBackendTests()
 {
   var tests = [
+    { name: "testExpensePurchasePolicyContracts", run: testExpensePurchasePolicyContracts },
     { name: "getDashboardData", run: getDashboardData },
     { name: "testAggregate", run: testAggregate },
     { name: "testCanonicalTransactionAdapter", run: testCanonicalTransactionAdapter },
@@ -14,6 +15,9 @@ function runAllBackendTests()
     { name: "testDepreciationEngineContract", run: testDepreciationEngineContract },
     { name: "testCapitalEquityMigrationContract", run: testCapitalEquityMigrationContract },
     { name: "testCashFoundationContracts", run: testCashFoundationContracts },
+    { name: "testInventorySchemaMigrationContract", run: testInventorySchemaMigrationContract },
+    { name: "testInventoryConversionAuthorityContracts", run: testInventoryConversionAuthorityContracts },
+    { name: "testInventoryOpeningStagingContracts", run: testInventoryOpeningStagingContracts },
     { name: "testSummaryFixtures", run: testSummaryFixtures },
     { name: "testRevenueTrendFixtures", run: testRevenueTrendFixtures },
     { name: "testExpenseBreakdownFixtures", run: testExpenseBreakdownFixtures },

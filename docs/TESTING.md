@@ -118,6 +118,138 @@ during opening-schema expansion, after opening write, and during acceptance must
 physical dimensions while preserving the original error and reporting any rollback error separately. This is
 deterministic local evidence only; a disposable real Apps Script runtime test remains a separate evidence class.
 
+## Finance Phase 11C Inventory foundation contracts
+
+`testInventoryFoundationContracts()` is the focused, candidate-only Inventory gate. It validates stable
+`COGSIngredients.ID_Ingredient` identity, raw-material and recipe-packaging classification, canonical base UOMs,
+explicit effective-dated conversions, the post-cutover InventoryLedger schema and movement rules, linked inverse
+corrections, dormant transfers, timestamp-plus-ID ordering, integer-Rupiah moving weighted average with half-up
+outbound rounding and exact depletion, negative-stock refusal, 2026-09-30 EOD opening evidence, Account 1100
+candidate taxonomy, and exact subledger-to-control reconciliation. Recipe auto-consumption remains disabled and
+`tabsal.HPP` remains P&L COGS authority. The focused contract is nested under
+`testBalanceFoundationContracts()` and the existing Capital Equity runner entry, while the Inventory migration and conversion-authority entries make the ordered suite 59
+entries. No test creates a sheet, migrates Accounts, posts a journal, or writes production data.
+
+Run `testInventoryFoundationContracts()`, `testBalanceFoundationContracts()`,
+`testCapitalEquityMigrationContract()`, `testFinanceCoreBackendContract()`,
+`testFinanceProfitAndLossUiContract()`, and `testDepreciationEngineContract()` first, then
+`runAllBackendTests()`; require 59/59.
+
+## Finance Phase 11F Inventory migration contracts
+
+`testInventorySchemaMigrationContract()` is the focused local/mock migration and recovery gate. It requires the
+audited 22-item and 410-active-recipe source shape, exact classification and canonical-UOM distributions, an
+unused Account 1100, and all three target sheets to be absent. It validates four logical writes, header-only
+conversion and ledger storage, fresh-read acceptance, exact second-run idempotency, zero-write refusal states,
+and recovery only while the complete post-image remains unchanged. It creates no production data and does not
+authorize Inventory posting. Run it with the Balance and Cash focused contracts, then run
+`runAllBackendTests()`; require 59/59.
+
+## Finance Phase 11K conversion authority contracts
+
+`testInventoryConversionAuthorityContracts()` validates the exact 24-column conversion evidence schema,
+independent approval, effective-date and package-version conflicts, readiness precedence, fail-closed coverage for
+every Inventory movement type, and the dedicated one-write legacy-header migration, fresh-read acceptance,
+idempotency, preservation, refusal, and guarded recovery contracts. These are local/mock checks only and do not
+populate conversions or movements, execute Apps Script runtime, or authorize production migration.
+
+## Finance Phase 11N.6 single-operator conversion governance
+
+The unchanged 24-column `InventoryUOMConversions` schema represents the governance path through the explicit
+`SINGLE_OPERATOR_APPROVED` approval status. It is never treated as independent review: `ReviewedBy` and
+`ReviewedAt` must be blank, the immutable manifest reference must contain its version and SHA256, and the structured
+ApprovalNote must disclose `NO_INDEPENDENT_REVIEW` and `SELF_APPROVAL_DISCLOSED`. Its method must record a signed
+first-person statement, deterministic arithmetic, and the validator-derived `RISK_LOW` or `RISK_MODERATE` tier.
+Eligible active rows classify `SINGLE_OPERATOR_VERIFIED`; the existing distinct-reviewer `APPROVED` path continues
+to classify `VERIFIED`. The posting gate accepts either explicit readiness and refuses every other state.
+
+Fixed bags, cartons, bottles, packs, and boxes are low risk. A standardized gallon and ING-021 fixed standardized
+ice package are moderate risk. Loose, subjective, estimated, naturally variable, unknown-unit, and ING-018 Lemon
+operator attestations are high risk and cannot use this path. A single-operator controlled-yield record requires an
+immutable manifest for at least five actual observations, recorded variation, deterministic arithmetic, and a
+predeclared median standard-conversion rule. This test-only contract does not supply observations or authorize a
+Lemon conversion. Phase 11U supersedes the controlled-yield path for ING-018 with the management standard below.
+
+`testInventoryOperatorAttestationContracts()` covers independent-review preservation, single-operator identity and
+chronology, immutable-reference enforcement, control-token enforcement, deterministic risk classification,
+self-review disclosure, overlap conflicts, controlled-yield requirements, distinct readiness, and posting-gate
+behavior. It remains nested in `testInventoryConversionAuthorityContracts()` and does not change the 59-entry
+ordered runner. `runInventoryConversionDisposableRuntimeProof()` additionally exercises both governance paths,
+LOW and MODERATE single-operator acceptance, malformed and HIGH-risk refusal, Lemon refusal, authority conflicts,
+posting-gate outcomes, production fingerprint preservation, and verified disposable cleanup in Apps Script.
+
+## Finance Phase 11N.10 inactive conversion candidate population
+
+`runInventoryConversionCandidatePopulation()` is the only production entry point for the frozen 21-row Phase 11N.9
+candidate set. It rereads and hashes each immutable Drive manifest, validates the exact 24-column candidates against
+the 22 authoritative InventoryItems, requires header-only conversion and ledger storage plus unchanged Account 1100,
+and writes one deterministic 21-by-24 range under ScriptLock. Every populated row remains
+`SINGLE_OPERATOR_APPROVED` and inactive, so readiness remains `NEEDS_EVIDENCE` and the posting gate remains closed.
+Its exact post-image is idempotent as `ALREADY_POPULATED`; recovery accepts only the unchanged owned post-image.
+`runInventoryConversionCandidateDisposableRuntimeProof()` proves the write, idempotency, refusal, recovery,
+production-fingerprint, posting-gate, and cleanup contracts before the separately authorized one-time production run.
+
+## Finance Phase 11N.11 prospective conversion activation
+
+`runInventoryConversionActivation()` is the separately gated production activation entry point for the exact frozen
+21-row candidate post-image. Under ScriptLock it requires a fresh semantic match to every Phase 11N.9 identity,
+evidence reference, ratio, UOM, package, approval, and inactive state, then writes only the single `IsActive` column
+from false to true in one logical write. The operation is idempotent only for the exact valid active post-image.
+Effective authority remains prospective from 2026-10-01: posting before that date refuses, while posting on or after
+that date accepts only rows that still validate as `SINGLE_OPERATOR_VERIFIED`.
+
+`runInventoryConversionActivationDisposableRuntimeProof()` proves activation, idempotency, exact semantic post-image,
+all required drift and evidence refusals, the prospective posting boundary, guarded recovery, refusal to recover after
+a dependent InventoryLedger movement, production-fingerprint preservation, and verified disposable cleanup. It does
+not call the production activation wrapper. Production activation remains prohibited until separately authorized.
+
+## Finance Phase 11Q Inventory opening staging foundation
+
+`testInventoryOpeningStagingContracts()` validates the exact 27-column append-only `InventoryOpenings` staging
+schema, the frozen 21-item `MAIN` scope excluding ING-018, physical-count and explicit verified-zero evidence,
+six-decimal quantity and ten-decimal unit-cost limits, integer-Rupiah half-up valuation, economic-origin and
+source-classification readiness, all-or-nothing batch completeness, and a permanently refused Phase 11Q posting
+plan. `UNRESOLVED` is accepted for evidence intake but remains `NEEDS_SOURCE_EVIDENCE`; even
+`READY_FOR_ACCOUNTING_REVIEW` is not accounting authorization. Balancing authority remains `NONE`.
+Corrections require a new `OpeningID`, explicit `SupersedesOpeningID`, unchanged batch/item/location/cutover/UOM
+scope, and an explicit two-write correction plan; silent historical mutation is prohibited.
+
+The guarded migration contract creates only the exact header under `ScriptLock`, fresh-rereads acceptance, refuses
+collisions, drift, formulas, notes, and business rows, is idempotent for the exact header-only post-image, and permits
+recovery only while that owned post-image is unchanged. Local tests do not call the production migration or recovery
+wrappers, create `InventoryLedger` or `BalanceLedger` rows, modify Account 1100/3200/3210, post accounting, upload,
+or deploy. Run `testInventoryOpeningStagingContracts()` first, then `runAllBackendTests()`; require 60/60.
+`runInventoryOpeningStagingDisposableRuntimeProof()` is the isolated Apps Script runtime entry point: it validates
+the focused contract, proves READY/MIGRATED/idempotent/refusal/recovery behavior only in owned temporary Sheets,
+verifies the canonical production fingerprint is unchanged, and trashes every owned temporary Sheet.
+The fresh-read migration classifier also requires Account 3210 to be completely absent: either an active or inactive
+3210 row returns `REFUSED_ACCOUNT_3210_PRESENT` with `writeCount: 0`. Account 3210 remains a proposal only and is
+never created, activated, or treated as balancing authority.
+
+## Finance Phase 11S inventory opening evidence review and population readiness
+
+`testInventoryOpeningStagingContracts()` also owns the Phase 11S local contract. It transforms the exact
+`INV-OPEN-20261001-V01` 21-item `MAIN` intake into deterministic 27-column candidates, classifies incomplete,
+count-verified, valuation-verified, unresolved-source, conflicting-source, and accounting-review-ready states, and
+keeps every state non-posting. The population planner requires an exact empty 27-column production preimage, all 21
+currently applicable active conversions, header-only InventoryLedger and BalanceLedger, unchanged Account 1100,
+no Account 3210, and a separately trusted frozen filename/version/SHA-256 identity. It plans one logical 21-row
+write, accepts only the exact semantic post-image, is idempotent only for that exact image, and refuses partial,
+mixed, drifted, or duplicate rows. Recovery clears only the exact owned candidate batch and refuses after any
+InventoryLedger or BalanceLedger dependency exists.
+
+The checked-in Phase 11R workbook remains the blank operator intake template, not a completed reviewed artifact.
+Accordingly, the production wrapper is deliberately fail-closed as `FROZEN_REVIEWED_ARTIFACT_NOT_CONFIGURED`.
+Local fixtures prove the pipeline without supplying business evidence or authorizing a production write. No
+InventoryOpenings population, InventoryLedger or BalanceLedger row, Account 1100 recognition, Account 3210 creation,
+upload, runtime execution, deployment, or Git operation is part of this phase.
+
+`runInventoryOpeningReviewDisposableRuntimeProof()` is the Phase 11S runtime-only acceptance entry point. It uses
+synthetic reviewed evidence and owned disposable spreadsheets to prove review states, artifact refusal, population,
+idempotency, partial/duplicate refusal, recovery, downstream-dependency refusal, production fingerprint preservation,
+and verified cleanup. It never reads the Phase 11R template as evidence, never configures a reviewed production hash,
+and verifies that the real production population wrapper remains disabled.
+
 ## Finance Phase 9E schema migration readiness
 
 The existing Capital Equity runner entry also exercises the guarded Phase 9E schema executor. The deterministic
@@ -301,7 +433,7 @@ Apps Script execution does not automatically display a function's returned objec
 
 `testCapitalEquityMigrationContract()` validates the approved Phase 8D capital, return-of-capital, owner-draw, retained-earnings opening-balance, cutoff, deterministic identity, duplicate, reconciliation, inactive-row, no-P&L, no-cash, and read-only diagnostic contracts.
 
-Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `57/57` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
+Use the individual functions for targeted debugging after `runAllBackendTests()` identifies a failure. The wrapper logs a start marker, one PASS per completed test, and a final `60/60` marker. On failure it logs the test name and error message, then immediately rethrows the original error.
 
 ## Helpers that must not be run directly
 
@@ -318,7 +450,7 @@ Running a parameterized helper without its required value can produce a misleadi
 
 ## Required validation sequence
 
-`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `57/57`, including Cash Foundation, CapitalEquity migration, depreciation, Finance Core and Profit & Loss UI plus the existing deterministic feature, response, accessibility, UI, chart, theme, performance, navigation, shell, composition, and data-quality coverage. The unified suite remains ordered and fail-fast.
+`runAllBackendTests()` is the unified backend gate for local and Apps Script validation. It requires `60/60`, including Inventory migration, conversion authority, and opening staging, Cash Foundation, CapitalEquity migration, depreciation, Finance Core and Profit & Loss UI plus the existing deterministic feature, response, accessibility, UI, chart, theme, performance, navigation, shell, composition, and data-quality coverage. The unified suite remains ordered and fail-fast.
 
 ## Frontend-dependency contract
 
@@ -402,3 +534,111 @@ Follow `RELEASE.md` for the complete authoritative release sequence and checklis
 - Do not edit `.clasp.json` or expose its script ID.
 - Do not treat `clasp push` as a test pass.
 - Do not commit, push Git, deploy, or modify spreadsheet data unless the task explicitly authorizes it.
+
+## Finance Phase 11U Lemon operational authority
+
+`testInventoryLemonOperationalStandardContracts()` runs inside the existing conversion suite.
+ING-018 retains BaseUOM `slice`. Its sole prospective conversion authority is
+`MANAGEMENT_OPERATIONAL_STANDARD`: 1 kg = 8 fruits and 1 fruit = 3 slices,
+therefore exactly 1000 gr = 24 slice, effective 2026-10-01. This is NUMLOCK management's
+operational standard, not a physical assertion about each batch. Natural yield differences
+are operational variance and never automatically change the conversion. Historical approximately
+21 slices/kg and controlled-yield observations cannot authorize readiness, posting, openings,
+or costing. No controlled-yield experiment is required.
+
+The existing 24-column schema is preserved. The validator requires Numerator=24,
+Denominator=1000, FromUOM=gr, ToUOM=slice, SupplierRef=INTERNAL-NUMLOCK and
+PackageIdentity=`ING-018|INTERNAL-NUMLOCK|Lemon|OPERATIONAL-STANDARD|1000gr-24slice|V01`.
+PackageIdentity identifies the normative standard here, not a measured package.
+ApprovalStatus must be SINGLE_OPERATOR_APPROVED, with named PreparedBy, valid PreparedAt,
+EvidenceDate no later than preparation, blank reviewer fields, and a versioned immutable
+`GDRIVE:<file-id>:V01:SHA256:<64-lowercase-hex>` attestation reference.
+The exact ApprovalNote is:
+
+```text
+BASIS=MANAGEMENT_OPERATIONAL_STANDARD; METHOD=1_KG_8_FRUITS_1_FRUIT_3_SLICES_SIGNED_FIRST_PERSON_STATEMENT_DETERMINISTIC_ARITHMETIC; PLAUSIBILITY=CONFIRMED; LIMITATIONS=NO_INDEPENDENT_REVIEW_NOT_PHYSICAL_OBSERVATION_OPERATIONAL_VARIANCE; REVIEW=SELF_APPROVAL_DISCLOSED_CONTROLS_CONFIRMED
+```
+
+A real signed management attestation must supply that reference; the local test reference is
+synthetic and must never be populated. Validation checks the reference contract, not remote
+file existence or signature authenticity. Future governed intake must retrieve and verify the
+referenced artifact and hash. No evidence artifact or physical evidence is fabricated here.
+A valid active row becomes SINGLE_OPERATOR_VERIFIED only within its effective date range.
+`convertInventoryLemonOperationalQuantity()` is pure, accepts gr only, and returns slice.
+Bag-to-weight conversion requires an explicitly governed purchase/receipt rule in a later phase.
+
+Conversion eligibility does not expand the frozen 21-item InventoryOpenings intake or supply
+count, valuation, economic-origin, or accounting approval evidence. The 21 conversion manifests
+and population/activation code remain unchanged. No historical reconstruction, openings,
+InventoryLedger movements, Account 1100 posting, or recipe auto-consumption is enabled.
+Local focused regressions and syntax checks are separate from Apps Script runtime acceptance.
+
+## Finance Phase 11U.1 management attestation and runtime acceptance
+
+`runInventoryLemonManagementDisposableRuntimeProof()` runs 42 Lemon checks with disposable,
+function-local synthetic fixtures. It creates no Sheets or Drive files and calls no production
+writers. It reads full-grid values, formulas, and notes for InventoryUOMConversions,
+InventoryItems, InventoryOpenings, InventoryLedger, BalanceLedger, Accounts, and COGSRecipes
+before and after the proof. It requires exactly the frozen 21 production conversion references,
+SINGLE_OPERATOR_VERIFIED readiness for each, no production Lemon row, and identical snapshots.
+Cleanup PASS denotes disposal of in-memory fixtures; no external temporary resources exist.
+
+The management manifest and version/SHA256 reference are in
+[evidence/finance-phase-11u1](evidence/finance-phase-11u1/README.md).
+The 2026-09-05 local proof and focused regressions passed. One authorized `clasp push --force`
+synchronized 66 files. The CLI attempt returned storage `NOT_FOUND`. The user's Phase 11U.2A
+correction supersedes that earlier blocked record: the authenticated editor subsequently ran
+`runInventoryLemonManagementDisposableRuntimeProof()` exactly once with PASS, 42 scenarios,
+existing21Authorities PASS, zero production writes, productionMutation=false, and cleanup PASS;
+`runAllBackendTests()` then passed exactly once at 60/60. These are user-supplied accepted runtime
+facts. Phase 11U.1 is COMPLETE/FROZEN and must not be rerun for Phase 11U.2A.
+
+## Finance Phase 11U.2A guarded Lemon production flow
+
+`testInventoryLemonProductionFlowContracts()` is nested under the existing conversion-authority
+suite entry; the ordered backend suite remains 60 entries. Its 104 synthetic scenarios cover
+fresh-read preflight, exact frozen evidence fields, single-row population and IsActive-only
+activation, both idempotency states, 22 valid active authorities, the prospective posting gate,
+full-grid preservation, schema/formula/note/row drift, uncertain write failures, and guarded
+recovery with downstream and later-conversion refusals. A populated BalanceLedger conservatively
+blocks recovery because it cannot prove the absence of a Lemon dependency.
+
+`runInventoryLemonProductionDisposableRuntimeProof()` runs only those in-memory fixtures, with
+synthetic digest doubles and no Google service access. Its cleanup PASS means function-local
+fixture disposal. It does not establish current production preflight or live Drive access.
+The separate local verifier checks the real frozen manifest files using Node SHA256:
+
+```sh
+node docs/evidence/finance-phase-11u2a/verify-local.cjs
+```
+
+The verifier runs the new proof and focused Inventory foundation, migration, conversion, and
+nested governance/Lemon contracts. These additive executors do not change shared conversion
+or posting logic; the impact-radius gate does not rerun the full backend suite. Syntax and
+`git diff --check` are also required. See the [11U.2A execution notes](evidence/finance-phase-11u2a/README.md)
+for entry points, recovery limitations, and the separate future upload/runtime/production gates.
+
+## Finance Phase 11V.8 orchestration foundation
+
+`testInventoryReceiptOrchestrationContracts(authority)` is a parameterized local-only
+fixture suite. Run it through `node docs/evidence/finance-phase-11v8/verify-local.cjs --unified`,
+which also tests the real public dispatcher against synthetic Sheets and runs the existing
+ordered 60-entry backend suite. Receipt foundation (188 scenarios), operational receipt
+(169 checks), conversion/opening, transaction entry/lifecycle and static UI regressions are
+included. Suite membership remains unchanged. Production posting/correction remains disabled.
+See the [11V.8 contract and routing review](evidence/finance-phase-11v8/README.md) for all 34
+unresolved BLOCKED IDs, recovery states, changed files and evidence boundaries. Local PASS
+does not establish authenticated runtime, browser, upload or deployment acceptance.
+
+## Finance Phase 11V.8B simplified prospective routing
+
+Phase 11V.8B supersedes the V1 crosswalk/all-BLOCKED routing contract. Current-source validation
+uses `node docs/evidence/finance-phase-11v8b/verify-local.cjs --unified`; the preceding V1
+verifier is historical. The updated parameterized orchestration suite passes 165 checks
+without ExpenseItems/registry dependencies. The new verifier checks the seven approved
+Expense IDs and 27 blocked IDs through actual synthetic dispatcher persistence, stale-client
+refusals, selector cache-version isolation, 22 direct InventoryItem choices and historical
+resolution for all 27 blocked IDs. Receipt foundation 188 and operational 169 regressions
+pass. Ordered backend suite membership remains 60 entries, all passing in the local VM.
+See the [approved V2 authority and evidence](evidence/finance-phase-11v8b/README.md).
+Production operational posting remains disabled; no upload/runtime/browser PASS is implied.

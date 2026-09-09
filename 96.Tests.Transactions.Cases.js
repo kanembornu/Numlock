@@ -250,7 +250,10 @@ function testCanonicalTransactionEntryService()
   }
   scenarios += 2;
 
-  var submitSource = submitCanonicalTransaction.toString();
+  var publicSubmitSource = submitCanonicalTransaction.toString();
+  assertSourceContains(publicSubmitSource, 'environment: "PRODUCTION"', "public dispatcher owns production runtime");
+  assertSourceContains(publicSubmitSource, "submitCanonicalTransactionWithRuntime_(payload", "public dispatcher delegates shared core");
+  var submitSource = publicSubmitSource + submitCanonicalTransactionWithRuntime_.toString();
   var persistSource = persistCanonicalEntry.toString();
   ["LockService.getScriptLock()", "lock.waitLock(30000)", "prepareCanonicalSalesEntry(payload, context)",
     "prepareCanonicalExpenseEntry(payload, context)", "persistCanonicalEntry(ss", '"CREATE_SALES"',
@@ -285,7 +288,10 @@ function testCanonicalTransactionEntryService()
     context.products.concat([{ ID_Prod: "P0", Produk: "Americano", Kategori: "Coffee", Kind: "Beverage", IsActive: true, Notes: "private" }]),
     context.expenseItems,
     context.pricing,
-    timestamp
+    timestamp,
+    { version: "SYNTHETIC", revision: 1, evidenceRef: "LOCAL_TEST", rows: context.expenseItems.map(function(item) {
+      return { expenseItemId: item.ID_Ops, classification: "ORDINARY_EXPENSE", reason: "SYNTHETIC" };
+    }) }
   );
   if (options.sales.length !== 2 || options.sales[0].productId !== "P0" ||
       Object.prototype.hasOwnProperty.call(options.sales[0], "Notes") ||
@@ -727,6 +733,17 @@ function testTransactionEntryUiContract()
   var previewRegion = getSourceRegion(source, "function previewTransactionCorrection(payload)", "function renderCorrectionComparison", "correction preview");
   var scenarios = 0;
 
+  ['id="expenseCostType"', 'value="FIXED_COST"', 'value="VARIABLE_COST"',
+    'isPurchaseExpenseEntry()', 'option.costType === transactionEntryState.costType',
+    'state.receiptPayload = { transactionType: "EXPENSE", expenseItemId:',
+    'state.receiptUnresolved', 'PRODUCTION_PURCHASE_DISABLED'].forEach(function(token) {
+    assertSourceContains(source, token, "prospective Expense purchase policy UI");
+  });
+  ['id="transactionTypeReceipt"', 'id="receiptItem"', 'loadReceiptEntryChoices()'].forEach(function(token) {
+    assertSourceExcludes(source, token, "no top-level receipt or component selector");
+  });
+  scenarios++;
+
   ['id="newTransactionButton"', 'id="transactionEntryDialog"', 'role="dialog"', 'aria-modal="true"',
     'onclick="openTransactionEntry()"', 'onclick="closeTransactionEntry()"'].forEach(function(token) {
     assertSourceContains(source, token, "entry trigger/dialog");
@@ -777,7 +794,7 @@ function testTransactionEntryUiContract()
     'expenses: response.data.expenses.slice()', 'preloadTransactionEntryOptions()', 'loadTransactionEntryOptions()">Retry'].forEach(function(token) {
     assertSourceContains(source, token, "cached options and retry state");
   });
-  ['CacheService.getScriptCache()', 'transaction-entry-options-v2|', 'cache.put(cacheKey', 'readCanonicalTable(ss, "ProductPricing"'].forEach(function(token) {
+  ['CacheService.getScriptCache()', 'transaction-entry-options-v4|', 'EXPENSE_PURCHASE_POLICY.version', 'cache.put(cacheKey', 'readCanonicalTable(ss, "ProductPricing"'].forEach(function(token) {
     assertSourceContains(optionsServerSource, token, "revision-scoped master option cache");
   });
   scenarios++;
@@ -991,8 +1008,8 @@ function testTransactionLifecycleUiContract()
     throw new Error("Transactions ID, item, date, type-removal, lifecycle, or pagination search contract mismatch");
   }
   ['placeholder="Search ID, item, or date"',
-    '[row.id, row.product, row.purchaseCategory, row.date, formatTransactionDate(row.date)]',
-    '[row.id, row.product, row.purchaseCategory, row.date, formatTransactionsSearchDate(row.date)]'].forEach(function(token) {
+    '[row.id, row.product, row.purchaseCategory, row.item, row.date, formatTransactionDate(row.date)]',
+    '[row.id, row.product, row.purchaseCategory, row.item, row.date, formatTransactionsSearchDate(row.date)]'].forEach(function(token) {
     assertSourceContains(token.indexOf("formatTransactionsSearchDate") !== -1 ? transactionPageSource : source, token, "Transactions date search contract");
   });
   ['row.transactionType].some', 'row.purchaseCategory, type].some', 'placeholder="Search ID, item, or type"'].forEach(function(token) {
