@@ -129,7 +129,8 @@ function canonicalEntryContext(ss, timestamp, transactionType) {
   return context;
 }
 
-function buildTransactionEntryOptions(products, expenseItems, pricingRows, referenceDate) {
+function buildTransactionEntryOptions(products, expenseItems, pricingRows, referenceDate, registry) {
+  var coverage = registry ? validateInventoryExpenseRouting_(expenseItems, registry).routes : validateExpensePurchasePolicy_(expenseItems);
   var pricingIndex = buildProductPricingIndex(pricingRows || []);
   var sales = products.filter(function(row) { return isCanonicalActive(row.IsActive); })
     .map(function(row) {
@@ -145,8 +146,12 @@ function buildTransactionEntryOptions(products, expenseItems, pricingRows, refer
       return { productId: productId, product: String(row.Produk), category: String(row.Kategori), kind: String(row.Kind), pricing: pricing };
     })
     .sort(function(a, b) { return a.product.localeCompare(b.product) || a.productId.localeCompare(b.productId); });
-  var expenses = expenseItems.filter(function(row) { return isCanonicalActive(row.IsActive); })
-    .map(function(row) { return { expenseItemId: String(row.ID_Ops), item: String(row.Item), category: String(row.Kategori), kind: String(row.Kind), group: String(row.Group) }; })
+  var expenses = expenseItems.filter(function(row) {
+    return isCanonicalActive(row.IsActive) && (registry ? coverage[String(row.ID_Ops).trim()].classification === "ORDINARY_EXPENSE" : coverage[String(row.ID_Ops).trim()].prospectiveEligible);
+  })
+    .map(function(row) { return { expenseItemId: String(row.ID_Ops), item: String(row.Item), category: String(row.Kategori), kind: String(row.Kind), group: String(row.Group),
+      costType: registry ? null : coverage[row.ID_Ops].CostType,
+      purchaseRequired: registry ? false : expensePolicyIsPurchase_(coverage[row.ID_Ops]) }; })
     .sort(function(a, b) { return a.item.localeCompare(b.item) || a.expenseItemId.localeCompare(b.expenseItemId); });
   return { sales: sales, expenses: expenses };
 }
@@ -155,7 +160,7 @@ function getTransactionEntryOptions() {
   try {
     var revision = typeof getDashboardCacheRevision === "function" ? getDashboardCacheRevision() : "0";
     var cache = CacheService.getScriptCache();
-    var cacheKey = "transaction-entry-options-v2|" + revision;
+    var cacheKey = "transaction-entry-options-v4|" + EXPENSE_PURCHASE_POLICY.version + "|" + revision;
     var cached = cache.get(cacheKey);
     if (cached) return { success: true, data: JSON.parse(cached), cacheHit: true };
     var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -163,6 +168,8 @@ function getTransactionEntryOptions() {
     var expenses = readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"]);
     var pricing = readCanonicalTable(ss, "ProductPricing", ["ID_Prod", "Tipe", "EffectiveFrom", "EffectiveTo", "HPP", "Harga", "IsActive"]);
     var data = buildTransactionEntryOptions(products, expenses, pricing, new Date());
+    data.policyVersion = EXPENSE_PURCHASE_POLICY.version;
+    data.purchaseEnabled = EXPENSE_PURCHASE_POLICY.enabled;
     data.revision = revision;
     cache.put(cacheKey, JSON.stringify(data), 300);
     return { success: true, data: data, cacheHit: false };
@@ -179,35 +186,93 @@ function getProductEntryPricing(productId, type) {
   } catch (error) { return canonicalEntryFailure(error); }
 }
 
+// The public boundary never accepts a client-supplied runtime or activation capability.
 function submitCanonicalTransaction(payload) {
-  var type = payload && typeof payload.transactionType === "string" ? payload.transactionType.trim() : "";
-  if (type !== "SALES" && type !== "EXPENSE") {
-    return canonicalEntryFailure(canonicalEntryError("INVALID_TRANSACTION_TYPE",
-      "Transaction type must be SALES or EXPENSE.", "transactionType"));
+  return submitCanonicalTransactionWithRuntime_(payload, {
+    environment: "PRODUCTION", lock: LockService.getScriptLock(),
+    spreadsheet: function() { return SpreadsheetApp.getActiveSpreadsheet(); },
+    now: function() { return new Date(); }, uuid: function() { return Utilities.getUuid(); },
+    flush: function() { SpreadsheetApp.flush(); }, invalidate: function() { invalidateDashboardCache(); }
+  });
+}
+
+// Private shared dispatcher: synthetic adapters exercise exactly the same routing and writer.
+function submitCanonicalTransactionWithRuntime_(payload, runtime) {
+  var type = payload && typeof payload.transactionType === "string" ? payload.transactionType : "";
+  if (["SALES", "EXPENSE", "INVENTORY_RECEIPT"].indexOf(type) === -1) {
+    var refused = canonicalEntryFailure(canonicalEntryError("INVALID_TRANSACTION_TYPE",
+      "Transaction type must be SALES, EXPENSE or INVENTORY_RECEIPT.", "transactionType"));
+    refused.status = "REFUSED"; refused.writeCount = 0; return refused;
   }
-  var lock = LockService.getScriptLock(), acquired = false;
+  if (type === "INVENTORY_RECEIPT") {
+    try { validateInventoryReceiptRequest_(payload); }
+    catch (error) { return inventoryReceiptOrchestrationResult_("NOT_STARTED", error.message, payload && payload.requestKey, null, 0); }
+  }
+  var lock = runtime.lock, acquired = false, scope = null;
   try {
     lock.waitLock(30000);
     acquired = true;
-    var ss = SpreadsheetApp.getActiveSpreadsheet(), timestamp = new Date();
-    var context = canonicalEntryContext(ss, timestamp, type);
-    var entry = type === "SALES" ? prepareCanonicalSalesEntry(payload, context) : prepareCanonicalExpenseEntry(payload, context);
-    var sheetName = type === "SALES" ? "tabsal" : "tabops";
+    scope = { lock: lock, active: true };
+    var ss = runtime.spreadsheet(), timestamp = runtime.now();
+    var context, entry, sheetName, headers, prefix, action, values;
+    switch (type) {
+      case "INVENTORY_RECEIPT":
+        return orchestrateInventoryReceiptUnderLock_(payload, inventoryReceiptProductionRuntime_(ss, lock), scope);
+      case "SALES":
+        context = canonicalEntryContext(ss, timestamp, "SALES");
+        entry = prepareCanonicalSalesEntry(payload, context);
+        sheetName = "tabsal"; headers = CANONICAL_ENTRY.SALES_HEADERS; prefix = "SAL-APP-"; action = "CREATE_SALES";
+        values = [null, timestamp, entry.productId, entry.type, entry.qty, entry.unitHPP, entry.unitPrice,
+          CANONICAL_ENTRY.SOURCE, true, timestamp, CANONICAL_ENTRY.USER, "", ""];
+        break;
+      case "EXPENSE":
+        context = { timestamp: timestamp, expenseItems: readCanonicalTable(ss, "ExpenseItems",
+          ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]) };
+        var route = resolveExpensePurchasePolicy_(payload.expenseItemId, context.expenseItems);
+        if (expensePolicyIsPurchase_(route)) {
+          var purchaseRuntime = purchaseEventProductionRuntime_(ss, lock, context.expenseItems, timestamp);
+          if (runtime.environment === "LOCAL_FIXTURE" && runtime.purchase && runtime.purchase.environment === "LOCAL_FIXTURE") {
+            purchaseRuntime = Object.assign({}, runtime.purchase, { lock: lock, read: function() {
+              var state = runtime.purchase.read();
+              return Object.assign({}, state, { expenses: context.expenseItems });
+            } });
+          }
+          return orchestratePurchaseEventUnderLock_(payload, purchaseRuntime, scope);
+        }
+        Object.keys(payload).forEach(function(field) {
+          if (["transactionType", "expenseItemId", "amount", "expenseDate"].indexOf(field) === -1) inventoryReceiptFail_("EXPENSE_ROUTE_UNKNOWN_FIELD");
+        });
+        context.accounts = readCanonicalTable(ss, "Accounts", ["AccountCode", "IsActive"]);
+        if (payload.expenseDate !== undefined) {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(payload.expenseDate) || !capitalEquityDateKey(payload.expenseDate)) inventoryReceiptFail_("EXPENSE_ROUTE_INVALID_DATE");
+          timestamp = new Date(payload.expenseDate + "T00:00:00+07:00");
+          context.timestamp = timestamp;
+        }
+        entry = prepareCanonicalExpenseEntry(payload, context);
+        sheetName = "tabops"; headers = CANONICAL_ENTRY.EXPENSE_HEADERS; prefix = "OPS-APP-"; action = "CREATE_EXPENSE";
+        values = [null, timestamp, entry.expenseItemId, entry.amount, CANONICAL_ENTRY.SOURCE, true,
+          timestamp, CANONICAL_ENTRY.USER, "", ""];
+        break;
+      default:
+        throw canonicalEntryError("INVALID_TRANSACTION_TYPE", "Unsupported transaction type.", "transactionType");
+    }
     var sheet = ss.getSheetByName(sheetName);
-    var id = generateCanonicalEntryId(type === "SALES" ? "SAL-APP-" : "OPS-APP-", timestamp,
-      function() { return Utilities.getUuid(); }, function(candidate) { return canonicalSheetHasId(sheet, candidate); });
-    var values = type === "SALES"
-      ? [id, timestamp, entry.productId, entry.type, entry.qty, entry.unitHPP, entry.unitPrice,
-        CANONICAL_ENTRY.SOURCE, true, timestamp, CANONICAL_ENTRY.USER, "", ""]
-      : [id, timestamp, entry.expenseItemId, entry.amount, CANONICAL_ENTRY.SOURCE, true,
-        timestamp, CANONICAL_ENTRY.USER, "", ""];
-    persistCanonicalEntry(ss, { sheetName: sheetName,
-      headers: type === "SALES" ? CANONICAL_ENTRY.SALES_HEADERS : CANONICAL_ENTRY.EXPENSE_HEADERS,
-      values: values, timestamp: timestamp, id: id, action: type === "SALES" ? "CREATE_SALES" : "CREATE_EXPENSE" });
-    invalidateDashboardCache();
+    var id = generateCanonicalEntryId(prefix, timestamp,
+      runtime.uuid, function(candidate) { return canonicalSheetHasId(sheet, candidate); });
+    values[0] = id;
+    persistCanonicalEntry(ss, { sheetName: sheetName, headers: headers,
+      values: values, timestamp: timestamp, id: id, action: action }, { flush: runtime.flush, uuid: runtime.uuid });
+    runtime.invalidate();
     entry.id = id;
     entry.timestamp = Utilities.formatDate(timestamp, CANONICAL_ENTRY.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
     return { success: true, data: entry };
-  } catch (error) { return canonicalEntryFailure(error); }
-  finally { if (acquired) lock.releaseLock(); }
+  } catch (error) {
+    var result = canonicalEntryFailure(error);
+    // Only pre-persistence routing refusals carry a definite zero-write claim.
+    if (/^(ROUTING_|EXPENSE_POLICY_|EXPENSE_ROUTE_|EXPENSE_ID_|EXPENSE_ITEM_NOT_ACTIVE_OR_MAPPED|INVALID_ROUTING_REGISTRY)/.test(error.message)) {
+      result.status = "REFUSED"; result.writeCount = 0; result.tabopsWrites = 0;
+      result.error.code = error.message;
+    }
+    return result;
+  } finally { if (scope) scope.active = false; if (acquired) lock.releaseLock(); }
 }

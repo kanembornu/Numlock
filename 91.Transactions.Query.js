@@ -45,9 +45,9 @@ function filterTransactionsPeriodRows(periodRows, request, tabName) {
     if (lifecycleState === "voided" && row.isActive !== false) return false;
     if (tab === "sales" && type !== "Sales") return false;
     if (tab === "expenses" && type !== "Expense") return false;
-    if (type !== "Sales" && type !== "Expense") return false;
+    if (type !== "Sales" && type !== "Expense" && type !== "InventoryReceipt" && type !== "PurchaseEvent") return false;
     if (!search) return true;
-    return [row.id, row.product, row.purchaseCategory, row.date, formatTransactionsSearchDate(row.date)].some(function(value) {
+    return [row.id, row.product, row.purchaseCategory, row.item, row.date, formatTransactionsSearchDate(row.date)].some(function(value) {
       return String(value || "").toLowerCase().indexOf(search) !== -1;
     });
   });
@@ -56,7 +56,7 @@ function filterTransactionsPeriodRows(periodRows, request, tabName) {
     rows = rows.filter(function(row) {
       var type = row.transactionType;
       if (safeRequest.drilldownType === "sales") return type === "Sales";
-      if (safeRequest.drilldownType === "purchase") return type === "Expense";
+      if (safeRequest.drilldownType === "purchase") return type === "Expense" || type === "PurchaseEvent";
       if (safeRequest.drilldownType === "month") return String(row.dateKey || "").slice(0, 7) === safeRequest.drilldownValue;
       if (safeRequest.drilldownType === "expenseCategory") return type === "Expense" && row.purchaseCategory === safeRequest.drilldownValue;
       return safeRequest.drilldownType === "all";
@@ -82,6 +82,7 @@ function normalizeTransactionsLifecycleState(request) {
 
 function buildTransactionsSearchIndex(periodRows) {
   return periodRows.map(function(row, index) {
+    if (row.transactionType === "InventoryReceipt" || row.transactionType === "PurchaseEvent") return Object.assign({}, row, { sortIdentity: index });
     return {
       id: row.id,
       date: row.date,
@@ -107,8 +108,8 @@ function getTransactionsExport(request) {
   var rows = filterTransactionsPeriodRows(periodResult.rows, safeRequest, tab).map(function(row) {
     return {
       id: row.id, date: row.date, transactionType: row.transactionType,
-      item: row.product || row.purchaseCategory || "-", qty: row.qty || 0,
-      amount: row.revenue || row.expense || 0
+      item: row.item || row.product || row.purchaseCategory || "-", qty: row.purchaseQuantity || row.qty || 0,
+      amount: (row.transactionType === "InventoryReceipt" || row.transactionType === "PurchaseEvent") ? Number(row.acquisitionValue) : row.revenue || row.expense || 0
     };
   });
   return { success: true, data: { rows: rows, totalRows: rows.length, cacheHit: periodResult.cacheHit } };
@@ -132,7 +133,7 @@ function buildTransactionsPageResult(rows, requestedPage, pageSize) {
 
 function getTransactionsPeriodRows(range) {
   var cache = CacheService.getScriptCache();
-  var prefix = ["transactions-period-v1", getDashboardCacheRevision(), range.startDate, range.endDate].join("|");
+  var prefix = ["transactions-period-v3", getDashboardCacheRevision(), range.startDate, range.endDate].join("|");
   var metaKey = prefix + "|meta";
   var cachedMeta = cache.get(metaKey);
   if (cachedMeta) {
@@ -151,10 +152,15 @@ function getTransactionsPeriodRows(range) {
     }
   }
 
-  var canonicalData = getCanonicalTransactionData(SpreadsheetApp.getActiveSpreadsheet());
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var canonicalData = getCanonicalTransactionData(ss);
   var periodRows = buildLifecycleTransactionRows(
     filterTransactionsByDateRange(canonicalData.lifecycleRecords || [], range).slice().reverse()
   );
+  var purchases = readPurchaseEventTransactionRows_(ss);
+  periodRows = periodRows.concat(purchases.concat(readInventoryReceiptTransactionRows_(ss, purchases)).filter(function(row) {
+    return row.date >= range.startDate && row.date <= range.endDate;
+  })).sort(function(a, b) { return String(b.date).localeCompare(String(a.date)); });
   var chunkSize = 100;
   var chunkCount = Math.ceil(periodRows.length / chunkSize);
   var cacheEntries = {};
@@ -168,4 +174,56 @@ function getTransactionsPeriodRows(range) {
     Logger.log("Transactions period cache write skipped: " + String(cacheWriteError && cacheWriteError.message || cacheWriteError));
   }
   return { rows: periodRows, cacheHit: false };
+}
+
+// Read-only UI adapter over the frozen receipt authority.
+function buildInventoryReceiptEntryChoices_(items, conversions, date) {
+  return buildInventoryPurchaseOptions_(items, date).map(function(item) {
+    var authority = classifyInventoryConversionReadiness(item.itemId, date, items, conversions).conversion;
+    var choices = [];
+    if (authority) {
+      var units = item.itemId === "ING-018" ? ["gr", "kg"] :
+        item.baseUOM === "gr" ? ["gr", "kg"] : ["ml", "pcs"].indexOf(item.baseUOM) !== -1 ? [item.baseUOM] : [];
+      units.forEach(function(unit) { choices.push({ uom: unit, label: unit }); });
+      var from = String(authority.FromUOM).toLowerCase();
+      if (item.itemId !== "ING-018" && from !== "purchase lot" && units.indexOf(from) === -1) {
+        choices.push({ uom: from, label: from + " — " + authority.PackageIdentity,
+          packageIdentity: authority.PackageIdentity, supplierRef: authority.SupplierRef });
+      }
+    }
+    return { itemId: item.itemId, item: item.item, baseUOM: item.baseUOM, choices: choices };
+  });
+}
+
+function getInventoryReceiptEntryOptions(receiptDate) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var items = readCanonicalTable(ss, "InventoryItems", BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS);
+    var conversions = readCanonicalTable(ss, "InventoryUOMConversions", BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS);
+    return { success: true, data: { date: receiptDate,
+      items: buildInventoryReceiptEntryChoices_(items, conversions, receiptDate) } };
+  } catch (error) { return canonicalEntryFailure(error); }
+}
+
+function readInventoryReceiptTransactionRows_(ss, purchases) {
+  if (!ss.getSheetByName("InventoryReceipts")) return [];
+  var receipts = readCanonicalTable(ss, "InventoryReceipts", INVENTORY_RECEIPT_POLICY.HEADERS);
+  if (!receipts.length) return [];
+  var items = readCanonicalTable(ss, "InventoryItems", BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS);
+  var index = inventoryItemIndex(items).items;
+  // One business purchase appears once; its internal receipt is a downstream fact.
+  var purchaseKeys = Object.create(null);
+  (purchases || []).forEach(function(row) { purchaseKeys["pe-receipt-" + row.id.slice(3)] = true; });
+  return receipts.filter(function(row) { return row.IsActive === true && !purchaseKeys[row.IdempotencyKey]; }).map(function(row) {
+    // Capture alone never proves operational posting.
+    var dto = projectInventoryReceiptTransaction_(row, "RECEIPT_CAPTURED");
+    dto.date = capitalEquityDateKey(row.ReceiptDate);
+    dto.dateKey = dto.date;
+    dto.item = index[row.ItemID] ? index[row.ItemID].ItemName : row.ItemID;
+    dto.purchaseQuantity = row.PurchaseQty;
+    dto.purchaseUOM = row.PurchaseUOM;
+    dto.supplier = row.SupplierSource;
+    dto.reference = row.ExternalRef || "Document unavailable";
+    return dto;
+  });
 }
