@@ -6,5 +6,9 @@
   ],
   "settings": {
     "editor.fontSize": 10,
+    "telemetry.feedback.enabled": false,
+    "telemetry.editStats.enabled": false,
+    "gitlens.telemetry.enabled": false,
+    "editor.cursorBlinking": "solid",
   },
 }
