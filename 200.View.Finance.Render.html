@@ -187,11 +187,70 @@
         [equity.ownerContributions, equity.returnOfCapital, equity.ownerDraws].some(function(value) { return Number(value) !== 0; });
     }
 
+    function formatFinanceNullableCurrency(value)
+    {
+      if (value === null || value === undefined) return "—";
+      var number = Number(value);
+      if (!Number.isFinite(number)) return "—";
+      return formatFinanceCurrency(number);
+    }
+
+    function formatFinanceNullableInteger(value)
+    {
+      if (value === null || value === undefined) return "—";
+      var number = Number(value);
+      if (!Number.isFinite(number)) return "—";
+      return new Intl.NumberFormat("id-ID").format(number);
+    }
+
+    function renderFinanceProductProfitability(response)
+    {
+      if (!response || !response.products) {
+        throw new Error("Product Profitability response is unavailable or malformed");
+      }
+      var summary = response.summary || {};
+      var period = response.period || {};
+      var comparisonPeriod = response.comparisonPeriod || null;
+      var quality = response.quality || {};
+      var products = Array.isArray(response.products) ? response.products : [];
+
+      getFinanceElement("financePPRevenue").textContent = formatFinanceNullableCurrency(summary.revenue);
+      getFinanceElement("financePPCogs").textContent = formatFinanceNullableCurrency(summary.cogs);
+      getFinanceElement("financePPGrossProfit").textContent = formatFinanceNullableCurrency(summary.grossProfit);
+      getFinanceElement("financePPVariantCount").textContent = formatFinanceNullableInteger(summary.uniqueProductVariants);
+      getFinanceElement("financePPRowCount").textContent = formatFinanceNullableInteger(products.length);
+      getFinanceElement("financePPQualityStatus").textContent = quality.status === "ATTENTION"
+        ? "Attention"
+        : quality.status === "OK"
+          ? "OK"
+          : "—";
+
+      getFinanceElement("financePPPeriod").textContent = "Product Profitability — " + String(period.label || "Selected period");
+
+      var comparisonEl = getFinanceElement("financePPComparisonPeriod");
+      if (comparisonPeriod && comparisonPeriod.label) {
+        comparisonEl.textContent = "Comparison: " + String(comparisonPeriod.label);
+        comparisonEl.hidden = false;
+      } else {
+        comparisonEl.hidden = true;
+      }
+
+      var warningEl = getFinanceElement("financePPWarning");
+      if (quality.status === "ATTENTION") {
+        warningEl.hidden = false;
+      } else {
+        warningEl.hidden = true;
+      }
+
+      return products.length === 0;
+    }
+
     function setFinanceViewState(state, message)
     {
       var status = getFinanceElement("financeStatus");
       var content = getFinanceElement("financeContent");
       var equityContent = getFinanceElement("financeCapitalEquityContent");
+      var ppContent = getFinanceElement("financeProductProfitabilityContent");
       var retry = getFinanceElement("financeRetryButton");
       var isLoading = state === "loading";
 
@@ -201,9 +260,17 @@
       status.hidden = state === "success" || state === "empty";
       content.hidden = state === "loading" || state === "error" || financeState.destination !== "profit-loss";
       equityContent.hidden = state === "loading" || state === "error" || financeState.destination !== "capital-equity";
+      ppContent.hidden = state === "loading" || state === "error" || financeState.destination !== "product-profitability";
       retry.hidden = state !== "error";
+
+      var destLabel = financeState.destination === "capital-equity"
+        ? "Capital & Equity"
+        : financeState.destination === "product-profitability"
+          ? "Product Profitability"
+          : "Profit & Loss";
+
       getFinanceElement("financeStatusText").textContent = isLoading
-        ? (financeState.destination === "capital-equity" ? "Loading Capital & Equity…" : "Loading Profit & Loss…")
+        ? "Loading " + destLabel + "…"
         : financeState.error || "";
       getFinanceElement("financeEmptyNotice").hidden = state !== "empty";
     }

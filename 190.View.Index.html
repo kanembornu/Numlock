@@ -2597,9 +2597,11 @@
                 <span class="sidebar-expanded-content min-w-0">Profit &amp; Loss</span>
               </button>
             </div>
-            <div data-navigation-destination="products" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Products, unavailable until module migration is approved" title="Products — unavailable until module migration is approved">
-              <i class="fas fa-mug-hot w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0">Products</span>
+            <div role="listitem">
+              <button type="button" data-page="finance" data-navigation-destination="product-profitability" aria-label="Product Profitability" title="Product Profitability" class="ui-sidebar-item flex w-full items-center text-left transition">
+                <i class="fas fa-mug-hot w-6 text-center" aria-hidden="true"></i>
+                <span class="sidebar-expanded-content min-w-0">Product Profitability</span>
+              </button>
             </div>
             <div role="listitem">
               <button type="button" data-page="finance" data-navigation-destination="capital-equity" aria-label="Capital and Equity" title="Capital &amp; Equity" class="ui-sidebar-item flex w-full items-center text-left transition">
@@ -3168,6 +3170,22 @@
             <div><dt>Retained earnings authority</dt><dd id="financeEquityOpeningStatus">Sibuta migrated opening balance</dd></div>
             <div><dt>Capital policy</dt><dd id="financeEquityCapitalPolicy">Return of Capital is distinct from Owner Draw; no cash balance is asserted</dd></div>
           </dl>
+        </div>
+        <div id="financeProductProfitabilityContent" class="finance-layout" data-finance-panel="product-profitability" hidden>
+          <p id="financePPWarning" class="finance-surface p-3 ui-theme-secondary" role="alert" hidden>Data quality issues were detected in the source data. Some metrics may be incomplete.</p>
+          <dl class="finance-kpis" aria-label="Product Profitability summary">
+            <div class="finance-kpi finance-surface"><dt>Revenue</dt><dd id="financePPRevenue">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>COGS</dt><dd id="financePPCogs">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Gross Profit</dt><dd id="financePPGrossProfit">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Products</dt><dd id="financePPVariantCount">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Product Rows</dt><dd id="financePPRowCount">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Quality</dt><dd id="financePPQualityStatus">—</dd></div>
+          </dl>
+          <div class="finance-surface p-4" role="region" aria-label="Product Profitability detail">
+            <p id="financePPPeriod" class="hf-section-heading">Product Profitability</p>
+            <p id="financePPComparisonPeriod" class="hf-section-label mt-1" hidden></p>
+            <p id="financePPDetail" class="ui-body-text ui-theme-secondary mt-2">Full product table and analytics coming in a future update.</p>
+          </div>
         </div>
       </div>
     </section>
@@ -3895,6 +3913,8 @@
         "financeCompositionRetained", "financeCompositionDraw", "financeCompositionTotal", "financeOwnerReconciliationBody",
         "financeRetainedOpening", "financeRetainedOpeningDate", "financeRetainedPostCutoff", "financeRetainedPostCutoffDate",
         "financeRetainedCurrent", "financeRetainedAsOfDate", "financeEquityAsOfStatus", "financeEquityOpeningStatus", "financeEquityCapitalPolicy",
+        "financeProductProfitabilityContent", "financePPWarning", "financePPRevenue", "financePPCogs", "financePPGrossProfit",
+        "financePPVariantCount", "financePPRowCount", "financePPQualityStatus", "financePPPeriod", "financePPComparisonPeriod", "financePPDetail",
         "snapshotTopProfit", "snapshotBestMargin", "snapshotTopRevenue", "snapshotExpenseDriver", "snapshotTotalMargin", "snapshotConcentration",
         "categoryMixCenter", "categoryMixLegend", "hotColdComparison", "hotColdChartSummary", "hotColdChartEmpty",
         "marginHealthContainer",
@@ -4331,6 +4351,18 @@
           title: "Profit & Loss",
           context: "Transaction-date operating statement"
         },
+        "finance:profit-loss": {
+          title: "Profit & Loss",
+          context: "Transaction-date operating statement"
+        },
+        "finance:capital-equity": {
+          title: "Capital & Equity",
+          context: "Owner capital and retained earnings as of the selected date"
+        },
+        "finance:product-profitability": {
+          title: "Product Profitability",
+          context: "Per-product revenue, COGS, and margin analysis"
+        },
         settings: {
           title: "Settings",
           context: "Appearance and application information"
@@ -4344,7 +4376,8 @@
         elements.pageElements,
         function(page) { return page.id === pageId; }
       );
-      var contract = pageContract[pageId];
+      var contractKey = pageId === "finance" ? pageId + ":" + (destination || "profit-loss") : pageId;
+      var contract = pageContract[contractKey] || pageContract[pageId];
 
       if (!activePage || !contract)
       {
