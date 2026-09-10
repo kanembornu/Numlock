@@ -811,6 +811,7 @@
         latestDashboardResponse.dashboardPerformance;
       p.backendTotalMs = bp ? bp.totalMs || 0 : 0;
       p.backendCacheHit = bp ? Boolean(bp.cacheHit) : null;
+      p.backendColdSegments = bp && bp.coldSegments ? bp.coldSegments : null;
       p.cacheStatus =
         p.backendCacheHit === true
           ? "WARM"
@@ -882,7 +883,8 @@
         backend: {
           totalMs: p.backendTotalMs,
           cacheHit: p.backendCacheHit,
-          cacheStatus: p.cacheStatus
+          cacheStatus: p.cacheStatus,
+          coldSegments: p.backendColdSegments
         },
         chartJs: p.chartJs,
         fontAwesome: p.fontAwesome

@@ -203,7 +203,77 @@ function testColdStartProfilingInstrumentationContract()
     "profiling / no blocking claim"
   );
 
-  // 23. No CDN source-order change — Chart.js script tag before FA link
+  // 23. backendColdSegments projected from bp.coldSegments
+  assertSourceContains(
+    source,
+    "p.backendColdSegments",
+    "profiling / backendColdSegments assignment"
+  );
+
+  // 24. Source reads bp.coldSegments (not a copy or rename)
+  assertSourceContains(
+    source,
+    "bp.coldSegments",
+    "profiling / source reads bp.coldSegments"
+  );
+
+  // 25. Warm/missing coldSegments maps to null
+  assertSourceContains(
+    source,
+    "bp && bp.coldSegments ? bp.coldSegments : null",
+    "profiling / warm missing maps to null"
+  );
+
+  // 26. Console includes coldSegments in backend section
+  assertSourceContains(
+    source,
+    "coldSegments: p.backendColdSegments",
+    "profiling / console coldSegments passthrough"
+  );
+
+  // 27. Existing backendTotalMs retained
+  assertSourceContains(
+    source,
+    "p.backendTotalMs = bp ? bp.totalMs || 0 : 0",
+    "profiling / backendTotalMs retained"
+  );
+
+  // 28. Existing backendCacheHit retained
+  assertSourceContains(
+    source,
+    "p.backendCacheHit = bp ? Boolean(bp.cacheHit) : null",
+    "profiling / backendCacheHit retained"
+  );
+
+  // 29. Existing cacheStatus retained
+  assertSourceContains(
+    source,
+    "p.cacheStatus",
+    "profiling / cacheStatus retained"
+  );
+
+  // 30. No backend change — source reads from response, not from backend directly
+  assertSourceExcludes(
+    source,
+    "coldSegments = {",
+    "profiling / no backend coldSegments construction in frontend"
+  );
+
+  // 31. DashboardTiming unchanged
+  assertSourceContains(
+    source,
+    '"DashboardTiming"',
+    "profiling / DashboardTiming unchanged"
+  );
+
+  // 32. No rendering change
+  assertSourceExcludes(
+    source,
+    "renderDashboard" + "FromProfile",
+    "profiling / no render mutation"
+  );
+
+  // 33. No CDN source-order change — Chart.js script tag before FA link
   assertSourceContains(
     source,
     'script src="https://cdn.jsdelivr.net/npm/chart.js',
