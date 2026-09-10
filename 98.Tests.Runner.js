@@ -19,6 +19,7 @@ function runAllBackendTests()
     { name: "testFinanceProfitAndLossUiContract", run: testFinanceProfitAndLossUiContract },
     { name: "testFinanceDestinationSwitchContract", run: testFinanceDestinationSwitchContract },
     { name: "testFinancePpFieldSemantics", run: testFinancePpFieldSemantics },
+    { name: "testFinancePeriodLabelSync", run: testFinancePeriodLabelSync },
     { name: "testFinanceWarmCacheKeyGeneration", run: testFinanceWarmCacheKeyGeneration },
     { name: "testFinanceCacheStructureExists", run: testFinanceCacheStructureExists },
     { name: "testFinanceCacheValidation", run: testFinanceCacheValidation },

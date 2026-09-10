@@ -157,6 +157,64 @@ function testFinanceDestinationSwitchContract()
   return { passed: true, scenarios: scenarios };
 }
 
+function testFinancePeriodLabelSync()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+  function forbidToken(source, token, name) {
+    scenarios++;
+    if (source.indexOf(token) !== -1) throw new Error("Finance UI forbidden " + name + ": " + token);
+  }
+
+  var renderSource = include("200.View.Finance.Render");
+
+  var pnlStart = renderSource.indexOf("function renderFinanceProfitAndLoss");
+  var ceStart = renderSource.indexOf("function renderFinanceCapitalEquity");
+  var ppStart = renderSource.indexOf("function renderFinanceProductProfitability");
+  var postPpStart = renderSource.indexOf("function setFinanceViewState");
+
+  var pnlBody = renderSource.substring(pnlStart, ceStart);
+  var ceBody = renderSource.substring(ceStart, ppStart);
+  var ppBody = renderSource.substring(ppStart, postPpStart);
+
+  // P&L updates shared period label
+  check(pnlBody.indexOf("financePeriodLabel") !== -1,
+    "P&L render updates shared period label");
+  check(pnlBody.indexOf("period.label") !== -1,
+    "P&L render uses period.label");
+
+  // PP updates shared period label
+  check(ppBody.indexOf("financePeriodLabel") !== -1,
+    "PP render updates shared period label");
+  check(ppBody.indexOf("period.label") !== -1,
+    "PP render uses period.label");
+
+  // C&E updates shared period label
+  check(ceBody.indexOf("financePeriodLabel") !== -1,
+    "C&E render updates shared period label");
+  check(ceBody.indexOf("period.label") !== -1,
+    "C&E render uses period.label");
+
+  // Fallback: "Selected period" used in all three
+  check(pnlBody.indexOf("Selected period") !== -1,
+    "P&L falls back to Selected period");
+  check(ppBody.indexOf("Selected period") !== -1,
+    "PP falls back to Selected period");
+  check(ceBody.indexOf("Selected period") !== -1,
+    "C&E falls back to Selected period");
+
+  // No hardcoded period labels
+  forbidToken(pnlBody, '"Current Year"', "no hardcoded Current Year in P&L");
+  forbidToken(pnlBody, '"Previous Year"', "no hardcoded Previous Year in P&L");
+  forbidToken(ppBody, '"Current Year"', "no hardcoded Current Year in PP");
+  forbidToken(ppBody, '"Previous Year"', "no hardcoded Previous Year in PP");
+  forbidToken(ceBody, '"Current Year"', "no hardcoded Current Year in C&E");
+  forbidToken(ceBody, '"Previous Year"', "no hardcoded Previous Year in C&E");
+
+  Logger.log("PASS: testFinancePeriodLabelSync | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function testFinancePpFieldSemantics()
 {
   var scenarios = 0;

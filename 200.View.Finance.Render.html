@@ -137,6 +137,9 @@
       if (!established && equity.retainedEarningsStatus !== "NOT_ESTABLISHED") {
         throw new Error("Capital & Equity retained earnings status is malformed");
       }
+      var period = response && response.period || {};
+      getFinanceElement("financePeriodLabel").textContent =
+        String(period.label || "Selected period");
       [
         ["financeEquityContributions", equity.ownerContributions],
         ["financeEquityReturns", equity.returnOfCapital],
@@ -226,6 +229,7 @@
           : "—";
 
       getFinanceElement("financePPPeriod").textContent = "Product Profitability — " + String(period.label || "Selected period");
+      getFinanceElement("financePeriodLabel").textContent = String(period.label || "Selected period");
 
       var comparisonEl = getFinanceElement("financePPComparisonPeriod");
       if (comparisonPeriod && comparisonPeriod.label) {
