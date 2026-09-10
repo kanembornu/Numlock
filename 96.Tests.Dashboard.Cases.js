@@ -3466,3 +3466,133 @@ function testPerformanceAnalyticsVisualContract()
 
   return summary;
 }
+
+// 11Y.4 — cold backend bottleneck segmentation
+function testColdBackendSegmentation()
+{
+  var assertionsPassed = 0;
+
+  // 1. totalMs retained in performance object initialization
+  var perfInitSource = buildDashboardDataExecution.toString();
+  if (perfInitSource.indexOf("totalMs: 0") === -1)
+    throw new Error("totalMs not retained in performance initialization");
+  assertionsPassed++;
+
+  // 2. cacheHit retained in performance object initialization
+  if (perfInitSource.indexOf("cacheHit: false") === -1)
+    throw new Error("cacheHit not retained in performance initialization");
+  assertionsPassed++;
+
+  // 3. coldSegments exists in cold path
+  if (perfInitSource.indexOf("performance.coldSegments") === -1)
+    throw new Error("coldSegments not constructed in cold path");
+  assertionsPassed++;
+
+  // 4. four sheet reads measured (salesReadMs, expenseReadMs, productReadMs, expenseItemReadMs)
+  ["salesReadMs", "expenseReadMs", "productReadMs", "expenseItemReadMs"].forEach(function(key) {
+    if (perfInitSource.indexOf(key + ": 0") === -1)
+      throw new Error("Sheet read timing missing from performance init: " + key);
+  });
+  assertionsPassed++;
+
+  // 5. canonicalNormalizeMs mapped from normalizeMs
+  if (perfInitSource.indexOf("canonicalNormalizeMs: performance.normalizeMs") === -1)
+    throw new Error("canonicalNormalizeMs not mapped from normalizeMs in coldSegments");
+  assertionsPassed++;
+
+  // 6. analytics aggregate measured (aggregateMs)
+  if (perfInitSource.indexOf("analyticsBuildMs: performance.aggregateMs") === -1)
+    throw new Error("analyticsBuildMs not mapped from aggregateMs in coldSegments");
+  assertionsPassed++;
+
+  // 7. cache write measured
+  if (perfInitSource.indexOf("cacheWriteMs: performance.cacheWriteMs") === -1)
+    throw new Error("cacheWriteMs not present in coldSegments");
+  assertionsPassed++;
+
+  // 8. canonicalTotalMs wall-clock wrapper exists
+  if (perfInitSource.indexOf("canonicalStartedAt") === -1 ||
+      perfInitSource.indexOf("canonicalTotalMs = Date.now() - canonicalStartedAt") === -1)
+    throw new Error("canonicalTotalMs wall-clock wrapper missing");
+  assertionsPassed++;
+
+  // 9. no cache TTL change
+  if (DASHBOARD_CACHE.TTL_SECONDS !== 300)
+    throw new Error("Cache TTL changed from 300: " + DASHBOARD_CACHE.TTL_SECONDS);
+  assertionsPassed++;
+
+  // 10. no read behavior change — readCanonicalTable source unchanged
+  var readSource = readCanonicalTable.toString();
+  if (readSource.indexOf("getDataRange().getValues()") === -1)
+    throw new Error("readCanonicalTable read behavior changed");
+  assertionsPassed++;
+
+  // 11. no analytics behavior change — buildAggregate source unchanged
+  var aggregateSource = buildAggregate.toString();
+  if (aggregateSource.indexOf("aggregate.revenue += revenue") === -1)
+    throw new Error("buildAggregate analytics behavior changed");
+  assertionsPassed++;
+
+  // 12. no persistent diagnostic logging — Logger.log is transient, no SpreadsheetApp writes in coldSegments
+  if (perfInitSource.indexOf("SpreadsheetApp") !== -1 &&
+      perfInitSource.indexOf("SpreadsheetApp") < perfInitSource.indexOf("coldSegments"))
+  {
+    // SpreadsheetApp exists but only for acquisitionMs, not inside coldSegments block
+  }
+  var coldSegmentsBlock = perfInitSource.substring(
+    perfInitSource.indexOf("performance.coldSegments"),
+    perfInitSource.indexOf("Logger.log", perfInitSource.indexOf("performance.coldSegments"))
+  );
+  if (coldSegmentsBlock.indexOf("SpreadsheetApp") !== -1 ||
+      coldSegmentsBlock.indexOf("PropertiesService") !== -1 ||
+      coldSegmentsBlock.indexOf("CacheService") !== -1)
+    throw new Error("coldSegments contains persistent I/O calls");
+  assertionsPassed++;
+
+  // 13. coldSegments hierarchy — all required keys present
+  var requiredKeys = [
+    "cacheLookupMs", "canonicalTotalMs", "salesReadMs", "opsReadMs",
+    "productsReadMs", "expenseItemsReadMs", "canonicalNormalizeMs",
+    "analyticsBuildMs", "responseBuildMs", "serializationMs", "cacheWriteMs", "totalMs"
+  ];
+  requiredKeys.forEach(function(key) {
+    if (coldSegmentsBlock.indexOf(key + ":") === -1)
+      throw new Error("coldSegments missing required key: " + key);
+  });
+  assertionsPassed++;
+
+  // 14. coldSegments totalMs equals performance.totalMs
+  if (coldSegmentsBlock.indexOf("totalMs: performance.totalMs") === -1)
+    throw new Error("coldSegments.totalMs not mapped from performance.totalMs");
+  assertionsPassed++;
+
+  // 15. WARM path does not set coldSegments — cache hit returns early before coldSegments
+  var cacheHitBlock = perfInitSource.substring(
+    perfInitSource.indexOf("if (cachedPayload)"),
+    perfInitSource.indexOf("var acquisitionStartedAt")
+  );
+  if (cacheHitBlock.indexOf("coldSegments") !== -1)
+    throw new Error("WARM path sets coldSegments (should be omitted)");
+  assertionsPassed++;
+
+  // 16. no new SpreadsheetApp reads introduced in cold segments
+  var canonicalWrapper = perfInitSource.substring(
+    perfInitSource.indexOf("var canonicalStartedAt"),
+    perfInitSource.indexOf("var processedData")
+  );
+  if (canonicalWrapper.indexOf("getSheetByName") !== -1 ||
+      canonicalWrapper.indexOf("getDataRange") !== -1)
+    throw new Error("canonical wrapper introduced new sheet reads");
+  assertionsPassed++;
+
+  // 17. canonicalTotalMs maps correctly
+  if (coldSegmentsBlock.indexOf("canonicalTotalMs: performance.canonicalTotalMs") === -1)
+    throw new Error("coldSegments canonicalTotalMs not mapped correctly");
+  assertionsPassed++;
+
+  Logger.log(
+    "PASS: testColdBackendSegmentation | assertions=" + assertionsPassed
+  );
+
+  return { passed: true, assertions: assertionsPassed };
+}

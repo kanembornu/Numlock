@@ -108,7 +108,8 @@ function runAllBackendTests()
     { name: "testProductProfitabilityUngovernedType", run: testProductProfitabilityUngovernedType },
     { name: "testProductProfitabilityZeroComparisonDenominator", run: testProductProfitabilityZeroComparisonDenominator },
     { name: "testProductProfitabilityAbsentVariantComparison", run: testProductProfitabilityAbsentVariantComparison },
-    { name: "testProductProfitabilityEmptyDataset", run: testProductProfitabilityEmptyDataset }
+    { name: "testProductProfitabilityEmptyDataset", run: testProductProfitabilityEmptyDataset },
+    { name: "testColdBackendSegmentation", run: testColdBackendSegmentation }
   ];
   var passedTests = [];
 

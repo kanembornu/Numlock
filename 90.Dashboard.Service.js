@@ -100,6 +100,7 @@ function buildDashboardDataExecution(filter, customStart, customEnd) {
 
   var performance = {
     acquisitionMs: 0,
+    canonicalTotalMs: 0,
     salesReadMs: 0,
     expenseReadMs: 0,
     productReadMs: 0,
@@ -143,7 +144,9 @@ function buildDashboardDataExecution(filter, customStart, customEnd) {
       .getActiveSpreadsheet();
   performance.acquisitionMs = Date.now() - acquisitionStartedAt;
 
+  var canonicalStartedAt = Date.now();
   var canonicalData = getCanonicalTransactionData(ss, performance);
+  performance.canonicalTotalMs = Date.now() - canonicalStartedAt;
   var processedData = canonicalData.records;
   var sourceQuality = canonicalData.sourceQuality;
 
@@ -173,6 +176,20 @@ function buildDashboardDataExecution(filter, customStart, customEnd) {
   }
   performance.cacheWriteMs = Date.now() - cacheWriteStartedAt;
   performance.totalMs = Date.now() - totalStartedAt;
+  performance.coldSegments = {
+    cacheLookupMs: performance.cacheLookupMs,
+    canonicalTotalMs: performance.canonicalTotalMs,
+    salesReadMs: performance.salesReadMs,
+    opsReadMs: performance.expenseReadMs,
+    productsReadMs: performance.productReadMs,
+    expenseItemsReadMs: performance.expenseItemReadMs,
+    canonicalNormalizeMs: performance.normalizeMs,
+    analyticsBuildMs: performance.aggregateMs,
+    responseBuildMs: performance.responseAssemblyMs,
+    serializationMs: performance.serializationMs,
+    cacheWriteMs: performance.cacheWriteMs,
+    totalMs: performance.totalMs
+  };
   Logger.log("DashboardPerf " + JSON.stringify(performance));
   return { response: response, performance: performance };
 }
