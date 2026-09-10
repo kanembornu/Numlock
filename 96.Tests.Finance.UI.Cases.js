@@ -69,3 +69,134 @@ function testFinanceProfitAndLossUiContract()
   Logger.log("PASS: testFinanceProfitAndLossUiContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
+
+function testFinanceDestinationSwitchContract()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+  function forbidToken(source, token, name) {
+    scenarios++;
+    if (source.indexOf(token) !== -1) throw new Error("Finance UI forbidden " + name + ": " + token);
+  }
+
+  var stateSource = include("199.View.Finance.State");
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+  var combined = stateSource + renderSource + controllerSource;
+
+  // Defect 1 — shared data contamination: compatibility function exists
+  check(controllerSource.indexOf("function isFinanceDataCompatible") !== -1,
+    "compatibility check function declared");
+  check(controllerSource.indexOf("isFinanceDataCompatible(financeState.data") !== -1,
+    "setFinanceDestination checks data compatibility before render");
+
+  // Defect 1 — incompatible data triggers fresh request on switch
+  check(controllerSource.indexOf('setFinanceViewState("loading")') !== -1 &&
+    controllerSource.indexOf("requestFinanceData(getFinanceRequestFromControls())") !== -1,
+    "incompatible destination switch issues fresh request");
+
+  // Defect 1 — P&L→PP: P&L data has no products → incompatible
+  // Defect 1 — PP→C&E: PP data has no capitalEquity → incompatible
+  // Defect 1 — C&E→P&L: both from getFinanceData → compatible
+  // Defect 1 — PP→P&L: PP data has no expenseBreakdown → incompatible
+  check(controllerSource.indexOf("data.capitalEquity") !== -1,
+    "compatibility checks capitalEquity for C&E");
+  check(controllerSource.indexOf("data.products") !== -1 || controllerSource.indexOf("data.products") !== -1,
+    "compatibility checks products for PP");
+  check(controllerSource.indexOf("data.expenseBreakdown") !== -1,
+    "compatibility checks expenseBreakdown for P&L");
+
+  // Defect 2 — PP field name mismatch: productVariantCount
+  check(renderSource.indexOf("summary.productVariantCount") !== -1,
+    "PP reads productVariantCount");
+  check(renderSource.indexOf("summary.uniqueProductVariants") === -1,
+    "PP no longer reads uniqueProductVariants");
+
+  // Defect 2 — distinctProductCount for Products
+  check(renderSource.indexOf("summary.distinctProductCount") !== -1,
+    "PP reads distinctProductCount for Products KPI");
+
+  // Defect 2 — quality.status === "GOOD" (not "OK")
+  check(renderSource.indexOf('quality.status === "GOOD"') !== -1,
+    "PP quality checks GOOD from backend");
+  check(renderSource.indexOf('quality.status === "OK"') === -1,
+    "PP quality no longer checks obsolete OK status");
+
+  // Defect 3 — requestId destination binding
+  check(controllerSource.indexOf("dest !== financeState.destination") !== -1,
+    "callbacks validate destination alignment (not just requestId)");
+  check(controllerSource.indexOf("var dest = financeState.destination") !== -1,
+    "destination captured at request time before async call");
+
+  // Defect 3 — both success and failure guard on destination
+  var onSuccessBlock = controllerSource.substring(
+    controllerSource.indexOf("function onSuccess"),
+    controllerSource.indexOf("function onFailure")
+  );
+  var onFailureBlock = controllerSource.substring(
+    controllerSource.indexOf("function onFailure"),
+    controllerSource.indexOf("if (dest ===")
+  );
+  check(onSuccessBlock.indexOf("dest !== financeState.destination") !== -1,
+    "onSuccess validates destination alignment");
+  check(onFailureBlock.indexOf("dest !== financeState.destination") !== -1,
+    "onFailure validates destination alignment");
+
+  // Defect 4 — ensureFinanceData checks compatibility
+  check(controllerSource.indexOf("isFinanceDataCompatible(financeState.data") !== -1,
+    "ensureFinanceData checks data compatibility");
+
+  // Defect 4 — no stale data reuse without compatibility
+  check(controllerSource.indexOf("financeState.hasLoaded && financeState.data") !== -1,
+    "destination switch requires both hasLoaded and data");
+
+  // Error isolation — no hardcoded P&L in PP/CE paths
+  forbidToken(combined, '"Unable to display Profit & Loss."', "no hardcoded P&L in catch without dynamic label");
+
+  Logger.log("PASS: testFinanceDestinationSwitchContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinancePpFieldSemantics()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var renderSource = include("200.View.Finance.Render");
+  var shell = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+
+  // Products label maps to distinctProductCount
+  check(shell.indexOf('id="financePPVariantCount"') !== -1,
+    "Products KPI element exists");
+  check(renderSource.indexOf("summary.distinctProductCount") !== -1,
+    "Products KPI renders distinctProductCount");
+
+  // Product Rows label maps to productVariantCount
+  check(shell.indexOf('id="financePPRowCount"') !== -1,
+    "Product Rows KPI element exists");
+  check(renderSource.indexOf("summary.productVariantCount") !== -1,
+    "Product Rows KPI renders productVariantCount");
+
+  // Quality GOOD renders clean state
+  check(renderSource.indexOf('quality.status === "GOOD"') !== -1,
+    "GOOD quality detected from backend");
+  check(renderSource.indexOf('? "OK"') !== -1 || renderSource.indexOf('? "OK"\n') !== -1,
+    "GOOD displays as OK (clean/healthy)");
+
+  // Quality ATTENTION renders warning
+  check(renderSource.indexOf('quality.status === "ATTENTION"') !== -1,
+    "ATTENTION quality detected");
+  check(renderSource.indexOf('warningEl.hidden = false') !== -1,
+    "ATTENTION triggers warning visibility");
+
+  // No reference to obsolete uniqueProductVariants
+  check(renderSource.indexOf("uniqueProductVariants") === -1,
+    "no reference to obsolete uniqueProductVariants");
+
+  // No reference to obsolete quality OK check
+  check(renderSource.indexOf('quality.status === "OK"') === -1,
+    "no reference to obsolete quality OK check");
+
+  Logger.log("PASS: testFinancePpFieldSemantics | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}

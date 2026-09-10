@@ -17,6 +17,8 @@ function runAllBackendTests()
     { name: "testFinanceErrorDestinationMessaging", run: testFinanceErrorDestinationMessaging },
     { name: "testFinanceResponseBackwardCompatibility", run: testFinanceResponseBackwardCompatibility },
     { name: "testFinanceProfitAndLossUiContract", run: testFinanceProfitAndLossUiContract },
+    { name: "testFinanceDestinationSwitchContract", run: testFinanceDestinationSwitchContract },
+    { name: "testFinancePpFieldSemantics", run: testFinancePpFieldSemantics },
     { name: "testDepreciationEngineContract", run: testDepreciationEngineContract },
     { name: "testCapitalEquityMigrationContract", run: testCapitalEquityMigrationContract },
     { name: "testCashFoundationContracts", run: testCashFoundationContracts },

@@ -217,11 +217,11 @@
       getFinanceElement("financePPRevenue").textContent = formatFinanceNullableCurrency(summary.revenue);
       getFinanceElement("financePPCogs").textContent = formatFinanceNullableCurrency(summary.cogs);
       getFinanceElement("financePPGrossProfit").textContent = formatFinanceNullableCurrency(summary.grossProfit);
-      getFinanceElement("financePPVariantCount").textContent = formatFinanceNullableInteger(summary.uniqueProductVariants);
-      getFinanceElement("financePPRowCount").textContent = formatFinanceNullableInteger(products.length);
+      getFinanceElement("financePPVariantCount").textContent = formatFinanceNullableInteger(summary.distinctProductCount);
+      getFinanceElement("financePPRowCount").textContent = formatFinanceNullableInteger(summary.productVariantCount);
       getFinanceElement("financePPQualityStatus").textContent = quality.status === "ATTENTION"
         ? "Attention"
-        : quality.status === "OK"
+        : quality.status === "GOOD"
           ? "OK"
           : "—";
 

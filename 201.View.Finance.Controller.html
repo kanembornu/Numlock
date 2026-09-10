@@ -27,6 +27,21 @@
       requestFinanceData(request);
     }
 
+    function isFinanceDataCompatible(data, destination)
+    {
+      if (!data) return false;
+      if (destination === "product-profitability") {
+        return Array.isArray(data.products) && !!data.summary;
+      }
+      if (destination === "capital-equity") {
+        return !!data.capitalEquity;
+      }
+      if (destination === "profit-loss") {
+        return !!data.summary && Array.isArray(data.expenseBreakdown);
+      }
+      return false;
+    }
+
     function requestFinanceData(request)
     {
       financeState.filter = request.filter;
@@ -38,7 +53,7 @@
       setFinanceViewState("loading");
 
       function onSuccess(response) {
-        if (requestId !== financeState.activeRequestId) return;
+        if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         try {
           financeState.data = response;
           financeState.hasLoaded = true;
@@ -52,7 +67,7 @@
       }
 
       function onFailure(error) {
-        if (requestId !== financeState.activeRequestId) return;
+        if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         console.error("Finance request failed", error);
         var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
         setFinanceViewState("error", "Unable to load " + failLabel + ".");
@@ -103,19 +118,24 @@
       getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : isPP ? "Transaction-date operating basis" : "Transaction-date operating basis";
       getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : isPP ? "Product-level COGS follows authoritative sales allocation." : "Depreciation is included from the authoritative DepreciationLedger.";
       if (financeState.hasLoaded && financeState.data) {
-        try {
-          var isEmpty = renderActiveFinanceDestination(financeState.data);
-          setFinanceViewState(isEmpty ? "empty" : "success");
-        } catch (error) {
-          console.error("Finance render failed", error);
-          setFinanceViewState("error", "Unable to display " + headingText + ".");
+        if (isFinanceDataCompatible(financeState.data, financeState.destination)) {
+          try {
+            var isEmpty = renderActiveFinanceDestination(financeState.data);
+            setFinanceViewState(isEmpty ? "empty" : "success");
+          } catch (error) {
+            console.error("Finance render failed", error);
+            setFinanceViewState("error", "Unable to display " + headingText + ".");
+          }
+        } else {
+          setFinanceViewState("loading");
+          requestFinanceData(getFinanceRequestFromControls());
         }
       }
     }
 
     function ensureFinanceData()
     {
-      if (!financeState.hasLoaded && !financeState.loading) {
+      if (!financeState.loading && (!financeState.hasLoaded || !isFinanceDataCompatible(financeState.data, financeState.destination))) {
         requestFinanceData(getFinanceRequestFromControls());
       }
     }
