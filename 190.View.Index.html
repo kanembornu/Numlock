@@ -5162,6 +5162,10 @@
 
 window.onload = function()
 {
+  // 11Y.2A — cold-start profiling, navigation timeline origin
+  var __profile = window.__numlockStartupProfile = { t0: 0 };
+  __profile.t1 = performance.now();
+
   initializeThemeFoundation();
   initializeResponsiveShell();
   initializeDashboardTabs();
@@ -5179,6 +5183,7 @@ window.onload = function()
   loadData();
   // 11X.3K — async background warm-up after Dashboard first render
   setTimeout(function() {
+    __profile.t9 = performance.now();
     warmFinanceData("currentYear", null, null);
     warmProductProfitabilityData("currentYear", null, null);
   }, 0);

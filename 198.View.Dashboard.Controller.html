@@ -580,6 +580,7 @@
 
       setDashboardState("loading");
       var requestStartedAt = performance.now();
+      (function(){ var p = window.__numlockStartupProfile; if (p && !p.t2) p.t2 = requestStartedAt; })();
 
       google.script.run
         .withSuccessHandler(function(res)
@@ -595,6 +596,7 @@
           try
           {
             var responseReceivedAt = performance.now();
+            (function(){ var p = window.__numlockStartupProfile; if (p && !p.t3) p.t3 = responseReceivedAt; })();
             render(res, requestToken);
             var renderCompletedAt = performance.now();
             var serverMs = Number(res && res.dashboardPerformance && res.dashboardPerformance.totalMs) || 0;
@@ -683,6 +685,10 @@
 
     function scheduleDeferredDashboardRender(res, requestToken)
     {
+      // 11Y.2 — deferred render scheduled
+      var __profile = window.__numlockStartupProfile;
+      if (__profile && !__profile.t8) __profile.t8 = performance.now();
+
       pendingDashboardRenderFrame =
         window.requestAnimationFrame(function()
         {
@@ -734,11 +740,24 @@
 
       latestDashboardResponse = res;
 
+      // 11Y.2 — primary render timing
+      var __profile = window.__numlockStartupProfile;
+      if (__profile && !__profile.t4) __profile.t4 = performance.now();
+
       renderBusinessOverview(res);
       renderReportingMetadata(res);
       renderOverviewContext(res);
       renderKpiTargets(res.kpiTargets);
+
+      // 11Y.2 — primary render end / chart render start
+      if (__profile && !__profile.t5) __profile.t5 = performance.now();
+      if (__profile && !__profile.t6) __profile.t6 = performance.now();
+
       renderCharts(res);
+
+      // 11Y.2 — chart render end
+      if (__profile && !__profile.t7) __profile.t7 = performance.now();
+
       renderExecutiveSummary(res);
 
       scheduleDeferredDashboardRender(
@@ -756,4 +775,116 @@
       renderDeferredDashboardPresentation(res);
 
     hideChartSkeleton();
+
+    // 11Y.2 — cold-start profiling summary
+    emitStartupProfile();
+    }
+
+    // 11Y.2 — cold-start profiling
+    function emitStartupProfile()
+    {
+      var p = window.__numlockStartupProfile;
+      if (!p || p.emitted) return;
+      p.emitted = true;
+
+      p.firstUsableMs =
+        p.t5 != null && p.t0 != null ? Math.round(p.t5 - p.t0) : null;
+      p.preWindowLoadMs =
+        p.t1 != null && p.t0 != null ? Math.round(p.t1 - p.t0) : null;
+      p.windowLoadToRequestMs =
+        p.t2 != null && p.t1 != null ? Math.round(p.t2 - p.t1) : null;
+      p.navigationToRequestMs =
+        p.t2 != null && p.t0 != null ? Math.round(p.t2 - p.t0) : null;
+      p.serverRoundtripMs =
+        p.t3 != null && p.t2 != null ? Math.round(p.t3 - p.t2) : null;
+      p.postResponseToUsableMs =
+        p.t5 != null && p.t3 != null ? Math.round(p.t5 - p.t3) : null;
+      p.primaryRenderMs =
+        p.t5 != null && p.t4 != null ? Math.round(p.t5 - p.t4) : null;
+      p.chartRenderMs =
+        p.t7 != null && p.t6 != null ? Math.round(p.t7 - p.t6) : null;
+      p.warmupStartOffsetMs =
+        p.t9 != null && p.t5 != null ? Math.round(p.t9 - p.t5) : null;
+
+      var bp =
+        latestDashboardResponse &&
+        latestDashboardResponse.dashboardPerformance;
+      p.backendTotalMs = bp ? bp.totalMs || 0 : 0;
+      p.backendCacheHit = bp ? Boolean(bp.cacheHit) : null;
+      p.cacheStatus =
+        p.backendCacheHit === true
+          ? "WARM"
+          : p.backendCacheHit === false
+            ? "COLD"
+            : "UNKNOWN";
+
+      var resources =
+        typeof performance.getEntriesByType === "function"
+          ? performance.getEntriesByType("resource")
+          : [];
+      var chartJsEntry = null;
+      var fontAwesomeEntry = null;
+      var i, name;
+      for (i = 0; i < resources.length; i++)
+      {
+        name = resources[i].name || "";
+        if (
+          !chartJsEntry &&
+          name.indexOf("chart.js") !== -1 &&
+          name.indexOf("chart.umd") !== -1
+        )
+        {
+          chartJsEntry = resources[i];
+        }
+        if (
+          !fontAwesomeEntry &&
+          name.indexOf("font-awesome") !== -1
+        )
+        {
+          fontAwesomeEntry = resources[i];
+        }
+      }
+
+      p.chartJs = chartJsEntry
+        ? {
+            startTime: Math.round(chartJsEntry.startTime),
+            responseEnd: Math.round(chartJsEntry.responseEnd),
+            duration: Math.round(chartJsEntry.duration),
+            classification:
+              chartJsEntry.responseEnd <= (p.t1 || 0)
+                ? "RESOURCE_FINISHED_BEFORE_LOAD"
+                : "AFTER_FIRST_USABLE"
+          }
+        : null;
+
+      p.fontAwesome = fontAwesomeEntry
+        ? {
+            startTime: Math.round(fontAwesomeEntry.startTime),
+            responseEnd: Math.round(fontAwesomeEntry.responseEnd),
+            duration: Math.round(fontAwesomeEntry.duration),
+            classification:
+              fontAwesomeEntry.responseEnd <= (p.t1 || 0)
+                ? "RESOURCE_FINISHED_BEFORE_LOAD"
+                : "AFTER_FIRST_USABLE"
+          }
+        : null;
+
+      console.info("NUMLOCK Startup Profile", {
+        firstUsableMs: p.firstUsableMs,
+        preWindowLoadMs: p.preWindowLoadMs,
+        windowLoadToRequestMs: p.windowLoadToRequestMs,
+        navigationToRequestMs: p.navigationToRequestMs,
+        serverRoundtripMs: p.serverRoundtripMs,
+        postResponseToUsableMs: p.postResponseToUsableMs,
+        primaryRenderMs: p.primaryRenderMs,
+        chartRenderMs: p.chartRenderMs,
+        warmupStartOffsetMs: p.warmupStartOffsetMs,
+        backend: {
+          totalMs: p.backendTotalMs,
+          cacheHit: p.backendCacheHit,
+          cacheStatus: p.cacheStatus
+        },
+        chartJs: p.chartJs,
+        fontAwesome: p.fontAwesome
+      });
     }
