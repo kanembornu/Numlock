@@ -147,6 +147,8 @@
     function refreshTransactionEntryAfterSuccess()
     {
       if (!lastDashboardRequest) return;
+      // 11X.3K — invalidate finance caches on business mutation
+      invalidateFinanceCache();
       try
       {
         activeDashboardRequestToken = ++dashboardRequestSequence;

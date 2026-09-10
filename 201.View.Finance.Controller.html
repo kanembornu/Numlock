@@ -42,23 +42,66 @@
       return false;
     }
 
+    // 11X.3K — cache key: filter type + custom range (if any)
+    function buildFinanceCacheKey(filter, customStart, customEnd)
+    {
+      if (filter === "custom" && customStart && customEnd) {
+        return "custom|" + customStart + "|" + customEnd;
+      }
+      return filter || "currentYear";
+    }
+
+    // 11X.3K — validate cache entry before serving
+    function isValidFinanceCacheEntry(entry)
+    {
+      if (!entry || !entry.data) return false;
+      return isFinanceDataCompatible(entry.data, entry.destination);
+    }
+
+    // 11X.3K — fetch-or-join in-flight backend request
+    // Computes cache key from request params, stores captured values for warm-up,
+    // caches validated response, and warms sibling dataset for same filter.
     function requestFinanceData(request)
     {
-      financeState.filter = request.filter;
-      financeState.customStart = request.customStart;
-      financeState.customEnd = request.customEnd;
+      var capturedFilter = request.filter;
+      var capturedCustomStart = request.customStart;
+      var capturedCustomEnd = request.customEnd;
+      financeState.filter = capturedFilter;
+      financeState.customStart = capturedCustomStart;
+      financeState.customEnd = capturedCustomEnd;
+
+      var dest = financeState.destination;
+      var cacheType = dest === "product-profitability" ? "productProfitability" : "finance";
+      var cacheKey = buildFinanceCacheKey(capturedFilter, capturedCustomStart, capturedCustomEnd);
+
+      // Deduplicate: join existing in-flight request for same cache key + type
+      if (financeInflight[cacheType + "|" + cacheKey]) {
+        setFinanceViewState("loading");
+        return;
+      }
+
       var requestId = ++financeState.requestSequence;
       financeState.activeRequestId = requestId;
-      var dest = financeState.destination;
       setFinanceViewState("loading");
 
       function onSuccess(response) {
+        delete financeInflight[cacheType + "|" + cacheKey];
         if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         try {
           financeState.data = response;
           financeState.hasLoaded = true;
+          // Cache validated entry
+          if (isFinanceDataCompatible(response, dest)) {
+            financeCache[cacheType][cacheKey] = { data: response, destination: dest };
+          }
           var isEmpty = renderActiveFinanceDestination(response);
           setFinanceViewState(isEmpty ? "empty" : "success");
+          // 11X.3K — warm sibling dataset for same filter
+          if (cacheType === "finance") {
+            warmProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+          } else {
+            warmFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+          }
         } catch (error) {
           console.error("Finance render failed", error);
           var renderLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
@@ -67,23 +110,74 @@
       }
 
       function onFailure(error) {
+        delete financeInflight[cacheType + "|" + cacheKey];
         if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         console.error("Finance request failed", error);
         var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
         setFinanceViewState("error", "Unable to load " + failLabel + ".");
       }
 
+      financeInflight[cacheType + "|" + cacheKey] = true;
+
       if (dest === "product-profitability") {
         google.script.run
           .withSuccessHandler(onSuccess)
           .withFailureHandler(onFailure)
-          .getProductProfitabilityData(request.filter, request.customStart, request.customEnd);
+          .getProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
       } else {
         google.script.run
           .withSuccessHandler(onSuccess)
           .withFailureHandler(onFailure)
-          .getFinanceData(request.filter, request.customStart, request.customEnd);
+          .getFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
       }
+    }
+
+    // 11X.3K — background warm: finance dataset (P&L + C&E share cache entry)
+    function warmFinanceData(filter, customStart, customEnd)
+    {
+      var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      if (financeCache.finance[cacheKey]) return;
+      if (financeInflight["finance|" + cacheKey]) return;
+      financeInflight["finance|" + cacheKey] = true;
+      google.script.run
+        .withSuccessHandler(function(response) {
+          delete financeInflight["finance|" + cacheKey];
+          if (response && isFinanceDataCompatible(response, "profit-loss")) {
+            financeCache.finance[cacheKey] = { data: response, destination: "profit-loss" };
+          }
+        })
+        .withFailureHandler(function() {
+          delete financeInflight["finance|" + cacheKey];
+        })
+        .getFinanceData(filter, customStart, customEnd);
+    }
+
+    // 11X.3K — background warm: product profitability dataset
+    function warmProductProfitabilityData(filter, customStart, customEnd)
+    {
+      var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      if (financeCache.productProfitability[cacheKey]) return;
+      if (financeInflight["productProfitability|" + cacheKey]) return;
+      financeInflight["productProfitability|" + cacheKey] = true;
+      google.script.run
+        .withSuccessHandler(function(response) {
+          delete financeInflight["productProfitability|" + cacheKey];
+          if (response && isFinanceDataCompatible(response, "product-profitability")) {
+            financeCache.productProfitability[cacheKey] = { data: response, destination: "product-profitability" };
+          }
+        })
+        .withFailureHandler(function() {
+          delete financeInflight["productProfitability|" + cacheKey];
+        })
+        .getProductProfitabilityData(filter, customStart, customEnd);
+    }
+
+    // 11X.3K — invalidate all finance + PP caches (on transaction mutation)
+    function invalidateFinanceCache()
+    {
+      financeCache = { finance: {}, productProfitability: {} };
+      financeInflight = {};
+      financeState.activeRequestId = ++financeState.requestSequence;
     }
 
     function renderActiveFinanceDestination(response)
@@ -117,27 +211,43 @@
       getFinanceElement("utilityPageContext").textContent = contextText;
       getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : isPP ? "Transaction-date operating basis" : "Transaction-date operating basis";
       getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : isPP ? "Product-level COGS follows authoritative sales allocation." : "Depreciation is included from the authoritative DepreciationLedger.";
-      if (financeState.hasLoaded && financeState.data) {
-        if (isFinanceDataCompatible(financeState.data, financeState.destination)) {
-          try {
-            var isEmpty = renderActiveFinanceDestination(financeState.data);
-            setFinanceViewState(isEmpty ? "empty" : "success");
-          } catch (error) {
-            console.error("Finance render failed", error);
-            setFinanceViewState("error", "Unable to display " + headingText + ".");
-          }
-        } else {
-          setFinanceViewState("loading");
-          requestFinanceData(getFinanceRequestFromControls());
-        }
-      }
     }
 
+    // 11X.3K — navigation entry: check cache first, then in-flight, then request
     function ensureFinanceData()
     {
-      if (!financeState.loading && (!financeState.hasLoaded || !isFinanceDataCompatible(financeState.data, financeState.destination))) {
-        requestFinanceData(getFinanceRequestFromControls());
+      var request = getFinanceRequestFromControls();
+      var dest = financeState.destination;
+      var cacheType = dest === "product-profitability" ? "productProfitability" : "finance";
+      var cacheKey = buildFinanceCacheKey(request.filter, request.customStart, request.customEnd);
+      var cacheEntry = financeCache[cacheType][cacheKey];
+
+      if (cacheEntry && isValidFinanceCacheEntry(cacheEntry)) {
+        financeState.filter = request.filter;
+        financeState.customStart = request.customStart;
+        financeState.customEnd = request.customEnd;
+        financeState.data = cacheEntry.data;
+        financeState.hasLoaded = true;
+        try {
+          var isEmpty = renderActiveFinanceDestination(cacheEntry.data);
+          setFinanceViewState(isEmpty ? "empty" : "success");
+        } catch (error) {
+          console.error("Finance render failed", error);
+          var label = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
+          setFinanceViewState("error", "Unable to display " + label + ".");
+        }
+        return;
       }
+
+      if (financeInflight[cacheType + "|" + cacheKey]) {
+        financeState.filter = request.filter;
+        financeState.customStart = request.customStart;
+        financeState.customEnd = request.customEnd;
+        setFinanceViewState("loading");
+        return;
+      }
+
+      requestFinanceData(request);
     }
 
     function retryFinanceData()
