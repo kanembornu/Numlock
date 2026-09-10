@@ -46,13 +46,15 @@
             setFinanceViewState(isEmpty ? "empty" : "success");
           } catch (error) {
             console.error("Finance render failed", error);
-            setFinanceViewState("error", "Unable to display Profit & Loss.");
+            var renderDestLabel = financeState.destination === "capital-equity" ? "Capital & Equity" : "Profit & Loss";
+            setFinanceViewState("error", "Unable to display " + renderDestLabel + ".");
           }
         })
         .withFailureHandler(function(error) {
           if (requestId !== financeState.activeRequestId) return;
           console.error("Finance request failed", error);
-          setFinanceViewState("error", "Unable to load Profit & Loss.");
+          var failDestLabel = financeState.destination === "capital-equity" ? "Capital & Equity" : "Profit & Loss";
+          setFinanceViewState("error", "Unable to load " + failDestLabel + ".");
         })
         .getFinanceData(request.filter, request.customStart, request.customEnd);
     }

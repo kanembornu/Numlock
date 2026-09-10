@@ -98,8 +98,8 @@ function testFinanceCoreBackendContract() {
       result.accountingPolicy.cashBalanceAvailable !== false ||
       result.accountingPolicy.inventoryBalanceAvailable !== false || result.accountingPolicy.balanceSheetAvailable !== false ||
       result.accountingPolicy.cashFlowAvailable !== false) throw new Error("Finance accounting-policy disclosure mismatch");
-  var financeSource = getFinanceData.toString() + buildFinanceProfitAndLoss.toString() +
-    buildFinanceDepreciationSource.toString();
+  var financeSource = getFinanceDataWithRuntime.toString() + getFinanceData.toString() +
+    buildFinanceProfitAndLoss.toString() + buildFinanceDepreciationSource.toString();
   ["getDashboardData(", "buildFinancial(", 'getSheetByName(\"Transaction\")', 'getSheetByName(\"Helper\")'].forEach(function(token) {
     if (financeSource.indexOf(token) !== -1) throw new Error("Finance forbidden dependency: " + token);
   });
@@ -108,4 +108,315 @@ function testFinanceCoreBackendContract() {
   });
   Logger.log("PASS: testFinanceCoreBackendContract | scenarios=35");
   return { passed: true, scenarios: 35 };
+}
+
+function financeIsolationTestSpreadsheet(options) {
+  options = options || {};
+  var sheets = [];
+  var acctH = ["AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"];
+  var acctRows = (options.accounts || []).map(function(a) {
+    return acctH.map(function(h) { return a[h] === undefined ? "" : a[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("Accounts", [acctH].concat(acctRows)));
+
+  var tabSalH = ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"];
+  var salRows = (options.sales || []).map(function(r) {
+    return tabSalH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("tabsal", [tabSalH].concat(salRows)));
+
+  var tabOpsH = ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"];
+  var opsRows = (options.expenses || []).map(function(r) {
+    return tabOpsH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("tabops", [tabOpsH].concat(opsRows)));
+
+  var prodH = ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"];
+  var prodRows = (options.products || []).map(function(r) {
+    return prodH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("Products", [prodH].concat(prodRows)));
+
+  var expItemH = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"];
+  var expItemRows = (options.expenseItems || []).map(function(r) {
+    return expItemH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("ExpenseItems", [expItemH].concat(expItemRows)));
+
+  var depH = ["ID_Dep", "Period", "ID_Asset", "OpeningBookValue", "Depreciation", "AccumulatedDepreciation", "ClosingBookValue", "GeneratedAt"];
+  var depRows = (options.depreciationLedger || []).map(function(r) {
+    return depH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("DepreciationLedger", [depH].concat(depRows)));
+
+  var assetH = ["ID_Asset"];
+  var assetRows = (options.assets || []).map(function(r) {
+    return assetH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+  });
+  sheets.push(capitalEquitySchemaTestSheet("Assets", [assetH].concat(assetRows)));
+
+  if (!options.omitCapitalEquity) {
+    var ceH = CAPITAL_EQUITY_POLICY.HEADERS;
+    var ceRows = (options.capitalEquity || []).map(function(r) {
+      return ceH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+    });
+    sheets.push(capitalEquitySchemaTestSheet("CapitalEquity", [ceH].concat(ceRows)));
+  }
+  if (!options.omitOpeningBalances) {
+    var obH = FINANCE_OPENING_BALANCE_POLICY.HEADERS;
+    var obRows = (options.openingBalances || []).map(function(r) {
+      return obH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+    });
+    sheets.push(capitalEquitySchemaTestSheet("FinanceOpeningBalances", [obH].concat(obRows)));
+  }
+
+  return capitalEquitySchemaTestSpreadsheet(sheets);
+}
+
+function financeIsolationTestAccounts() {
+  return [
+    { AccountCode: "4100", AccountName: "Sales", AccountType: "Revenue", StatementGroup: "Revenue", CashFlowGroup: "Operating", IsActive: true },
+    { AccountCode: "5100", AccountName: "COGS", AccountType: "COGS", StatementGroup: "COGS", CashFlowGroup: "Operating", IsActive: true },
+    { AccountCode: "6100", AccountName: "Rent", AccountType: "Expense", StatementGroup: "Operating Expenses", CashFlowGroup: "Operating", IsActive: true },
+    { AccountCode: "3000", AccountName: "Owner Capital", AccountType: "Equity", IsActive: true },
+    { AccountCode: "3100", AccountName: "Owner Draw", AccountType: "Equity", IsActive: true },
+    { AccountCode: "3200", AccountName: "Retained Earnings", AccountType: "Equity", IsActive: true }
+  ];
+}
+
+function financeIsolationTestSales() {
+  return [
+    { ID_Trx: "SAL-ISO-1", Tanggal: new Date(2026, 0, 15), ID_Prod: "P1", Tipe: "Hot", Qty: 10, HPP: 5000, HJ: 15000, Source: "tabsal", IsActive: true }
+  ];
+}
+
+function financeIsolationTestExpenses() {
+  return [
+    { ID_Trx: "OPS-ISO-1", Tanggal: new Date(2026, 0, 20), ID_Ops: "O1", Nilai: 3000, Source: "tabops", IsActive: true }
+  ];
+}
+
+function financeIsolationTestProducts() {
+  return [
+    { ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", IsActive: true }
+  ];
+}
+
+function financeIsolationTestExpenseItems() {
+  return [
+    { ID_Ops: "O1", Item: "Rent", Kategori: "Operations", Kind: "Fixed", Group: "Operating", IsActive: true }
+  ];
+}
+
+function financeIsolationTestDepreciation() {
+  return [
+    { ID_Dep: "DEP-ISO-1", Period: new Date(2026, 0, 1), ID_Asset: "AST-1", OpeningBookValue: 100000, Depreciation: 5000, AccumulatedDepreciation: 5000, ClosingBookValue: 95000, GeneratedAt: new Date() }
+  ];
+}
+
+function financeIsolationTestAssets() {
+  return [{ ID_Asset: "AST-1" }];
+}
+
+function financeIsolationBuildSpreadsheet(options) {
+  return financeIsolationTestSpreadsheet({
+    accounts: financeIsolationTestAccounts(),
+    sales: financeIsolationTestSales(),
+    expenses: financeIsolationTestExpenses(),
+    products: financeIsolationTestProducts(),
+    expenseItems: financeIsolationTestExpenseItems(),
+    depreciationLedger: financeIsolationTestDepreciation(),
+    assets: financeIsolationTestAssets(),
+    capitalEquity: options && options.capitalEquity || [],
+    openingBalances: options && options.openingBalances || [],
+    omitCapitalEquity: options && options.omitCapitalEquity,
+    omitOpeningBalances: options && options.omitOpeningBalances
+  });
+}
+
+function testFinancePAndLIsolation() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var ss = financeIsolationBuildSpreadsheet({});
+  var result = getFinanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-01-31");
+
+  check(result.summary !== undefined, "P&L summary present when C&E is valid");
+  check(result.summary.revenue === 150000, "P&L revenue correct: 10 * 15000");
+  check(result.summary.cogs === 50000, "P&L COGS correct: 10 * 5000 = tabsal.HPP");
+  check(result.summary.grossProfit === 100000, "P&L gross profit correct");
+  check(result.summary.operatingExpenses === 3000, "P&L operating expenses correct");
+  check(result.capitalEquity !== undefined, "capitalEquity present");
+  check(result.capitalEquity.status !== "UNAVAILABLE", "C&E available when dependencies valid");
+
+  var ssMissingCapitalEquity = financeIsolationBuildSpreadsheet({ omitCapitalEquity: true });
+  var resultMissing = getFinanceDataWithRuntime({ spreadsheet: ssMissingCapitalEquity }, "custom", "2026-01-01", "2026-01-31");
+
+  check(resultMissing.summary !== undefined, "P&L summary present even when CapitalEquity sheet missing");
+  check(resultMissing.summary.revenue === 150000, "P&L revenue unaffected by missing CapitalEquity");
+  check(resultMissing.summary.cogs === 50000, "P&L COGS unaffected: still tabsal.HPP");
+  check(resultMissing.summary.grossProfit === 100000, "P&L gross profit unaffected");
+  check(resultMissing.capitalEquity !== undefined, "capitalEquity field present even when degraded");
+  check(resultMissing.capitalEquity.status === "UNAVAILABLE", "C&E explicitly UNAVAILABLE when sheet missing");
+  check(typeof resultMissing.capitalEquity.error === "string" && resultMissing.capitalEquity.error.length > 0, "C&E has error message");
+  check(!resultMissing.capitalEquity.hasOwnProperty("owners"), "no fabricated owners array");
+  check(!resultMissing.capitalEquity.hasOwnProperty("totalEquity"), "no fabricated totalEquity");
+  check(!resultMissing.capitalEquity.hasOwnProperty("contributedCapital"), "no fabricated contributedCapital");
+
+  Logger.log("PASS: testFinancePAndLIsolation | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceCapitalEquityGracefulDegradation() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var ssNoOpening = financeIsolationBuildSpreadsheet({
+    capitalEquity: [
+      { ID_Trx: "CE-1", Tanggal: "2021-01-01", Owner: "Dekker", Type: "OWNER_CONTRIBUTION", Nominal: 10000000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+    ],
+    omitOpeningBalances: true
+  });
+  var resultNoOpening = getFinanceDataWithRuntime({ spreadsheet: ssNoOpening }, "custom", "2026-08-01", "2026-08-31");
+  check(resultNoOpening.summary !== undefined, "P&L present when opening balances missing");
+  check(resultNoOpening.capitalEquity.status === "UNAVAILABLE", "C&E UNAVAILABLE when FinanceOpeningBalances missing");
+  check(resultNoOpening.capitalEquity.error.indexOf("schema") !== -1 || resultNoOpening.capitalEquity.error.indexOf("missing") !== -1 || resultNoOpening.capitalEquity.error.length > 0, "C&E error describes the failure");
+
+  var ssInvalidOpening = financeIsolationBuildSpreadsheet({
+    capitalEquity: [
+      { ID_Trx: "CE-1", Tanggal: "2021-01-01", Owner: "Dekker", Type: "OWNER_CONTRIBUTION", Nominal: 10000000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+    ],
+    openingBalances: [
+      { ID: "FOB-BAD", EffectiveDate: "2026-07-31", AccountCode: "9999", Amount: 1000, Source: "LEGACY_XLSM_MIGRATION", Keterangan: "Bad", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+    ]
+  });
+  var resultInvalid = getFinanceDataWithRuntime({ spreadsheet: ssInvalidOpening }, "custom", "2026-08-01", "2026-08-31");
+  check(resultInvalid.summary !== undefined, "P&L present when opening balance validation fails");
+  check(resultInvalid.capitalEquity.status === "UNAVAILABLE", "C&E UNAVAILABLE when opening balance invalid");
+  check(resultInvalid.capitalEquity.error.length > 0, "C&E has error for invalid opening balance");
+
+  check(!resultInvalid.capitalEquity.hasOwnProperty("owners"), "no fabricated owners on invalid opening");
+  check(!resultInvalid.capitalEquity.hasOwnProperty("totalEquity"), "no fabricated totalEquity on invalid opening");
+  check(!resultInvalid.capitalEquity.hasOwnProperty("retainedEarnings"), "no fabricated retainedEarnings on invalid opening");
+
+  Logger.log("PASS: testFinanceCapitalEquityGracefulDegradation | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceCapitalEquitySuccess() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var ceRows = [
+    { ID_Trx: "CE-1", Tanggal: "2021-01-01", Owner: "Dekker", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" },
+    { ID_Trx: "CE-2", Tanggal: "2021-01-01", Owner: "Erway", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var obRows = [
+    { ID: "FOB-3200-20260731", EffectiveDate: "2026-07-31", AccountCode: "3200", Amount: 7407000, Source: "LEGACY_XLSM_MIGRATION", Keterangan: "Opening", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var ss = financeIsolationBuildSpreadsheet({ capitalEquity: ceRows, openingBalances: obRows });
+  var result = getFinanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-07-31");
+
+  check(result.summary !== undefined, "P&L summary present on success path");
+  check(result.capitalEquity !== undefined, "capitalEquity present");
+  check(result.capitalEquity.status !== "UNAVAILABLE", "C&E not degraded on success");
+  check(result.capitalEquity.asOfDate === "2026-07-31", "C&E asOfDate correct");
+  check(result.capitalEquity.owners.length === 2, "C&E has two owners");
+  check(result.capitalEquity.owners[0].owner === "Dekker", "First owner is Dekker");
+  check(result.capitalEquity.owners[1].owner === "Erway", "Second owner is Erway");
+  check(result.capitalEquity.ownerContributions === 21270000, "Total contributions correct");
+  check(result.capitalEquity.contributedCapital === 0, "Contributed capital net zero");
+  check(result.capitalEquity.retainedEarnings === 7407000, "Retained earnings matches opening");
+  check(result.capitalEquity.totalEquity === 7407000, "Total equity correct at cutoff");
+  check(result.capitalEquity.retainedEarningsStatus === "ESTABLISHED", "Retained earnings established");
+  check(result.capitalEquity.accountingPolicy !== undefined, "C&E accountingPolicy present");
+
+  Logger.log("PASS: testFinanceCapitalEquitySuccess | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceErrorDestinationMessaging() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var controllerSource = include("201.View.Finance.Controller");
+  var stateSource = include("199.View.Finance.State");
+  var renderSource = include("200.View.Finance.Render");
+
+  check(controllerSource.indexOf('var renderDestLabel = financeState.destination === "capital-equity" ? "Capital & Equity" : "Profit & Loss"') !== -1,
+    "render error handler uses dynamic destination label");
+  check(controllerSource.indexOf('var failDestLabel = financeState.destination === "capital-equity" ? "Capital & Equity" : "Profit & Loss"') !== -1,
+    "failure handler uses dynamic destination label");
+  check(controllerSource.indexOf('"Unable to display Profit & Loss."') === -1 || controllerSource.indexOf('renderDestLabel') !== -1,
+    "no hardcoded Profit & Loss in render catch without dynamic label");
+  check(controllerSource.indexOf('"Unable to load Profit & Loss."') === -1 || controllerSource.indexOf('failDestLabel') !== -1,
+    "no hardcoded Profit & Loss in failure handler without dynamic label");
+  check(controllerSource.indexOf('"Unable to display " + renderDestLabel') !== -1,
+    "render error message interpolates destination");
+  check(controllerSource.indexOf('"Unable to load " + failDestLabel') !== -1,
+    "failure message interpolates destination");
+
+  check(stateSource.indexOf('destination: "profit-loss"') !== -1, "default destination is profit-loss");
+  check(controllerSource.indexOf('financeState.destination === "capital-equity"') !== -1, "destination check exists for capital-equity");
+
+  var setDestSource = controllerSource;
+  check(setDestSource.indexOf('setFinanceViewState("error", isEquity ? "Unable to display Capital & Equity." : "Unable to display Profit & Loss.")') !== -1,
+    "setFinanceDestination error path uses dynamic label");
+
+  Logger.log("PASS: testFinanceErrorDestinationMessaging | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceResponseBackwardCompatibility() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var ceRows = [
+    { ID_Trx: "CE-1", Tanggal: "2021-01-01", Owner: "Dekker", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" },
+    { ID_Trx: "CE-2", Tanggal: "2021-01-01", Owner: "Erway", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var obRows = [
+    { ID: "FOB-3200-20260731", EffectiveDate: "2026-07-31", AccountCode: "3200", Amount: 7407000, Source: "LEGACY_XLSM_MIGRATION", Keterangan: "Opening", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var ss = financeIsolationBuildSpreadsheet({ capitalEquity: ceRows, openingBalances: obRows });
+  var result = getFinanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-07-31");
+
+  check(typeof result === "object" && result !== null, "response is object");
+  check(result.period !== undefined, "response has period");
+  check(result.period.filter === "custom", "period.filter correct");
+  check(result.period.startDate === "2026-01-01", "period.startDate correct");
+  check(result.period.endDate === "2026-07-31", "period.endDate correct");
+  check(result.summary !== undefined, "response has summary");
+  check(typeof result.summary.revenue === "number", "summary.revenue is number");
+  check(typeof result.summary.cogs === "number", "summary.cogs is number");
+  check(typeof result.summary.grossProfit === "number", "summary.grossProfit is number");
+  check(typeof result.summary.operatingExpenses === "number", "summary.operatingExpenses is number");
+  check(typeof result.summary.depreciationExpense === "number", "summary.depreciationExpense is number");
+  check(typeof result.summary.operatingNetProfit === "number", "summary.operatingNetProfit is number");
+  check(typeof result.summary.operatingProfitMargin === "number", "summary.operatingProfitMargin is number");
+  check(Array.isArray(result.expenseBreakdown), "expenseBreakdown is array");
+  check(result.dataQuality !== undefined, "response has dataQuality");
+  check(result.dataQuality.status !== undefined, "dataQuality has status");
+  check(result.accountingPolicy !== undefined, "response has accountingPolicy");
+  check(result.accountingPolicy.recognitionBasis === "TRANSACTION_DATE_OPERATING", "accountingPolicy preserved");
+  check(result.capitalEquity !== undefined, "response has capitalEquity");
+  check(result.capitalEquity.asOfDate === "2026-07-31", "capitalEquity.asOfDate preserved");
+  check(Array.isArray(result.capitalEquity.owners), "capitalEquity.owners is array");
+  check(result.capitalEquity.accountingPolicy !== undefined, "capitalEquity.accountingPolicy preserved");
+  check(result.capitalEquity.dataQuality !== undefined, "capitalEquity.dataQuality preserved");
+
+  check(result.grossProfit === result.summary.revenue - result.summary.cogs, "formula: grossProfit = revenue - cogs");
+  check(result.summary.grossProfit === result.summary.revenue - result.summary.cogs, "formula in summary consistent");
+
+  var ssDeg = financeIsolationBuildSpreadsheet({ omitCapitalEquity: true });
+  var degResult = getFinanceDataWithRuntime({ spreadsheet: ssDeg }, "custom", "2026-01-01", "2026-01-31");
+  check(degResult.period !== undefined, "degraded response still has period");
+  check(degResult.summary !== undefined, "degraded response still has summary");
+  check(degResult.dataQuality !== undefined, "degraded response still has dataQuality");
+  check(degResult.capitalEquity !== undefined, "degraded response still has capitalEquity key");
+  check(degResult.capitalEquity.status === "UNAVAILABLE", "degraded capitalEquity has status UNAVAILABLE");
+  check(degResult.capitalEquity.error.length > 0, "degraded capitalEquity has error message");
+
+  Logger.log("PASS: testFinanceResponseBackwardCompatibility | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
 }

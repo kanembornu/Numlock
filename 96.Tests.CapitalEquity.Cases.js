@@ -173,7 +173,7 @@ function testCapitalEquityMigrationContract() {
       capitalEquityTestAccounts(), "2026-08-31", 0);
   } catch (error) { invalidOpeningRejected = error.message.indexOf("ACCOUNT_CODE_MISMATCH") !== -1; }
   check(invalidOpeningRejected, "opening-balance account mismatch rejected");
-  var financeIntegrationSource = getFinanceData.toString();
+  var financeIntegrationSource = getFinanceDataWithRuntime.toString();
   check(financeIntegrationSource.indexOf("buildCapitalEquityReadModel") !== -1 &&
     financeIntegrationSource.indexOf("period.endDate") !== -1 &&
     financeIntegrationSource.indexOf("runCapitalEquityMigration") === -1,

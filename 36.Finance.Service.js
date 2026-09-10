@@ -32,8 +32,8 @@ function requireNumlockProductionSpreadsheet() {
 
 var FINANCE_DEPRECIATION_EXPECTED_ROWS = 2679;
 
-function getFinanceData(filter, customStart, customEnd) {
-  var ss = requireNumlockProductionSpreadsheet();
+function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
+  var ss = runtime.spreadsheet;
   var canonicalData = getCanonicalTransactionData(ss);
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
@@ -41,20 +41,30 @@ function getFinanceData(filter, customStart, customEnd) {
   var depreciationSource = getFinanceDepreciationSource(ss);
   var period = resolveDashboardDateRange(filter, customStart, customEnd);
   var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
-  var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
-  var openingRows = readFinanceOpeningBalancesCompat(ss);
-  var postCutoffProfit = 0;
-  if (period.endDate >= FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START) {
-    postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
-      filter: "custom",
-      startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
-      endDate: period.endDate,
-      label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + period.endDate
-    }, depreciationSource).summary.operatingNetProfit;
+  try {
+    var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
+    var openingRows = readFinanceOpeningBalancesCompat(ss);
+    var postCutoffProfit = 0;
+    if (period.endDate >= FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START) {
+      postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
+        filter: "custom",
+        startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
+        endDate: period.endDate,
+        label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + period.endDate
+      }, depreciationSource).summary.operatingNetProfit;
+    }
+    finance.capitalEquity = buildCapitalEquityReadModel(
+      capitalRows, openingRows, accounts, period.endDate, postCutoffProfit);
+  } catch (equityError) {
+    finance.capitalEquity = { status: "UNAVAILABLE", error: String(equityError && equityError.message || equityError) };
   }
-  finance.capitalEquity = buildCapitalEquityReadModel(
-    capitalRows, openingRows, accounts, period.endDate, postCutoffProfit);
   return finance;
+}
+
+function getFinanceData(filter, customStart, customEnd) {
+  return getFinanceDataWithRuntime({
+    spreadsheet: requireNumlockProductionSpreadsheet()
+  }, filter, customStart, customEnd);
 }
 
 function financeDepreciationPeriodKey(value) {
