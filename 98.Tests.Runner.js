@@ -66,7 +66,27 @@ function runAllBackendTests()
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },
     { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics },
-    { name: "testSourceDataQualityPipeline", run: testSourceDataQualityPipeline }
+    { name: "testSourceDataQualityPipeline", run: testSourceDataQualityPipeline },
+    { name: "testProductProfitabilityBasicAggregation", run: testProductProfitabilityBasicAggregation },
+    { name: "testProductProfitabilityProductTypeGrain", run: testProductProfitabilityProductTypeGrain },
+    { name: "testProductProfitabilityHotColdSplit", run: testProductProfitabilityHotColdSplit },
+    { name: "testProductProfitabilityGrossMargin", run: testProductProfitabilityGrossMargin },
+    { name: "testProductProfitabilityPerUnitMetrics", run: testProductProfitabilityPerUnitMetrics },
+    { name: "testProductProfitabilityMixMetrics", run: testProductProfitabilityMixMetrics },
+    { name: "testProductProfitabilityRanking", run: testProductProfitabilityRanking },
+    { name: "testProductProfitabilityPeriodFiltering", run: testProductProfitabilityPeriodFiltering },
+    { name: "testProductProfitabilityComparison", run: testProductProfitabilityComparison },
+    { name: "testProductProfitabilityInactiveExcluded", run: testProductProfitabilityInactiveExcluded },
+    { name: "testProductProfitabilityZeroRevenueDenominator", run: testProductProfitabilityZeroRevenueDenominator },
+    { name: "testProductProfitabilityZeroUnitsDenominator", run: testProductProfitabilityZeroUnitsDenominator },
+    { name: "testProductProfitabilityMissingIdentityHandling", run: testProductProfitabilityMissingIdentityHandling },
+    { name: "testProductProfitabilityReconcilesToFinance", run: testProductProfitabilityReconcilesToFinance },
+    { name: "testProductProfitabilityFailureIsolation", run: testProductProfitabilityFailureIsolation },
+    { name: "testProductProfitabilityResponseContract", run: testProductProfitabilityResponseContract },
+    { name: "testProductProfitabilityUngovernedType", run: testProductProfitabilityUngovernedType },
+    { name: "testProductProfitabilityZeroComparisonDenominator", run: testProductProfitabilityZeroComparisonDenominator },
+    { name: "testProductProfitabilityAbsentVariantComparison", run: testProductProfitabilityAbsentVariantComparison },
+    { name: "testProductProfitabilityEmptyDataset", run: testProductProfitabilityEmptyDataset }
   ];
   var passedTests = [];
 
