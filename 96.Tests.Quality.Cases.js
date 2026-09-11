@@ -122,6 +122,51 @@ function testReportingMetadata()
 
   scenariosPassed++;
 
+  var fallbackMetadata =
+    buildReportingMetadata(
+      [
+        { date: new Date(2026, 5, 15, 9, 0, 0),
+          transactionType: "Sales" }
+      ],
+      { filter: "custom" },
+      fixture.referenceDate
+    );
+
+  if (
+    fallbackMetadata.reportingScope.firstTransactionDate
+      !== "2026-06-15"
+  )
+  {
+    throw new Error(
+      "canonicalDateKey fallback date mismatch"
+    );
+  }
+
+  scenariosPassed++;
+
+  var reportingSource =
+    buildReportingMetadata.toString();
+
+  if (
+    reportingSource.indexOf("Utilities.formatDate") !== -1
+  )
+  {
+    throw new Error(
+      "buildReportingMetadata still uses Utilities.formatDate"
+    );
+  }
+
+  if (
+    reportingSource.indexOf("canonicalDateKey") === -1
+  )
+  {
+    throw new Error(
+      "buildReportingMetadata missing canonicalDateKey"
+    );
+  }
+
+  scenariosPassed++;
+
   var source = getAssembledFrontendSource();
 
   fixture.frontendTokens.forEach(function(token)

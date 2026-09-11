@@ -219,10 +219,8 @@ function buildReportingMetadata(scopedData, dateRange, referenceDate) {
     new Date(referenceDate || new Date());
 
   var today =
-    Utilities.formatDate(
-      generatedDate,
-      timezone,
-      "yyyy-MM-dd"
+    canonicalDateKey(
+      generatedDate
     );
 
   var rows =
@@ -254,21 +252,9 @@ function buildReportingMetadata(scopedData, dateRange, referenceDate) {
       return;
     }
 
-    var dateKey;
-
-    try
-    {
-      dateKey =
-        Utilities.formatDate(
-          transactionDate,
-          timezone,
-          "yyyy-MM-dd"
-        );
-    }
-    catch (error)
-    {
-      return;
-    }
+    var dateKey =
+      row && row.dateKey ||
+      canonicalDateKey(transactionDate);
 
     if (
       firstTransactionDate === null ||
