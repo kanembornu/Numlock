@@ -42,6 +42,21 @@ function testCanonicalTransactionAdapter()
   };
   var mockSpreadsheet = {
     getSheetByName: function(name) {
+      if (name === "tabsal") {
+        return {
+          getLastRow: function() {
+            readCounts[name] = (readCounts[name] || 0) + 1;
+            return tables[name].length;
+          },
+          getRange: function(row, col, numRows, numCols) {
+            return {
+              getValues: function() {
+                return tables[name].map(function(r) { return r.slice(0, numCols); });
+              }
+            };
+          }
+        };
+      }
       return {
         getDataRange: function() {
           return {

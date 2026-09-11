@@ -21,6 +21,31 @@ function readCanonicalTable(ss, name, required) {
   });
 }
 
+function readBoundedCanonicalTable(ss, name, required, columnCount) {
+  var sheet = ss.getSheetByName(name);
+  if (!sheet) throw new Error("Missing canonical sheet: " + name);
+  var lastRow = sheet.getLastRow();
+  if (lastRow === 0) throw new Error(name + " is empty (no rows)");
+  var values = sheet.getRange(1, 1, lastRow, columnCount).getValues();
+  var headers = values[0] || [];
+  var indexes = {};
+  headers.forEach(function(header, index) { indexes[String(header).trim()] = index; });
+  required.forEach(function(header) {
+    if (!Object.prototype.hasOwnProperty.call(indexes, header)) {
+      throw new Error(name + " is missing required column: " + header);
+    }
+  });
+  return values.slice(1).filter(function(row) {
+    return row.some(function(value) { return value !== "" && value != null; });
+  }).map(function(row, rowIndex) {
+    var record = { sourceRowIndex: rowIndex + 1 };
+    headers.forEach(function(header, index) {
+      record[String(header).trim()] = row[index] === undefined ? "" : row[index];
+    });
+    return record;
+  });
+}
+
 function isCanonicalActive(value) {
   return value === true || String(value).trim().toUpperCase() === "TRUE";
 }
@@ -186,7 +211,12 @@ function getCanonicalTransactionData(ss, performance) {
   }
 
   var source = {
-    sales: timedRead("salesReadMs", "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"]),
+    sales: (function() {
+      var startedAt = Date.now();
+      var rows = readBoundedCanonicalTable(ss, "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"], 9);
+      if (performance) performance["salesReadMs"] = Date.now() - startedAt;
+      return rows;
+    })(),
     expenses: timedRead("expenseReadMs", "tabops", ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"]),
     products: timedRead("productReadMs", "Products", ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]),
     expenseItems: timedRead("expenseItemReadMs", "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"])

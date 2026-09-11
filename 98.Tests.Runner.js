@@ -5,6 +5,7 @@ function runAllBackendTests()
     { name: "getDashboardData", run: getDashboardData },
     { name: "testAggregate", run: testAggregate },
     { name: "testCanonicalTransactionAdapter", run: testCanonicalTransactionAdapter },
+    { name: "testBoundedCanonicalRead", run: testBoundedCanonicalRead },
     { name: "testProductPricingResolution", run: testProductPricingResolution },
     { name: "testCanonicalTransactionEntryService", run: testCanonicalTransactionEntryService },
     { name: "testCanonicalTransactionLifecycleService", run: testCanonicalTransactionLifecycleService },
