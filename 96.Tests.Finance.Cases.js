@@ -131,7 +131,7 @@ function financeIsolationTestSpreadsheet(options) {
   });
   sheets.push(capitalEquitySchemaTestSheet("tabops", [tabOpsH].concat(opsRows)));
 
-  var prodH = ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"];
+  var prodH = ["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"];
   var prodRows = (options.products || []).map(function(r) {
     return prodH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
   });
@@ -198,7 +198,7 @@ function financeIsolationTestExpenses() {
 
 function financeIsolationTestProducts() {
   return [
-    { ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", IsActive: true }
+    { ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", RevenueAccountCode: "4100", COGSAccountCode: "5100", IsActive: true }
   ];
 }
 

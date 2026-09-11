@@ -190,11 +190,25 @@ function testBoundedCanonicalRead()
       }
       if (name === "Products") {
         return {
+          getLastRow: function() { return 2; },
+          getRange: function(row, col, numRows, numCols) {
+            var values = [["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"],
+              ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true]];
+            return {
+              getValues: function() {
+                var result = [];
+                for (var r = row - 1; r < row - 1 + numRows; r++) {
+                  result.push(values[r] ? values[r].slice(0, numCols) : []);
+                }
+                return result;
+              }
+            };
+          },
           getDataRange: function() {
             return {
               getValues: function() {
-                return [["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"],
-                  ["P1", "Latte", "Coffee", "Beverage", true]];
+                return [["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"],
+                  ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true]];
               }
             };
           }
@@ -402,9 +416,22 @@ function testBoundedCanonicalReadTabops() {
 
   var productsSheet = {
     _values: [
-      ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"],
-      ["P1", "Latte", "Coffee", "Beverage", true]
+      ["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"],
+      ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true]
     ],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return {
+        getValues: function() {
+          var result = [];
+          for (var r = row - 1; r < row - 1 + numRows; r++) {
+            result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+          }
+          return result;
+        }
+      };
+    },
     getDataRange: function() {
       var self = this;
       return {
@@ -485,4 +512,264 @@ function testBoundedCanonicalReadTabops() {
   if (activeSales.length !== 1) {
     throw new Error("Sales bounded: expected 1 active sales record, got " + activeSales.length);
   }
+}
+
+function testBoundedCanonicalReadProducts() {
+  var headers7 = ["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"];
+
+  function makeProductsSheet(values) {
+    return {
+      _values: values,
+      getLastRow: function() { return this._values.length; },
+      getRange: function(row, col, numRows, numCols) {
+        var self = this;
+        return {
+          getValues: function() {
+            var result = [];
+            for (var r = row - 1; r < row - 1 + numRows; r++) {
+              result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+            }
+            return result;
+          }
+        };
+      },
+      getDataRange: function() {
+        var self = this;
+        return {
+          getValues: function() { return self._values.map(function(r) { return r.slice(); }); }
+        };
+      }
+    };
+  }
+
+  // ---- 1. Products A:G bounded range exactly 7 columns ----
+  var fullHeaders7 = headers7.concat(["CreatedAt", "UpdatedAt", "Notes"]);
+  var sheet1 = makeProductsSheet([
+    fullHeaders7,
+    ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true, "2025-01-01", "2025-06-01", "note"]
+  ]);
+  var capturedNumCols = null;
+  var origGetRange = sheet1.getRange;
+  sheet1.getRange = function(row, col, numRows, numCols) {
+    capturedNumCols = numCols;
+    return origGetRange.call(this, row, col, numRows, numCols);
+  };
+  var ss1 = { getSheetByName: function(n) { return n === "Products" ? sheet1 : null; } };
+  readBoundedCanonicalTable(ss1, "Products", headers7, 7);
+  if (capturedNumCols !== 7) {
+    throw new Error("Products bounded read: expected width 7, got " + capturedNumCols);
+  }
+
+  // ---- 2. H:J excluded (CreatedAt, UpdatedAt, Notes not read) ----
+  var sheet2 = makeProductsSheet([
+    fullHeaders7,
+    ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true, "2025-01-01", "2025-06-01", "note"]
+  ]);
+  var ss2 = { getSheetByName: function(n) { return n === "Products" ? sheet2 : null; } };
+  var bounded2 = readBoundedCanonicalTable(ss2, "Products", headers7, 7);
+  var trailingCols = ["CreatedAt", "UpdatedAt", "Notes"];
+  trailingCols.forEach(function(col) {
+    if (Object.prototype.hasOwnProperty.call(bounded2[0], col) && bounded2[0][col] !== "") {
+      throw new Error("Products bounded reader exposed trailing column: " + col);
+    }
+  });
+
+  // ---- 3. All 7 fields preserved ----
+  var sheet3 = makeProductsSheet([
+    fullHeaders7,
+    ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true, "", "", ""]
+  ]);
+  var ss3 = { getSheetByName: function(n) { return n === "Products" ? sheet3 : null; } };
+  var bounded3 = readBoundedCanonicalTable(ss3, "Products", headers7, 7);
+  headers7.forEach(function(h) {
+    if (!Object.prototype.hasOwnProperty.call(bounded3[0], h)) {
+      throw new Error("Products bounded output missing required header: " + h);
+    }
+  });
+  if (bounded3[0].ID_Prod !== "P1") throw new Error("Products field ID_Prod wrong");
+  if (bounded3[0].Produk !== "Latte") throw new Error("Products field Produk wrong");
+  if (bounded3[0].Kategori !== "Coffee") throw new Error("Products field Kategori wrong");
+  if (bounded3[0].Kind !== "Beverage") throw new Error("Products field Kind wrong");
+  if (bounded3[0].RevenueAccountCode !== "4100") throw new Error("Products field RevenueAccountCode wrong");
+  if (bounded3[0].COGSAccountCode !== "5100") throw new Error("Products field COGSAccountCode wrong");
+  if (bounded3[0].IsActive !== true) throw new Error("Products field IsActive wrong");
+
+  // ---- 4. inactive row remains inactive (IsActive=false filtered) ----
+  var sheet4 = makeProductsSheet([
+    headers7,
+    ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true],
+    ["P2", "Decaf", "Coffee", "Beverage", "4100", "5100", false]
+  ]);
+  var ss4 = { getSheetByName: function(n) { return n === "Products" ? sheet4 : null; } };
+  var result4 = readBoundedCanonicalTable(ss4, "Products", headers7, 7);
+  var activeP = result4.filter(function(r) { return r.IsActive === true; });
+  if (activeP.length !== 1) {
+    throw new Error("Products IsActive: expected 1 active product, got " + activeP.length);
+  }
+  var inactiveP = result4.find(function(r) { return r.ID_Prod === "P2"; });
+  if (!inactiveP || inactiveP.IsActive !== false) {
+    throw new Error("Products inactive record: IsActive should be false");
+  }
+
+  // ---- 5. row order unchanged ----
+  var sheet5 = makeProductsSheet([
+    headers7,
+    ["P2", "Decaf", "Coffee", "Beverage", "4100", "5100", true],
+    ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true],
+    ["P3", "Mocha", "Coffee", "Beverage", "4100", "5100", true]
+  ]);
+  var ss5 = { getSheetByName: function(n) { return n === "Products" ? sheet5 : null; } };
+  var result5 = readBoundedCanonicalTable(ss5, "Products", headers7, 7);
+  if (result5[0].ID_Prod !== "P2" || result5[1].ID_Prod !== "P1" || result5[2].ID_Prod !== "P3") {
+    throw new Error("Products row order not preserved");
+  }
+
+  // ---- 6. empty sheet behavior preserved ----
+  var caughtEmpty = false;
+  var emptySheet = {
+    _values: [],
+    getLastRow: function() { return 0; }
+  };
+  var emptySS = { getSheetByName: function(n) { return n === "Products" ? emptySheet : null; } };
+  try {
+    readBoundedCanonicalTable(emptySS, "Products", headers7, 7);
+  } catch (e) {
+    caughtEmpty = true;
+    if (e.message.indexOf("empty") === -1) {
+      throw new Error("Products empty sheet wrong error: " + e.message);
+    }
+  }
+  if (!caughtEmpty) throw new Error("Products empty sheet did not throw");
+
+  // ---- 7. header-only behavior preserved ----
+  var headerOnlySheet = makeProductsSheet([headers7.slice()]);
+  var headerOnlySS = { getSheetByName: function(n) { return n === "Products" ? headerOnlySheet : null; } };
+  var emptyResult = readBoundedCanonicalTable(headerOnlySS, "Products", headers7, 7);
+  if (emptyResult.length !== 0) {
+    throw new Error("Products header-only sheet should return 0 rows, got " + emptyResult.length);
+  }
+
+  // ---- 8. missing RevenueAccountCode header throws ----
+  var badSheet8 = makeProductsSheet([
+    ["ID_Prod", "Produk", "Kategori", "Kind", "COGSAccountCode", "IsActive"]
+  ]);
+  var badSS8 = { getSheetByName: function(n) { return n === "Products" ? badSheet8 : null; } };
+  var caught8 = false;
+  try {
+    readBoundedCanonicalTable(badSS8, "Products", headers7, 7);
+  } catch (e) {
+    caught8 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("Products wrong error for missing RevenueAccountCode: " + e.message);
+    }
+  }
+  if (!caught8) throw new Error("Products missing RevenueAccountCode did not throw");
+
+  // ---- 9. missing COGSAccountCode header throws ----
+  var badSheet9 = makeProductsSheet([
+    ["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "IsActive"]
+  ]);
+  var badSS9 = { getSheetByName: function(n) { return n === "Products" ? badSheet9 : null; } };
+  var caught9 = false;
+  try {
+    readBoundedCanonicalTable(badSS9, "Products", headers7, 7);
+  } catch (e) {
+    caught9 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("Products wrong error for missing COGSAccountCode: " + e.message);
+    }
+  }
+  if (!caught9) throw new Error("Products missing COGSAccountCode did not throw");
+
+  // ---- 10. trailing audit fields cannot leak into canonical result ----
+  var auditSheet = makeProductsSheet([
+    headers7.concat(["CreatedAt", "UpdatedAt", "Notes"]),
+    ["P1", "Latte", "Coffee", "Beverage", "4100", "5100", true, "2025-01-01", "2025-06-01", "leak"]
+  ]);
+  var auditSS = { getSheetByName: function(n) { return n === "Products" ? auditSheet : null; } };
+  var auditResult = readBoundedCanonicalTable(auditSS, "Products", headers7, 7);
+  if (auditResult.length !== 1) throw new Error("Products audit leak: row count wrong");
+  headers7.forEach(function(h) {
+    if (!Object.prototype.hasOwnProperty.call(auditResult[0], h)) {
+      throw new Error("Products audit leak: missing header " + h);
+    }
+  });
+  if (Object.prototype.hasOwnProperty.call(auditResult[0], "CreatedAt")) {
+    throw new Error("Products audit leak: CreatedAt leaked into result");
+  }
+  if (Object.prototype.hasOwnProperty.call(auditResult[0], "UpdatedAt")) {
+    throw new Error("Products audit leak: UpdatedAt leaked into result");
+  }
+  if (Object.prototype.hasOwnProperty.call(auditResult[0], "Notes")) {
+    throw new Error("Products audit leak: Notes leaked into result");
+  }
+
+  // ---- 11. Sales width remains 9 ----
+  var salesFull = ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"].concat(["CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]);
+  var salesSheet = {
+    _values: [salesFull, ["S1", new Date(2025, 0, 15), "P1", "Hot", 3, 4000, 10000, "TEST", true, "", "", "", ""]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return {
+        getValues: function() {
+          var result = [];
+          for (var r = row - 1; r < row - 1 + numRows; r++) {
+            result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+          }
+          return result;
+        }
+      };
+    }
+  };
+  var salesSS = { getSheetByName: function(n) { return n === "tabsal" ? salesSheet : null; } };
+  var salesBounded = readBoundedCanonicalTable(salesSS, "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"], 9);
+  if (salesBounded.length !== 1) throw new Error("Sales bounded width check: row count wrong");
+  if (!Object.prototype.hasOwnProperty.call(salesBounded[0], "HJ")) throw new Error("Sales bounded width check: HJ missing");
+
+  // ---- 12. tabops width remains 6 ----
+  var tabopsFull = ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"].concat(["CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]);
+  var tabopsSheet = {
+    _values: [tabopsFull, ["E1", new Date(2025, 0, 17), "O1", 75000, "TEST", true, "", "", "", ""]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return {
+        getValues: function() {
+          var result = [];
+          for (var r = row - 1; r < row - 1 + numRows; r++) {
+            result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+          }
+          return result;
+        }
+      };
+    }
+  };
+  var tabopsSS = { getSheetByName: function(n) { return n === "tabops" ? tabopsSheet : null; } };
+  var tabopsBounded = readBoundedCanonicalTable(tabopsSS, "tabops", ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"], 6);
+  if (tabopsBounded.length !== 1) throw new Error("tabops bounded width check: row count wrong");
+
+  // ---- 13. ExpenseItems read unchanged ----
+  var expItemHeaders = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"];
+  var expItemFull = expItemHeaders.concat(["CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]);
+  var expItemSheet = {
+    _values: [expItemFull, ["O1", "Rent", "Ops", "Fixed", "General", true, "", "", "", ""]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return {
+        getValues: function() {
+          var result = [];
+          for (var r = row - 1; r < row - 1 + numRows; r++) {
+            result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+          }
+          return result;
+        }
+      };
+    }
+  };
+  var expItemSS = { getSheetByName: function(n) { return n === "ExpenseItems" ? expItemSheet : null; } };
+  var expItemResult = readBoundedCanonicalTable(expItemSS, "ExpenseItems", expItemHeaders, 6);
+  if (expItemResult.length !== 1) throw new Error("ExpenseItems read unchanged check: row count wrong");
+  if (expItemResult[0].Item !== "Rent") throw new Error("ExpenseItems read unchanged check: Item wrong");
 }

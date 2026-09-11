@@ -35,8 +35,8 @@ function testCanonicalTransactionAdapter()
       ["S1", new Date(2025, 0, 15), "P1", "Hot", 3, 4000, 10000, "TEST", true]],
     tabops: [["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"],
       ["E1", new Date(2025, 0, 17), "O1", 75000, "TEST", true]],
-    Products: [["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"],
-      ["P1", "Product", "Coffee", "Beverage", true]],
+    Products: [["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"],
+      ["P1", "Product", "Coffee", "Beverage", "", "4100", true]],
     ExpenseItems: [["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"],
       ["O1", "Electricity", "Utility", "Support", "Operating", true]]
   };
