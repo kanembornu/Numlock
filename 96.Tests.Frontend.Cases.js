@@ -1876,11 +1876,18 @@ function testDashboardOverviewStabilizationContract()
   {
     assertSourceContains(dashboardExportSource, token, "combined Dashboard CSV projection");
   });
-  ['timedRead("salesReadMs", "tabsal"', 'timedRead("expenseReadMs", "tabops"',
+  ['readBoundedCanonicalTable(ss, "tabops"',
+    'readBoundedCanonicalTable(ss, "tabsal"',
+    ', 6)',
+    '"expenseReadMs"',
     'filterTransactionsPeriodRows(periodResult.rows'].forEach(function(token)
   {
     assertSourceContains(dashboardExportServerSource, token, "canonical period export source");
   });
+  assertSourceContains(
+    getDashboardData.toString(), 'opsReadMs',
+    "opsReadMs exposed publicly in dashboard cold segments"
+  );
   ["Purchase", 'getSheetByName("Transaction")', "toggleDashboardExportMenu", "role=\"menuitem\""].forEach(function(token)
   {
     assertSourceExcludes(dashboardExportSource, token, "retired or non-canonical Dashboard export path");

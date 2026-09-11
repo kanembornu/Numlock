@@ -49,15 +49,34 @@ function testCanonicalTransactionAdapter()
             return tables[name].length;
           },
           getRange: function(row, col, numRows, numCols) {
+            var rowStart = row - 1;
+            var columnStart = col - 1;
             return {
               getValues: function() {
-                return tables[name].map(function(r) { return r.slice(0, numCols); });
+                return tables[name]
+                  .slice(rowStart, rowStart + numRows)
+                  .map(function(r) { return r.slice(columnStart, columnStart + numCols); });
               }
             };
           }
         };
       }
       return {
+        getLastRow: function() {
+          readCounts[name] = (readCounts[name] || 0) + 1;
+          return tables[name].length;
+        },
+        getRange: function(row, col, numRows, numCols) {
+          var rowStart = row - 1;
+          var columnStart = col - 1;
+          return {
+            getValues: function() {
+              return tables[name]
+                .slice(rowStart, rowStart + numRows)
+                .map(function(r) { return r.slice(columnStart, columnStart + numCols); });
+            }
+          };
+        },
         getDataRange: function() {
           return {
             getValues: function() {
@@ -110,6 +129,73 @@ function testCanonicalTransactionAdapter()
       throw new Error("Dashboard cache invalidation missing from " + mutation.name);
     }
   });
+
+  // --- Mock rectangle fidelity proof (11Y.27A) ---
+  var rectTable = [
+    ["A1", "B1", "C1", "D1", "E1", "F1", "G1", "H1", "I1", "J1"],
+    ["A2", "B2", "C2", "D2", "E2", "F2", "G2", "H2", "I2", "J2"],
+    ["A3", "B3", "C3", "D3", "E3", "F3", "G3", "H3", "I3", "J3"],
+    ["A4", "B4", "C4", "D4", "E4", "F4", "G4", "H4", "I4", "J4"]
+  ];
+  var rectSheet = {
+    getLastRow: function() { return rectTable.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var rowStart = row - 1;
+      var columnStart = col - 1;
+      return {
+        getValues: function() {
+          return rectTable
+            .slice(rowStart, rowStart + numRows)
+            .map(function(r) { return r.slice(columnStart, columnStart + numCols); });
+        }
+      };
+    },
+    getDataRange: function() {
+      return {
+        getValues: function() { return rectTable; }
+      };
+    }
+  };
+
+  // 1. Full row with A:F bound
+  var full = rectSheet.getRange(1, 1, rectTable.length, 6).getValues();
+  if (full.length !== 4) throw new Error("Rectangle full row count mismatch");
+  if (full[0].length !== 6) throw new Error("Rectangle full col count mismatch");
+  if (full[0][0] !== "A1" || full[3][5] !== "F4") throw new Error("Rectangle full value mismatch");
+
+  // 2. Columns G:J excluded (already proven by col count = 6 above)
+
+  // 3. Non-1 row offset
+  var offsetRow = rectSheet.getRange(3, 1, 2, 6).getValues();
+  if (offsetRow.length !== 2) throw new Error("Rectangle row offset count mismatch");
+  if (offsetRow[0][0] !== "A3" || offsetRow[1][0] !== "A4") throw new Error("Rectangle row offset value mismatch");
+
+  // 4. Non-1 column offset
+  var offsetCol = rectSheet.getRange(1, 3, 4, 3).getValues();
+  if (offsetCol.length !== 4) throw new Error("Rectangle col offset row count mismatch");
+  if (offsetCol[0].length !== 3) throw new Error("Rectangle col offset col count mismatch");
+  if (offsetCol[0][0] !== "C1" || offsetCol[0][2] !== "E1") throw new Error("Rectangle col offset value mismatch");
+
+  // 5. numRows truncates
+  var truncRow = rectSheet.getRange(2, 1, 1, 6).getValues();
+  if (truncRow.length !== 1) throw new Error("Rectangle numRows truncation mismatch");
+  if (truncRow[0][0] !== "A2") throw new Error("Rectangle numRows truncation value mismatch");
+
+  // 6. numCols truncates
+  var truncCol = rectSheet.getRange(1, 1, 4, 2).getValues();
+  if (truncCol[0].length !== 2) throw new Error("Rectangle numCols truncation mismatch");
+  if (truncCol[0][0] !== "A1" || truncCol[0][1] !== "B1") throw new Error("Rectangle numCols truncation value mismatch");
+
+  // 7. Sub-rectangle with both row>1 and col>1
+  var subRect = rectSheet.getRange(2, 4, 2, 3).getValues();
+  if (subRect.length !== 2 || subRect[0].length !== 3) throw new Error("Rectangle sub-rectangle size mismatch");
+  if (subRect[0][0] !== "D2" || subRect[0][2] !== "F2" || subRect[1][0] !== "D3" || subRect[1][2] !== "F3") {
+    throw new Error("Rectangle sub-rectangle value mismatch");
+  }
+
+  // 8. getDataRange preserved
+  var allData = rectSheet.getDataRange().getValues();
+  if (allData.length !== 4 || allData[0].length !== 10) throw new Error("getDataRange preservation mismatch");
 
   return { passed: true, records: 2, inactiveExcluded: 1, singleReadSheets: 4,
     normalizedDateKeys: true, cacheContexts: 4, mutationInvalidators: 3 };
