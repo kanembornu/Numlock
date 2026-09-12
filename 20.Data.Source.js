@@ -229,7 +229,12 @@ function getCanonicalTransactionData(ss, performance) {
       if (performance) performance["productReadMs"] = Date.now() - startedAt;
       return rows;
     })(),
-    expenseItems: timedRead("expenseItemReadMs", "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"])
+    expenseItems: (function() {
+      var startedAt = Date.now();
+      var rows = readBoundedCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"], 7);
+      if (performance) performance["expenseItemReadMs"] = Date.now() - startedAt;
+      return rows;
+    })(),
   };
   var normalizeStartedAt = Date.now();
   var canonicalData = buildCanonicalTransactionData(source);

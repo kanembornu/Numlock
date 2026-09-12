@@ -37,8 +37,8 @@ function testCanonicalTransactionAdapter()
       ["E1", new Date(2025, 0, 17), "O1", 75000, "TEST", true]],
     Products: [["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"],
       ["P1", "Product", "Coffee", "Beverage", "", "4100", true]],
-    ExpenseItems: [["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"],
-      ["O1", "Electricity", "Utility", "Support", "Operating", true]]
+    ExpenseItems: [["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"],
+      ["O1", "Electricity", "Utility", "Support", "Operating", "6100", true]]
   };
   var mockSpreadsheet = {
     getSheetByName: function(name) {

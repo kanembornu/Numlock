@@ -137,7 +137,7 @@ function financeIsolationTestSpreadsheet(options) {
   });
   sheets.push(capitalEquitySchemaTestSheet("Products", [prodH].concat(prodRows)));
 
-  var expItemH = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"];
+  var expItemH = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"];
   var expItemRows = (options.expenseItems || []).map(function(r) {
     return expItemH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
   });
@@ -204,7 +204,7 @@ function financeIsolationTestProducts() {
 
 function financeIsolationTestExpenseItems() {
   return [
-    { ID_Ops: "O1", Item: "Rent", Kategori: "Operations", Kind: "Fixed", Group: "Operating", IsActive: true }
+    { ID_Ops: "O1", Item: "Rent", Kategori: "Operations", Kind: "Fixed", Group: "Operating", AccountCode: "6100", IsActive: true }
   ];
 }
 

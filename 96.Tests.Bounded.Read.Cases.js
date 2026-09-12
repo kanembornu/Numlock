@@ -216,11 +216,24 @@ function testBoundedCanonicalRead()
       }
       if (name === "ExpenseItems") {
         return {
-          getDataRange: function() {
+          _values: [["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]],
+          getLastRow: function() { return this._values.length; },
+          getRange: function(row, col, numRows, numCols) {
+            var self = this;
             return {
               getValues: function() {
-                return [["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"]];
+                var result = [];
+                for (var r = row - 1; r < row - 1 + numRows; r++) {
+                  result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+                }
+                return result;
               }
+            };
+          },
+          getDataRange: function() {
+            var self = this;
+            return {
+              getValues: function() { return self._values.map(function(r) { return r.slice(); }); }
             };
           }
         };
@@ -442,10 +455,23 @@ function testBoundedCanonicalReadTabops() {
 
   var expenseItemsSheet = {
     _values: [
-      ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"],
-      ["E1", "Rent", "Fixed", "Ops", "General", true],
-      ["E2", "Utilities", "Variable", "Ops", "General", true]
+      ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"],
+      ["E1", "Rent", "Fixed", "Ops", "General", "6100", true],
+      ["E2", "Utilities", "Variable", "Ops", "General", "6200", true]
     ],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return {
+        getValues: function() {
+          var result = [];
+          for (var r = row - 1; r < row - 1 + numRows; r++) {
+            result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+          }
+          return result;
+        }
+      };
+    },
     getDataRange: function() {
       var self = this;
       return {
@@ -749,11 +775,11 @@ function testBoundedCanonicalReadProducts() {
   var tabopsBounded = readBoundedCanonicalTable(tabopsSS, "tabops", ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"], 6);
   if (tabopsBounded.length !== 1) throw new Error("tabops bounded width check: row count wrong");
 
-  // ---- 13. ExpenseItems read unchanged ----
-  var expItemHeaders = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"];
+  // ---- 13. ExpenseItems bounded read A:G width 7 ----
+  var expItemHeaders = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"];
   var expItemFull = expItemHeaders.concat(["CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]);
   var expItemSheet = {
-    _values: [expItemFull, ["O1", "Rent", "Ops", "Fixed", "General", true, "", "", "", ""]],
+    _values: [expItemFull, ["O1", "Rent", "Ops", "Fixed", "General", "6100", true, "", "", "", ""]],
     getLastRow: function() { return this._values.length; },
     getRange: function(row, col, numRows, numCols) {
       var self = this;
@@ -769,7 +795,202 @@ function testBoundedCanonicalReadProducts() {
     }
   };
   var expItemSS = { getSheetByName: function(n) { return n === "ExpenseItems" ? expItemSheet : null; } };
-  var expItemResult = readBoundedCanonicalTable(expItemSS, "ExpenseItems", expItemHeaders, 6);
+  var expItemCapturedNumCols = null;
+  var origExpGetRange = expItemSheet.getRange;
+  expItemSheet.getRange = function(row, col, numRows, numCols) {
+    expItemCapturedNumCols = numCols;
+    return origExpGetRange.call(this, row, col, numRows, numCols);
+  };
+  var expItemResult = readBoundedCanonicalTable(expItemSS, "ExpenseItems", expItemHeaders, 7);
+  if (expItemCapturedNumCols !== 7) throw new Error("ExpenseItems bounded read: expected width 7, got " + expItemCapturedNumCols);
   if (expItemResult.length !== 1) throw new Error("ExpenseItems read unchanged check: row count wrong");
   if (expItemResult[0].Item !== "Rent") throw new Error("ExpenseItems read unchanged check: Item wrong");
+  if (expItemResult[0].AccountCode !== "6100") throw new Error("ExpenseItems AccountCode field wrong");
+  ["CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"].forEach(function(col) {
+    if (Object.prototype.hasOwnProperty.call(expItemResult[0], col) && expItemResult[0][col] !== "") {
+      throw new Error("ExpenseItems bounded reader exposed trailing column: " + col);
+    }
+  });
+
+  // ---- 14. missing ID_Ops header throws ----
+  var badExpHeaders1 = ["Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"];
+  var badExpSheet1 = {
+    _values: [badExpHeaders1, ["Rent", "Ops", "Fixed", "General", "6100", true]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS1 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet1 : null; } };
+  var caughtExp1 = false;
+  try { readBoundedCanonicalTable(badExpSS1, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp1 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing ID_Ops: " + e.message);
+    }
+  }
+  if (!caughtExp1) throw new Error("ExpenseItems missing ID_Ops did not throw");
+
+  // ---- 15. missing Item header throws ----
+  var badExpHeaders2 = ["ID_Ops", "Kategori", "Kind", "Group", "AccountCode", "IsActive"];
+  var badExpSheet2 = {
+    _values: [badExpHeaders2, ["O1", "Ops", "Fixed", "General", "6100", true]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS2 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet2 : null; } };
+  var caughtExp2 = false;
+  try { readBoundedCanonicalTable(badExpSS2, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp2 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing Item: " + e.message);
+    }
+  }
+  if (!caughtExp2) throw new Error("ExpenseItems missing Item did not throw");
+
+  // ---- 16. missing Kategori header throws ----
+  var badExpHeaders3 = ["ID_Ops", "Item", "Kind", "Group", "AccountCode", "IsActive"];
+  var badExpSheet3 = {
+    _values: [badExpHeaders3, ["O1", "Rent", "Fixed", "General", "6100", true]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS3 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet3 : null; } };
+  var caughtExp3 = false;
+  try { readBoundedCanonicalTable(badExpSS3, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp3 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing Kategori: " + e.message);
+    }
+  }
+  if (!caughtExp3) throw new Error("ExpenseItems missing Kategori did not throw");
+
+  // ---- 17. missing Kind header throws ----
+  var badExpHeaders4 = ["ID_Ops", "Item", "Kategori", "Group", "AccountCode", "IsActive"];
+  var badExpSheet4 = {
+    _values: [badExpHeaders4, ["O1", "Rent", "Ops", "General", "6100", true]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS4 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet4 : null; } };
+  var caughtExp4 = false;
+  try { readBoundedCanonicalTable(badExpSS4, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp4 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing Kind: " + e.message);
+    }
+  }
+  if (!caughtExp4) throw new Error("ExpenseItems missing Kind did not throw");
+
+  // ---- 18. missing Group header throws ----
+  var badExpHeaders5 = ["ID_Ops", "Item", "Kategori", "Kind", "AccountCode", "IsActive"];
+  var badExpSheet5 = {
+    _values: [badExpHeaders5, ["O1", "Rent", "Ops", "Fixed", "6100", true]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS5 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet5 : null; } };
+  var caughtExp5 = false;
+  try { readBoundedCanonicalTable(badExpSS5, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp5 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing Group: " + e.message);
+    }
+  }
+  if (!caughtExp5) throw new Error("ExpenseItems missing Group did not throw");
+
+  // ---- 19. missing AccountCode header throws ----
+  var badExpHeaders6 = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"];
+  var badExpSheet6 = {
+    _values: [badExpHeaders6, ["O1", "Rent", "Ops", "Fixed", "General", true]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS6 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet6 : null; } };
+  var caughtExp6 = false;
+  try { readBoundedCanonicalTable(badExpSS6, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp6 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing AccountCode: " + e.message);
+    }
+  }
+  if (!caughtExp6) throw new Error("ExpenseItems missing AccountCode did not throw");
+
+  // ---- 20. missing IsActive header throws ----
+  var badExpHeaders7 = ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode"];
+  var badExpSheet7 = {
+    _values: [badExpHeaders7, ["O1", "Rent", "Ops", "Fixed", "General", "6100"]],
+    getLastRow: function() { return this._values.length; },
+    getRange: function(row, col, numRows, numCols) {
+      var self = this;
+      return { getValues: function() {
+        var result = [];
+        for (var r = row - 1; r < row - 1 + numRows; r++) {
+          result.push(self._values[r] ? self._values[r].slice(0, numCols) : []);
+        }
+        return result;
+      } };
+    }
+  };
+  var badExpSS7 = { getSheetByName: function(n) { return n === "ExpenseItems" ? badExpSheet7 : null; } };
+  var caughtExp7 = false;
+  try { readBoundedCanonicalTable(badExpSS7, "ExpenseItems", expItemHeaders, 7); } catch (e) {
+    caughtExp7 = true;
+    if (e.message.indexOf("missing required column") === -1) {
+      throw new Error("ExpenseItems wrong error for missing IsActive: " + e.message);
+    }
+  }
+  if (!caughtExp7) throw new Error("ExpenseItems missing IsActive did not throw");
 }
