@@ -751,6 +751,12 @@
 
       // 11Y.2 — primary render end / chart render start
       if (__profile && !__profile.t5) __profile.t5 = performance.now();
+      // 11Y.53 — warm-up Finance/PP after Dashboard first render
+      setTimeout(function() {
+        if (window.__numlockStartupProfile) window.__numlockStartupProfile.t9 = performance.now();
+        if (typeof warmFinanceData === 'function') warmFinanceData("currentYear", null, null);
+        if (typeof warmProductProfitabilityData === 'function') warmProductProfitabilityData("currentYear", null, null);
+      }, 0);
       if (__profile && !__profile.t6) __profile.t6 = performance.now();
 
       renderCharts(res);

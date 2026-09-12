@@ -97,10 +97,15 @@ function testFinanceCacheInvalidationOnMutation()
 function testFinanceStartupPreload()
 {
   var source = getAssembledFrontendSource();
-  // setTimeout fires async warm-up after dashboard render
-  assertSourceContains(source, 'warmFinanceData("currentYear", null, null)', '11X.3K startup preloads finance currentYear');
-  assertSourceContains(source, 'warmProductProfitabilityData("currentYear", null, null)', '11X.3K startup preloads PP currentYear');
-  assertSourceContains(source, 'setTimeout(function()', '11X.3K startup warm-up is async');
+  // 11Y.53 — warmup moved from window.onload to after Dashboard T5
+  assertSourceContains(source, 'warmFinanceData("currentYear", null, null)', '11Y.53 startup preloads finance currentYear');
+  assertSourceContains(source, 'warmProductProfitabilityData("currentYear", null, null)', '11Y.53 startup preloads PP currentYear');
+  assertSourceContains(source, 'setTimeout(function()', '11Y.53 startup warm-up is async');
+  // 11Y.53 — warmup must use typeof guards for safety
+  assertSourceContains(source, "typeof warmFinanceData === 'function'", '11Y.53 warmFinanceData guarded by typeof');
+  assertSourceContains(source, "typeof warmProductProfitabilityData === 'function'", '11Y.53 warmProductProfitabilityData guarded by typeof');
+  // 11Y.53 — t9 must still be assigned in warmup block
+  assertSourceContains(source, '__numlockStartupProfile.t9 = performance.now()', '11Y.53 t9 assigned in warmup setTimeout');
 }
 
 function testFinanceDestinationBoundGuardsPreserved()

@@ -5181,12 +5181,6 @@ window.onload = function()
     serverLayoutDebugEnabled || clientLayoutDebugFallback
   );
   loadData();
-  // 11X.3K — async background warm-up after Dashboard first render
-  setTimeout(function() {
-    __profile.t9 = performance.now();
-    warmFinanceData("currentYear", null, null);
-    warmProductProfitabilityData("currentYear", null, null);
-  }, 0);
 };
 
 </script>
