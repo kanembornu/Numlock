@@ -825,10 +825,13 @@
             ? "COLD"
             : "UNKNOWN";
 
-      var resources =
-        typeof performance.getEntriesByType === "function"
-          ? performance.getEntriesByType("resource")
-          : [];
+      var resources = null;
+      try {
+        resources =
+          typeof performance.getEntriesByType === "function"
+            ? performance.getEntriesByType("resource")
+            : [];
+      } catch(e) { resources = []; }
       var chartJsEntry = null;
       var fontAwesomeEntry = null;
       var i, name;
@@ -854,7 +857,10 @@
 
       p.chartJs = chartJsEntry
         ? {
+            name: chartJsEntry.name || "",
+            initiatorType: chartJsEntry.initiatorType || "",
             startTime: Math.round(chartJsEntry.startTime),
+            responseStart: Math.round(chartJsEntry.responseStart),
             responseEnd: Math.round(chartJsEntry.responseEnd),
             duration: Math.round(chartJsEntry.duration),
             classification:
@@ -866,7 +872,10 @@
 
       p.fontAwesome = fontAwesomeEntry
         ? {
+            name: fontAwesomeEntry.name || "",
+            initiatorType: fontAwesomeEntry.initiatorType || "",
             startTime: Math.round(fontAwesomeEntry.startTime),
+            responseStart: Math.round(fontAwesomeEntry.responseStart),
             responseEnd: Math.round(fontAwesomeEntry.responseEnd),
             duration: Math.round(fontAwesomeEntry.duration),
             classification:
@@ -874,7 +883,57 @@
                 ? "RESOURCE_FINISHED_BEFORE_LOAD"
                 : "AFTER_FIRST_USABLE"
           }
-        : null;
+          : null;
+
+      var startupResources = [];
+      try {
+        var allResources = performance.getEntriesByType("resource");
+        if (allResources) {
+          for (var ri = 0; ri < allResources.length; ri++) {
+            var r = allResources[ri];
+            if (r.startTime < (p.firstUsableMs || 15000)) {
+              startupResources.push({
+                name: r.name.split('/').pop() || r.name.substring(0, 80),
+                fullName: r.name,
+                initiatorType: r.initiatorType,
+                startTime: Math.round(r.startTime),
+                responseStart: Math.round(r.responseStart),
+                responseEnd: Math.round(r.responseEnd),
+                duration: Math.round(r.duration)
+              });
+            }
+          }
+        }
+      } catch(e) {}
+
+      // Navigation Timing segmentation
+      var navSegments = null;
+      try {
+        var navEntries = performance.getEntriesByType("navigation");
+        if (navEntries && navEntries.length > 0) {
+          var nav = navEntries[0];
+          var n2r = nav.responseStart - nav.startTime;
+          var docTransfer = nav.responseEnd - nav.responseStart;
+          var domParse = nav.domInteractive - nav.responseEnd;
+          var interactiveToDcl = nav.domContentLoadedEventEnd - nav.domInteractive;
+          var dclToLoad = nav.loadEventStart - nav.domContentLoadedEventEnd;
+          var navMeasuredToLoad = nav.loadEventStart - nav.startTime;
+          var residual = navMeasuredToLoad - (n2r + docTransfer + domParse + interactiveToDcl + dclToLoad);
+          navSegments = {
+            navigationToResponseStartMs: Math.round(n2r),
+            documentTransferMs: Math.round(docTransfer),
+            domParseToInteractiveMs: Math.round(domParse),
+            interactiveToDOMContentLoadedMs: Math.round(interactiveToDcl),
+            domContentLoadedToLoadMs: Math.round(dclToLoad),
+            navigationMeasuredToLoadMs: Math.round(navMeasuredToLoad),
+            reconciliationResidualMs: Math.round(residual),
+            domContentLoadedEventStartMs: Math.round(nav.domContentLoadedEventStart),
+            loadEventEndMs: Math.round(nav.loadEventEnd)
+          };
+        }
+      } catch(e) {}
+      p.navSegments = navSegments;
+      p.startupResources = startupResources;
 
       console.info("NUMLOCK Startup Profile", {
         firstUsableMs: p.firstUsableMs,
@@ -893,6 +952,8 @@
           coldSegments: p.backendColdSegments
         },
         chartJs: p.chartJs,
-        fontAwesome: p.fontAwesome
+        fontAwesome: p.fontAwesome,
+        navSegments: p.navSegments,
+        startupResources: p.startupResources
       });
     }
