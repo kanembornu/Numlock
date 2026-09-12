@@ -21,12 +21,16 @@ function readCanonicalTable(ss, name, required) {
   });
 }
 
-function readBoundedCanonicalTable(ss, name, required, columnCount) {
+function readBoundedCanonicalTable(ss, name, required, columnCount, perf) {
+  var t0 = perf ? Date.now() : 0;
   var sheet = ss.getSheetByName(name);
   if (!sheet) throw new Error("Missing canonical sheet: " + name);
+  var t1 = perf ? Date.now() : 0;
   var lastRow = sheet.getLastRow();
   if (lastRow === 0) throw new Error(name + " is empty (no rows)");
+  var t2 = perf ? Date.now() : 0;
   var values = sheet.getRange(1, 1, lastRow, columnCount).getValues();
+  var t3 = perf ? Date.now() : 0;
   var headers = values[0] || [];
   var indexes = {};
   headers.forEach(function(header, index) { indexes[String(header).trim()] = index; });
@@ -35,7 +39,7 @@ function readBoundedCanonicalTable(ss, name, required, columnCount) {
       throw new Error(name + " is missing required column: " + header);
     }
   });
-  return values.slice(1).filter(function(row) {
+  var records = values.slice(1).filter(function(row) {
     return row.some(function(value) { return value !== "" && value != null; });
   }).map(function(row, rowIndex) {
     var record = { sourceRowIndex: rowIndex + 1 };
@@ -44,6 +48,14 @@ function readBoundedCanonicalTable(ss, name, required, columnCount) {
     });
     return record;
   });
+  var t4 = perf ? Date.now() : 0;
+  if (perf) {
+    perf.sheetLookupMs = t1 - t0;
+    perf.lastRowMs = t2 - t1;
+    perf.getValuesMs = t3 - t2;
+    perf.normalizeMs = t4 - t3;
+  }
+  return records;
 }
 
 function isCanonicalActive(value) {
@@ -213,8 +225,10 @@ function getCanonicalTransactionData(ss, performance) {
   var source = {
     sales: (function() {
       var startedAt = Date.now();
-      var rows = readBoundedCanonicalTable(ss, "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"], 9);
+      var salesDetail = {};
+      var rows = readBoundedCanonicalTable(ss, "tabsal", ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"], 9, salesDetail);
       if (performance) performance["salesReadMs"] = Date.now() - startedAt;
+      if (performance) performance["salesReadDetail"] = salesDetail;
       return rows;
     })(),
     expenses: (function() {

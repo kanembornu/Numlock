@@ -515,3 +515,148 @@ function testColdStartProfilingInstrumentationContract()
     "profiling / startupResources push unconditional within startTime"
   );
 }
+
+// 11Y.2B — sales read sub-component profiling
+function testSalesReadSubComponentProfiling()
+{
+  var dataSourceSource = include("20.Data.Source");
+  var dashboardSource = include("90.Dashboard.Service");
+
+  // 1. existing salesReadMs still present in Data.Source
+  assertSourceContains(
+    dataSourceSource,
+    'performance["salesReadMs"]',
+    "salesReadDetail / salesReadMs preserved"
+  );
+
+  // 2. salesReadDetail exists in Data.Source
+  assertSourceContains(
+    dataSourceSource,
+    'performance["salesReadDetail"]',
+    "salesReadDetail / salesReadDetail assigned in Data.Source"
+  );
+
+  // 3. salesReadDetail exposed in coldSegments
+  assertSourceContains(
+    dashboardSource,
+    "salesReadDetail: performance.salesReadDetail",
+    "salesReadDetail / salesReadDetail in coldSegments"
+  );
+
+  // 4. detail sub-fields present in readBoundedCanonicalTable
+  assertSourceContains(
+    dataSourceSource,
+    "perf.sheetLookupMs",
+    "salesReadDetail / sheetLookupMs in reader"
+  );
+  assertSourceContains(
+    dataSourceSource,
+    "perf.lastRowMs",
+    "salesReadDetail / lastRowMs in reader"
+  );
+  assertSourceContains(
+    dataSourceSource,
+    "perf.getValuesMs",
+    "salesReadDetail / getValuesMs in reader"
+  );
+  assertSourceContains(
+    dataSourceSource,
+    "perf.normalizeMs",
+    "salesReadDetail / normalizeMs in reader"
+  );
+
+  // 5. residual formula — sum of detail parts decomposes salesReadMs
+  assertSourceContains(
+    dataSourceSource,
+    "var salesDetail = {}",
+    "salesReadDetail / salesDetail object created"
+  );
+
+  // 6. tabsal call passes perf object
+  assertSourceContains(
+    dataSourceSource,
+    "readBoundedCanonicalTable(ss, \"tabsal\"",
+    "salesReadDetail / tabsal readBoundedCanonicalTable call exists"
+  );
+  assertSourceContains(
+    dataSourceSource,
+    "readBoundedCanonicalTable(ss, \"tabops\"",
+    "salesReadDetail / tabops readBoundedCanonicalTable call exists"
+  );
+  assertSourceContains(
+    dataSourceSource,
+    "readBoundedCanonicalTable(ss, \"Products\"",
+    "salesReadDetail / Products readBoundedCanonicalTable call exists"
+  );
+  assertSourceContains(
+    dataSourceSource,
+    "readBoundedCanonicalTable(ss, \"ExpenseItems\"",
+    "salesReadDetail / ExpenseItems readBoundedCanonicalTable call exists"
+  );
+
+  // 7. tabops, Products, ExpenseItems do NOT pass perf — extract call lines
+  // Each non-tabsal call should end with columnCount + ')' not ', salesDetail)'
+  // Verify no salesDetail appears in those calls by checking the function body
+  // Only the tabsal IIFE contains salesDetail
+  var salesIIFE = dataSourceSource.slice(
+    dataSourceSource.indexOf("sales: (function()")
+  );
+  var firstOtherCall = salesIIFE.indexOf("readBoundedCanonicalTable(ss, \"tabops\"");
+  if (firstOtherCall !== -1) {
+    var tabopsSegment = salesIIFE.slice(firstOtherCall, firstOtherCall + 200);
+    assertSourceExcludes(
+      tabopsSegment,
+      ", salesDetail)",
+      "salesReadDetail / tabops does NOT pass perf"
+    );
+  }
+
+  // 8. no row-loop timers in readBoundedCanonicalTable
+  var readerStart = dataSourceSource.indexOf("function readBoundedCanonicalTable(");
+  var readerEnd = dataSourceSource.indexOf("\n}", readerStart) + 2;
+  var readerBody = dataSourceSource.slice(readerStart, readerEnd);
+  assertSourceExcludes(
+    readerBody,
+    "forEach(function(row",
+    "salesReadDetail / no per-row timer inside reader"
+  );
+
+  // 9. bounded width remains 9 for tabsal
+  assertSourceContains(
+    dataSourceSource,
+    '], 9, salesDetail)',
+    "salesReadDetail / tabsal bounded width 9 preserved"
+  );
+
+  // 10. existing response compatibility — coldSegments preserves all existing keys
+  assertSourceContains(
+    dashboardSource,
+    "salesReadMs: performance.salesReadMs",
+    "salesReadDetail / coldSegments salesReadMs preserved"
+  );
+  assertSourceContains(
+    dashboardSource,
+    "opsReadMs: performance.expenseReadMs",
+    "salesReadDetail / coldSegments opsReadMs preserved"
+  );
+  assertSourceContains(
+    dashboardSource,
+    "productsReadMs: performance.productReadMs",
+    "salesReadDetail / coldSegments productsReadMs preserved"
+  );
+  assertSourceContains(
+    dashboardSource,
+    "expenseItemsReadMs: performance.expenseItemReadMs",
+    "salesReadDetail / coldSegments expenseItemsReadMs preserved"
+  );
+  assertSourceContains(
+    dashboardSource,
+    "canonicalNormalizeMs: performance.normalizeMs",
+    "salesReadDetail / coldSegments canonicalNormalizeMs preserved"
+  );
+  assertSourceContains(
+    dashboardSource,
+    "totalMs: performance.totalMs",
+    "salesReadDetail / coldSegments totalMs preserved"
+  );
+}

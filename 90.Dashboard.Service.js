@@ -180,6 +180,7 @@ function buildDashboardDataExecution(filter, customStart, customEnd) {
     cacheLookupMs: performance.cacheLookupMs,
     canonicalTotalMs: performance.canonicalTotalMs,
     salesReadMs: performance.salesReadMs,
+    salesReadDetail: performance.salesReadDetail || null,
     opsReadMs: performance.expenseReadMs,
     productsReadMs: performance.productReadMs,
     expenseItemsReadMs: performance.expenseItemReadMs,
