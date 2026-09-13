@@ -367,6 +367,187 @@ function testFinanceErrorDestinationMessaging() {
   return { passed: true, scenarios: scenarios };
 }
 
+function testPartialBalancePositionReport() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var ceRows = [
+    { ID_Trx: "CE-1", Tanggal: "2021-01-01", Owner: "Dekker", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" },
+    { ID_Trx: "CE-2", Tanggal: "2021-01-01", Owner: "Erway", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var obRows = [
+    { ID: "FOB-3200-20260731", EffectiveDate: "2026-07-31", AccountCode: "3200", Amount: 7407000, Source: "LEGACY_XLSM_MIGRATION", Keterangan: "Opening", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var depLedger = [
+    { ID_Dep: "DEP-AST-1-202601", Period: new Date(2026, 0, 1), ID_Asset: "AST-1", OpeningBookValue: 100000, Depreciation: 5000, AccumulatedDepreciation: 5000, ClosingBookValue: 95000, GeneratedAt: new Date() },
+    { ID_Dep: "DEP-AST-1-202602", Period: new Date(2026, 1, 1), ID_Asset: "AST-1", OpeningBookValue: 95000, Depreciation: 5000, AccumulatedDepreciation: 10000, ClosingBookValue: 90000, GeneratedAt: new Date() },
+    { ID_Dep: "DEP-AST-2-202601", Period: new Date(2026, 0, 1), ID_Asset: "AST-2", OpeningBookValue: 200000, Depreciation: 10000, AccumulatedDepreciation: 10000, ClosingBookValue: 190000, GeneratedAt: new Date() },
+    { ID_Dep: "DEP-AST-2-202602", Period: new Date(2026, 1, 1), ID_Asset: "AST-2", OpeningBookValue: 190000, Depreciation: 10000, AccumulatedDepreciation: 20000, ClosingBookValue: 180000, GeneratedAt: new Date() }
+  ];
+
+  var ss = financeIsolationBuildSpreadsheet({
+    capitalEquity: ceRows,
+    openingBalances: obRows,
+    depreciationLedger: depLedger,
+    assets: [{ ID_Asset: "AST-1" }, { ID_Asset: "AST-2" }]
+  });
+
+  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-02-28");
+
+  // Response top-level contract shape
+  check(typeof result === "object" && result !== null, "response is object");
+  check(result.period !== undefined, "period present");
+  check(result.asOfDate === "2026-02-28", "asOfDate correct");
+  check(result.assets !== undefined, "assets present");
+  check(result.liabilities !== undefined, "liabilities present");
+  check(result.equity !== undefined, "equity present");
+  check(result.reconciliation !== undefined, "reconciliation present");
+  check(result.totalKnownAssets !== undefined, "totalKnownAssets present");
+  check(result.totalAssets === null, "totalAssets is null");
+  check(result.availability !== undefined, "availability present");
+  check(result.qualityIssues !== undefined, "qualityIssues present");
+  check(result.accountingPolicy !== undefined, "accountingPolicy present");
+
+  // status = PARTIAL
+  check(result.status === "PARTIAL", "status is PARTIAL");
+
+  // cash unavailable contract
+  check(result.assets.cash.status === "UNAVAILABLE", "cash status UNAVAILABLE");
+  check(result.assets.cash.amount === null, "cash amount null");
+
+  // inventory unavailable contract
+  check(result.assets.inventory.status === "UNAVAILABLE", "inventory status UNAVAILABLE");
+  check(result.assets.inventory.amount === null, "inventory amount null");
+
+  // liabilities ZERO_AUTHORITATIVE
+  check(result.liabilities.status === "ZERO_AUTHORITATIVE", "liabilities ZERO_AUTHORITATIVE");
+  check(result.liabilities.total === 0, "liabilities total 0");
+
+  // fixed asset values
+  check(result.assets.fixedAssets.status === "AVAILABLE", "fixedAssets AVAILABLE");
+  check(result.assets.fixedAssets.acquisitionCost === 300000, "total gross cost 300000");
+  check(result.assets.fixedAssets.accumulatedDepreciation === 30000, "total accumulatedDepreciation 30000");
+  check(result.assets.fixedAssets.netBookValue === 270000, "total NBV 270000");
+
+  // totalKnownAssets = fixedAssets.netBookValue
+  check(result.totalKnownAssets === 270000, "totalKnownAssets = totalNBV");
+
+  // totalAssets = null
+  check(result.totalAssets === null, "totalAssets null");
+
+  // equity fields
+  check(typeof result.equity.ownerContributions === "number", "equity.ownerContributions is number");
+  check(typeof result.equity.returnOfCapital === "number", "equity.returnOfCapital is number");
+  check(typeof result.equity.netContributedCapital === "number", "equity.netContributedCapital is number");
+  check(typeof result.equity.ownerDraws === "number", "equity.ownerDraws is number");
+  check(result.equity.retainedEarningsOpening === 7407000, "equity.retainedEarningsOpening correct");
+  check(typeof result.equity.postCutoffProfit === "number", "equity.postCutoffProfit is number");
+  check(typeof result.equity.totalEquity === "number", "equity.totalEquity is number");
+
+  // no double count in retained earnings
+  var expectedTotalEquity = result.equity.netContributedCapital +
+    result.equity.retainedEarningsOpening + result.equity.postCutoffProfit - result.equity.ownerDraws;
+  check(result.equity.totalEquity === expectedTotalEquity, "no double count in retained earnings");
+
+  // reconciliation full equation UNRECONCILABLE
+  check(result.reconciliation.fullEquation.status === "UNRECONCILABLE", "full equation UNRECONCILABLE");
+  check(result.reconciliation.fullEquation.reason === "INCOMPLETE_ASSET_AUTHORITY", "full equation reason");
+
+  // known position formula
+  check(result.reconciliation.knownPosition.status === "COMPUTABLE", "known position COMPUTABLE");
+  var expectedKnownPosition = result.totalKnownAssets - result.liabilities.total - result.equity.totalEquity;
+  check(result.reconciliation.knownPosition.difference === expectedKnownPosition, "known position formula");
+
+  // availability contract
+  check(result.availability.cash === "UNAVAILABLE", "availability.cash UNAVAILABLE");
+  check(result.availability.inventory === "UNAVAILABLE", "availability.inventory UNAVAILABLE");
+  check(result.availability.fixedAssets === "AVAILABLE", "availability.fixedAssets AVAILABLE");
+  check(result.availability.liabilities === "ZERO_AUTHORITATIVE", "availability.liabilities ZERO_AUTHORITATIVE");
+  check(result.availability.equity === "AVAILABLE", "availability.equity AVAILABLE");
+
+  // quality issues
+  check(Array.isArray(result.qualityIssues), "qualityIssues is array");
+  check(result.qualityIssues.indexOf("CASH_MIGRATION_NOT_READY") !== -1, "qualityIssues includes CASH_MIGRATION_NOT_READY");
+  check(result.qualityIssues.indexOf("INVENTORY_AUTHORITY_NOT_ACTIVE") !== -1, "qualityIssues includes INVENTORY_AUTHORITY_NOT_ACTIVE");
+  check(result.qualityIssues.indexOf("CAPITAL_EQUITY_UNAVAILABLE") === -1, "no CAPITAL_EQUITY_UNAVAILABLE when valid");
+
+  // accountingPolicy contract
+  check(result.accountingPolicy === FINANCE_ACCOUNTING_POLICY, "accountingPolicy is policy reference");
+  check(result.accountingPolicy.balanceSheetAvailable === false, "balanceSheetAvailable false");
+
+  // response frozen
+  var frozen = false;
+  try { result.status = "MUTATED"; } catch (e) { frozen = true; }
+  check(frozen, "response is frozen");
+
+  Logger.log("PASS: testPartialBalancePositionReport | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testPartialBalanceEquityUnavailable() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var depLedger = [
+    { ID_Dep: "DEP-AST-1-202601", Period: new Date(2026, 0, 1), ID_Asset: "AST-1", OpeningBookValue: 100000, Depreciation: 5000, AccumulatedDepreciation: 5000, ClosingBookValue: 95000, GeneratedAt: new Date() }
+  ];
+
+  var ss = financeIsolationBuildSpreadsheet({
+    depreciationLedger: depLedger,
+    assets: [{ ID_Asset: "AST-1" }],
+    omitCapitalEquity: true,
+    omitOpeningBalances: true
+  });
+
+  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-01-31");
+
+  check(result.status === "PARTIAL", "status PARTIAL when equity unavailable");
+  check(result.equity.status === "UNAVAILABLE", "equity UNAVAILABLE when C&E data missing");
+  check(typeof result.equity.error === "string" && result.equity.error.length > 0, "equity has error string");
+  check(result.availability.equity === "UNAVAILABLE", "availability.equity UNAVAILABLE");
+  check(result.reconciliation.knownPosition.status === "UNAVAILABLE", "known position UNAVAILABLE when equity missing");
+  check(result.reconciliation.knownPosition.reason === "EQUITY_UNAVAILABLE", "known position reason");
+  check(result.qualityIssues.indexOf("CAPITAL_EQUITY_UNAVAILABLE") !== -1, "qualityIssues includes CAPITAL_EQUITY_UNAVAILABLE");
+  check(result.assets.fixedAssets.acquisitionCost === 100000, "fixed assets still computed when equity unavailable");
+
+  Logger.log("PASS: testPartialBalanceEquityUnavailable | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testPartialBalanceNoFixedAssets() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var ceRows = [
+    { ID_Trx: "CE-1", Tanggal: "2021-01-01", Owner: "Dekker", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" },
+    { ID_Trx: "CE-2", Tanggal: "2021-01-01", Owner: "Erway", Type: "OWNER_CONTRIBUTION", Nominal: 10635000, Keterangan: "Opening", Source: "LEGACY_XLSM_MIGRATION", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  var obRows = [
+    { ID: "FOB-3200-20260731", EffectiveDate: "2026-07-31", AccountCode: "3200", Amount: 7407000, Source: "LEGACY_XLSM_MIGRATION", Keterangan: "Opening", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+
+  var ss = financeIsolationBuildSpreadsheet({
+    capitalEquity: ceRows,
+    openingBalances: obRows,
+    depreciationLedger: [],
+    assets: []
+  });
+
+  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-01-31");
+
+  check(result.status === "PARTIAL", "status PARTIAL with no fixed assets");
+  check(result.assets.fixedAssets.acquisitionCost === 0, "acquisitionCost zero");
+  check(result.assets.fixedAssets.accumulatedDepreciation === 0, "accumulatedDepreciation zero");
+  check(result.assets.fixedAssets.netBookValue === 0, "netBookValue zero");
+  check(result.totalKnownAssets === 0, "totalKnownAssets zero");
+  check(result.equity.status !== "UNAVAILABLE", "equity available");
+  check(result.reconciliation.knownPosition.status === "COMPUTABLE", "known position computable");
+  check(result.reconciliation.knownPosition.difference === 0 - 0 - result.equity.totalEquity, "known position with zero assets");
+
+  Logger.log("PASS: testPartialBalanceNoFixedAssets | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function testFinanceResponseBackwardCompatibility() {
   var scenarios = 0;
   function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }

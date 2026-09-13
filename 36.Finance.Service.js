@@ -293,6 +293,167 @@ function buildFinanceRuntimeValidationPeriods(canonicalData) {
   ];
 }
 
+function buildPartialBalanceFixedAssetPosition(ledgerRows, asOfDate) {
+  var assetRows = {};
+  (ledgerRows || []).forEach(function(row) {
+    var id = String(row.ID_Asset || "").trim();
+    var period = financeDepreciationPeriodKey(row.Period);
+    if (!id || !period) return;
+    if (!assetRows[id]) assetRows[id] = [];
+    assetRows[id].push({ period: period, openingBookValue: Number(row.OpeningBookValue) || 0,
+      accumulatedDepreciation: Number(row.AccumulatedDepreciation) || 0,
+      closingBookValue: Number(row.ClosingBookValue) || 0 });
+  });
+  var assetPositions = {};
+  Object.keys(assetRows).forEach(function(id) {
+    var sorted = assetRows[id].sort(function(a, b) { return a.period < b.period ? -1 : a.period > b.period ? 1 : 0; });
+    var earliest = sorted[0];
+    var grossCost = earliest.openingBookValue;
+    var latest = sorted[0];
+    for (var i = 1; i < sorted.length; i++) {
+      if (sorted[i].period <= asOfDate) latest = sorted[i];
+    }
+    if (sorted[0].period > asOfDate) return;
+    assetPositions[id] = {
+      grossCost: grossCost,
+      accumulatedDepreciation: latest.accumulatedDepreciation,
+      netBookValue: latest.closingBookValue,
+      latestPeriod: latest.period
+    };
+  });
+  var totalGrossCost = 0;
+  var totalAccumulatedDepreciation = 0;
+  var totalNBV = 0;
+  Object.keys(assetPositions).forEach(function(id) {
+    totalGrossCost += assetPositions[id].grossCost;
+    totalAccumulatedDepreciation += assetPositions[id].accumulatedDepreciation;
+    totalNBV += assetPositions[id].netBookValue;
+  });
+  return {
+    assetCount: Object.keys(assetPositions).length,
+    totalGrossCost: totalGrossCost,
+    totalAccumulatedDepreciation: totalAccumulatedDepreciation,
+    totalNBV: totalNBV,
+    positions: assetPositions
+  };
+}
+
+function getPartialBalanceDataWithRuntime(runtime, filter, customStart, customEnd) {
+  var ss = runtime.spreadsheet;
+  var period = resolveDashboardDateRange(filter, customStart, customEnd);
+  var asOfDate = period.endDate;
+
+  var ledgerRows = readCanonicalTable(ss, "DepreciationLedger", [
+    "ID_Dep", "Period", "ID_Asset", "OpeningBookValue", "Depreciation",
+    "AccumulatedDepreciation", "ClosingBookValue", "GeneratedAt"
+  ]);
+  var fixedAssets = buildPartialBalanceFixedAssetPosition(ledgerRows, asOfDate);
+
+  var capitalEquity = { status: "UNAVAILABLE" };
+  try {
+    var canonicalData = getCanonicalTransactionData(ss);
+    var accounts = readCanonicalTable(ss, "Accounts", [
+      "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
+    ]);
+    var depreciationSource = getFinanceDepreciationSource(ss);
+    var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
+    var openingRows = readFinanceOpeningBalancesCompat(ss);
+    var postCutoffProfit = 0;
+    if (asOfDate >= FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START) {
+      postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
+        filter: "custom",
+        startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
+        endDate: asOfDate,
+        label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + asOfDate
+      }, depreciationSource).summary.operatingNetProfit;
+    }
+    capitalEquity = buildCapitalEquityReadModel(
+      capitalRows, openingRows, accounts, asOfDate, postCutoffProfit);
+  } catch (equityError) {
+    capitalEquity = { status: "UNAVAILABLE", error: String(equityError && equityError.message || equityError) };
+  }
+
+  var assets = {
+    cash: { status: "UNAVAILABLE", amount: null },
+    inventory: { status: "UNAVAILABLE", amount: null },
+    fixedAssets: {
+      status: "AVAILABLE",
+      acquisitionCost: fixedAssets.totalGrossCost,
+      accumulatedDepreciation: fixedAssets.totalAccumulatedDepreciation,
+      netBookValue: fixedAssets.totalNBV
+    }
+  };
+
+  var liabilities = { status: "ZERO_AUTHORITATIVE", total: 0 };
+
+  var equity;
+  if (capitalEquity.status !== "UNAVAILABLE") {
+    equity = {
+      ownerContributions: capitalEquity.ownerContributions,
+      returnOfCapital: capitalEquity.returnOfCapital,
+      netContributedCapital: capitalEquity.contributedCapital,
+      ownerDraws: capitalEquity.ownerDraws,
+      retainedEarningsOpening: capitalEquity.retainedEarningsOpening,
+      postCutoffProfit: capitalEquity.retainedEarningsPostCutoffProfit,
+      totalEquity: capitalEquity.totalEquity
+    };
+  } else {
+    equity = { status: "UNAVAILABLE", error: capitalEquity.error };
+  }
+
+  var totalKnownAssets = fixedAssets.totalNBV;
+  var knownPosition = null;
+  if (typeof equity.totalEquity === "number") {
+    knownPosition = totalKnownAssets - liabilities.total - equity.totalEquity;
+  }
+
+  var reconciliation = {
+    fullEquation: {
+      status: "UNRECONCILABLE",
+      reason: "INCOMPLETE_ASSET_AUTHORITY"
+    },
+    knownPosition: knownPosition !== null
+      ? { status: "COMPUTABLE", difference: knownPosition }
+      : { status: "UNAVAILABLE", reason: "EQUITY_UNAVAILABLE" }
+  };
+
+  var availability = {
+    cash: "UNAVAILABLE",
+    inventory: "UNAVAILABLE",
+    fixedAssets: "AVAILABLE",
+    liabilities: "ZERO_AUTHORITATIVE",
+    equity: capitalEquity.status !== "UNAVAILABLE" ? "AVAILABLE" : "UNAVAILABLE"
+  };
+
+  var qualityIssues = [];
+  qualityIssues.push("CASH_MIGRATION_NOT_READY");
+  qualityIssues.push("INVENTORY_AUTHORITY_NOT_ACTIVE");
+  if (capitalEquity.status === "UNAVAILABLE") {
+    qualityIssues.push("CAPITAL_EQUITY_UNAVAILABLE");
+  }
+
+  return Object.freeze({
+    status: "PARTIAL",
+    period: { filter: period.filter, startDate: period.startDate, endDate: period.endDate, label: period.label },
+    asOfDate: asOfDate,
+    assets: assets,
+    liabilities: liabilities,
+    equity: equity,
+    reconciliation: reconciliation,
+    totalKnownAssets: totalKnownAssets,
+    totalAssets: null,
+    availability: availability,
+    qualityIssues: qualityIssues,
+    accountingPolicy: FINANCE_ACCOUNTING_POLICY
+  });
+}
+
+function getPartialBalanceData(filter, customStart, customEnd) {
+  return getPartialBalanceDataWithRuntime({
+    spreadsheet: requireNumlockProductionSpreadsheet()
+  }, filter, customStart, customEnd);
+}
+
 function financeDateKey(year, month, day) {
   return String(year) + "-" + String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
 }
