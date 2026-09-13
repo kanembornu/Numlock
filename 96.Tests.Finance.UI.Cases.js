@@ -18,13 +18,13 @@ function testFinanceProfitAndLossUiContract()
 
   requireToken(shell, 'data-page="finance"', "active Profit & Loss route");
   requireToken(shell, 'data-page="finance" data-navigation-destination="capital-equity"', "active Capital & Equity route");
-  requireToken(shell, 'data-navigation-destination="balance-sheet" class="ui-future-module', "gated Balance Sheet");
+  requireToken(shell, 'data-navigation-destination="balance-sheet" class="ui-sidebar-item', "active Balance Position route");
   requireToken(shell, 'data-navigation-destination="cash-flow" class="ui-future-module', "gated Cash Flow");
   requireToken(controller, ".getFinanceData(", "Finance backend request");
   forbidToken(financeSource, "getDashboardData(", "Dashboard request coupling");
   requireToken(shell, 'aria-label="Profit and Loss summary"', "six-metric summary");
   scenarios++;
-  if ((shell.match(/class="finance-kpi finance-surface"/g) || []).length !== 11) throw new Error("Finance UI must render six P&L and five Capital & Equity KPI cards");
+  if ((shell.match(/class="finance-kpi finance-surface"/g) || []).length !== 21) throw new Error("Finance UI must render six P&L, five Capital & Equity, six Product Profitability, and four Balance Position KPI cards");
   requireToken(shell, 'class="finance-kpis finance-equity-kpis"', "five-card Capital & Equity summary");
   requireToken(shell, 'id="financeOwnerReconciliationBody"', "owner reconciliation");
   requireToken(shell, 'id="financeRetainedBridgeHeading"', "retained earnings bridge");
@@ -256,5 +256,107 @@ function testFinancePpFieldSemantics()
     "no reference to obsolete quality OK check");
 
   Logger.log("PASS: testFinancePpFieldSemantics | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceBalancePositionUiContract()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+  function forbidToken(source, token, name) {
+    scenarios++;
+    if (source.indexOf(token) !== -1) throw new Error("Finance UI forbidden " + name + ": " + token);
+  }
+
+  var shell = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+  var stateSource = include("199.View.Finance.State");
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+  var combined = stateSource + renderSource + controllerSource;
+
+  // Navigation activated
+  check(shell.indexOf('data-navigation-destination="balance-sheet"') !== -1,
+    "balance-sheet destination exists");
+  check(shell.indexOf('data-page="finance" data-navigation-destination="balance-sheet"') !== -1,
+    "balance-sheet route is active finance page");
+  check(shell.indexOf('class="ui-future-module') === -1 ||
+    shell.indexOf('balance-sheet" class="ui-future-module') === -1,
+    "balance-sheet no longer gated");
+  check(shell.indexOf('Balance Position') !== -1,
+    "label shows Balance Position");
+
+  // RPC uses getPartialBalanceData
+  check(controllerSource.indexOf(".getPartialBalanceData(") !== -1,
+    "controller calls getPartialBalanceData");
+
+  // Independent cache key
+  check(combined.indexOf("balanceSheet") !== -1,
+    "balanceSheet has independent cache type");
+
+  // Stale callback rejection
+  check(controllerSource.indexOf("dest !== financeState.destination") !== -1,
+    "callbacks validate destination alignment");
+
+  // Period label "As of [date]"
+  check(renderSource.indexOf("As of") !== -1,
+    "renderer uses 'As of' period label");
+  check(renderSource.indexOf("balancePosition.asOfDate") !== -1 || renderSource.indexOf("balance.asOfDate") !== -1,
+    "renderer reads asOfDate for balance position");
+
+  // KPI card rendering
+  check(shell.indexOf('id="financeBalanceSheetContent"') !== -1,
+    "balance-sheet content container exists");
+  check(shell.indexOf('id="financeBSKnownAssets"') !== -1,
+    "Known Assets KPI exists");
+  check(shell.indexOf('id="financeBSLiabilities"') !== -1,
+    "Liabilities KPI exists");
+  check(shell.indexOf('id="financeBSEquity"') !== -1,
+    "Equity KPI exists");
+  check(shell.indexOf('id="financeBSPositionStatus"') !== -1,
+    "Position Status KPI exists");
+
+  // null vs zero rendering
+  check(renderSource.indexOf("Unavailable") !== -1,
+    "null values render as Unavailable");
+
+  // Fixed asset display
+  check(shell.indexOf('id="financeBSFixedAssets"') !== -1,
+    "Fixed Assets element exists");
+  check(renderSource.indexOf("financeBSFixedAssets") !== -1,
+    "renderer writes Fixed Assets");
+
+  // Equity display
+  check(shell.indexOf('id="financeBSEquityCapital"') !== -1,
+    "Contributed Capital element exists");
+  check(shell.indexOf('id="financeBSEquityRetained"') !== -1,
+    "Retained Earnings element exists");
+  check(shell.indexOf('id="financeBSEquityTotal"') !== -1,
+    "Total Equity element exists");
+
+  // Reconciliation display
+  check(shell.indexOf('id="financeBSReconAssets"') !== -1,
+    "Reconciliation Assets element exists");
+  check(shell.indexOf('id="financeBSReconLiabilities"') !== -1,
+    "Reconciliation Liabilities element exists");
+  check(shell.indexOf('id="financeBSReconKnownPosition"') !== -1,
+    "Reconciliation Known Position element exists");
+  check(renderSource.indexOf("financeBSReconAssets") !== -1,
+    "renderer writes Reconciliation Assets");
+
+  // Heading and context text
+  check(controllerSource.indexOf('"Balance Position"') !== -1,
+    "controller sets Balance Position heading");
+  check(controllerSource.indexOf('"Assets, liabilities, and equity as of the selected date"') !== -1,
+    "controller sets Balance Position context text");
+
+  // isFinanceDataCompatible check
+  check(controllerSource.indexOf("data.balancePosition") !== -1,
+    "compatibility checks balancePosition for balance-sheet");
+
+  // Compatible data check in renderActiveFinanceDestination
+  check(controllerSource.indexOf("renderFinanceBalanceSheet") !== -1,
+    "renderActiveFinanceDestination dispatches to renderFinanceBalanceSheet");
+
+  Logger.log("PASS: testFinanceBalancePositionUiContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }

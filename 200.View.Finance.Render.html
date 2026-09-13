@@ -249,6 +249,71 @@
       return products.length === 0;
     }
 
+    function renderFinanceBalanceSheet(response)
+    {
+      var balance = response && response.balancePosition;
+      if (!balance || !balance.asOfDate) {
+        throw new Error("Balance Position response is unavailable or malformed");
+      }
+      var period = response && response.period || {};
+      var assets = balance.assets || {};
+      var liabilities = balance.liabilities || {};
+      var equity = balance.equity || {};
+
+      getFinanceElement("financePeriodLabel").textContent = "As of " + formatFinanceDate(balance.asOfDate);
+
+      function bsNullableCurrency(value)
+      {
+        if (value === null || value === undefined) return "Unavailable";
+        var number = Number(value);
+        if (!Number.isFinite(number)) return "Unavailable";
+        return formatFinanceCurrency(number);
+      }
+
+      // KPI cards
+      getFinanceElement("financeBSKnownAssets").textContent = bsNullableCurrency(assets.knownTotal);
+      getFinanceElement("financeBSLiabilities").textContent = bsNullableCurrency(liabilities.total);
+      getFinanceElement("financeBSEquity").textContent = bsNullableCurrency(equity.totalEquity);
+
+      var knownAssets = Number(assets.knownTotal);
+      var knownLiabilities = Number(liabilities.total);
+      var hasBoth = Number.isFinite(knownAssets) && Number.isFinite(knownLiabilities);
+      var positionText = hasBoth
+        ? (knownAssets - knownLiabilities >= 0 ? "Positive" : "Negative")
+        : "Unknown";
+      getFinanceElement("financeBSPositionStatus").textContent = positionText;
+
+      // Assets section
+      getFinanceElement("financeBSCash").textContent = bsNullableCurrency(assets.cash);
+      getFinanceElement("financeBSInventory").textContent = bsNullableCurrency(assets.inventory);
+      getFinanceElement("financeBSFixedAssets").textContent = bsNullableCurrency(assets.fixedAssets);
+
+      // Liabilities section
+      getFinanceElement("financeBSLiabilitiesTotal").textContent = bsNullableCurrency(liabilities.total);
+      var liabilitiesZero = Number(liabilities.total) === 0;
+      getFinanceElement("financeBSLiabilitiesDisclosure").textContent = liabilitiesZero
+        ? "Liabilities are authoritative at Rp0 until external obligations are recorded."
+        : bsNullableCurrency(liabilities.total);
+
+      // Equity section
+      getFinanceElement("financeBSEquityCapital").textContent = bsNullableCurrency(equity.contributedCapital);
+      getFinanceElement("financeBSEquityRetained").textContent = bsNullableCurrency(equity.retainedEarnings);
+      getFinanceElement("financeBSEquityTotal").textContent = bsNullableCurrency(equity.totalEquity);
+
+      // Reconciliation section
+      getFinanceElement("financeBSReconAssets").textContent = bsNullableCurrency(assets.knownTotal);
+      getFinanceElement("financeBSReconLiabilities").textContent = bsNullableCurrency(liabilities.total);
+
+      var reconKnownAssets = Number(assets.knownTotal);
+      var reconKnownLiab = Number(liabilities.total);
+      var knownPosition = Number.isFinite(reconKnownAssets) && Number.isFinite(reconKnownLiab)
+        ? reconKnownAssets - reconKnownLiab
+        : null;
+      getFinanceElement("financeBSReconKnownPosition").textContent = bsNullableCurrency(knownPosition);
+
+      return !Number.isFinite(knownAssets) && !Number.isFinite(knownLiabilities) && !Number.isFinite(Number(equity.totalEquity));
+    }
+
     function setFinanceViewState(state, message)
     {
       var status = getFinanceElement("financeStatus");
@@ -265,13 +330,17 @@
       content.hidden = state === "loading" || state === "error" || financeState.destination !== "profit-loss";
       equityContent.hidden = state === "loading" || state === "error" || financeState.destination !== "capital-equity";
       ppContent.hidden = state === "loading" || state === "error" || financeState.destination !== "product-profitability";
+      var bsContent = getFinanceElement("financeBalanceSheetContent");
+      bsContent.hidden = state === "loading" || state === "error" || financeState.destination !== "balance-sheet";
       retry.hidden = state !== "error";
 
       var destLabel = financeState.destination === "capital-equity"
         ? "Capital & Equity"
         : financeState.destination === "product-profitability"
           ? "Product Profitability"
-          : "Profit & Loss";
+          : financeState.destination === "balance-sheet"
+            ? "Balance Position"
+            : "Profit & Loss";
 
       getFinanceElement("financeStatusText").textContent = isLoading
         ? "Loading " + destLabel + "…"

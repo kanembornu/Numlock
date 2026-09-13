@@ -2617,9 +2617,11 @@
               <i class="fas fa-arrow-trend-down w-6 text-center" aria-hidden="true"></i>
               <span class="sidebar-expanded-content min-w-0">Depreciation</span>
             </div>
-            <div data-navigation-destination="balance-sheet" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Balance Sheet, unavailable until module migration is approved" title="Balance Sheet — unavailable until module migration is approved">
-              <i class="fas fa-scale-balanced w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0">Balance Sheet</span>
+            <div role="listitem">
+              <button type="button" data-page="finance" data-navigation-destination="balance-sheet" aria-label="Balance Position" title="Balance Position" class="ui-sidebar-item flex w-full items-center text-left transition">
+                <i class="fas fa-scale-balanced w-6 text-center" aria-hidden="true"></i>
+                <span class="sidebar-expanded-content min-w-0">Balance Position</span>
+              </button>
             </div>
             <div data-navigation-destination="cash-flow" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Cash Flow, unavailable until module migration is approved" title="Cash Flow — unavailable until module migration is approved">
               <i class="fas fa-money-bill-transfer w-6 text-center" aria-hidden="true"></i>
@@ -3185,6 +3187,50 @@
             <p id="financePPPeriod" class="hf-section-heading">Product Profitability</p>
             <p id="financePPComparisonPeriod" class="hf-section-label mt-1" hidden></p>
             <p id="financePPDetail" class="ui-body-text ui-theme-secondary mt-2">Full product table and analytics coming in a future update.</p>
+          </div>
+        </div>
+        <div id="financeBalanceSheetContent" class="finance-layout" data-finance-panel="balance-sheet" hidden>
+          <dl class="finance-kpis finance-equity-kpis" aria-label="Balance Position summary">
+            <div class="finance-kpi finance-surface"><dt>Known Assets</dt><dd id="financeBSKnownAssets">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Liabilities</dt><dd id="financeBSLiabilities">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Equity</dt><dd id="financeBSEquity">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Position Status</dt><dd id="financeBSPositionStatus">—</dd></div>
+          </dl>
+          <div class="finance-equity-grid">
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeBSAssetsHeading">
+              <h2 id="financeBSAssetsHeading" class="hf-section-heading">Assets</h2>
+              <dl class="finance-statement-list">
+                <div class="finance-statement-row"><dt>Cash</dt><dd id="financeBSCash">Unavailable</dd></div>
+                <div class="finance-statement-row"><dt>Inventory</dt><dd id="financeBSInventory">Unavailable</dd></div>
+                <div class="finance-statement-row finance-total"><dt>Fixed Assets (Net)</dt><dd id="financeBSFixedAssets">—</dd></div>
+              </dl>
+            </section>
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeBSLiabilitiesHeading">
+              <h2 id="financeBSLiabilitiesHeading" class="hf-section-heading">Liabilities</h2>
+              <dl class="finance-statement-list">
+                <div class="finance-statement-row finance-total"><dt>Total Liabilities</dt><dd id="financeBSLiabilitiesTotal">—</dd></div>
+              </dl>
+              <p id="financeBSLiabilitiesDisclosure" class="ui-meta-text ui-theme-muted mt-2">Liabilities are authoritative at Rp0 until external obligations are recorded.</p>
+            </section>
+          </div>
+          <div class="finance-equity-grid">
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeBSEquityHeading">
+              <h2 id="financeBSEquityHeading" class="hf-section-heading">Equity</h2>
+              <dl class="finance-statement-list">
+                <div class="finance-statement-row"><dt>Contributed Capital</dt><dd id="financeBSEquityCapital">—</dd></div>
+                <div class="finance-statement-row"><dt>Retained Earnings</dt><dd id="financeBSEquityRetained">—</dd></div>
+                <div class="finance-statement-row finance-total finance-final-total"><dt>= Total Equity</dt><dd id="financeBSEquityTotal">—</dd></div>
+              </dl>
+            </section>
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeBSReconciliationHeading">
+              <h2 id="financeBSReconciliationHeading" class="hf-section-heading">Reconciliation</h2>
+              <dl class="finance-statement-list">
+                <div class="finance-statement-row"><dt>Assets</dt><dd id="financeBSReconAssets">—</dd></div>
+                <div class="finance-statement-row"><dt>(−) Liabilities</dt><dd id="financeBSReconLiabilities">—</dd></div>
+                <div class="finance-statement-row finance-total finance-final-total"><dt>= Known Position</dt><dd id="financeBSReconKnownPosition">—</dd></div>
+              </dl>
+              <p id="financeBSReconEquation" class="ui-meta-text ui-theme-muted mt-2">Full equation: Assets = Liabilities + Equity</p>
+            </section>
           </div>
         </div>
       </div>
@@ -3915,6 +3961,10 @@
         "financeRetainedCurrent", "financeRetainedAsOfDate", "financeEquityAsOfStatus", "financeEquityOpeningStatus", "financeEquityCapitalPolicy",
         "financeProductProfitabilityContent", "financePPWarning", "financePPRevenue", "financePPCogs", "financePPGrossProfit",
         "financePPVariantCount", "financePPRowCount", "financePPQualityStatus", "financePPPeriod", "financePPComparisonPeriod", "financePPDetail",
+        "financeBalanceSheetContent", "financeBSKnownAssets", "financeBSLiabilities", "financeBSEquity", "financeBSPositionStatus",
+        "financeBSCash", "financeBSInventory", "financeBSFixedAssets", "financeBSLiabilitiesTotal", "financeBSLiabilitiesDisclosure",
+        "financeBSEquityCapital", "financeBSEquityRetained", "financeBSEquityTotal",
+        "financeBSReconAssets", "financeBSReconLiabilities", "financeBSReconKnownPosition", "financeBSReconEquation",
         "snapshotTopProfit", "snapshotBestMargin", "snapshotTopRevenue", "snapshotExpenseDriver", "snapshotTotalMargin", "snapshotConcentration",
         "categoryMixCenter", "categoryMixLegend", "hotColdComparison", "hotColdChartSummary", "hotColdChartEmpty",
         "marginHealthContainer",

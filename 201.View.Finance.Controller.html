@@ -30,6 +30,9 @@
     function isFinanceDataCompatible(data, destination)
     {
       if (!data) return false;
+      if (destination === "balance-sheet") {
+        return !!data.balancePosition;
+      }
       if (destination === "product-profitability") {
         return Array.isArray(data.products) && !!data.summary;
       }
@@ -71,7 +74,7 @@
       financeState.customEnd = capturedCustomEnd;
 
       var dest = financeState.destination;
-      var cacheType = dest === "product-profitability" ? "productProfitability" : "finance";
+      var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : "finance";
       var cacheKey = buildFinanceCacheKey(capturedFilter, capturedCustomStart, capturedCustomEnd);
 
       // Deduplicate: join existing in-flight request for same cache key + type
@@ -104,7 +107,7 @@
           }
         } catch (error) {
           console.error("Finance render failed", error);
-          var renderLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
+          var renderLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : "Profit & Loss";
           setFinanceViewState("error", "Unable to display " + renderLabel + ".");
         }
       }
@@ -113,7 +116,7 @@
         delete financeInflight[cacheType + "|" + cacheKey];
         if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         console.error("Finance request failed", error);
-        var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
+        var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : "Profit & Loss";
         setFinanceViewState("error", "Unable to load " + failLabel + ".");
       }
 
@@ -124,6 +127,11 @@
           .withSuccessHandler(onSuccess)
           .withFailureHandler(onFailure)
           .getProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+      } else if (dest === "balance-sheet") {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .getPartialBalanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
       } else {
         google.script.run
           .withSuccessHandler(onSuccess)
@@ -175,7 +183,7 @@
     // 11X.3K — invalidate all finance + PP caches (on transaction mutation)
     function invalidateFinanceCache()
     {
-      financeCache = { finance: {}, productProfitability: {} };
+      financeCache = { finance: {}, productProfitability: {}, balanceSheet: {} };
       financeInflight = {};
       financeState.activeRequestId = ++financeState.requestSequence;
     }
@@ -191,6 +199,9 @@
       if (financeState.destination === "product-profitability") {
         return renderFinanceProductProfitability(response);
       }
+      if (financeState.destination === "balance-sheet") {
+        return renderFinanceBalanceSheet(response);
+      }
       renderFinanceProfitAndLoss(response);
       var summary = response && response.summary || {};
       return [summary.revenue, summary.cogs, summary.grossProfit,
@@ -200,12 +211,13 @@
 
     function setFinanceDestination(destination)
     {
-      var validDestinations = ["profit-loss", "capital-equity", "product-profitability"];
+      var validDestinations = ["profit-loss", "capital-equity", "product-profitability", "balance-sheet"];
       financeState.destination = validDestinations.indexOf(destination) !== -1 ? destination : "profit-loss";
       var isEquity = financeState.destination === "capital-equity";
       var isPP = financeState.destination === "product-profitability";
-      var headingText = isEquity ? "Capital & Equity" : isPP ? "Product Profitability" : "Profit & Loss";
-      var contextText = isEquity ? "Owner capital and retained earnings as of the selected date" : isPP ? "Per-product revenue, COGS, and margin analysis" : "Transaction-date operating statement";
+      var isBS = financeState.destination === "balance-sheet";
+      var headingText = isEquity ? "Capital & Equity" : isPP ? "Product Profitability" : isBS ? "Balance Position" : "Profit & Loss";
+      var contextText = isEquity ? "Owner capital and retained earnings as of the selected date" : isPP ? "Per-product revenue, COGS, and margin analysis" : isBS ? "Assets, liabilities, and equity as of the selected date" : "Transaction-date operating statement";
       getFinanceElement("financeHeading").textContent = headingText;
       getFinanceElement("utilityPageTitle").textContent = headingText;
       getFinanceElement("utilityPageContext").textContent = contextText;
@@ -218,7 +230,7 @@
     {
       var request = getFinanceRequestFromControls();
       var dest = financeState.destination;
-      var cacheType = dest === "product-profitability" ? "productProfitability" : "finance";
+      var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : "finance";
       var cacheKey = buildFinanceCacheKey(request.filter, request.customStart, request.customEnd);
       var cacheEntry = financeCache[cacheType][cacheKey];
 
@@ -233,7 +245,7 @@
           setFinanceViewState(isEmpty ? "empty" : "success");
         } catch (error) {
           console.error("Finance render failed", error);
-          var label = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : "Profit & Loss";
+          var label = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : "Profit & Loss";
           setFinanceViewState("error", "Unable to display " + label + ".");
         }
         return;
