@@ -303,7 +303,7 @@
 
       // Equity section
       getFinanceElement("financeBSEquityCapital").textContent = bsNullableCurrency(equity.netContributedCapital);
-      getFinanceElement("financeBSEquityRetained").textContent = bsNullableCurrency(equity.postCutoffProfit);
+      getFinanceElement("financeBSEquityRetained").textContent = bsNullableCurrency(equity.retainedEarnings);
       getFinanceElement("financeBSEquityTotal").textContent = bsNullableCurrency(equity.totalEquity);
 
       // Reconciliation section

@@ -362,10 +362,24 @@ function testFinanceBalancePositionUiContract()
     "balance renderer reads fixedAssets.netBookValue (not bare object)");
   check(renderSource.indexOf("equity.netContributedCapital") !== -1,
     "balance renderer reads equity.netContributedCapital");
-  check(renderSource.indexOf("equity.postCutoffProfit") !== -1,
-    "balance renderer reads equity.postCutoffProfit");
+  check(renderSource.indexOf("equity.retainedEarnings") !== -1,
+    "balance renderer reads equity.retainedEarnings");
   check(renderSource.indexOf("balance.totalKnownAssets") !== -1,
     "balance renderer reads balance.totalKnownAssets");
+
+  // warmBalanceSheetData exists and follows same pattern
+  check(controllerSource.indexOf("function warmBalanceSheetData") !== -1,
+    "warmBalanceSheetData function declared");
+  check(controllerSource.indexOf("financeCache.balanceSheet[cacheKey]") !== -1,
+    "warmBalanceSheetData writes to financeCache.balanceSheet");
+  check(controllerSource.indexOf("financeInflight[\"balanceSheet|\" + cacheKey]") !== -1,
+    "warmBalanceSheetData uses balanceSheet inflight key");
+  check(controllerSource.indexOf(".getPartialBalanceData(") !== -1,
+    "warmBalanceSheetData calls getPartialBalanceData");
+
+  // No second cache architecture
+  check(controllerSource.indexOf("balanceSheetCache") === -1,
+    "no separate balanceSheetCache object");
 
   // Reconciliation uses backend knownPositionDifference — no manual Assets - Liabilities arithmetic
   check(renderSource.indexOf("reconciliation.knownPosition") !== -1,
@@ -394,5 +408,66 @@ function testFinanceBalancePositionUiContract()
     "renderer writes Equity row in reconciliation");
 
   Logger.log("PASS: testFinanceBalancePositionUiContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceBalanceSheetPrewarmContract()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var stateSource = include("199.View.Finance.State");
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+  var dashboardSource = include("198.View.Dashboard.Controller");
+  var combined = stateSource + renderSource + controllerSource;
+
+  // warmBalanceSheetData follows same cache pattern as warmFinanceData
+  check(controllerSource.indexOf("function warmBalanceSheetData") !== -1,
+    "warmBalanceSheetData declared");
+  check(controllerSource.indexOf("financeCache.balanceSheet[cacheKey]") !== -1,
+    "warmBalanceSheetData reads/writes financeCache.balanceSheet");
+
+  // warmBalanceSheetData uses inflight dedup
+  check(controllerSource.indexOf("financeInflight[\"balanceSheet|\" + cacheKey]") !== -1,
+    "warmBalanceSheetData uses balanceSheet inflight key");
+
+  // warmBalanceSheetData calls correct backend
+  check(controllerSource.indexOf("getPartialBalanceData") !== -1,
+    "balance-sheet path calls getPartialBalanceData");
+
+  // warmBalanceSheetData does NOT render
+  check(controllerSource.indexOf("function warmBalanceSheetData") !== -1,
+    "warmBalanceSheetData declared");
+  var warmBSBody = controllerSource.substring(
+    controllerSource.indexOf("function warmBalanceSheetData"),
+    controllerSource.indexOf("// 11X.3K — invalidate all finance")
+  );
+  check(warmBSBody.indexOf("renderFinance") === -1,
+    "warmBalanceSheetData does not call any renderer");
+  check(warmBSBody.indexOf("setFinanceViewState") === -1,
+    "warmBalanceSheetData does not set view state");
+
+  // Sibling warming includes balanceSheet
+  check(controllerSource.indexOf("warmBalanceSheetData(capturedFilter") !== -1,
+    "sibling warming calls warmBalanceSheetData");
+
+  // Dashboard prewarms balanceSheet
+  check(dashboardSource.indexOf("warmBalanceSheetData") !== -1,
+    "Dashboard prewarms warmBalanceSheetData");
+  check(dashboardSource.indexOf("warmBalanceSheetData(\"currentYear\"") !== -1,
+    "Dashboard prewarm uses currentYear filter");
+
+  // Cache key isolation — all three use shared buildFinanceCacheKey
+  check(controllerSource.indexOf("function buildFinanceCacheKey") !== -1,
+    "shared buildFinanceCacheKey exists");
+  check(combined.indexOf("balanceSheet") !== -1,
+    "balanceSheet appears in cache architecture");
+
+  // No second cache architecture
+  check(controllerSource.indexOf("balanceSheetCache") === -1,
+    "no separate balanceSheetCache object");
+
+  Logger.log("PASS: testFinanceBalanceSheetPrewarmContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }

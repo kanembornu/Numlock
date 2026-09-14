@@ -99,11 +99,16 @@
           }
           var isEmpty = renderActiveFinanceDestination(response);
           setFinanceViewState(isEmpty ? "empty" : "success");
-          // 11X.3K — warm sibling dataset for same filter
+          // 11X.3K — warm sibling datasets for same filter
           if (cacheType === "finance") {
             warmProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmBalanceSheetData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+          } else if (cacheType === "productProfitability") {
+            warmFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmBalanceSheetData(capturedFilter, capturedCustomStart, capturedCustomEnd);
           } else {
             warmFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
           }
         } catch (error) {
           console.error("Finance render failed", error);
@@ -178,6 +183,26 @@
           delete financeInflight["productProfitability|" + cacheKey];
         })
         .getProductProfitabilityData(filter, customStart, customEnd);
+    }
+
+    // 11X.3K — background warm: balance sheet dataset
+    function warmBalanceSheetData(filter, customStart, customEnd)
+    {
+      var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      if (financeCache.balanceSheet[cacheKey]) return;
+      if (financeInflight["balanceSheet|" + cacheKey]) return;
+      financeInflight["balanceSheet|" + cacheKey] = true;
+      google.script.run
+        .withSuccessHandler(function(response) {
+          delete financeInflight["balanceSheet|" + cacheKey];
+          if (response && isFinanceDataCompatible(response, "balance-sheet")) {
+            financeCache.balanceSheet[cacheKey] = { data: response, destination: "balance-sheet" };
+          }
+        })
+        .withFailureHandler(function() {
+          delete financeInflight["balanceSheet|" + cacheKey];
+        })
+        .getPartialBalanceData(filter, customStart, customEnd);
     }
 
     // 11X.3K — invalidate all finance + PP caches (on transaction mutation)
