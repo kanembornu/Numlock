@@ -1,3 +1,6 @@
+    // 11X.3K — one-shot callbacks for warming race resolution
+    var _warmCallbacks = {};
+
     function getFinanceRequestFromControls()
     {
       var filter = getFinanceElement("financeFilter").value;
@@ -164,18 +167,25 @@
     function warmFinanceData(filter, customStart, customEnd)
     {
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      var cbKey = "finance|" + cacheKey;
       if (financeCache.finance[cacheKey]) return;
-      if (financeInflight["finance|" + cacheKey]) return;
-      financeInflight["finance|" + cacheKey] = true;
+      if (financeInflight[cbKey]) return;
+      financeInflight[cbKey] = true;
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight["finance|" + cacheKey];
+          delete financeInflight[cbKey];
           if (response && isFinanceDataCompatible(response, "profit-loss")) {
             financeCache.finance[cacheKey] = { data: response, destination: "profit-loss" };
           }
+          // 11X.3K — wake any foreground navigation waiting on this data
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight["finance|" + cacheKey];
+          delete financeInflight[cbKey];
+          // 11X.3K — on failure, wake foreground so it can retry
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .getFinanceData(filter, customStart, customEnd);
     }
@@ -184,18 +194,23 @@
     function warmProductProfitabilityData(filter, customStart, customEnd)
     {
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      var cbKey = "productProfitability|" + cacheKey;
       if (financeCache.productProfitability[cacheKey]) return;
-      if (financeInflight["productProfitability|" + cacheKey]) return;
-      financeInflight["productProfitability|" + cacheKey] = true;
+      if (financeInflight[cbKey]) return;
+      financeInflight[cbKey] = true;
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight["productProfitability|" + cacheKey];
+          delete financeInflight[cbKey];
           if (response && isFinanceDataCompatible(response, "product-profitability")) {
             financeCache.productProfitability[cacheKey] = { data: response, destination: "product-profitability" };
           }
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight["productProfitability|" + cacheKey];
+          delete financeInflight[cbKey];
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .getProductProfitabilityData(filter, customStart, customEnd);
     }
@@ -204,18 +219,23 @@
     function warmBalanceSheetData(filter, customStart, customEnd)
     {
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      var cbKey = "balanceSheet|" + cacheKey;
       if (financeCache.balanceSheet[cacheKey]) return;
-      if (financeInflight["balanceSheet|" + cacheKey]) return;
-      financeInflight["balanceSheet|" + cacheKey] = true;
+      if (financeInflight[cbKey]) return;
+      financeInflight[cbKey] = true;
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight["balanceSheet|" + cacheKey];
+          delete financeInflight[cbKey];
           if (response && isFinanceDataCompatible(response, "balance-sheet")) {
             financeCache.balanceSheet[cacheKey] = { data: response, destination: "balance-sheet" };
           }
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight["balanceSheet|" + cacheKey];
+          delete financeInflight[cbKey];
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .getPartialBalanceData(filter, customStart, customEnd);
     }
@@ -224,18 +244,23 @@
     function warmDepreciationData(filter, customStart, customEnd)
     {
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      var cbKey = "depreciation|" + cacheKey;
       if (financeCache.depreciation[cacheKey]) return;
-      if (financeInflight["depreciation|" + cacheKey]) return;
-      financeInflight["depreciation|" + cacheKey] = true;
+      if (financeInflight[cbKey]) return;
+      financeInflight[cbKey] = true;
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight["depreciation|" + cacheKey];
+          delete financeInflight[cbKey];
           if (response && isFinanceDataCompatible(response, "depreciation")) {
             financeCache.depreciation[cacheKey] = { data: response, destination: "depreciation" };
           }
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight["depreciation|" + cacheKey];
+          delete financeInflight[cbKey];
+          var cb = _warmCallbacks[cbKey];
+          if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .getDepreciationData(filter, customStart, customEnd);
     }
@@ -245,6 +270,7 @@
     {
       financeCache = { finance: {}, productProfitability: {}, balanceSheet: {}, depreciation: {} };
       financeInflight = {};
+      _warmCallbacks = {};
       financeState.activeRequestId = ++financeState.requestSequence;
     }
 
@@ -320,6 +346,8 @@
         financeState.customStart = request.customStart;
         financeState.customEnd = request.customEnd;
         setFinanceViewState("loading");
+        // 11X.3K — register one-shot callback so warming completion re-navigates
+        _warmCallbacks[cacheType + "|" + cacheKey] = function() { ensureFinanceData(); };
         return;
       }
 
