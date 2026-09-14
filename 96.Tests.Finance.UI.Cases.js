@@ -357,6 +357,16 @@ function testFinanceBalancePositionUiContract()
   check(controllerSource.indexOf("renderFinanceBalanceSheet") !== -1,
     "renderActiveFinanceDestination dispatches to renderFinanceBalanceSheet");
 
+  // Field name correctness — balance position uses backend-correct names
+  check(renderSource.indexOf("assets.fixedAssets.netBookValue") !== -1,
+    "balance renderer reads fixedAssets.netBookValue (not bare object)");
+  check(renderSource.indexOf("equity.netContributedCapital") !== -1,
+    "balance renderer reads equity.netContributedCapital");
+  check(renderSource.indexOf("equity.postCutoffProfit") !== -1,
+    "balance renderer reads equity.postCutoffProfit");
+  check(renderSource.indexOf("balance.totalKnownAssets") !== -1,
+    "balance renderer reads balance.totalKnownAssets");
+
   Logger.log("PASS: testFinanceBalancePositionUiContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }

@@ -271,11 +271,11 @@
       }
 
       // KPI cards
-      getFinanceElement("financeBSKnownAssets").textContent = bsNullableCurrency(assets.knownTotal);
+      getFinanceElement("financeBSKnownAssets").textContent = bsNullableCurrency(balance.totalKnownAssets);
       getFinanceElement("financeBSLiabilities").textContent = bsNullableCurrency(liabilities.total);
       getFinanceElement("financeBSEquity").textContent = bsNullableCurrency(equity.totalEquity);
 
-      var knownAssets = Number(assets.knownTotal);
+      var knownAssets = Number(balance.totalKnownAssets);
       var knownLiabilities = Number(liabilities.total);
       var hasBoth = Number.isFinite(knownAssets) && Number.isFinite(knownLiabilities);
       var positionText = hasBoth
@@ -286,7 +286,7 @@
       // Assets section
       getFinanceElement("financeBSCash").textContent = bsNullableCurrency(assets.cash);
       getFinanceElement("financeBSInventory").textContent = bsNullableCurrency(assets.inventory);
-      getFinanceElement("financeBSFixedAssets").textContent = bsNullableCurrency(assets.fixedAssets);
+      getFinanceElement("financeBSFixedAssets").textContent = bsNullableCurrency(assets.fixedAssets && assets.fixedAssets.netBookValue);
 
       // Liabilities section
       getFinanceElement("financeBSLiabilitiesTotal").textContent = bsNullableCurrency(liabilities.total);
@@ -296,15 +296,15 @@
         : bsNullableCurrency(liabilities.total);
 
       // Equity section
-      getFinanceElement("financeBSEquityCapital").textContent = bsNullableCurrency(equity.contributedCapital);
-      getFinanceElement("financeBSEquityRetained").textContent = bsNullableCurrency(equity.retainedEarnings);
+      getFinanceElement("financeBSEquityCapital").textContent = bsNullableCurrency(equity.netContributedCapital);
+      getFinanceElement("financeBSEquityRetained").textContent = bsNullableCurrency(equity.postCutoffProfit);
       getFinanceElement("financeBSEquityTotal").textContent = bsNullableCurrency(equity.totalEquity);
 
       // Reconciliation section
-      getFinanceElement("financeBSReconAssets").textContent = bsNullableCurrency(assets.knownTotal);
+      getFinanceElement("financeBSReconAssets").textContent = bsNullableCurrency(balance.totalKnownAssets);
       getFinanceElement("financeBSReconLiabilities").textContent = bsNullableCurrency(liabilities.total);
 
-      var reconKnownAssets = Number(assets.knownTotal);
+      var reconKnownAssets = Number(balance.totalKnownAssets);
       var reconKnownLiab = Number(liabilities.total);
       var knownPosition = Number.isFinite(reconKnownAssets) && Number.isFinite(reconKnownLiab)
         ? reconKnownAssets - reconKnownLiab
