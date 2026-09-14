@@ -31,7 +31,7 @@
     {
       if (!data) return false;
       if (destination === "balance-sheet") {
-        return !!data.balancePosition;
+        return !!data.asOfDate;
       }
       if (destination === "product-profitability") {
         return Array.isArray(data.products) && !!data.summary;

@@ -350,8 +350,8 @@ function testFinanceBalancePositionUiContract()
     "controller sets Balance Position context text");
 
   // isFinanceDataCompatible check
-  check(controllerSource.indexOf("data.balancePosition") !== -1,
-    "compatibility checks balancePosition for balance-sheet");
+  check(controllerSource.indexOf("data.asOfDate") !== -1,
+    "compatibility checks asOfDate for balance-sheet");
 
   // Compatible data check in renderActiveFinanceDestination
   check(controllerSource.indexOf("renderFinanceBalanceSheet") !== -1,

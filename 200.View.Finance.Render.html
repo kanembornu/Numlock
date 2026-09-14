@@ -251,7 +251,7 @@
 
     function renderFinanceBalanceSheet(response)
     {
-      var balance = response && response.balancePosition;
+      var balance = response;
       if (!balance || !balance.asOfDate) {
         throw new Error("Balance Position response is unavailable or malformed");
       }
