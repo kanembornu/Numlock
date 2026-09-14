@@ -2613,9 +2613,11 @@
               <i class="fas fa-building-columns w-6 text-center" aria-hidden="true"></i>
               <span class="sidebar-expanded-content min-w-0">Assets</span>
             </div>
-            <div data-navigation-destination="depreciation" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Depreciation, unavailable until module migration is approved" title="Depreciation — unavailable until module migration is approved">
-              <i class="fas fa-arrow-trend-down w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0">Depreciation</span>
+            <div role="listitem">
+              <button type="button" data-page="finance" data-navigation-destination="depreciation" aria-label="Depreciation" title="Depreciation" class="ui-sidebar-item flex w-full items-center text-left transition">
+                <i class="fas fa-arrow-trend-down w-6 text-center" aria-hidden="true"></i>
+                <span class="sidebar-expanded-content min-w-0">Depreciation</span>
+              </button>
             </div>
             <div role="listitem">
               <button type="button" data-page="finance" data-navigation-destination="balance-sheet" aria-label="Balance Position" title="Balance Position" class="ui-sidebar-item flex w-full items-center text-left transition">
@@ -3233,6 +3235,42 @@
               <p id="financeBSReconEquation" class="ui-meta-text ui-theme-muted mt-2">Full equation: Assets = Liabilities + Equity</p>
             </section>
           </div>
+        </div>
+        <div id="financeDepreciationContent" class="finance-layout" data-finance-panel="depreciation" hidden>
+          <dl class="finance-kpis finance-equity-kpis" aria-label="Depreciation summary">
+            <div class="finance-kpi finance-surface"><dt>Depreciation Expense</dt><dd id="financeDepExpense">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Accumulated Depreciation</dt><dd id="financeDepAccumulated">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Net Book Value</dt><dd id="financeDepNBV">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Active Assets</dt><dd id="financeDepActiveAssets">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Fully Depreciated</dt><dd id="financeDepFullyDepreciated">—</dd></div>
+          </dl>
+          <div class="finance-equity-grid">
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepAssetsHeading">
+              <h2 id="financeDepAssetsHeading" class="hf-section-heading">Asset Register</h2>
+              <div class="finance-table-scroll">
+                <table class="finance-equity-table"><caption class="sr-only">Fixed asset depreciation schedule</caption><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Acquired</th><th scope="col" class="finance-number">Cost</th><th scope="col" class="finance-number">Accum. Dep.</th><th scope="col" class="finance-number">Period Dep.</th><th scope="col" class="finance-number">Net Book Value</th><th scope="col">Status</th></tr></thead><tbody id="financeDepAssetBody"></tbody></table>
+              </div>
+            </section>
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepReconHeading">
+              <h2 id="financeDepReconHeading" class="hf-section-heading">Reconciliation</h2>
+              <dl class="finance-statement-list">
+                <div class="finance-statement-row"><dt>Period Depreciation</dt><dd id="financeDepReconPeriod">—</dd></div>
+                <div class="finance-statement-row"><dt>Accumulated Depreciation</dt><dd id="financeDepReconAccum">—</dd></div>
+                <div class="finance-statement-row finance-total finance-final-total"><dt>Net Book Value</dt><dd id="financeDepReconNBV">—</dd></div>
+              </dl>
+            </section>
+          </div>
+          <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepPolicyHeading">
+            <h2 id="financeDepPolicyHeading" class="hf-section-heading">Accounting Policy</h2>
+            <dl class="finance-statement-list">
+              <div class="finance-statement-row"><dt>Method</dt><dd id="financeDepPolicyMethod">—</dd></div>
+              <div class="finance-statement-row"><dt>Granularity</dt><dd id="financeDepPolicyGranularity">—</dd></div>
+              <div class="finance-statement-row"><dt>Rounding</dt><dd id="financeDepPolicyRounding">—</dd></div>
+              <div class="finance-statement-row"><dt>Start Rule</dt><dd id="financeDepPolicyStartRule">—</dd></div>
+              <div class="finance-statement-row"><dt>Residual Treatment</dt><dd id="financeDepPolicyResidualTreatment">—</dd></div>
+              <div class="finance-statement-row finance-total"><dt>Source</dt><dd id="financeDepPolicySource">—</dd></div>
+            </dl>
+          </section>
         </div>
       </div>
     </section>

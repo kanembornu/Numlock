@@ -320,6 +320,76 @@
       return !Number.isFinite(Number(balance.totalKnownAssets)) && !Number.isFinite(Number(liabilities.total)) && !Number.isFinite(Number(equity.totalEquity));
     }
 
+    function renderFinanceDepreciation(response)
+    {
+      if (!response || !response.summary) {
+        throw new Error("Depreciation response is unavailable or malformed");
+      }
+      if (response.status === "EMPTY") {
+        return true;
+      }
+      var summary = response.summary;
+      var period = response.period || {};
+      var reconciliation = response.reconciliation || {};
+      var quality = response.quality || {};
+      var policy = response.policy || {};
+      var assets = Array.isArray(response.assets) ? response.assets : [];
+
+      getFinanceElement("financePeriodLabel").textContent = "As of " + formatFinanceDate(response.asOfDate);
+
+      // KPI cards
+      getFinanceElement("financeDepExpense").textContent = formatFinanceNullableCurrency(summary.periodDepreciation);
+      getFinanceElement("financeDepAccumulated").textContent = formatFinanceNullableCurrency(summary.accumulatedDepreciation);
+      getFinanceElement("financeDepNBV").textContent = formatFinanceNullableCurrency(summary.netBookValue);
+      getFinanceElement("financeDepActiveAssets").textContent = formatFinanceNullableInteger(summary.activeAssetCount);
+      getFinanceElement("financeDepFullyDepreciated").textContent = formatFinanceNullableInteger(summary.fullyDepreciatedAssetCount);
+
+      // Asset table
+      getFinanceElement("financeDepAssetBody").innerHTML = assets.length
+        ? assets.map(function(asset) {
+          var statusLabel = asset.disposedAt ? "Disposed" : asset.fullyDepreciated ? "Fully Dep." : "Active";
+          return "<tr><th scope=\"row\">" + escapeUiHtml(asset.id) + "</th><td>" + escapeUiHtml(asset.name) +
+            "</td><td>" + escapeUiHtml(asset.category) + "</td><td>" + escapeUiHtml(formatFinanceDate(asset.acquisitionDate)) +
+            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.cost)) +
+            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.accumulatedDepreciation)) +
+            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.periodDepreciation)) +
+            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.netBookValue)) +
+            "</td><td>" + escapeUiHtml(statusLabel) + "</td></tr>";
+        }).join("")
+        : "<tr><td colspan=\"9\" class=\"finance-table-empty\">No fixed assets available.</td></tr>";
+
+      // Reconciliation
+      function reconText(row) {
+        if (!row || row.status === "UNAVAILABLE") return "Unavailable";
+        var statusLabel = row.status === "RECONCILED" ? "Reconciled" : "Difference";
+        return statusLabel + (row.difference === 0 ? "" : " (" + formatFinanceCurrency(row.difference) + ")");
+      }
+      getFinanceElement("financeDepReconPeriod").textContent = reconText(reconciliation.periodDepreciation);
+      getFinanceElement("financeDepReconAccum").textContent = reconText(reconciliation.accumulatedDepreciation);
+      getFinanceElement("financeDepReconNBV").textContent = reconText(reconciliation.netBookValue);
+
+      // Policy
+      var policyLabels = {
+        method: "Method",
+        granularity: "Granularity",
+        rounding: "Rounding",
+        startRule: "Start Rule",
+        residualTreatment: "Residual Treatment",
+        source: "Source"
+      };
+      Object.keys(policyLabels).forEach(function(key) {
+        var elementId = "financeDepPolicy" + key.charAt(0).toUpperCase() + key.slice(1);
+        getFinanceElement(elementId).textContent = policy[key] || "—";
+      });
+
+      // Quality ATTENTION
+      if (quality.status === "ATTENTION") {
+        getFinanceElement("financeDepReconHeading").textContent = "Reconciliation — Attention";
+      }
+
+      return false;
+    }
+
     function setFinanceViewState(state, message)
     {
       var status = getFinanceElement("financeStatus");
@@ -338,6 +408,8 @@
       ppContent.hidden = state === "loading" || state === "error" || financeState.destination !== "product-profitability";
       var bsContent = getFinanceElement("financeBalanceSheetContent");
       bsContent.hidden = state === "loading" || state === "error" || financeState.destination !== "balance-sheet";
+      var depContent = getFinanceElement("financeDepreciationContent");
+      depContent.hidden = state === "loading" || state === "error" || financeState.destination !== "depreciation";
       retry.hidden = state !== "error";
 
       var destLabel = financeState.destination === "capital-equity"
@@ -346,7 +418,9 @@
           ? "Product Profitability"
           : financeState.destination === "balance-sheet"
             ? "Balance Position"
-            : "Profit & Loss";
+            : financeState.destination === "depreciation"
+              ? "Depreciation"
+              : "Profit & Loss";
 
       getFinanceElement("financeStatusText").textContent = isLoading
         ? "Loading " + destLabel + "…"

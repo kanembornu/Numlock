@@ -39,6 +39,9 @@
       if (destination === "capital-equity") {
         return !!data.capitalEquity;
       }
+      if (destination === "depreciation") {
+        return !!data.summary && !!data.asOfDate;
+      }
       if (destination === "profit-loss") {
         return !!data.summary && Array.isArray(data.expenseBreakdown);
       }
@@ -74,7 +77,7 @@
       financeState.customEnd = capturedCustomEnd;
 
       var dest = financeState.destination;
-      var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : "finance";
+      var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : dest === "depreciation" ? "depreciation" : "finance";
       var cacheKey = buildFinanceCacheKey(capturedFilter, capturedCustomStart, capturedCustomEnd);
 
       // Deduplicate: join existing in-flight request for same cache key + type
@@ -103,16 +106,23 @@
           if (cacheType === "finance") {
             warmProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
             warmBalanceSheetData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmDepreciationData(capturedFilter, capturedCustomStart, capturedCustomEnd);
           } else if (cacheType === "productProfitability") {
             warmFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmBalanceSheetData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmDepreciationData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+          } else if (cacheType === "depreciation") {
+            warmFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
             warmBalanceSheetData(capturedFilter, capturedCustomStart, capturedCustomEnd);
           } else {
             warmFinanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
             warmProductProfitabilityData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+            warmDepreciationData(capturedFilter, capturedCustomStart, capturedCustomEnd);
           }
         } catch (error) {
           console.error("Finance render failed", error);
-          var renderLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : "Profit & Loss";
+          var renderLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : dest === "depreciation" ? "Depreciation" : "Profit & Loss";
           setFinanceViewState("error", "Unable to display " + renderLabel + ".");
         }
       }
@@ -121,7 +131,7 @@
         delete financeInflight[cacheType + "|" + cacheKey];
         if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         console.error("Finance request failed", error);
-        var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : "Profit & Loss";
+        var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : dest === "depreciation" ? "Depreciation" : "Profit & Loss";
         setFinanceViewState("error", "Unable to load " + failLabel + ".");
       }
 
@@ -137,6 +147,11 @@
           .withSuccessHandler(onSuccess)
           .withFailureHandler(onFailure)
           .getPartialBalanceData(capturedFilter, capturedCustomStart, capturedCustomEnd);
+      } else if (dest === "depreciation") {
+        google.script.run
+          .withSuccessHandler(onSuccess)
+          .withFailureHandler(onFailure)
+          .getDepreciationData(capturedFilter, capturedCustomStart, capturedCustomEnd);
       } else {
         google.script.run
           .withSuccessHandler(onSuccess)
@@ -205,10 +220,30 @@
         .getPartialBalanceData(filter, customStart, customEnd);
     }
 
+    // 11X.3K — background warm: depreciation dataset
+    function warmDepreciationData(filter, customStart, customEnd)
+    {
+      var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
+      if (financeCache.depreciation[cacheKey]) return;
+      if (financeInflight["depreciation|" + cacheKey]) return;
+      financeInflight["depreciation|" + cacheKey] = true;
+      google.script.run
+        .withSuccessHandler(function(response) {
+          delete financeInflight["depreciation|" + cacheKey];
+          if (response && isFinanceDataCompatible(response, "depreciation")) {
+            financeCache.depreciation[cacheKey] = { data: response, destination: "depreciation" };
+          }
+        })
+        .withFailureHandler(function() {
+          delete financeInflight["depreciation|" + cacheKey];
+        })
+        .getDepreciationData(filter, customStart, customEnd);
+    }
+
     // 11X.3K — invalidate all finance + PP caches (on transaction mutation)
     function invalidateFinanceCache()
     {
-      financeCache = { finance: {}, productProfitability: {}, balanceSheet: {} };
+      financeCache = { finance: {}, productProfitability: {}, balanceSheet: {}, depreciation: {} };
       financeInflight = {};
       financeState.activeRequestId = ++financeState.requestSequence;
     }
@@ -227,6 +262,9 @@
       if (financeState.destination === "balance-sheet") {
         return renderFinanceBalanceSheet(response);
       }
+      if (financeState.destination === "depreciation") {
+        return renderFinanceDepreciation(response);
+      }
       renderFinanceProfitAndLoss(response);
       var summary = response && response.summary || {};
       return [summary.revenue, summary.cogs, summary.grossProfit,
@@ -236,18 +274,19 @@
 
     function setFinanceDestination(destination)
     {
-      var validDestinations = ["profit-loss", "capital-equity", "product-profitability", "balance-sheet"];
+      var validDestinations = ["profit-loss", "capital-equity", "product-profitability", "balance-sheet", "depreciation"];
       financeState.destination = validDestinations.indexOf(destination) !== -1 ? destination : "profit-loss";
       var isEquity = financeState.destination === "capital-equity";
       var isPP = financeState.destination === "product-profitability";
       var isBS = financeState.destination === "balance-sheet";
-      var headingText = isEquity ? "Capital & Equity" : isPP ? "Product Profitability" : isBS ? "Balance Position" : "Profit & Loss";
-      var contextText = isEquity ? "Owner capital and retained earnings as of the selected date" : isPP ? "Per-product revenue, COGS, and margin analysis" : isBS ? "Assets, liabilities, and equity as of the selected date" : "Transaction-date operating statement";
+      var isDep = financeState.destination === "depreciation";
+      var headingText = isEquity ? "Capital & Equity" : isPP ? "Product Profitability" : isBS ? "Balance Position" : isDep ? "Depreciation" : "Profit & Loss";
+      var contextText = isEquity ? "Owner capital and retained earnings as of the selected date" : isPP ? "Per-product revenue, COGS, and margin analysis" : isBS ? "Assets, liabilities, and equity as of the selected date" : isDep ? "Fixed asset depreciation schedule and reconciliation" : "Transaction-date operating statement";
       getFinanceElement("financeHeading").textContent = headingText;
       getFinanceElement("utilityPageTitle").textContent = headingText;
       getFinanceElement("utilityPageContext").textContent = contextText;
-      getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : isPP ? "Transaction-date operating basis" : "Transaction-date operating basis";
-      getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : isPP ? "Product-level COGS follows authoritative sales allocation." : "Depreciation is included from the authoritative DepreciationLedger.";
+      getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : isPP ? "Transaction-date operating basis" : isDep ? "Monthly straight-line depreciation" : "Transaction-date operating basis";
+      getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : isPP ? "Product-level COGS follows authoritative sales allocation." : isDep ? "Depreciation is calculated from the authoritative DepreciationLedger." : "Depreciation is included from the authoritative DepreciationLedger.";
     }
 
     // 11X.3K — navigation entry: check cache first, then in-flight, then request
@@ -255,7 +294,7 @@
     {
       var request = getFinanceRequestFromControls();
       var dest = financeState.destination;
-      var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : "finance";
+      var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : dest === "depreciation" ? "depreciation" : "finance";
       var cacheKey = buildFinanceCacheKey(request.filter, request.customStart, request.customEnd);
       var cacheEntry = financeCache[cacheType][cacheKey];
 
@@ -270,7 +309,7 @@
           setFinanceViewState(isEmpty ? "empty" : "success");
         } catch (error) {
           console.error("Finance render failed", error);
-          var label = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : "Profit & Loss";
+          var label = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : dest === "depreciation" ? "Depreciation" : "Profit & Loss";
           setFinanceViewState("error", "Unable to display " + label + ".");
         }
         return;

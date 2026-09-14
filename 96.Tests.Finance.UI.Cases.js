@@ -24,7 +24,7 @@ function testFinanceProfitAndLossUiContract()
   forbidToken(financeSource, "getDashboardData(", "Dashboard request coupling");
   requireToken(shell, 'aria-label="Profit and Loss summary"', "six-metric summary");
   scenarios++;
-  if ((shell.match(/class="finance-kpi finance-surface"/g) || []).length !== 21) throw new Error("Finance UI must render six P&L, five Capital & Equity, six Product Profitability, and four Balance Position KPI cards");
+  if ((shell.match(/class="finance-kpi finance-surface"/g) || []).length !== 26) throw new Error("Finance UI must render six P&L, five Capital & Equity, six Product Profitability, four Balance Position, and five Depreciation KPI cards");
   requireToken(shell, 'class="finance-kpis finance-equity-kpis"', "five-card Capital & Equity summary");
   requireToken(shell, 'id="financeOwnerReconciliationBody"', "owner reconciliation");
   requireToken(shell, 'id="financeRetainedBridgeHeading"', "retained earnings bridge");
@@ -469,5 +469,147 @@ function testFinanceBalanceSheetPrewarmContract()
     "no separate balanceSheetCache object");
 
   Logger.log("PASS: testFinanceBalanceSheetPrewarmContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceDepreciationUiContract()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+  function forbidToken(source, token, name) {
+    scenarios++;
+    if (source.indexOf(token) !== -1) throw new Error("Finance UI forbidden " + name + ": " + token);
+  }
+
+  var shell = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+  var stateSource = include("199.View.Finance.State");
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+  var combined = stateSource + renderSource + controllerSource;
+
+  // Navigation activated
+  check(shell.indexOf('data-navigation-destination="depreciation"') !== -1,
+    "depreciation destination exists");
+  check(shell.indexOf('data-page="finance" data-navigation-destination="depreciation"') !== -1,
+    "depreciation route is active finance page");
+  check(shell.indexOf('depreciation" class="ui-future-module') === -1,
+    "depreciation no longer gated");
+
+  // Correct RPC method
+  check(controllerSource.indexOf(".getDepreciationData(") !== -1,
+    "controller calls getDepreciationData");
+
+  // Cache key isolation
+  check(combined.indexOf("depreciation") !== -1,
+    "depreciation has independent cache type");
+  check(controllerSource.indexOf("financeCache.depreciation[cacheKey]") !== -1,
+    "depreciation uses financeCache.depreciation");
+
+  // Heading and context text
+  check(controllerSource.indexOf('"Depreciation"') !== -1,
+    "controller sets Depreciation heading");
+  check(controllerSource.indexOf('"Fixed asset depreciation schedule and reconciliation"') !== -1,
+    "controller sets Depreciation context text");
+
+  // Content container
+  check(shell.indexOf('id="financeDepreciationContent"') !== -1,
+    "depreciation content container exists");
+  check(shell.indexOf('data-finance-panel="depreciation"') !== -1,
+    "depreciation content panel attribute set");
+
+  // KPI rendering (5 cards)
+  check(shell.indexOf('id="financeDepExpense"') !== -1,
+    "Depreciation Expense KPI exists");
+  check(shell.indexOf('id="financeDepAccumulated"') !== -1,
+    "Accumulated Depreciation KPI exists");
+  check(shell.indexOf('id="financeDepNBV"') !== -1,
+    "Net Book Value KPI exists");
+  check(shell.indexOf('id="financeDepActiveAssets"') !== -1,
+    "Active Assets KPI exists");
+  check(shell.indexOf('id="financeDepFullyDepreciated"') !== -1,
+    "Fully Depreciated KPI exists");
+
+  // Asset table rendering
+  check(shell.indexOf('id="financeDepAssetBody"') !== -1,
+    "asset table body exists");
+  check(renderSource.indexOf("financeDepAssetBody") !== -1,
+    "renderer writes asset table");
+
+  // Reconciliation rendering
+  check(shell.indexOf('id="financeDepReconPeriod"') !== -1,
+    "Period Depreciation reconciliation exists");
+  check(shell.indexOf('id="financeDepReconAccum"') !== -1,
+    "Accumulated Depreciation reconciliation exists");
+  check(shell.indexOf('id="financeDepReconNBV"') !== -1,
+    "Net Book Value reconciliation exists");
+  check(renderSource.indexOf("financeDepReconPeriod") !== -1,
+    "renderer writes Period Depreciation reconciliation");
+  check(renderSource.indexOf("reconStatus") !== -1 || renderSource.indexOf("RECONCILED") !== -1,
+    "renderer maps reconciliation status");
+
+  // Policy rendering
+  check(shell.indexOf('id="financeDepPolicyMethod"') !== -1,
+    "Policy Method exists");
+  check(shell.indexOf('id="financeDepPolicyGranularity"') !== -1,
+    "Policy Granularity exists");
+  check(shell.indexOf('id="financeDepPolicyRounding"') !== -1,
+    "Policy Rounding exists");
+  check(shell.indexOf('id="financeDepPolicyStartRule"') !== -1,
+    "Policy Start Rule exists");
+  check(shell.indexOf('id="financeDepPolicyResidualTreatment"') !== -1,
+    "Policy Residual Treatment exists");
+  check(shell.indexOf('id="financeDepPolicySource"') !== -1,
+    "Policy Source exists");
+  check(renderSource.indexOf("financeDepPolicyMethod") !== -1,
+    "renderer writes policy method");
+
+  // EMPTY/ERROR states
+  check(renderSource.indexOf('"EMPTY"') !== -1,
+    "renderer handles EMPTY status");
+  check(renderSource.indexOf('response.status === "EMPTY"') !== -1,
+    "renderer checks for EMPTY status");
+
+  // Quality ATTENTION
+  check(renderSource.indexOf("ATTENTION") !== -1,
+    "renderer handles ATTENTION quality");
+
+  // isFinanceDataCompatible check
+  check(controllerSource.indexOf('destination === "depreciation"') !== -1,
+    "compatibility checks depreciation destination");
+  check(controllerSource.indexOf("data.summary") !== -1,
+    "compatibility checks data.summary for depreciation");
+  check(controllerSource.indexOf("data.asOfDate") !== -1,
+    "compatibility checks data.asOfDate for depreciation");
+
+  // renderActiveFinanceDestination dispatches
+  check(controllerSource.indexOf("renderFinanceDepreciation") !== -1,
+    "renderActiveFinanceDestination dispatches to renderFinanceDepreciation");
+
+  // warmDepreciationData exists
+  check(controllerSource.indexOf("function warmDepreciationData") !== -1,
+    "warmDepreciationData function declared");
+  check(controllerSource.indexOf("financeCache.depreciation[cacheKey]") !== -1,
+    "warmDepreciationData writes to financeCache.depreciation");
+  check(controllerSource.indexOf('financeInflight["depreciation|" + cacheKey]') !== -1,
+    "warmDepreciationData uses depreciation inflight key");
+  check(controllerSource.indexOf(".getDepreciationData(") !== -1,
+    "warmDepreciationData calls getDepreciationData");
+
+  // Sibling warming includes depreciation
+  check(controllerSource.indexOf("warmDepreciationData(capturedFilter") !== -1,
+    "sibling warming calls warmDepreciationData");
+
+  // Stale callback rejection
+  check(controllerSource.indexOf("dest !== financeState.destination") !== -1,
+    "callbacks validate destination alignment");
+
+  // No second cache architecture
+  check(controllerSource.indexOf("depreciationCache") === -1,
+    "no separate depreciationCache object");
+
+  // No migration execution
+  forbidToken(combined, 'runDepreciationMigration(', "migration execution");
+
+  Logger.log("PASS: testFinanceDepreciationUiContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
