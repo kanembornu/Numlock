@@ -613,3 +613,125 @@ function testFinanceDepreciationUiContract()
   Logger.log("PASS: testFinanceDepreciationUiContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
+
+function testFinanceElementCacheRegistration()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var shell = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+  var financeSource = renderSource + controllerSource;
+
+  // Extract requiredIds array from shell source
+  var requiredIdsStart = shell.indexOf("var requiredIds = [");
+  check(requiredIdsStart !== -1, "requiredIds array declared in shell");
+  var requiredIdsEnd = shell.indexOf("];", requiredIdsStart);
+  var requiredIdsBlock = shell.substring(requiredIdsStart, requiredIdsEnd + 2);
+
+  // Parse quoted IDs from the array
+  var registeredIds = {};
+  var idMatch = requiredIdsBlock.match(/"([a-zA-Z][a-zA-Z0-9]*)"/g);
+  check(idMatch !== null, "requiredIds contains element IDs");
+  for (var i = 0; i < idMatch.length; i++) {
+    var raw = idMatch[i];
+    registeredIds[raw.substring(1, raw.length - 1)] = true;
+  }
+
+  // Also parse dynamic receipt IDs added via push
+  // receiptIds keys → "receipt" + key pattern
+  var receiptKeys = ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested"];
+  for (var r = 0; r < receiptKeys.length; r++) {
+    registeredIds["receipt" + receiptKeys[r]] = true;
+    registeredIds["receipt" + receiptKeys[r] + "Error"] = true;
+  }
+  registeredIds["receiptEntryFields"] = true;
+  registeredIds["receiptEntryControls"] = true;
+  registeredIds["expenseCostType"] = true;
+  registeredIds["expenseDate"] = true;
+  registeredIds["expenseDateError"] = true;
+  registeredIds["expensePolicyFields"] = true;
+  registeredIds["receiptChoicesState"] = true;
+  registeredIds["receiptRecovery"] = true;
+
+  check(Object.keys(registeredIds).length > 100, "registeredIds parsed from shell (expected 100+)");
+
+  // Extract all getFinanceElement("...") calls from finance frontend source
+  var calledIds = {};
+  var callRegex = /getFinanceElement\("([a-zA-Z][a-zA-Z0-9]*)"\)/g;
+  var callMatch;
+  while ((callMatch = callRegex.exec(financeSource)) !== null) {
+    calledIds[callMatch[1]] = true;
+  }
+  check(Object.keys(calledIds).length > 30, "getFinanceElement calls extracted from finance source");
+
+  // Extract dynamic IDs from currencyMetrics object (P&L KPIs)
+  var pnlMetricKeys = ["financeRevenue", "financeCogs", "financeGrossProfit",
+    "financeOperatingExpenses", "financeOperatingNetProfit"];
+  for (var m = 0; m < pnlMetricKeys.length; m++) {
+    calledIds[pnlMetricKeys[m]] = true;
+  }
+
+  // Extract dynamic IDs from statement metrics array (P&L statement rows)
+  var statementKeys = ["financeStatementRevenue", "financeStatementCogs",
+    "financeStatementGrossProfit", "financeStatementOperatingExpenses",
+    "financeStatementDepreciation", "financeStatementOperatingNetProfit"];
+  for (var s = 0; s < statementKeys.length; s++) {
+    calledIds[statementKeys[s]] = true;
+  }
+
+  // Extract dynamic IDs from C&E metrics arrays
+  var ceKeys = ["financeEquityContributions", "financeEquityReturns",
+    "financeEquityClosingCapital", "financeCompositionCapital", "financeCompositionDraw",
+    "financeEquityRetainedEarnings", "financeEquityTotal",
+    "financeCompositionRetained", "financeCompositionTotal",
+    "financeRetainedOpening", "financeRetainedPostCutoff", "financeRetainedCurrent"];
+  for (var c = 0; c < ceKeys.length; c++) {
+    calledIds[ceKeys[c]] = true;
+  }
+
+  // Extract dynamic IDs from Depreciation policy labels
+  var policyKeys = ["method", "granularity", "rounding", "startRule", "residualTreatment", "source"];
+  for (var p = 0; p < policyKeys.length; p++) {
+    var capitalKey = policyKeys[p].charAt(0).toUpperCase() + policyKeys[p].slice(1);
+    calledIds["financeDepPolicy" + capitalKey] = true;
+  }
+
+  // Cross-reference: every called ID must be registered in requiredIds
+  var missing = [];
+  var calledList = Object.keys(calledIds);
+  for (var x = 0; x < calledList.length; x++) {
+    if (!registeredIds[calledList[x]]) {
+      missing.push(calledList[x]);
+    }
+  }
+  check(missing.length === 0,
+    "every getFinanceElement ID registered in requiredIds — missing: " + missing.join(", "));
+
+  // Specific regression: financeDepreciationContent and all Depreciation IDs
+  var depreciationIds = [
+    "financeDepreciationContent", "financeDepExpense", "financeDepAccumulated",
+    "financeDepNBV", "financeDepActiveAssets", "financeDepFullyDepreciated",
+    "financeDepAssetsHeading", "financeDepAssetBody", "financeDepReconHeading",
+    "financeDepReconPeriod", "financeDepReconAccum", "financeDepReconNBV",
+    "financeDepPolicyHeading", "financeDepPolicyMethod", "financeDepPolicyGranularity",
+    "financeDepPolicyRounding", "financeDepPolicyStartRule",
+    "financeDepPolicyResidualTreatment", "financeDepPolicySource"
+  ];
+  for (var d = 0; d < depreciationIds.length; d++) {
+    check(registeredIds[depreciationIds[d]] === true,
+      "Depreciation ID registered: " + depreciationIds[d]);
+  }
+
+  // Prove financeElementCache is populated from requiredIds (not hardcoded subset)
+  check(shell.indexOf("financeElementCache = required") !== -1,
+    "shell assigns all requiredIds to financeElementCache");
+
+  // Prove getFinanceElement throws for unregistered IDs
+  check(shell.indexOf('throw new Error("Required shell element missing: #" + id)') !== -1,
+    "shell element lookup throws on missing ID");
+
+  Logger.log("PASS: testFinanceElementCacheRegistration | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
