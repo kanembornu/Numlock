@@ -367,6 +367,32 @@ function testFinanceBalancePositionUiContract()
   check(renderSource.indexOf("balance.totalKnownAssets") !== -1,
     "balance renderer reads balance.totalKnownAssets");
 
+  // Reconciliation uses backend knownPositionDifference — no manual Assets - Liabilities arithmetic
+  check(renderSource.indexOf("reconciliation.knownPosition") !== -1,
+    "renderer reads backend reconciliation.knownPosition");
+  check(renderSource.indexOf("reconKnownAssets") === -1,
+    "no manual Assets variable for reconciliation arithmetic");
+  check(renderSource.indexOf("reconKnownLiab") === -1,
+    "no manual Liabilities variable for reconciliation arithmetic");
+
+  // Position Status uses backend knownPositionStatus — not sign-based Positive/Negative
+  check(renderSource.indexOf("knownPosition.status") !== -1 || renderSource.indexOf("knownPosStatus") !== -1,
+    "renderer reads backend knownPosition status");
+  forbidToken(renderSource, '"Positive"', "no manual Positive position label");
+  forbidToken(renderSource, '"Negative"', "no manual Negative position label");
+
+  // Backend status values rendered
+  check(renderSource.indexOf("Known Position Reconciled") !== -1,
+    "COMPUTABLE + zero difference renders Known Position Reconciled");
+  check(renderSource.indexOf("Known Position Difference") !== -1,
+    "COMPUTABLE + nonzero difference renders Known Position Difference");
+
+  // Equity row present in reconciliation
+  check(shell.indexOf('id="financeBSReconEquity"') !== -1,
+    "Equity reconciliation element exists in shell");
+  check(renderSource.indexOf("financeBSReconEquity") !== -1,
+    "renderer writes Equity row in reconciliation");
+
   Logger.log("PASS: testFinanceBalancePositionUiContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }

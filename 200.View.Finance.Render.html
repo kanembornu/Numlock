@@ -275,12 +275,18 @@
       getFinanceElement("financeBSLiabilities").textContent = bsNullableCurrency(liabilities.total);
       getFinanceElement("financeBSEquity").textContent = bsNullableCurrency(equity.totalEquity);
 
-      var knownAssets = Number(balance.totalKnownAssets);
-      var knownLiabilities = Number(liabilities.total);
-      var hasBoth = Number.isFinite(knownAssets) && Number.isFinite(knownLiabilities);
-      var positionText = hasBoth
-        ? (knownAssets - knownLiabilities >= 0 ? "Positive" : "Negative")
-        : "Unknown";
+      var knownPos = balance.reconciliation && balance.reconciliation.knownPosition;
+      var knownPosStatus = knownPos && knownPos.status;
+      var knownPosDifference = knownPos && knownPos.difference;
+      var positionText;
+      if (knownPosStatus === "COMPUTABLE") {
+        positionText = knownPosDifference === 0 ? "Known Position Reconciled"
+          : "Known Position Difference";
+      } else if (knownPosStatus === "UNAVAILABLE") {
+        positionText = "Unavailable";
+      } else {
+        positionText = "Unknown";
+      }
       getFinanceElement("financeBSPositionStatus").textContent = positionText;
 
       // Assets section
@@ -303,15 +309,15 @@
       // Reconciliation section
       getFinanceElement("financeBSReconAssets").textContent = bsNullableCurrency(balance.totalKnownAssets);
       getFinanceElement("financeBSReconLiabilities").textContent = bsNullableCurrency(liabilities.total);
+      getFinanceElement("financeBSReconEquity").textContent = bsNullableCurrency(equity.totalEquity);
 
-      var reconKnownAssets = Number(balance.totalKnownAssets);
-      var reconKnownLiab = Number(liabilities.total);
-      var knownPosition = Number.isFinite(reconKnownAssets) && Number.isFinite(reconKnownLiab)
-        ? reconKnownAssets - reconKnownLiab
+      var reconKnownPos = balance.reconciliation && balance.reconciliation.knownPosition;
+      var reconDifference = reconKnownPos && Number.isFinite(Number(reconKnownPos.difference))
+        ? Number(reconKnownPos.difference)
         : null;
-      getFinanceElement("financeBSReconKnownPosition").textContent = bsNullableCurrency(knownPosition);
+      getFinanceElement("financeBSReconKnownPosition").textContent = bsNullableCurrency(reconDifference);
 
-      return !Number.isFinite(knownAssets) && !Number.isFinite(knownLiabilities) && !Number.isFinite(Number(equity.totalEquity));
+      return !Number.isFinite(Number(balance.totalKnownAssets)) && !Number.isFinite(Number(liabilities.total)) && !Number.isFinite(Number(equity.totalEquity));
     }
 
     function setFinanceViewState(state, message)
