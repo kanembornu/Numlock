@@ -2,6 +2,7 @@
 !appsscript.json
 !00.Project.Spec.js
 !10.Config.js
+!12A.Depreciation.Report.Service.js
 !20.Data.Source.js
 !21.Transaction.Entry.js
 !22.Transaction.Lifecycle.js
