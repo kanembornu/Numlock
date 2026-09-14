@@ -44,6 +44,7 @@ function runAllBackendTests()
     { name: "testFinanceSetFinanceDestinationDecoupled", run: testFinanceSetFinanceDestinationDecoupled },
     { name: "testFinanceWarmCacheMutationInvalidatesOutstandingRequest", run: testFinanceWarmCacheMutationInvalidatesOutstandingRequest },
     { name: "testDepreciationEngineContract", run: testDepreciationEngineContract },
+    { name: "testDepreciationReportContract", run: testDepreciationReportContract },
     { name: "testCapitalEquityMigrationContract", run: testCapitalEquityMigrationContract },
     { name: "testCashFoundationContracts", run: testCashFoundationContracts },
     { name: "testInventorySchemaMigrationContract", run: testInventorySchemaMigrationContract },
