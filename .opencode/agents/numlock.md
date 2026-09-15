@@ -5,9 +5,9 @@ model: 9router/numlock-explore-free
 permission:
   edit: deny
   bash:
-    "*": deny
     "codegraph explore*": allow
     "codegraph status*": allow
+    "*": deny
   read: allow
   glob: allow
   grep: allow

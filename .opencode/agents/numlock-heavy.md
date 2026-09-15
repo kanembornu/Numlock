@@ -26,6 +26,7 @@ permission:
     "node tests/browser/*.js": ask
     "node --check tests/browser/*.js": allow
     "npm install --package-lock-only --ignore-scripts": ask
+    "rm -f tests/browser/*.js": allow
   read: allow
   glob: allow
   grep: allow
