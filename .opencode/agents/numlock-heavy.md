@@ -18,6 +18,9 @@ permission:
     "git diff*": allow
     "git rev-parse*": allow
     "git ls-files*": allow
+    "git add .opencode/agents/*": allow
+    "git commit -m *": allow
+    "git push origin main": allow
     "clasp status": allow
     "clasp deployments": allow
     "clasp versions": allow

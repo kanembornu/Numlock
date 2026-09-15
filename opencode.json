@@ -43,6 +43,7 @@
       "clasp version *": "ask",
       "clasp deploy *": "ask",
       "npm install --package-lock-only --ignore-scripts": "ask",
+      "rm -rf tests/tmp/": "allow",
       "*": "deny"
     }
   }
