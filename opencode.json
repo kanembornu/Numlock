@@ -38,6 +38,11 @@
       "codegraph status*": "allow",
       "git *": "allow",
       "pwd": "allow",
+      "node tests/browser/*.js": "ask",
+      "node --check tests/browser/*.js": "allow",
+      "clasp version *": "ask",
+      "clasp deploy *": "ask",
+      "npm install --package-lock-only --ignore-scripts": "ask",
       "*": "deny"
     }
   }

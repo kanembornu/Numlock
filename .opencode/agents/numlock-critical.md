@@ -25,6 +25,10 @@ permission:
     "clasp pull": allow
     "clasp pull --projectDir *": allow
     "clasp push --force": allow
+    "clasp version *": ask
+    "clasp deploy *": ask
+    "node tests/browser/*.js": ask
+    "node --check tests/browser/*.js": allow
   read: allow
   glob: allow
   grep: allow

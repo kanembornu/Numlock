@@ -5,6 +5,7 @@
     "build:tailwind": "tailwindcss -c tailwind.config.js -i assets/tailwind.input.css -o 189.View.Tailwind.html --minify"
   },
   "devDependencies": {
+    "playwright": "1.62.1",
     "tailwindcss": "3.4.17"
   }
 }

@@ -23,6 +23,9 @@ permission:
     "clasp versions": allow
     "clasp clone *": allow
     "clasp pull": allow
+    "node tests/browser/*.js": ask
+    "node --check tests/browser/*.js": allow
+    "npm install --package-lock-only --ignore-scripts": ask
   read: allow
   glob: allow
   grep: allow
