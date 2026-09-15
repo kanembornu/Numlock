@@ -134,4 +134,10 @@ CodeGraph remains a local code tool. Use the allowed `codegraph explore`/`codegr
 
 Before any separately authorized `clasp push --force`, capture actual `clasp status` from the exact clean deployment workspace. Verify the full upload manifest, required runtime/test inventory and exclusions before the human gate. File presence, an archive, and source diff alone are insufficient. An upload is not an immutable deployment or authenticated runtime proof.
 
+### Clasp execution rules
+
+**Rule 7 — Second push prohibition:** After one task-authorized `clasp push --force`, no second push may occur merely to retry, reconcile counts, normalize manifests, or resolve uncertainty. A second `clasp push --force` requires a NEW explicit task authorization.
+
+**Rule 8 — No manual deferral:** When the active task explicitly authorizes a clasp command and OpenCode has technical capability to execute it, the agent must execute the command itself. It must not defer the command back to the user for manual shell execution. Human approval may be required before execution, but after approval the authorized command remains OpenCode's responsibility.
+
 See `docs/AGENT-ARCHITECTURE.md` for the executable routing contract and evidence limits.

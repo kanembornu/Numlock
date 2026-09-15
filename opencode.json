@@ -22,5 +22,23 @@
   ],
   "instructions": [
     "AGENTS.md"
-  ]
+  ],
+  "permission": {
+    "bash": {
+      "clasp status": "allow",
+      "clasp deployments": "allow",
+      "clasp versions": "allow",
+      "clasp clone *": "allow",
+      "clasp pull": "allow",
+      "clasp pull --projectDir *": "allow",
+      "clasp push --force": "allow",
+      "mkdir *": "allow",
+      "diff *": "allow",
+      "codegraph explore*": "allow",
+      "codegraph status*": "allow",
+      "git *": "allow",
+      "pwd": "allow",
+      "*": "deny"
+    }
+  }
 }

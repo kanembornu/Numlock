@@ -18,6 +18,13 @@ permission:
     "git diff*": allow
     "git rev-parse*": allow
     "git ls-files*": allow
+    "clasp status": allow
+    "clasp deployments": allow
+    "clasp versions": allow
+    "clasp clone *": allow
+    "clasp pull": allow
+    "clasp pull --projectDir *": allow
+    "clasp push --force": allow
   read: allow
   glob: allow
   grep: allow
