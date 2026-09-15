@@ -145,6 +145,15 @@ function cashTransactionById(transactions, id, type) {
   return matches.length === 1 ? matches[0] : null;
 }
 
+function cashPurchaseEventById(purchaseEvents, eventId) {
+  var matches = (purchaseEvents || []).filter(function(pe) {
+    var peId = String(pe && pe.EventID || pe && pe.id || "").trim();
+    var active = pe.IsActive === undefined ? pe.isActive : pe.IsActive;
+    return peId === eventId && isCanonicalActive(active);
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
 function cashLedgerLine(journalId, suffix, settlement, accountCode, debit, credit, movementType, sourceType, sourceId) {
   return { JournalID: journalId, LineID: journalId + "-" + suffix, Tanggal: capitalEquityDateKey(settlement.Tanggal),
     AccountCode: accountCode, Debit: debit, Credit: credit, MovementType: movementType,
@@ -202,7 +211,7 @@ function buildCashPostingCandidate(settlement, context) {
     var sale = cashTransactionById(context.transactions, transactionId, "Sales");
     if (!sale || String(settlement.RelatedTransactionType || "") !== "Sales" ||
         sale.paymentTiming !== "AT_RECOGNITION" || Number(sale.approvedPaidAmount) !== amount ||
-        Number(sale.amount) !== amount || capitalEquityDateKey(sale.dateKey || sale.Tanggal) !== capitalEquityDateKey(settlement.Tanggal)) {
+        Number(sale.amount) !== amount) {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
     var revenueAccount = String(sale.revenueAccountCode || CASH_FOUNDATION_POLICY.REVENUE_ACCOUNT).trim();
@@ -215,11 +224,37 @@ function buildCashPostingCandidate(settlement, context) {
       cashLedgerLine(journalId, "2", settlement, revenueAccount, 0, amount,
         "PAID_SALE", sourceType, sourceId)
     ];
+  } else if (sourceType === "PURCHASE_SETTLEMENT") {
+    var purchaseEvent = cashPurchaseEventById(context.purchaseEvents, transactionId);
+    if (!purchaseEvent || String(settlement.RelatedTransactionType || "") !== "PurchaseEvent") {
+      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
+    }
+    var purchaseAmount = Number(purchaseEvent.acquisitionValue || purchaseEvent.AcquisitionValue || 0);
+    var purchaseDate = purchaseEvent.dateKey || purchaseEvent.ExpenseDate || "";
+    if (purchaseAmount !== amount) {
+      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
+    }
+    var purchaseExpenseId = purchaseEvent.expenseId || purchaseEvent.ExpenseID || "";
+    var linkedExpense = cashTransactionById(context.transactions, purchaseExpenseId, "Expense");
+    if (!linkedExpense || !String(linkedExpense.expenseAccountCode || "").trim()) {
+      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
+    }
+    var purchaseExpenseAccountCode = String(linkedExpense.expenseAccountCode).trim();
+    if (cashTransactionEffectAlreadyPosted(context.balanceLedgerRows, transactionId,
+        purchaseExpenseAccountCode, "Debit")) {
+      return { status: "REFUSED", reason: "TRANSACTION_EFFECT_ALREADY_POSTED", readOnly: true, writeCount: 0 };
+    }
+    lines = [
+      cashLedgerLine(journalId, "1", settlement, purchaseExpenseAccountCode, amount, 0,
+        "PAID_PURCHASE", sourceType, sourceId),
+      cashLedgerLine(journalId, "2", settlement, String(settlement.AccountCode), 0, amount,
+        "PAID_PURCHASE", sourceType, sourceId)
+    ];
   } else {
     var expense = cashTransactionById(context.transactions, transactionId, "Expense");
     if (!expense || String(settlement.RelatedTransactionType || "") !== "Expense" ||
         expense.paymentTiming !== "AT_RECOGNITION" || Number(expense.approvedPaidAmount) !== amount ||
-        Number(expense.amount) !== amount || capitalEquityDateKey(expense.dateKey || expense.Tanggal) !== capitalEquityDateKey(settlement.Tanggal) ||
+        Number(expense.amount) !== amount ||
         !String(expense.expenseAccountCode || "").trim()) {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
@@ -242,6 +277,27 @@ function buildCashPostingCandidate(settlement, context) {
     return cashJournalSignature(existing) === cashJournalSignature(lines) ?
       { status: "ALREADY_POSTED", readOnly: true, writeCount: 0, rows: existing } :
       { status: "REFUSED", reason: "REFUSED_DUPLICATE_SOURCE", readOnly: true, writeCount: 0 };
+  }
+  var relatedType = String(settlement.RelatedTransactionType || "").trim();
+  var relatedId = String(settlement.RelatedTransactionID || "").trim();
+  if (relatedType && relatedId && sourceType !== "CASH_TRANSFER" && sourceType !== "SETTLEMENT_REVERSAL") {
+    if (context.settlements === undefined || context.settlements === null) {
+      return { status: "REFUSED", reason: "SETTLEMENT_CONTEXT_INCOMPLETE", readOnly: true, writeCount: 0 };
+    }
+    var existingSettlements = context.settlements;
+    for (var si = 0; si < existingSettlements.length; si++) {
+      var es = existingSettlements[si];
+      if (String(es.RelatedTransactionType || "").trim() === relatedType &&
+          String(es.RelatedTransactionID || "").trim() === relatedId &&
+          String(es.SettlementID || "").trim() !== String(settlement.SettlementID || "").trim() &&
+          isCanonicalActive(es.IsActive) && String(es.Status || "").trim() === "POSTED") {
+        var esRows = cashExistingSourceRows(context.balanceLedgerRows,
+          String(es.SourceType || "").trim(), String(es.SourceID || "").trim());
+        if (esRows.length) {
+          return { status: "REFUSED", reason: "REFUSED_DUPLICATE_SOURCE", readOnly: true, writeCount: 0 };
+        }
+      }
+    }
   }
   return { status: "READY", readOnly: true, writeCount: 0, rows: lines, journalId: journalId,
     externalCashFlowClassification: direction === "TRANSFER" ? "EXCLUDED" : "BY_TRANSACTION_SUBSTANCE" };

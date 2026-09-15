@@ -51,7 +51,7 @@ function testCashFoundationContracts() {
   }), "non-posted statuses do not post");
 
   var transactions = cashFoundationTransactions();
-  var salePosting = buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions, balanceLedgerRows: [] });
+  var salePosting = buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions, balanceLedgerRows: [], settlements: [] });
   check(salePosting.status === "READY" && salePosting.rows[0].Debit === 1000 && salePosting.rows[1].Credit === 1000 &&
     salePosting.rows[1].AccountCode === "4000", "paid-at-recognition sale");
   check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: [], balanceLedgerRows: [] }).reason ===
@@ -66,7 +66,7 @@ function testCashFoundationContracts() {
     changed(salePosting.rows[1], { SourceType: "SALES_RECOGNITION", SourceID: "SALE-1" })
   ] }).reason === "TRANSACTION_EFFECT_ALREADY_POSTED", "prior sale recognition refused");
 
-  var expensePosting = buildCashPostingCandidate(outflow, { accounts: accounts, transactions: transactions, balanceLedgerRows: [] });
+  var expensePosting = buildCashPostingCandidate(outflow, { accounts: accounts, transactions: transactions, balanceLedgerRows: [], settlements: [] });
   check(expensePosting.status === "READY" && expensePosting.rows[0].AccountCode === "6100" &&
     expensePosting.rows[0].Debit === 1000 && expensePosting.rows[1].Credit === 1000, "paid-at-recognition expense");
   check(buildCashPostingCandidate(outflow, { accounts: accounts, transactions: [], balanceLedgerRows: [] }).reason ===
@@ -81,6 +81,62 @@ function testCashFoundationContracts() {
     changed(expensePosting.rows[0], { SourceType: "EXPENSE_RECOGNITION", SourceID: "EXP-1" })
   ] }).reason === "TRANSACTION_EFFECT_ALREADY_POSTED", "prior expense recognition refused");
 
+  var purchaseEvents = cashFoundationPurchaseEvents();
+  var purchaseSettlement = cashFoundationSettlement({ SettlementID: "SET-PE-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-1", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001" });
+  var purchasePosting = buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] });
+  check(purchasePosting.status === "READY" && purchasePosting.rows[0].AccountCode === "6100" &&
+    purchasePosting.rows[0].Debit === 1000 && purchasePosting.rows[1].Credit === 1000 &&
+    purchasePosting.rows[1].AccountCode === "1000" && purchasePosting.rows[0].MovementType === "PAID_PURCHASE",
+    "valid purchase settlement");
+  check(purchasePosting.externalCashFlowClassification === "BY_TRANSACTION_SUBSTANCE",
+    "purchase settlement has external cash flow classification");
+  check(buildCashPostingCandidate(changed(purchaseSettlement, { Amount: 500 }), { accounts: accounts,
+    transactions: transactions, purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason ===
+    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "purchase amount mismatch refused");
+  check(buildCashPostingCandidate(changed(purchaseSettlement, { Amount: 2000 }), { accounts: accounts,
+    transactions: transactions, purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason ===
+    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "purchase amount overpayment refused");
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: [], balanceLedgerRows: [] }).reason === "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT",
+    "purchase without purchase event refused");
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [] }).reason === "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT",
+    "purchase without purchaseEvents context refused");
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: [changed(purchaseEvents[0], { isActive: false })], balanceLedgerRows: [] }).reason ===
+    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "inactive purchase event refused");
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purchasePosting.rows }).status === "ALREADY_POSTED",
+    "purchase not posted twice");
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [
+      changed(purchasePosting.rows[0], { SourceType: "PURCHASE_RECOGNITION", SourceID: "PE-REQ-001" })
+    ] }).reason === "TRANSACTION_EFFECT_ALREADY_POSTED", "prior purchase recognition refused");
+  var purchaseDateLater = changed(purchaseSettlement, { Tanggal: "2026-10-05" });
+  check(buildCashPostingCandidate(purchaseDateLater, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] }).status === "READY",
+    "purchase settlement date later than transaction date accepted");
+  var purchaseDateEarlier = changed(purchaseSettlement, { Tanggal: "2026-10-01" });
+  check(buildCashPostingCandidate(purchaseDateEarlier, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] }).status === "READY",
+    "purchase settlement date earlier than transaction date accepted");
+  var purchaseNoExpenseAccount = changed(purchaseEvents[0], { expenseId: "EXP-NO-ACCT" });
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: [purchaseNoExpenseAccount], balanceLedgerRows: [] }).reason ===
+    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "purchase linked to expense without account code refused");
+  var purchaseWrongType = cashFoundationSettlement({ SettlementID: "SET-PE-WRONG", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-WRONG", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "PE-REQ-001" });
+  check(buildCashPostingCandidate(purchaseWrongType, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason === "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT",
+    "purchase settlement with wrong RelatedTransactionType refused");
+  check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions,
+      balanceLedgerRows: [] }).reason === "SETTLEMENT_CONTEXT_INCOMPLETE",
+      "missing settlements context refuses business-event deduplication");
+
   [["1000", "1010"], ["1000", "1020"], ["1010", "1020"]].forEach(function(route, index) {
     var candidate = buildCashPostingCandidate(changed(transfer, { SettlementID: "SET-TR-" + index,
       AccountCode: route[0], CounterAccountCode: route[1], TransferID: "TR-" + index,
@@ -91,11 +147,64 @@ function testCashFoundationContracts() {
       return ["4000", "6100", "3000", "3100", "3200"].indexOf(row.AccountCode) === -1;
     }), "transfer has no external cash flow, pnl, or equity " + index);
   });
+  [["1010", "1000"], ["1020", "1000"], ["1020", "1010"]].forEach(function(route, index) {
+    var candidate = buildCashPostingCandidate(changed(transfer, { SettlementID: "SET-TR-R" + index,
+      AccountCode: route[0], CounterAccountCode: route[1], TransferID: "TR-R" + index,
+      SourceID: "TR-R" + index }), { accounts: accounts, transactions: transactions, balanceLedgerRows: [] });
+    check(candidate.status === "READY" && candidate.rows[0].AccountCode === route[1] && candidate.rows[0].Debit === 1000 &&
+      candidate.rows[1].AccountCode === route[0] && candidate.rows[1].Credit === 1000, "supported reverse transfer route " + index);
+  });
   var transferPosting = buildCashPostingCandidate(transfer, { accounts: accounts, balanceLedgerRows: [] });
   check(buildCashPostingCandidate(transfer, { accounts: accounts, balanceLedgerRows: transferPosting.rows }).status === "ALREADY_POSTED",
     "identical transfer is idempotent");
   check(buildCashPostingCandidate(changed(transfer, { Amount: 2000 }), { accounts: accounts,
     balanceLedgerRows: transferPosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE", "conflicting source refused");
+
+  var saleSettlement2 = cashFoundationSettlement({ SettlementID: "SET-SALE-2", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "SET-SALE-2", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1" });
+  check(buildCashPostingCandidate(saleSettlement2, { accounts: accounts, transactions: transactions,
+    settlements: [inflow], balanceLedgerRows: salePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
+    "same sale different settlement refused");
+  var expenseSettlement2 = cashFoundationSettlement({ SettlementID: "SET-EXP-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-EXP-2", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1" });
+  check(buildCashPostingCandidate(expenseSettlement2, { accounts: accounts, transactions: transactions,
+    settlements: [outflow], balanceLedgerRows: expensePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
+    "same expense different settlement refused");
+  var purchaseSettlement2 = cashFoundationSettlement({ SettlementID: "SET-PE-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-2", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001" });
+  check(buildCashPostingCandidate(purchaseSettlement2, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, settlements: [purchaseSettlement],
+    balanceLedgerRows: purchasePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
+    "same purchase different settlement refused");
+  check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions,
+    settlements: [inflow], balanceLedgerRows: salePosting.rows }).status === "ALREADY_POSTED",
+    "same sale same settlement idempotent");
+  check(buildCashPostingCandidate(outflow, { accounts: accounts, transactions: transactions,
+    settlements: [outflow], balanceLedgerRows: expensePosting.rows }).status === "ALREADY_POSTED",
+    "same expense same settlement idempotent");
+  check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, settlements: [purchaseSettlement],
+    balanceLedgerRows: purchasePosting.rows }).status === "ALREADY_POSTED",
+    "same purchase same settlement idempotent");
+  var saleSettlementNoLedger = cashFoundationSettlement({ SettlementID: "SET-SALE-3", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "SET-SALE-3", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1" });
+  check(buildCashPostingCandidate(saleSettlementNoLedger, { accounts: accounts, transactions: transactions,
+    settlements: [inflow], balanceLedgerRows: [] }).status === "READY",
+    "same sale different settlement without ledger rows allowed");
+  var transferSettlement2 = cashFoundationSettlement({ SettlementID: "SET-TR-2", Direction: "TRANSFER", AccountCode: "1000",
+    CounterAccountCode: "1010", TransferID: "TR-2", SourceType: "CASH_TRANSFER", SourceID: "TR-2" });
+  check(buildCashPostingCandidate(transferSettlement2, { accounts: accounts, transactions: transactions,
+    settlements: [transfer], balanceLedgerRows: transferPosting.rows }).status === "READY",
+    "transfer not blocked by business-event duplicate guard");
+  var reversalSettlement2 = cashFoundationSettlement({ SettlementID: "SET-REV-NEW", Direction: "OUTFLOW", AccountCode: "1010",
+    Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-REV-NEW", ReversalOf: "SET-SALE-1" });
+  check(buildCashReversalCandidate(reversalSettlement2, { accounts: accounts, settlements: [inflow, reversalSettlement2],
+    balanceLedgerRows: salePosting.rows }).reason === "ALREADY_REVERSED",
+    "reversal not blocked by linked-origin duplicate guard");
 
   var reversal = cashFoundationSettlement({ SettlementID: "SET-REV-1", Direction: "OUTFLOW", AccountCode: "1010",
     Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-REV-1", ReversalOf: "SET-SALE-1" });
@@ -364,6 +473,29 @@ function testCashFoundationContracts() {
     executeCashFoundationDisposableRuntimeProofWithRuntime.toString().indexOf("finally") !== -1,
     "orchestrator owns production fingerprint comparison and finally cleanup");
 
+  check(buildCashPostingCandidate(changed(inflow, { Tanggal: "2026-10-03" }), { accounts: accounts,
+    transactions: transactions, balanceLedgerRows: [], settlements: [] }).status === "READY",
+    "sale settlement date later than transaction accepted");
+  check(buildCashPostingCandidate(changed(outflow, { Tanggal: "2026-10-03" }), { accounts: accounts,
+    transactions: transactions, balanceLedgerRows: [], settlements: [] }).status === "READY",
+    "expense settlement date later than transaction accepted");
+  var saleDateEarlier = changed(inflow, { Tanggal: "2026-10-01" });
+  check(buildCashPostingCandidate(saleDateEarlier, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] }).status === "READY",
+    "sale settlement date earlier than transaction accepted");
+  var expenseDateEarlier = changed(outflow, { Tanggal: "2026-10-01" });
+  check(buildCashPostingCandidate(expenseDateEarlier, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] }).status === "READY",
+    "expense settlement date earlier than transaction accepted");
+  check(hasError(validateCashSettlements([changed(inflow, { AccountCode: "1020" })], accounts),
+    "INACTIVE_OR_INVALID_CASH_ACCOUNT") === false, "account 1020 accepted");
+  check(hasError(validateCashSettlements([changed(inflow, { AccountCode: "9999" })], accounts),
+    "INACTIVE_OR_INVALID_CASH_ACCOUNT"), "unknown account refused");
+  var multiTransferNet = transferPosting.rows.reduce(function(sum, row) {
+    return sum + Number(row.Debit) - Number(row.Credit);
+  }, 0);
+  check(multiTransferNet === 0, "transfer net cash effect is zero");
+
   Logger.log("PASS: testCashFoundationContracts | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
@@ -392,6 +524,13 @@ function cashFoundationTransactions() {
       approvedPaidAmount: 1000, paymentTiming: "AT_RECOGNITION", revenueAccountCode: "4000", isActive: true },
     { id: "EXP-1", canonicalTransactionType: "Expense", dateKey: "2026-10-02", amount: 1000,
       approvedPaidAmount: 1000, paymentTiming: "AT_RECOGNITION", expenseAccountCode: "6100", isActive: true }
+  ];
+}
+
+function cashFoundationPurchaseEvents() {
+  return [
+    { id: "PE-REQ-001", canonicalTransactionType: "PurchaseEvent", dateKey: "2026-10-02",
+      acquisitionValue: 1000, expenseId: "EXP-1", isActive: true }
   ];
 }
 
@@ -463,7 +602,7 @@ function cashSchemaMigrationTestRuntime(options) {
     var settlementValues = [CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS.slice(),
       CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS.map(function(header) { return settlement[header] === undefined ? "" : settlement[header]; })];
     var posting = buildCashPostingCandidate(settlement, { accounts: cashRowsFromPhysical(fixture.state.accounts),
-      transactions: cashFoundationTransactions(), balanceLedgerRows: [] });
+      transactions: cashFoundationTransactions(), balanceLedgerRows: [], settlements: [] });
     var ledgerValues = [CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_HEADERS.slice()].concat(posting.rows.map(function(row) {
       return CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_HEADERS.map(function(header) { return row[header] === undefined ? "" : row[header]; });
     }));
