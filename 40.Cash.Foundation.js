@@ -432,6 +432,136 @@ function cashSettle(request, context) {
   });
 }
 
+function cashPersistSettlement(settlement, runtime) {
+  runtime.writeSettlement(settlement);
+}
+
+function cashPersistLedgerRows(rows, runtime) {
+  runtime.writeLedger(rows);
+}
+
+function cashVerifyPostWrite(settlementId, expectedSettlement, expectedLedgerRows, runtime) {
+  var state = runtime.readSheets();
+  var settlementFound = (state.settlements || []).some(function(s) {
+    return String(s.SettlementID || "").trim() === settlementId &&
+      isCanonicalActive(s.IsActive) &&
+      cashSettlementPayloadSignature(s) === cashSettlementPayloadSignature(expectedSettlement);
+  });
+  if (!settlementFound) return { status: "FAIL", reason: "SETTLEMENT_NOT_FOUND" };
+  var sourceType = String(expectedSettlement.SourceType || "").trim();
+  var sourceId = String(expectedSettlement.SourceID || "").trim();
+  var ledgerRows = cashExistingSourceRows(state.balanceLedger || [], sourceType, sourceId);
+  if (ledgerRows.length !== expectedLedgerRows.length) {
+    return { status: "FAIL", reason: "LEDGER_ROW_COUNT_MISMATCH",
+      expected: expectedLedgerRows.length, actual: ledgerRows.length };
+  }
+  if (cashJournalSignature(ledgerRows) !== cashJournalSignature(expectedLedgerRows)) {
+    return { status: "FAIL", reason: "LEDGER_SIGNATURE_MISMATCH" };
+  }
+  return { status: "PASS", settlementId: settlementId, ledgerRowCount: ledgerRows.length };
+}
+
+function cashSettleAndPersist(request, runtime) {
+  var lockAcquired = false;
+  runtime.lock.acquire();
+  lockAcquired = true;
+  try {
+    var successfulWrites = 0;
+    var state = runtime.readSheets();
+    var context = {
+      accounts: state.accounts || [],
+      settlements: state.settlements || [],
+      balanceLedgerRows: state.balanceLedger || [],
+      transactions: state.transactions || [],
+      purchaseEvents: state.purchaseEvents || []
+    };
+    var result = cashSettle(request, context);
+    var settlement = request.settlement;
+    var settlementId = String(settlement.SettlementID || "").trim();
+    var sourceType = String(settlement.SourceType || "").trim();
+    var sourceId = String(settlement.SourceID || "").trim();
+    if (result.status === "REFUSED") {
+      return { persistenceState: "REFUSED", status: result.status, reason: result.reason,
+        errors: result.errors, readOnly: true, writeCount: 0 };
+    }
+    var persistenceState;
+    if (result.status === "READY") {
+      persistenceState = "NEW";
+    } else if (result.status === "ALREADY_POSTED") {
+      if (result.rows && result.rows.length > 0) {
+        persistenceState = "COMPLETE";
+      } else {
+        var existingLedger = cashExistingSourceRows(state.balanceLedger || [], sourceType, sourceId);
+        persistenceState = existingLedger.length > 0 ? "COMPLETE" : "SETTLEMENT_ONLY";
+      }
+    } else {
+      return { persistenceState: "UNKNOWN", status: result.status, readOnly: true, writeCount: 0 };
+    }
+    if (persistenceState === "COMPLETE") {
+      var completeRows = (result.rows && result.rows.length > 0) ? result.rows :
+        cashExistingSourceRows(state.balanceLedger || [], sourceType, sourceId);
+      return { status: "ALREADY_POSTED", persistenceState: "COMPLETE", readOnly: true, writeCount: 0, rows: completeRows };
+    }
+    if (persistenceState === "SETTLEMENT_ONLY") {
+      var recoveryCandidate;
+      if (sourceType === "SETTLEMENT_REVERSAL") {
+        recoveryCandidate = buildCashReversalCandidate(settlement, {
+          accounts: context.accounts,
+          settlements: context.settlements,
+          balanceLedgerRows: context.balanceLedgerRows
+        });
+      } else {
+        recoveryCandidate = buildCashPostingCandidate(settlement, {
+          accounts: context.accounts,
+          transactions: context.transactions,
+          purchaseEvents: context.purchaseEvents,
+          balanceLedgerRows: context.balanceLedgerRows,
+          settlements: context.settlements
+        });
+      }
+      if (recoveryCandidate.status !== "READY") {
+        return { status: "REFUSED", persistenceState: "SETTLEMENT_ONLY",
+          reason: "RECOVERY_FAILED", recoveryStatus: recoveryCandidate.status };
+      }
+      try {
+        cashPersistLedgerRows(recoveryCandidate.rows, runtime);
+      } catch (writeError) {
+        return { status: "FAILED", persistenceState: "SETTLEMENT_ONLY", reason: "PARTIAL_WRITE",
+          writeCount: successfulWrites, error: writeError.message };
+      }
+      successfulWrites += recoveryCandidate.rows.length;
+      runtime.flush();
+      var recoveryVerification = cashVerifyPostWrite(settlementId, settlement, recoveryCandidate.rows, runtime);
+      if (recoveryVerification.status !== "PASS") {
+        return { status: "REFUSED", persistenceState: "SETTLEMENT_ONLY",
+          reason: "VERIFICATION_FAILED", verification: recoveryVerification };
+      }
+      return { status: "POSTED", persistenceState: "SETTLEMENT_ONLY_RECOVERED", writeCount: successfulWrites,
+        rows: recoveryCandidate.rows };
+    }
+    // NEW: write settlement first, then ledger
+    cashPersistSettlement(settlement, runtime);
+    successfulWrites += 1;
+    try {
+      cashPersistLedgerRows(result.rows, runtime);
+    } catch (writeError) {
+      return { status: "FAILED", persistenceState: "NEW", reason: "PARTIAL_WRITE",
+        writeCount: successfulWrites, error: writeError.message };
+    }
+    successfulWrites += result.rows.length;
+    runtime.flush();
+    var verification = cashVerifyPostWrite(settlementId, settlement, result.rows, runtime);
+    if (verification.status !== "PASS") {
+      return { status: "REFUSED", persistenceState: "NEW",
+        reason: "VERIFICATION_FAILED", verification: verification };
+    }
+    return { status: "POSTED", persistenceState: "NEW", writeCount: successfulWrites,
+      rows: result.rows, journalId: result.journalId };
+  } finally {
+    if (lockAcquired) runtime.lock.release();
+  }
+}
+
 function buildCashBalanceReadModel(accounts, openingRows, ledgerRows, observedBalances) {
   var accountIndex = cashAccountMap(accounts), observed = observedBalances || {}, results = [];
   var openingValidation = validateCashOpeningRows(openingRows, accounts);

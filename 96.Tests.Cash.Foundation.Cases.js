@@ -625,6 +625,8 @@ function testCashFoundationContracts() {
   }, 0);
   check(multiTransferNet === 0, "transfer net cash effect is zero");
 
+  testCashSettlementPersistence();
+
   Logger.log("PASS: testCashFoundationContracts | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
@@ -853,6 +855,215 @@ function testCashSettlementService() {
   check(sig1 !== sig3, "payload signature differs for different amount");
 
   Logger.log("PASS: testCashSettlementService | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function mockCashRuntime(accounts, transactions, purchaseEvents) {
+  var settlements = [];
+  var ledger = [];
+  var lockState = { acquired: false };
+  var runtime = {
+    writeFailTarget: null,
+    get lockAcquired() { return lockState.acquired; },
+    lock: {
+      acquire: function() { lockState.acquired = true; },
+      release: function() { lockState.acquired = false; }
+    },
+    readSheets: function() {
+      return { accounts: accounts, settlements: settlements, balanceLedger: ledger,
+        transactions: transactions || [], purchaseEvents: purchaseEvents || [] };
+    },
+    writeSettlement: function(row) {
+      if (runtime.writeFailTarget === "settlement") throw new Error("WRITE_FAIL");
+      settlements.push(row);
+    },
+    writeLedger: function(rows) {
+      if (runtime.writeFailTarget === "ledger") throw new Error("WRITE_FAIL");
+      rows.forEach(function(r) { ledger.push(r); });
+    },
+    flush: function() {},
+    timestamp: "2026-10-15T10:00:00"
+  };
+  // ponytail: expose closure arrays as direct properties for persistence test assertions
+  Object.defineProperty(runtime, "settlements", { get: function() { return settlements; } });
+  Object.defineProperty(runtime, "ledger", { get: function() { return ledger; } });
+  return runtime;
+}
+
+function testCashSettlementPersistence() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+
+  var accounts = cashFoundationTestAccounts();
+  var transactions = cashFoundationTransactions();
+  var purchaseEvents = cashFoundationPurchaseEvents();
+
+  // --- 1. Normal Sale post ---
+  var rt1 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var sale1 = cashFoundationSettlement({ SettlementID: "P-SALE-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-SALE-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var result1 = cashSettleAndPersist({ settlement: sale1 }, rt1);
+  check(result1.status === "POSTED", "normal sale POSTED");
+  check(result1.writeCount === 1, "normal sale writeCount 1");
+  check(rt1.settlements.length === 1, "normal sale settlement written");
+  check(rt1.ledger.length === 2, "normal sale two ledger rows");
+
+  // --- 2. Sale split tender: S-A 30000 + S-B 70000 = 100000 ---
+  var splitTxs = cashFoundationTransactions().map(function(t) {
+    return t.id === "SALE-1" ? Object.assign({}, t, { amount: 100000, approvedPaidAmount: 100000 }) : t;
+  });
+  var rt2 = mockCashRuntime(accounts, splitTxs, purchaseEvents);
+  var saleA = cashFoundationSettlement({ SettlementID: "P-SPLIT-A", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-SPLIT-A", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 30000 });
+  var resultA = cashSettleAndPersist({ settlement: saleA }, rt2);
+  check(resultA.status === "POSTED", "split tender A POSTED");
+  var saleB = cashFoundationSettlement({ SettlementID: "P-SPLIT-B", Direction: "INFLOW", AccountCode: "1010",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-SPLIT-B", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 70000 });
+  var resultB = cashSettleAndPersist({ settlement: saleB }, rt2);
+  check(resultB.status === "POSTED", "split tender B POSTED");
+  check(rt2.settlements.length === 2, "split tender two settlements");
+
+  // --- 3. Sale over-settlement: third request after 100000 full ---
+  var saleC = cashFoundationSettlement({ SettlementID: "P-SPLIT-C", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-SPLIT-C", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1 });
+  var resultC = cashSettleAndPersist({ settlement: saleC }, rt2);
+  check(resultC.status === "REFUSED" && resultC.reason === "SALE_OVER_SETTLEMENT", "over-settlement REFUSED");
+
+  // --- 4. Sale exact retry: same SettlementID + same payload ---
+  var rt4 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var saleRetry = cashFoundationSettlement({ SettlementID: "P-RETRY-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-RETRY-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var resultFirst = cashSettleAndPersist({ settlement: saleRetry }, rt4);
+  check(resultFirst.status === "POSTED", "retry first POSTED");
+  var resultRetry = cashSettleAndPersist({ settlement: saleRetry }, rt4);
+  check(resultRetry.status === "ALREADY_POSTED" && resultRetry.persistenceState === "COMPLETE",
+    "exact retry ALREADY_POSTED COMPLETE");
+  check(resultRetry.writeCount === 0, "exact retry writeCount 0");
+
+  // --- 5. Sale identity conflict: same SettlementID + different Amount ---
+  var rt5 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var saleOrig = cashFoundationSettlement({ SettlementID: "P-CONF-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-CONF-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var resultOrig = cashSettleAndPersist({ settlement: saleOrig }, rt5);
+  check(resultOrig.status === "POSTED", "conflict original POSTED");
+  var saleDiff = cashFoundationSettlement({ SettlementID: "P-CONF-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-CONF-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 2000 });
+  var resultDiff = cashSettleAndPersist({ settlement: saleDiff }, rt5);
+  check(resultDiff.status === "REFUSED" && resultDiff.reason === "IDENTITY_CONFLICT", "identity conflict REFUSED");
+
+  // --- 6. Expense normal ---
+  var rt6 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var expense1 = cashFoundationSettlement({ SettlementID: "P-EXP-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "P-EXP-1", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 1000 });
+  var resultExp = cashSettleAndPersist({ settlement: expense1 }, rt6);
+  check(resultExp.status === "POSTED", "expense normal POSTED");
+
+  // --- 7. Expense duplicate: same origin, different SettlementID ---
+  var rt7 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var expOrig = cashFoundationSettlement({ SettlementID: "P-EXP-DUP-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "P-EXP-DUP-1", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 1000 });
+  var resultExpOrig = cashSettleAndPersist({ settlement: expOrig }, rt7);
+  check(resultExpOrig.status === "POSTED", "expense duplicate original POSTED");
+  var expDup = cashFoundationSettlement({ SettlementID: "P-EXP-DUP-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "P-EXP-DUP-2", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 1000 });
+  var resultExpDup = cashSettleAndPersist({ settlement: expDup }, rt7);
+  check(resultExpDup.status === "REFUSED" && resultExpDup.reason === "REFUSED_DUPLICATE_SOURCE",
+    "expense duplicate REFUSED_DUPLICATE_SOURCE");
+
+  // --- 8. Purchase normal ---
+  var rt8 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var purchase1 = cashFoundationSettlement({ SettlementID: "P-PE-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "P-PE-1", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001", Amount: 1000 });
+  var resultPur = cashSettleAndPersist({ settlement: purchase1 }, rt8);
+  check(resultPur.status === "POSTED", "purchase normal POSTED");
+
+  // --- 9. Transfer normal ---
+  var rt9 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var transfer1 = cashFoundationSettlement({ SettlementID: "P-TR-1", Direction: "TRANSFER", AccountCode: "1000",
+    CounterAccountCode: "1010", TransferID: "TR-P-1", SourceType: "CASH_TRANSFER", SourceID: "TR-P-1" });
+  var resultTr = cashSettleAndPersist({ settlement: transfer1 }, rt9);
+  check(resultTr.status === "POSTED", "transfer normal POSTED");
+
+  // --- 10. Reversal normal: reverse sale P-REV-ORIG ---
+  var rt10 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var saleForRev = cashFoundationSettlement({ SettlementID: "P-REV-ORIG", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-REV-ORIG", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var resultRevOrig = cashSettleAndPersist({ settlement: saleForRev }, rt10);
+  check(resultRevOrig.status === "POSTED", "reversal origin sale POSTED");
+  var reversal1 = cashFoundationSettlement({ SettlementID: "P-REV-1", Direction: "OUTFLOW", AccountCode: "1010",
+    Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "P-REV-1", ReversalOf: "P-REV-ORIG" });
+  var resultRev = cashSettleAndPersist({ settlement: reversal1 }, rt10);
+  check(resultRev.status === "POSTED", "reversal normal POSTED");
+
+  // --- 11. Failure before write: writeFailTarget = "settlement" ---
+  var rt11 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  rt11.writeFailTarget = "settlement";
+  var saleFail1 = cashFoundationSettlement({ SettlementID: "P-FAIL-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-FAIL-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var failError1 = null;
+  try { cashSettleAndPersist({ settlement: saleFail1 }, rt11); } catch (e) { failError1 = e; }
+  check(failError1 !== null && String(failError1.message).indexOf("WRITE_FAIL") !== -1, "failure before write throws WRITE_FAIL");
+  check(rt11.settlements.length === 0, "failure before write no settlement written");
+  check(rt11.ledger.length === 0, "failure before write no ledger written");
+
+  // --- 12. Failure after settlement: writeFailTarget = "ledger" ---
+  var rt12 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  rt12.writeFailTarget = "ledger";
+  var saleFail2 = cashFoundationSettlement({ SettlementID: "P-FAIL-2", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-FAIL-2", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var failError2 = null;
+  try { cashSettleAndPersist({ settlement: saleFail2 }, rt12); } catch (e) { failError2 = e; }
+  check(failError2 !== null && String(failError2.message).indexOf("WRITE_FAIL") !== -1, "failure after settlement throws WRITE_FAIL");
+  check(rt12.settlements.length === 1, "failure after settlement has settlement written");
+  check(rt12.ledger.length === 0, "failure after settlement no ledger written");
+
+  // --- 13. Recovery from settlement-only ---
+  var rt13 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var recoverySettlement = cashFoundationSettlement({ SettlementID: "P-REC-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-REC-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  rt13.settlements.push(recoverySettlement);
+  check(rt13.ledger.length === 0, "recovery starts with empty ledger");
+  var resultRec = cashSettleAndPersist({ settlement: recoverySettlement }, rt13);
+  check(resultRec.status === "POSTED" && resultRec.persistenceState === "SETTLEMENT_ONLY_RECOVERED",
+    "recovery SETTLEMENT_ONLY_RECOVERED");
+  check(resultRec.writeCount === 1, "recovery writeCount 1");
+  check(rt13.ledger.length === 2, "recovery writes two ledger rows");
+
+  // --- 14. Lock release after success ---
+  var rt14 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var saleLock = cashFoundationSettlement({ SettlementID: "P-LOCK-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-LOCK-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  check(!rt14.lockAcquired, "lock not acquired before success call");
+  cashSettleAndPersist({ settlement: saleLock }, rt14);
+  check(!rt14.lockAcquired, "lock released after success");
+
+  // --- 15. Lock release after failure ---
+  var rt15 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  rt15.writeFailTarget = "settlement";
+  var saleLockFail = cashFoundationSettlement({ SettlementID: "P-LOCK-FAIL", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "P-LOCK-FAIL", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  check(!rt15.lockAcquired, "lock not acquired before failure call");
+  try { cashSettleAndPersist({ settlement: saleLockFail }, rt15); } catch (e) {}
+  check(!rt15.lockAcquired, "lock released after failure");
+
+  Logger.log("PASS: testCashSettlementPersistence | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
 
