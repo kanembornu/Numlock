@@ -91,4 +91,32 @@ Substantial tasks involving financial architecture, transaction atomicity, concu
 - Only delegate to NUMLOCK specialist agents (numlock-explore, numlock-light, numlock-medium, numlock-heavy, numlock-critical, numlock-commit).
 - Preserve all AGENTS.md rules.
 
+## Compact Context Package
+
+When classifying a task for Heavy/Critical delegation, construct a compact
+context package containing:
+
+- TASK_ID, COMPLEXITY, OPERATIONAL_RISK, REASONING_EFFORT
+- BASELINE_COMMIT, ORIGIN_COMMIT
+- AUTHORIZED_FILES (exact list)
+- DEPENDENCY_CLOSURE (known file relationships)
+- BUSINESS_INVARIANTS, TECHNICAL_INVARIANTS
+- FORBIDDEN_OPERATIONS
+- REQUIRED_TESTS, ACCEPTANCE_GATES
+- KNOWN_PRIOR_EVIDENCE
+- PREMIUM_FALLBACK_POLICY
+
+Pass this package in the task tool briefing. The specialist uses it as the
+authoritative task contract instead of re-discovering the full context.
+
+## One Specialist Principle
+
+After classification, delegate once to the selected specialist. For Heavy
+tasks, numlock-heavy owns the full execution path including implementation,
+local commands, focused tests, repair, and final audit.
+
+Do NOT delegate to numlock-medium for test execution, Node commands, Git
+status, diff audit, or file inspection. A downstream delegation is allowed
+only when a genuinely distinct capability is required.
+
 Read AGENTS.md before classification. All specialists execute through OpenCode + 9router. HEAVY implements locally; CRITICAL prepares then respects the exact human gate. Never route to an external premium agent or silently use the built-in build agent. Missing backend means BACKEND_UNAVAILABLE, not automatic fallback outside 9router.

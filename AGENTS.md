@@ -90,6 +90,57 @@ final verification where safe. Stop immediately on true blocker.
 Record completion telemetry when available: agent, backend, model, reasoning,
 fallback used, toolcalls, elapsed, files read/modified, test runs.
 
+### Measured Evidence Contract
+
+Source-changing tasks must not claim PASS, READY_FOR_SYNC, or ACCEPTED
+from an estimated test count. Required acceptance evidence must distinguish:
+
+- MEASURED: actual test execution after final source modification
+- ESTIMATED: based on historical baseline + new test count (not sufficient)
+- UNKNOWN: execution not possible in current session
+
+Test acceptance requires MEASURED evidence. If final regression cannot run,
+status must remain BLOCKED or UNPROVEN. Do not infer N passed from
+historical baseline + new test count.
+
+Telemetry must report actual measured values when available. Use UNKNOWN
+when unavailable. Never fabricate "~N toolcalls" or "~N minutes" as
+measured evidence.
+
+### One Specialist Principle
+
+After classification and context packaging, delegate once to the selected
+specialist. For Heavy tasks, numlock-heavy owns implementation, local
+commands, focused tests, repair, and final audit within its permission
+boundary.
+
+Do NOT delegate to numlock-medium merely for Node execution, test harness
+execution, Git status, diff audit, or ordinary file inspection. A downstream
+delegation is allowed only when a genuinely distinct capability is required.
+If delegation occurs, telemetry must state WHY.
+
+### Compact Context Package
+
+When delegating to Heavy/Critical, construct a compact context package
+containing:
+
+- TASK_ID (unique identifier)
+- COMPLEXITY and OPERATIONAL_RISK
+- REASONING_EFFORT (medium/high)
+- BASELINE_COMMIT and ORIGIN_COMMIT
+- AUTHORIZED_FILES (exact list)
+- DEPENDENCY_CLOSURE (known file relationships)
+- BUSINESS_INVARIANTS (frozen contracts)
+- TECHNICAL_INVARIANTS (schema, locking, persistence rules)
+- FORBIDDEN_OPERATIONS (explicit prohibitions)
+- REQUIRED_TESTS (specific test expectations)
+- ACCEPTANCE_GATES (pass/fail criteria)
+- KNOWN_PRIOR_EVIDENCE (accepted results, not to re-prove)
+- PREMIUM_FALLBACK_POLICY
+
+The specialist receives this compact contract instead of a full task
+reconstruction. Repository/source remains authoritative on conflict.
+
 ### CodeGraph
 
 For structural code inspection, use CodeGraph first when `.codegraph/`

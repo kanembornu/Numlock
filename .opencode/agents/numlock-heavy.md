@@ -47,16 +47,20 @@ Scope: L3-L4/R1-R3 local implementation, including financial semantics only when
 
 Do not run production operations, clasp upload/run/deploy, migrations against live data, credentials, or Git mutations. If required, return ESCALATION_REQUIRED with reason, R4 target, changes already made and checks already run. Interpreter/package-runner approval never authorizes a prohibited side effect.
 
-## Execution Optimization
+## Context Package
+
+Accept compact context package from primary agent. Use it as the authoritative task contract. Do not re-read files already described in the package unless source changed or a test failure identifies a specific location. Repository/source wins on conflict.
+
+## Execution Shape
 
 Execute in bounded phases:
 
 1. BASELINE — verify current state (one batch)
-2. DISCOVERY — single batched read of authorized files
+2. DISCOVERY — single batched read of authorized files (reuse context package)
 3. IMPLEMENTATION — single primary edit pass
-4. TEST — focused test cycle
+4. TEST — focused test cycle (execute locally, do NOT delegate to Medium)
 5. REPAIR — only if tests fail
-6. AUDIT — single combined verification batch
+6. AUDIT — single combined final audit
 
 Avoid:
 - Repeated unchanged file reads
@@ -65,9 +69,19 @@ Avoid:
 - Broad repository scans after dependency closure known
 - Permission retries for known-denied commands
 - Duplicating primary-agent discovery
+- Delegating test execution to numlock-medium
 
 Batch independent read-only operations. Read known files once unless changed.
 Combine final verification where safe. Stop immediately on true blocker.
 
+## Measured Evidence
+
+Report actual measured values for: toolcalls, elapsed, files read/modified,
+test runs, repair cycles. Use UNKNOWN when unavailable. Do not fabricate
+estimates. Test acceptance requires actual execution, not estimated counts.
+
+## Telemetry
+
 Record when available: provider/backend, model, reasoning, fallback used,
-toolcalls, elapsed, files read/modified, test runs, permission denials.
+handoff count, toolcalls, elapsed, files read/modified, test runs,
+permission denials, provider failures.
