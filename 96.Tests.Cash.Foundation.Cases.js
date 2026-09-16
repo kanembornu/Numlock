@@ -629,6 +629,233 @@ function testCashFoundationContracts() {
   return { passed: true, scenarios: scenarios };
 }
 
+function testCashSettlementService() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+
+  var accounts = cashFoundationTestAccounts();
+  var transactions = cashFoundationTransactions();
+  var purchaseEvents = cashFoundationPurchaseEvents();
+
+  // --- SALE SETTLEMENT ---
+  var sale = cashFoundationSettlement({ SettlementID: "SET-SVC-SALE-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "SET-SVC-SALE-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var saleResult = cashSettle({ settlement: sale }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] });
+  check(saleResult.status === "READY", "sale split tender READY");
+
+  var saleRetry = cashSettle({ settlement: sale }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: saleResult.rows, settlements: [sale] });
+  check(saleRetry.status === "ALREADY_POSTED", "sale same-ID retry ALREADY_POSTED");
+
+  var saleConflict = cashFoundationSettlement({ SettlementID: "SET-SVC-SALE-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "SET-SVC-SALE-1", RelatedTransactionType: "Sales",
+    RelatedTransactionID: "SALE-1", Amount: 2000 });
+  var saleConflictResult = cashSettle({ settlement: saleConflict }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [sale] });
+  check(saleConflictResult.status === "REFUSED" && saleConflictResult.reason === "IDENTITY_CONFLICT",
+    "sale same-ID conflict IDENTITY_CONFLICT");
+
+  // --- EXPENSE SETTLEMENT ---
+  var expense = cashFoundationSettlement({ SettlementID: "SET-SVC-EXP-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-SVC-EXP-1", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 1000 });
+  var expResult = cashSettle({ settlement: expense }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] });
+  check(expResult.status === "READY", "expense full READY");
+
+  var expRetry = cashSettle({ settlement: expense }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: expResult.rows, settlements: [expense] });
+  check(expRetry.status === "ALREADY_POSTED", "expense retry ALREADY_POSTED");
+
+  var expConflict = cashFoundationSettlement({ SettlementID: "SET-SVC-EXP-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-SVC-EXP-1", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 2000 });
+  var expConflictResult = cashSettle({ settlement: expConflict }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [expense] });
+  check(expConflictResult.status === "REFUSED" && expConflictResult.reason === "IDENTITY_CONFLICT",
+    "expense conflict IDENTITY_CONFLICT");
+
+  var expDup = cashFoundationSettlement({ SettlementID: "SET-SVC-EXP-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-SVC-EXP-2", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 1000 });
+  var expDupResult = cashSettle({ settlement: expDup }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: expResult.rows, settlements: [expense] });
+  check(expDupResult.status === "REFUSED" && expDupResult.reason === "REFUSED_DUPLICATE_SOURCE",
+    "expense duplicate origin REFUSED_DUPLICATE_SOURCE");
+
+  var expPartial = cashFoundationSettlement({ SettlementID: "SET-SVC-EXP-P", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-SVC-EXP-P", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 500 });
+  var expPartialResult = cashSettle({ settlement: expPartial }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] });
+  check(expPartialResult.status === "REFUSED", "expense partial refused");
+
+  var expOver = cashFoundationSettlement({ SettlementID: "SET-SVC-EXP-O", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-SVC-EXP-O", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1", Amount: 2000 });
+  var expOverResult = cashSettle({ settlement: expOver }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] });
+  check(expOverResult.status === "REFUSED", "expense over refused");
+
+  // --- PURCHASE SETTLEMENT ---
+  var purchase = cashFoundationSettlement({ SettlementID: "SET-SVC-PE-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-SVC-PE-1", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001", Amount: 1000 });
+  var purResult = cashSettle({ settlement: purchase }, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] });
+  check(purResult.status === "READY", "purchase full READY");
+
+  var purRetry = cashSettle({ settlement: purchase }, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purResult.rows, settlements: [purchase] });
+  check(purRetry.status === "ALREADY_POSTED", "purchase retry ALREADY_POSTED");
+
+  var purConflict = cashFoundationSettlement({ SettlementID: "SET-SVC-PE-1", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-SVC-PE-1", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001", Amount: 2000 });
+  var purConflictResult = cashSettle({ settlement: purConflict }, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [purchase] });
+  check(purConflictResult.status === "REFUSED" && purConflictResult.reason === "IDENTITY_CONFLICT",
+    "purchase conflict IDENTITY_CONFLICT");
+
+  var purDup = cashFoundationSettlement({ SettlementID: "SET-SVC-PE-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-SVC-PE-2", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001", Amount: 1000 });
+  var purDupResult = cashSettle({ settlement: purDup }, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purResult.rows, settlements: [purchase] });
+  check(purDupResult.status === "REFUSED" && purDupResult.reason === "REFUSED_DUPLICATE_SOURCE",
+    "purchase duplicate origin REFUSED_DUPLICATE_SOURCE");
+
+  var purPartial = cashFoundationSettlement({ SettlementID: "SET-SVC-PE-P", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-SVC-PE-P", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001", Amount: 500 });
+  var purPartialResult = cashSettle({ settlement: purPartial }, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] });
+  check(purPartialResult.status === "REFUSED", "purchase partial refused");
+
+  var purOver = cashFoundationSettlement({ SettlementID: "SET-SVC-PE-O", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-SVC-PE-O", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001", Amount: 2000 });
+  var purOverResult = cashSettle({ settlement: purOver }, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] });
+  check(purOverResult.status === "REFUSED", "purchase over refused");
+
+  // --- TRANSFER ---
+  var transfer = cashFoundationSettlement({ SettlementID: "SET-SVC-TR-1", Direction: "TRANSFER", AccountCode: "1000",
+    CounterAccountCode: "1010", TransferID: "TR-SVC-1", SourceType: "CASH_TRANSFER", SourceID: "TR-SVC-1" });
+  var trResult = cashSettle({ settlement: transfer }, { accounts: accounts, balanceLedgerRows: [] });
+  check(trResult.status === "READY", "transfer valid READY");
+
+  var trRetry = cashSettle({ settlement: transfer }, { accounts: accounts,
+    balanceLedgerRows: trResult.rows, settlements: [transfer] });
+  check(trRetry.status === "ALREADY_POSTED", "transfer retry ALREADY_POSTED");
+
+  var trConflict = cashFoundationSettlement({ SettlementID: "SET-SVC-TR-1", Direction: "TRANSFER", AccountCode: "1000",
+    CounterAccountCode: "1010", TransferID: "TR-SVC-1", SourceType: "CASH_TRANSFER", SourceID: "TR-SVC-1",
+    Amount: 2000 });
+  var trConflictResult = cashSettle({ settlement: trConflict }, { accounts: accounts,
+    balanceLedgerRows: [], settlements: [transfer] });
+  check(trConflictResult.status === "REFUSED" && trConflictResult.reason === "IDENTITY_CONFLICT",
+    "transfer conflict IDENTITY_CONFLICT");
+
+  var trNet = trResult.rows.reduce(function(sum, row) { return sum + Number(row.Debit) - Number(row.Credit); }, 0);
+  check(trNet === 0, "transfer net cash effect is zero");
+
+  // --- REVERSAL ---
+  var saleForReversal = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-ORIG", Direction: "INFLOW",
+    AccountCode: "1000", SourceType: "SALE_SETTLEMENT", SourceID: "SET-SVC-REV-ORIG",
+    RelatedTransactionType: "Sales", RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var saleForRevResult = cashSettle({ settlement: saleForReversal }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: [], settlements: [] });
+  check(saleForRevResult.status === "READY", "reversal original sale READY");
+
+  var reversal = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-1", Direction: "OUTFLOW", AccountCode: "1010",
+    Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-SVC-REV-1", ReversalOf: "SET-SVC-REV-ORIG" });
+  var revResult = cashSettle({ settlement: reversal }, { accounts: accounts,
+    settlements: [saleForReversal], balanceLedgerRows: saleForRevResult.rows });
+  check(revResult.status === "READY", "reversal full READY");
+
+  var revImmutable = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-2", Direction: "OUTFLOW", AccountCode: "1010",
+    Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-SVC-REV-2", ReversalOf: "SET-SVC-REV-ORIG" });
+  var revImmutableResult = cashSettle({ settlement: revImmutable }, { accounts: accounts,
+    settlements: [saleForReversal, reversal], balanceLedgerRows: saleForRevResult.rows.concat(revResult.rows) });
+  check(revImmutableResult.status === "REFUSED" && revImmutableResult.reason === "ALREADY_REVERSED",
+    "reversal immutable ALREADY_REVERSED");
+
+  var revRetry = cashSettle({ settlement: reversal }, { accounts: accounts,
+    settlements: [saleForReversal, reversal], balanceLedgerRows: saleForRevResult.rows.concat(revResult.rows) });
+  check(revRetry.status === "ALREADY_POSTED", "reversal duplicate ALREADY_POSTED");
+
+  var revConflict = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-1", Direction: "OUTFLOW", AccountCode: "1010",
+    Amount: 2000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-SVC-REV-1", ReversalOf: "SET-SVC-REV-ORIG" });
+  var revConflictResult = cashSettle({ settlement: revConflict }, { accounts: accounts,
+    settlements: [saleForReversal, reversal], balanceLedgerRows: saleForRevResult.rows.concat(revResult.rows) });
+  check(revConflictResult.status === "REFUSED" && revConflictResult.reason === "IDENTITY_CONFLICT",
+    "reversal conflict IDENTITY_CONFLICT");
+
+  // --- TRANSFER DESTINATION CONFLICT ---
+  var transferA = cashFoundationSettlement({ SettlementID: "SET-SVC-TR-CONFLICT", Direction: "TRANSFER",
+    AccountCode: "1000", CounterAccountCode: "1010", TransferID: "TR-CONFLICT-1",
+    SourceType: "CASH_TRANSFER", SourceID: "TR-CONFLICT-1", Amount: 1000 });
+  var trResult = cashSettle({ settlement: transferA }, { accounts: accounts, balanceLedgerRows: [] });
+  check(trResult.status === "READY", "transfer destination READY");
+
+  var transferB = cashFoundationSettlement({ SettlementID: "SET-SVC-TR-CONFLICT", Direction: "TRANSFER",
+    AccountCode: "1000", CounterAccountCode: "1020", TransferID: "TR-CONFLICT-1",
+    SourceType: "CASH_TRANSFER", SourceID: "TR-CONFLICT-1", Amount: 1000 });
+  var trConflictResult = cashSettle({ settlement: transferB }, { accounts: accounts,
+    balanceLedgerRows: [], settlements: [transferA] });
+  check(trConflictResult.status === "REFUSED" && trConflictResult.reason === "IDENTITY_CONFLICT",
+    "transfer changed destination → IDENTITY_CONFLICT");
+
+  // --- REVERSAL TARGET CONFLICT ---
+  var reversalA = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-CONFLICT", Direction: "OUTFLOW",
+    AccountCode: "1010", Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-SVC-REV-CONFLICT",
+    ReversalOf: "SET-SVC-SALE-1" });
+  var revResult = cashSettle({ settlement: reversalA }, { accounts: accounts,
+    settlements: [sale], balanceLedgerRows: saleResult.rows });
+  check(revResult.status === "READY", "reversal target READY");
+
+  var reversalB = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-CONFLICT", Direction: "OUTFLOW",
+    AccountCode: "1010", Amount: 1000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-SVC-REV-CONFLICT",
+    ReversalOf: "SET-SVC-SALE-OTHER" });
+  var revConflictResult = cashSettle({ settlement: reversalB }, { accounts: accounts,
+    settlements: [sale, reversalA], balanceLedgerRows: saleResult.rows.concat(revResult.rows) });
+  check(revConflictResult.status === "REFUSED" && revConflictResult.reason === "IDENTITY_CONFLICT",
+    "reversal changed ReversalOf → IDENTITY_CONFLICT");
+
+  var saleReplacement = cashFoundationSettlement({ SettlementID: "SET-SVC-REV-REPL", Direction: "INFLOW",
+    AccountCode: "1000", SourceType: "SALE_SETTLEMENT", SourceID: "SET-SVC-REV-REPL",
+    RelatedTransactionType: "Sales", RelatedTransactionID: "SALE-1", Amount: 1000 });
+  var saleReplResult = cashSettle({ settlement: saleReplacement }, { accounts: accounts, transactions: transactions,
+    balanceLedgerRows: saleForRevResult.rows.concat(revResult.rows),
+    settlements: [saleForReversal, reversal] });
+  check(saleReplResult.status === "READY", "reversal aggregate allows replacement settlement");
+
+  // --- Controlled defect self-check ---
+  var nullResult = cashSettle(null, { accounts: accounts });
+  check(nullResult.status === "REFUSED" && nullResult.reason === "MISSING_SETTLEMENT", "null request refused");
+
+  var emptyResult = cashSettle({}, { accounts: accounts });
+  check(emptyResult.status === "REFUSED" && emptyResult.reason === "MISSING_SETTLEMENT", "empty request refused");
+
+  var noContextResult = cashSettle({ settlement: cashFoundationSettlement() });
+  check(noContextResult.status === "REFUSED", "no context defaults handled without throwing");
+
+  var sig1 = cashSettlementPayloadSignature(sale);
+  var sig2 = cashSettlementPayloadSignature(cashFoundationSettlement({ SettlementID: "SET-SVC-SALE-1", Amount: 1000,
+    AccountCode: "1000", SourceType: "SALE_SETTLEMENT", SourceID: "SET-SVC-SALE-1", Direction: "INFLOW",
+    Tanggal: "2026-10-02", RelatedTransactionType: "Sales", RelatedTransactionID: "SALE-1" }));
+  check(sig1 === sig2, "payload signature consistent for identical payloads");
+
+  var sig3 = cashSettlementPayloadSignature(cashFoundationSettlement({ SettlementID: "SET-SVC-SALE-1", Amount: 2000 }));
+  check(sig1 !== sig3, "payload signature differs for different amount");
+
+  Logger.log("PASS: testCashSettlementService | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function cashFoundationTestAccounts() {
   return [
     { AccountCode: "1000", AccountName: "Cash on Hand", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },

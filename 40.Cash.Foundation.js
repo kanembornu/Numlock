@@ -377,6 +377,61 @@ function buildCashReversalCandidate(reversal, context) {
     originalSettlementPreserved: true };
 }
 
+function cashSettlementPayloadSignature(settlement) {
+  return [
+    String(settlement.SettlementID || ""),
+    Number(settlement.Amount),
+    String(settlement.AccountCode || ""),
+    String(settlement.CounterAccountCode || ""),
+    String(settlement.SourceType || ""),
+    String(settlement.SourceID || ""),
+    String(settlement.Direction || ""),
+    capitalEquityDateKey(settlement.Tanggal),
+    String(settlement.RelatedTransactionType || ""),
+    String(settlement.RelatedTransactionID || ""),
+    String(settlement.TransferID || ""),
+    String(settlement.ReversalOf || "")
+  ].join("|");
+}
+
+function cashSettle(request, context) {
+  context = context || {};
+  var settlement = request && request.settlement;
+  if (!settlement) return { status: "REFUSED", reason: "MISSING_SETTLEMENT", readOnly: true, writeCount: 0, rows: [] };
+  var accounts = context.accounts || [];
+  var settlements = context.settlements || [];
+  var validation = validateCashSettlements([settlement], accounts);
+  if (validation.status !== "PASS") {
+    return { status: "REFUSED", reason: "INVALID_SETTLEMENT", errors: validation.errors,
+      readOnly: true, writeCount: 0, rows: [] };
+  }
+  var settlementId = String(settlement.SettlementID || "").trim();
+  var existingForId = settlements.filter(function(s) {
+    return String(s.SettlementID || "").trim() === settlementId;
+  });
+  if (existingForId.length === 1) {
+    var existing = existingForId[0];
+    if (cashSettlementPayloadSignature(existing) === cashSettlementPayloadSignature(settlement)) {
+      return { status: "ALREADY_POSTED", readOnly: true, writeCount: 0, rows: [] };
+    }
+    return { status: "REFUSED", reason: "IDENTITY_CONFLICT", readOnly: true, writeCount: 0, rows: [] };
+  }
+  var sourceType = String(settlement.SourceType || "").trim();
+  if (sourceType === "SETTLEMENT_REVERSAL") {
+    return buildCashReversalCandidate(settlement, {
+      accounts: accounts, settlements: settlements,
+      balanceLedgerRows: context.balanceLedgerRows || []
+    });
+  }
+  return buildCashPostingCandidate(settlement, {
+    accounts: accounts,
+    transactions: context.transactions || [],
+    purchaseEvents: context.purchaseEvents || [],
+    balanceLedgerRows: context.balanceLedgerRows || [],
+    settlements: settlements
+  });
+}
+
 function buildCashBalanceReadModel(accounts, openingRows, ledgerRows, observedBalances) {
   var accountIndex = cashAccountMap(accounts), observed = observedBalances || {}, results = [];
   var openingValidation = validateCashOpeningRows(openingRows, accounts);
