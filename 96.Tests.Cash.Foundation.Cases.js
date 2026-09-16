@@ -58,8 +58,8 @@ function testCashFoundationContracts() {
     "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "unpaid sale refused");
   check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: [changed(transactions[0], { paymentTiming: "DELAYED" })] }).reason ===
     "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "delayed sale refused");
-  check(buildCashPostingCandidate(changed(inflow, { Amount: 500 }), { accounts: accounts, transactions: transactions }).reason ===
-    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "partial sale refused");
+  check(buildCashPostingCandidate(changed(inflow, { Amount: 500 }), { accounts: accounts, transactions: transactions,
+    settlements: [], balanceLedgerRows: [] }).status === "READY", "partial sale accepted as split tender");
   check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions,
     balanceLedgerRows: salePosting.rows }).status === "ALREADY_POSTED", "sale revenue not posted twice");
   check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions, balanceLedgerRows: [
@@ -164,8 +164,8 @@ function testCashFoundationContracts() {
     SourceType: "SALE_SETTLEMENT", SourceID: "SET-SALE-2", RelatedTransactionType: "Sales",
     RelatedTransactionID: "SALE-1" });
   check(buildCashPostingCandidate(saleSettlement2, { accounts: accounts, transactions: transactions,
-    settlements: [inflow], balanceLedgerRows: salePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
-    "same sale different settlement refused");
+    settlements: [inflow], balanceLedgerRows: salePosting.rows }).reason === "SALE_OVER_SETTLEMENT",
+    "same sale different settlement over-settlement refused");
   var expenseSettlement2 = cashFoundationSettlement({ SettlementID: "SET-EXP-2", Direction: "OUTFLOW", AccountCode: "1000",
     SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-EXP-2", RelatedTransactionType: "Expense",
     RelatedTransactionID: "EXP-1" });
@@ -193,8 +193,137 @@ function testCashFoundationContracts() {
     SourceType: "SALE_SETTLEMENT", SourceID: "SET-SALE-3", RelatedTransactionType: "Sales",
     RelatedTransactionID: "SALE-1" });
   check(buildCashPostingCandidate(saleSettlementNoLedger, { accounts: accounts, transactions: transactions,
-    settlements: [inflow], balanceLedgerRows: [] }).status === "READY",
-    "same sale different settlement without ledger rows allowed");
+    settlements: [inflow], balanceLedgerRows: [] }).reason === "SALE_OVER_SETTLEMENT",
+    "same sale different settlement over-settlement refused regardless of ledger");
+
+  // --- Split-tender foundation tests ---
+  function cashSplitTenderSettlement(settlementId, amount, accountCode, sourceId) {
+    return cashFoundationSettlement({
+      SettlementID: settlementId,
+      Direction: "INFLOW",
+      AccountCode: accountCode || "1000",
+      SourceType: "SALE_SETTLEMENT",
+      SourceID: sourceId || settlementId,
+      RelatedTransactionType: "Sales",
+      RelatedTransactionID: "SALE-1",
+      Amount: amount || 1000
+    });
+  }
+  var transactionsSplitTender = cashFoundationTransactions().map(function(t) {
+    return t.id === "SALE-1" ? Object.assign({}, t, { amount: 100000, approvedPaidAmount: 100000 }) : t;
+  });
+
+  // Test 1: Same SettlementID retry — idempotent
+  var saleA = cashSplitTenderSettlement("SET-ST-1", 20000, "1000");
+  var saleAPosting = buildCashPostingCandidate(saleA, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: [], settlements: [] });
+  check(saleAPosting.status === "READY", "split tender A accepted");
+  var saleASecond = buildCashPostingCandidate(saleA, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleAPosting.rows, settlements: [saleA] });
+  check(saleASecond.status === "ALREADY_POSTED", "same SettlementID retry is idempotent");
+
+  // Test 2: Different SettlementID, same Sale origin, amount within remaining
+  var saleB = cashSplitTenderSettlement("SET-ST-2", 30000, "1010");
+  var saleBPosting = buildCashPostingCandidate(saleB, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleAPosting.rows, settlements: [saleA] });
+  check(saleBPosting.status === "READY", "split tender B accepted (different SettlementID, same Sale)");
+  check(saleBPosting.rows[0].AccountCode === "1010", "split tender B uses correct account");
+
+  // Test 3: Over-settlement refused
+  var saleC = cashSplitTenderSettlement("SET-ST-3", 50001, "1000");
+  var saleCPosting = buildCashPostingCandidate(saleC, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleAPosting.rows.concat(saleBPosting.rows), settlements: [saleA, saleB] });
+  check(saleCPosting.status === "REFUSED" && saleCPosting.reason === "SALE_OVER_SETTLEMENT",
+    "over-settlement refused");
+
+  // Test 4: Full first tender, second refused
+  var saleFull = cashSplitTenderSettlement("SET-ST-FULL", 100000, "1000");
+  var saleFullPosting = buildCashPostingCandidate(saleFull, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: [], settlements: [] });
+  check(saleFullPosting.status === "READY", "full first tender accepted");
+  var saleOver = cashSplitTenderSettlement("SET-ST-OVER", 1, "1000");
+  var saleOverPosting = buildCashPostingCandidate(saleOver, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleFullPosting.rows, settlements: [saleFull] });
+  check(saleOverPosting.status === "REFUSED" && saleOverPosting.reason === "SALE_OVER_SETTLEMENT",
+    "over-settlement after full tender refused");
+
+  // Test 5: N-tenders (3 settlements)
+  var saleN1 = cashSplitTenderSettlement("SET-ST-N1", 20000, "1000");
+  var saleN1Posting = buildCashPostingCandidate(saleN1, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: [], settlements: [] });
+  check(saleN1Posting.status === "READY", "N-tender 1 accepted");
+  var saleN2 = cashSplitTenderSettlement("SET-ST-N2", 30000, "1010");
+  var saleN2Posting = buildCashPostingCandidate(saleN2, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleN1Posting.rows, settlements: [saleN1] });
+  check(saleN2Posting.status === "READY", "N-tender 2 accepted");
+  var saleN3 = cashSplitTenderSettlement("SET-ST-N3", 50000, "1020");
+  var saleN3Posting = buildCashPostingCandidate(saleN3, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleN1Posting.rows.concat(saleN2Posting.rows), settlements: [saleN1, saleN2] });
+  check(saleN3Posting.status === "READY", "N-tender 3 accepted");
+  var saleN4 = cashSplitTenderSettlement("SET-ST-N4", 1, "1000");
+  var saleN4Posting = buildCashPostingCandidate(saleN4, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: saleN1Posting.rows.concat(saleN2Posting.rows).concat(saleN3Posting.rows),
+    settlements: [saleN1, saleN2, saleN3] });
+  check(saleN4Posting.status === "REFUSED" && saleN4Posting.reason === "SALE_OVER_SETTLEMENT",
+    "N-tender over-settlement refused");
+
+  // Test 6: Reversal-aware aggregate
+  var transactions50k = cashFoundationTransactions().map(function(t) {
+    return t.id === "SALE-1" ? Object.assign({}, t, { amount: 50000, approvedPaidAmount: 50000 }) : t;
+  });
+  var revA = cashSplitTenderSettlement("SET-REV-A", 20000, "1000");
+  var revAPosting = buildCashPostingCandidate(revA, { accounts: accounts, transactions: transactions50k,
+    balanceLedgerRows: [], settlements: [] });
+  check(revAPosting.status === "READY", "reversal test A accepted");
+  var revB = cashSplitTenderSettlement("SET-REV-B", 30000, "1010");
+  var revBPosting = buildCashPostingCandidate(revB, { accounts: accounts, transactions: transactions50k,
+    balanceLedgerRows: revAPosting.rows, settlements: [revA] });
+  check(revBPosting.status === "READY", "reversal test B accepted");
+  var reversalA = cashFoundationSettlement({ SettlementID: "SET-REV-RA", Direction: "OUTFLOW",
+    AccountCode: "1010", Amount: 20000, SourceType: "SETTLEMENT_REVERSAL", SourceID: "SET-REV-RA",
+    ReversalOf: "SET-REV-A" });
+  var reversalAPosting = buildCashReversalCandidate(reversalA, { accounts: accounts,
+    settlements: [revA, revB], balanceLedgerRows: revAPosting.rows.concat(revBPosting.rows) });
+  check(reversalAPosting.status === "READY", "reversal of A accepted");
+  var revC = cashSplitTenderSettlement("SET-REV-C", 20000, "1000");
+  var revCPosting = buildCashPostingCandidate(revC, { accounts: accounts, transactions: transactions50k,
+    balanceLedgerRows: revAPosting.rows.concat(revBPosting.rows).concat(reversalAPosting.rows),
+    settlements: [revA, revB, reversalA] });
+  check(revCPosting.status === "READY", "replacement C accepted after reversal");
+  var revD = cashSplitTenderSettlement("SET-REV-D", 1, "1000");
+  var revDPosting = buildCashPostingCandidate(revD, { accounts: accounts, transactions: transactions50k,
+    balanceLedgerRows: revAPosting.rows.concat(revBPosting.rows).concat(reversalAPosting.rows).concat(revCPosting.rows),
+    settlements: [revA, revB, reversalA, revC] });
+  check(revDPosting.status === "REFUSED" && revDPosting.reason === "SALE_OVER_SETTLEMENT",
+    "over-settlement after replacement refused");
+
+  // Test 7: Expense regression — unchanged
+  var exp2 = cashFoundationSettlement({ SettlementID: "SET-EXP-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "EXPENSE_SETTLEMENT", SourceID: "SET-EXP-2", RelatedTransactionType: "Expense",
+    RelatedTransactionID: "EXP-1" });
+  check(buildCashPostingCandidate(exp2, { accounts: accounts, transactions: transactions,
+    settlements: [outflow], balanceLedgerRows: expensePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
+    "expense second origin still refused");
+
+  // Test 8: Purchase regression — unchanged
+  var pur2 = cashFoundationSettlement({ SettlementID: "SET-PE-2", Direction: "OUTFLOW", AccountCode: "1000",
+    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-2", RelatedTransactionType: "PurchaseEvent",
+    RelatedTransactionID: "PE-REQ-001" });
+  check(buildCashPostingCandidate(pur2, { accounts: accounts, transactions: transactions,
+    purchaseEvents: purchaseEvents, settlements: [purchaseSettlement],
+    balanceLedgerRows: purchasePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
+    "purchase second origin still refused");
+
+  // Test 9: Ledger independence
+  var liA = cashSplitTenderSettlement("SET-LI-A", 20000, "1000");
+  var liAPosting = buildCashPostingCandidate(liA, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: [], settlements: [] });
+  check(liAPosting.status === "READY", "ledger independence A accepted");
+  var liB = cashSplitTenderSettlement("SET-LI-B", 30000, "1010");
+  var liBPosting = buildCashPostingCandidate(liB, { accounts: accounts, transactions: transactionsSplitTender,
+    balanceLedgerRows: liAPosting.rows, settlements: [liA] });
+  check(liBPosting.status === "READY", "ledger independence B accepted (with ledger rows for A)");
+
   var transferSettlement2 = cashFoundationSettlement({ SettlementID: "SET-TR-2", Direction: "TRANSFER", AccountCode: "1000",
     CounterAccountCode: "1010", TransferID: "TR-2", SourceType: "CASH_TRANSFER", SourceID: "TR-2" });
   check(buildCashPostingCandidate(transferSettlement2, { accounts: accounts, transactions: transactions,

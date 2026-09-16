@@ -184,6 +184,27 @@ function cashTransactionEffectAlreadyPosted(rows, transactionId, accountCode, si
   });
 }
 
+function cashEffectiveSaleSettlementAggregate(settlements, balanceLedgerRows, relatedTransactionId, excludeSettlementId) {
+  var aggregate = 0;
+  var excludeId = String(excludeSettlementId || "").trim();
+  (settlements || []).forEach(function(s) {
+    if (excludeId && String(s.SettlementID || "").trim() === excludeId) return;
+    if (String(s.RelatedTransactionType || "").trim() !== "Sales") return;
+    if (String(s.RelatedTransactionID || "").trim() !== String(relatedTransactionId || "").trim()) return;
+    if (!isCanonicalActive(s.IsActive)) return;
+    if (String(s.Status || "").trim() !== "POSTED") return;
+    if (String(s.SourceType || "").trim() !== "SALE_SETTLEMENT") return;
+    var settlementId = String(s.SettlementID || "").trim();
+    var reversed = (settlements || []).some(function(r) {
+      return String(r.SourceType || "").trim() === "SETTLEMENT_REVERSAL" &&
+        String(r.ReversalOf || "").trim() === settlementId &&
+        isCanonicalActive(r.IsActive) && String(r.Status || "").trim() === "POSTED";
+    });
+    if (!reversed) aggregate += Number(s.Amount);
+  });
+  return aggregate;
+}
+
 function buildCashPostingCandidate(settlement, context) {
   context = context || {};
   var validation = validateCashSettlements([settlement], context.accounts || []);
@@ -210,9 +231,22 @@ function buildCashPostingCandidate(settlement, context) {
   } else if (direction === "INFLOW") {
     var sale = cashTransactionById(context.transactions, transactionId, "Sales");
     if (!sale || String(settlement.RelatedTransactionType || "") !== "Sales" ||
-        sale.paymentTiming !== "AT_RECOGNITION" || Number(sale.approvedPaidAmount) !== amount ||
-        Number(sale.amount) !== amount) {
+        sale.paymentTiming !== "AT_RECOGNITION") {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
+    }
+    var authoritativeSaleAmount = Number(sale.amount);
+    if (!isFinite(authoritativeSaleAmount) || authoritativeSaleAmount <= 0) {
+      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
+    }
+    if (!isFinite(amount) || amount <= 0) {
+      return { status: "REFUSED", reason: "INVALID_AMOUNT", readOnly: true, writeCount: 0 };
+    }
+    var existingAggregate = cashEffectiveSaleSettlementAggregate(
+      context.settlements || [], context.balanceLedgerRows || [], transactionId,
+      String(settlement.SettlementID || "").trim());
+    var remaining = authoritativeSaleAmount - existingAggregate;
+    if (remaining < 0 || amount > remaining) {
+      return { status: "REFUSED", reason: "SALE_OVER_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
     var revenueAccount = String(sale.revenueAccountCode || CASH_FOUNDATION_POLICY.REVENUE_ACCOUNT).trim();
     if (cashTransactionEffectAlreadyPosted(context.balanceLedgerRows, transactionId, revenueAccount, "Credit")) {
@@ -284,17 +318,19 @@ function buildCashPostingCandidate(settlement, context) {
     if (context.settlements === undefined || context.settlements === null) {
       return { status: "REFUSED", reason: "SETTLEMENT_CONTEXT_INCOMPLETE", readOnly: true, writeCount: 0 };
     }
-    var existingSettlements = context.settlements;
-    for (var si = 0; si < existingSettlements.length; si++) {
-      var es = existingSettlements[si];
-      if (String(es.RelatedTransactionType || "").trim() === relatedType &&
-          String(es.RelatedTransactionID || "").trim() === relatedId &&
-          String(es.SettlementID || "").trim() !== String(settlement.SettlementID || "").trim() &&
-          isCanonicalActive(es.IsActive) && String(es.Status || "").trim() === "POSTED") {
-        var esRows = cashExistingSourceRows(context.balanceLedgerRows,
-          String(es.SourceType || "").trim(), String(es.SourceID || "").trim());
-        if (esRows.length) {
-          return { status: "REFUSED", reason: "REFUSED_DUPLICATE_SOURCE", readOnly: true, writeCount: 0 };
+    if (relatedType !== "Sales") {
+      var existingSettlements = context.settlements;
+      for (var si = 0; si < existingSettlements.length; si++) {
+        var es = existingSettlements[si];
+        if (String(es.RelatedTransactionType || "").trim() === relatedType &&
+            String(es.RelatedTransactionID || "").trim() === relatedId &&
+            String(es.SettlementID || "").trim() !== String(settlement.SettlementID || "").trim() &&
+            isCanonicalActive(es.IsActive) && String(es.Status || "").trim() === "POSTED") {
+          var esRows = cashExistingSourceRows(context.balanceLedgerRows,
+            String(es.SourceType || "").trim(), String(es.SourceID || "").trim());
+          if (esRows.length) {
+            return { status: "REFUSED", reason: "REFUSED_DUPLICATE_SOURCE", readOnly: true, writeCount: 0 };
+          }
         }
       }
     }
