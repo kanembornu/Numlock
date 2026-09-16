@@ -70,6 +70,26 @@ Every completed task must report:
 3. Remaining risks or blockers
 4. Recommended Git commands, with every path listed explicitly; state `None` when no Git action is appropriate
 
+### Execution Performance
+
+For bounded tasks, execute in phases:
+1. Baseline verification (one batch)
+2. Single batched discovery
+3. Single primary implementation pass
+4. Focused test cycle
+5. Repair only if tests fail
+6. Single combined final audit
+
+Avoid repeated unchanged file reads, repeated git status without mutation,
+re-running tests without code changes, broad scans after dependency closure,
+and permission retries for known-denied commands.
+
+Batch independent operations. Read files once unless changed. Combine
+final verification where safe. Stop immediately on true blocker.
+
+Record completion telemetry when available: agent, backend, model, reasoning,
+fallback used, toolcalls, elapsed, files read/modified, test runs.
+
 ### CodeGraph
 
 For structural code inspection, use CodeGraph first when `.codegraph/`
@@ -111,6 +131,38 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 - L4/R1-R3 → numlock-heavy
 - ANY/R4 → numlock-critical
 - Explicitly authorized local commit → numlock-commit
+
+### Premium Model Routing
+
+| Agent | Default Model | Premium Model | Fallback |
+|---|---|---|---|
+| numlock-explore | numlock-explore-free | — | — |
+| numlock-light | numlock-explore-free | — | — |
+| numlock-medium | numlock-explore-free | — | — |
+| numlock-heavy | numlock-sol | cx/gpt-5.6-sol | free combo |
+| numlock-critical | numlock-sol-premium | cx/gpt-5.6-sol | NONE (PREMIUM_REQUIRED) |
+| numlock-commit | numlock-explore-free | — | — |
+
+Premium route: OpenCode → 9Router → Codex OAuth → GPT-5.6 Sol
+Free fallback: numlock-explore-free → oc/mimo-v2.5-free → oc/big-pickle
+
+Heavy uses Sol by default. Reasoning effort (medium/high) is a request parameter, not a model selector.
+Escalate to HIGH reasoning only when:
+- Architecture must be derived
+- Multiple modules have non-trivial invariants
+- Competing designs require resolution
+- Production-safe migration reasoning is substantial
+
+Critical uses Sol by default. Reasoning effort (medium/high) is a request parameter.
+Escalate to HIGH when complexity/risk requires it. Do not automatically choose HIGH because classification = Critical.
+
+Fallback policy:
+- Heavy: free fallback permitted on quota/temp availability
+- Critical: NO free fallback — premium-only route enforced
+- If premium unavailable: PREMIUM_BACKEND_REQUIRED
+- Auth/config errors surface as configuration failures, not quota exhaustion
+
+SUBSCRIPTION_PROXY_RISK_NOTICE_PRESENT: 9Router subscription/OAuth proxy use may not be officially licensed for this use and may risk account restriction.
 
 R4 overrides complexity. Heavy floor applies when the task may CHANGE (not merely inspect or reason about): financial architecture, transaction semantics, accounting authority, COGS authority, inventory authority, atomicity, concurrency, idempotency/recovery semantics, locking design, cross-core-module production state behavior, or schema/data model affecting financial meaning. Reading or reasoning about financial modules to repair tests, fixtures, or assertions is MEDIUM-eligible provided production source mutation is prohibited, financial authority is unchanged, no production action occurs, and no architectural redesign is requested. Dynamic escalation remains: MEDIUM must return ESCALATION_REQUIRED if inspection reveals the task actually requires changing production financial semantics.
 

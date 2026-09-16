@@ -11,6 +11,9 @@
       "models": {
         "numlock-explore-free": {
           "name": "NUMLOCK Explore Free"
+        },
+        "numlock-sol": {
+          "name": "NUMLOCK Sol"
         }
       }
     }

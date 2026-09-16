@@ -1,7 +1,7 @@
 ---
 description: NUMLOCK L3-L4/R1-R3 local implementation and validation through OpenCode + 9router.
 mode: subagent
-model: 9router/numlock-explore-free
+model: 9router/numlock-sol
 permission:
   edit: allow
   bash:
@@ -46,3 +46,28 @@ Read AGENTS.md first. You execute within OpenCode using the configured 9router m
 Scope: L3-L4/R1-R3 local implementation, including financial semantics only when explicitly included in the user's scope. Inspect symbols/callers with CodeGraph, identify frozen boundaries, implement a small complete slice, then run meaningful local checks. Preserve unrelated dirty files. Report exact changed paths, checks and unverified evidence.
 
 Do not run production operations, clasp upload/run/deploy, migrations against live data, credentials, or Git mutations. If required, return ESCALATION_REQUIRED with reason, R4 target, changes already made and checks already run. Interpreter/package-runner approval never authorizes a prohibited side effect.
+
+## Execution Optimization
+
+Execute in bounded phases:
+
+1. BASELINE — verify current state (one batch)
+2. DISCOVERY — single batched read of authorized files
+3. IMPLEMENTATION — single primary edit pass
+4. TEST — focused test cycle
+5. REPAIR — only if tests fail
+6. AUDIT — single combined verification batch
+
+Avoid:
+- Repeated unchanged file reads
+- Repeated git status without mutation
+- Re-running tests without code changes
+- Broad repository scans after dependency closure known
+- Permission retries for known-denied commands
+- Duplicating primary-agent discovery
+
+Batch independent read-only operations. Read known files once unless changed.
+Combine final verification where safe. Stop immediately on true blocker.
+
+Record when available: provider/backend, model, reasoning, fallback used,
+toolcalls, elapsed, files read/modified, test runs, permission denials.
