@@ -905,7 +905,7 @@ function testCashSettlementPersistence() {
     RelatedTransactionID: "SALE-1", Amount: 1000 });
   var result1 = cashSettleAndPersist({ settlement: sale1 }, rt1);
   check(result1.status === "POSTED", "normal sale POSTED");
-  check(result1.writeCount === 1, "normal sale writeCount 1");
+  check(result1.writeCount === 3, "normal sale writeCount 3");
   check(rt1.settlements.length === 1, "normal sale settlement written");
   check(rt1.ledger.length === 2, "normal sale two ledger rows");
 
@@ -1025,9 +1025,10 @@ function testCashSettlementPersistence() {
   var saleFail2 = cashFoundationSettlement({ SettlementID: "P-FAIL-2", Direction: "INFLOW", AccountCode: "1000",
     SourceType: "SALE_SETTLEMENT", SourceID: "P-FAIL-2", RelatedTransactionType: "Sales",
     RelatedTransactionID: "SALE-1", Amount: 1000 });
-  var failError2 = null;
-  try { cashSettleAndPersist({ settlement: saleFail2 }, rt12); } catch (e) { failError2 = e; }
-  check(failError2 !== null && String(failError2.message).indexOf("WRITE_FAIL") !== -1, "failure after settlement throws WRITE_FAIL");
+  var resultFail2 = cashSettleAndPersist({ settlement: saleFail2 }, rt12);
+  check(resultFail2.status === "FAILED" && resultFail2.reason === "PARTIAL_WRITE" &&
+    String(resultFail2.error).indexOf("WRITE_FAIL") !== -1, "failure after settlement returns FAILED PARTIAL_WRITE");
+  check(resultFail2.writeCount === 1, "failure after settlement writeCount 1");
   check(rt12.settlements.length === 1, "failure after settlement has settlement written");
   check(rt12.ledger.length === 0, "failure after settlement no ledger written");
 
@@ -1041,7 +1042,7 @@ function testCashSettlementPersistence() {
   var resultRec = cashSettleAndPersist({ settlement: recoverySettlement }, rt13);
   check(resultRec.status === "POSTED" && resultRec.persistenceState === "SETTLEMENT_ONLY_RECOVERED",
     "recovery SETTLEMENT_ONLY_RECOVERED");
-  check(resultRec.writeCount === 1, "recovery writeCount 1");
+  check(resultRec.writeCount === 2, "recovery writeCount 2");
   check(rt13.ledger.length === 2, "recovery writes two ledger rows");
 
   // --- 14. Lock release after success ---
