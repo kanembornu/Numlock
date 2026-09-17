@@ -22,6 +22,9 @@ permission:
     "npx jest*": ask
     "npx vitest*": ask
     "npx tsc*": ask
+    "curl -s --connect-timeout * http://127.0.0.1:20128/v1/models": allow
+    "curl -s --connect-timeout * http://127.0.0.1:20128/v1/routes": allow
+    "curl -s --connect-timeout * http://127.0.0.1:20128/v1/combos": allow
   read: allow
   glob: allow
   grep: allow
@@ -30,7 +33,9 @@ permission:
   webfetch: deny
   websearch: deny
   task: deny
-  external_directory: deny
+  external_directory:
+    "~/.config/9router/model-catalog.json": allow
+    "*": deny
 ---
 
 You are the NUMLOCK L2/R1-R2 specialist for bounded implementation and debugging.
