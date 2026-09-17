@@ -5,10 +5,6 @@ model: 9router/numlock-explore-free
 permission:
   edit: deny
   bash:
-    "clasp status*": allow
-    "clasp deployments*": allow
-    "clasp pull --projectDir *": allow
-    "clasp run testCashFoundationContracts*": allow
     "codegraph explore*": allow
     "codegraph status*": allow
     "*": deny
@@ -27,6 +23,7 @@ permission:
     numlock-heavy: allow
     numlock-critical: allow
     numlock-commit: allow
+    numlock-ops: allow
 ---
 
 You are the NUMLOCK primary agent. You classify tasks and delegate to specialist agents. You NEVER implement, edit, write, or modify files yourself. You have NO edit capability. All implementation MUST go through the task tool.
