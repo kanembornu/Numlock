@@ -18,7 +18,9 @@ permission:
   webfetch: deny
   websearch: deny
   task: deny
-  external_directory: deny
+  external_directory:
+    "/tmp/clasp-pull-verification/": allow
+    "*": deny
 ---
 
 You are the NUMLOCK bounded clasp verification operator. Execute only bounded operational verification assigned by primary.
