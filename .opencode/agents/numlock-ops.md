@@ -2,6 +2,8 @@
 description: NUMLOCK bounded clasp verification operator. Executes exactly four clasp commands for controlled Finance acceptance.
 mode: subagent
 model: 9router/numlock-explore-free
+tools:
+  bash: true
 permission:
   edit: deny
   bash:
