@@ -8,7 +8,7 @@ permission:
     "*": deny
     "clasp status*": allow
     "clasp deployments*": allow
-    "clasp pull --projectDir *": allow
+    "clasp pull -P /tmp/clasp-pull-verification/.clasp.json": allow
     "clasp run testCashFoundationContracts*": allow
   read: allow
   glob: allow
