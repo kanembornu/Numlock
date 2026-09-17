@@ -5,7 +5,6 @@ model: 9router/numlock-explore-free
 permission:
   edit: allow
   bash:
-    "*": deny
     "clasp status*": allow
     "clasp deployments*": allow
     "clasp pull --projectDir *": allow
@@ -29,6 +28,7 @@ permission:
     "curl -s --connect-timeout * http://127.0.0.1:20128/v1/models": allow
     "curl -s --connect-timeout * http://127.0.0.1:20128/v1/routes": allow
     "curl -s --connect-timeout * http://127.0.0.1:20128/v1/combos": allow
+    "*": deny
   read: allow
   glob: allow
   grep: allow
