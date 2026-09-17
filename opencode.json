@@ -33,10 +33,7 @@
     "bash": {
       "clasp status*": "allow",
       "clasp deployments*": "allow",
-      "clasp versions": "allow",
-      "clasp clone *": "allow",
       "clasp pull --projectDir *": "allow",
-      "clasp push --force": "allow",
       "mkdir *": "allow",
       "diff *": "allow",
       "codegraph explore*": "allow",
@@ -45,11 +42,9 @@
       "pwd": "allow",
       "node tests/browser/*.js": "ask",
       "node --check tests/browser/*.js": "allow",
-      "clasp version *": "ask",
-      "clasp deploy *": "ask",
+      "clasp run testCashFoundationContracts*": "allow",
       "npm install --package-lock-only --ignore-scripts": "ask",
       "rm -rf tests/tmp/": "allow",
-      "clasp run testCashFoundationContracts*": "allow",
       "*": "deny"
     }
   }

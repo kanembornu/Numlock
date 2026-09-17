@@ -5,6 +5,10 @@ model: 9router/numlock-explore-free
 permission:
   edit: deny
   bash:
+    "clasp status*": allow
+    "clasp deployments*": allow
+    "clasp pull --projectDir *": allow
+    "clasp run testCashFoundationContracts*": allow
     "codegraph explore*": allow
     "codegraph status*": allow
     "*": deny
