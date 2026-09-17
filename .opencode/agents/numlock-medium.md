@@ -6,11 +6,10 @@ permission:
   edit: allow
   bash:
     "*": deny
-    "clasp status": allow
-    "clasp deployments": allow
-    "clasp pull": allow
+    "clasp status*": allow
+    "clasp deployments*": allow
     "clasp pull --projectDir *": allow
-    "clasp run testCashFoundationContracts": allow
+    "clasp run testCashFoundationContracts*": allow
     "pwd": allow
     "codegraph explore*": allow
     "codegraph status*": allow
