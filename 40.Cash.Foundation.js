@@ -38,6 +38,10 @@ var CASH_SCHEMA_RUNTIME = Object.freeze({
   DISPOSABLE_NAME_PREFIX: "NUMLOCK Cash Foundation Disposable "
 });
 
+var CASH_PRODUCTION_POLICY = Object.freeze({
+  ENABLED: false
+});
+
 function cashRequireSchemaExecutionRuntime(runtime) {
   if (!runtime || !runtime.spreadsheet || typeof runtime.spreadsheet.getId !== "function" ||
       typeof runtime.flush !== "function") {
@@ -891,6 +895,82 @@ function runCashFoundationSchemaRecovery(migrationRecord) {
       flush: function() { SpreadsheetApp.flush(); } }, migrationRecord);
     Logger.log(JSON.stringify(result)); return result;
   } finally { if (acquired) lock.releaseLock(); }
+}
+
+function createCashProductionRuntimeWithSpreadsheet(spreadsheet, options) {
+  options = options || {};
+  var lockFactory = options.lockFactory || function() { return LockService.getScriptLock(); };
+  var flushFn = options.flush || function() { SpreadsheetApp.flush(); };
+  if (!spreadsheet) throw new Error("Cash production runtime requires canonical storage");
+  var accountsSheet = spreadsheet.getSheetByName(CASH_SCHEMA_MIGRATION.ACCOUNTS_SHEET);
+  if (!accountsSheet) throw new Error("Cash production runtime missing Accounts sheet");
+  var settlementsSheet = spreadsheet.getSheetByName(CASH_SCHEMA_MIGRATION.SETTLEMENTS_SHEET);
+  if (!settlementsSheet) throw new Error("Cash production runtime missing Settlements sheet");
+  var balanceLedgerSheet = spreadsheet.getSheetByName(CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_SHEET);
+  if (!balanceLedgerSheet) throw new Error("Cash production runtime missing BalanceLedger sheet");
+  var accountsValues = balanceFoundationSheetSnapshot(accountsSheet);
+  if (!cashExactHeaders(accountsValues, CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS)) {
+    throw new Error("Cash production runtime Accounts headers incompatible");
+  }
+  var settlementsValues = balanceFoundationSheetSnapshot(settlementsSheet);
+  if (!cashExactHeaders(settlementsValues, CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS)) {
+    throw new Error("Cash production runtime Settlements headers incompatible");
+  }
+  var ledgerValues = balanceFoundationSheetSnapshot(balanceLedgerSheet);
+  if (!cashExactHeaders(ledgerValues, CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_HEADERS)) {
+    throw new Error("Cash production runtime BalanceLedger headers incompatible");
+  }
+  var lock = lockFactory(), acquired = false;
+  function appendRow(sheet, headers, row) {
+    var nextRow = sheet.getLastRow() + 1;
+    if (sheet.getMaxRows() < nextRow) sheet.insertRowsAfter(sheet.getMaxRows(), nextRow - sheet.getMaxRows());
+    sheet.getRange(nextRow, 1, 1, headers.length).setValues([headers.map(function(header) {
+      return row[header] === undefined ? "" : row[header];
+    })]);
+  }
+  return {
+    lock: {
+      acquire: function() { lock.waitLock(30000); acquired = true; },
+      release: function() { if (acquired) { lock.releaseLock(); acquired = false; } }
+    },
+    readSheets: function() {
+      var aSheet = spreadsheet.getSheetByName(CASH_SCHEMA_MIGRATION.ACCOUNTS_SHEET);
+      if (!aSheet) throw new Error("Cash production runtime missing Accounts sheet during read");
+      var sSheet = spreadsheet.getSheetByName(CASH_SCHEMA_MIGRATION.SETTLEMENTS_SHEET);
+      if (!sSheet) throw new Error("Cash production runtime missing Settlements sheet during read");
+      var lSheet = spreadsheet.getSheetByName(CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_SHEET);
+      if (!lSheet) throw new Error("Cash production runtime missing BalanceLedger sheet during read");
+      return {
+        accounts: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(aSheet)),
+        settlements: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(sSheet)),
+        balanceLedger: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(lSheet)),
+        transactions: [],
+        purchaseEvents: []
+      };
+    },
+    writeSettlement: function(row) {
+      appendRow(settlementsSheet, CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS, row);
+    },
+    writeLedger: function(rows) {
+      rows.forEach(function(row) {
+        appendRow(balanceLedgerSheet, CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_HEADERS, row);
+      });
+    },
+    flush: flushFn
+  };
+}
+
+function createCashProductionRuntime() {
+  var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime({
+    openById: function(id) { return SpreadsheetApp.openById(id); }
+  });
+  return createCashProductionRuntimeWithSpreadsheet(spreadsheet);
+}
+
+function runCashSettleAndPersist(request) {
+  if (!CASH_PRODUCTION_POLICY.ENABLED) return { status: "DISABLED" };
+  var runtime = createCashProductionRuntime();
+  return cashSettleAndPersist(request, runtime);
 }
 
 function cashDisposableRuntimeProofRequire(condition, message) {

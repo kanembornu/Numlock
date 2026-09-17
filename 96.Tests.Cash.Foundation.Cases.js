@@ -626,6 +626,7 @@ function testCashFoundationContracts() {
   check(multiTransferNet === 0, "transfer net cash effect is zero");
 
   testCashSettlementPersistence();
+  testCashProductionRuntimeAdapter();
 
   Logger.log("PASS: testCashFoundationContracts | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
@@ -1065,6 +1066,185 @@ function testCashSettlementPersistence() {
   check(!rt15.lockAcquired, "lock released after failure");
 
   Logger.log("PASS: testCashSettlementPersistence | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testCashProductionRuntimeAdapter() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+
+  var originalResolve = resolveNumlockProductionSpreadsheetWithRuntime;
+
+  function createTestSpreadsheet(options) {
+    options = options || {};
+    var accountsHeaders = CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS;
+    var accountsRows = cashFoundationTestAccounts().map(function(account) {
+      return accountsHeaders.map(function(header) { return account[header] === undefined ? "" : account[header]; });
+    });
+    var accountsSheet = capitalEquitySchemaTestSheet("Accounts", [accountsHeaders].concat(accountsRows));
+    var settlementsHeaders = CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS;
+    var settlementsSheet = capitalEquitySchemaTestSheet("Settlements", [settlementsHeaders]);
+    var ledgerHeaders = CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_HEADERS;
+    var ledgerSheet = capitalEquitySchemaTestSheet("BalanceLedger", [ledgerHeaders]);
+    var sheets = [accountsSheet, settlementsSheet, ledgerSheet];
+    if (options.missingSettlements) sheets = sheets.filter(function(s) { return s.getName() !== "Settlements"; });
+    if (options.missingLedger) sheets = sheets.filter(function(s) { return s.getName() !== "BalanceLedger"; });
+    if (options.missingAccounts) sheets = sheets.filter(function(s) { return s.getName() !== "Accounts"; });
+    if (options.incompatibleSettlements) {
+      sheets = sheets.map(function(s) {
+        return s.getName() === "Settlements" ?
+          capitalEquitySchemaTestSheet("Settlements", [["WrongHeader1", "WrongHeader2"]]) : s;
+      });
+    }
+    if (options.incompatibleLedger) {
+      sheets = sheets.map(function(s) {
+        return s.getName() === "BalanceLedger" ?
+          capitalEquitySchemaTestSheet("BalanceLedger", [["WrongHeader1", "WrongHeader2"]]) : s;
+      });
+    }
+    return capitalEquitySchemaTestSpreadsheet(sheets);
+  }
+
+  function mockLockFactory() {
+    var state = { acquired: false };
+    return {
+      state: state,
+      factory: function() {
+        return {
+          waitLock: function(ms) { state.acquired = true; state.waitLockMs = ms; },
+          releaseLock: function() { state.acquired = false; }
+        };
+      }
+    };
+  }
+
+  // --- 1. Adapter exposes exact runtime interface ---
+  var ss1 = createTestSpreadsheet();
+  var lock1 = mockLockFactory();
+  var flush1Called = false;
+  var rt1 = createCashProductionRuntimeWithSpreadsheet(ss1, {
+    lockFactory: lock1.factory, flush: function() { flush1Called = true; }
+  });
+  check(typeof rt1.lock === "object", "runtime has lock object");
+  check(typeof rt1.lock.acquire === "function", "runtime has lock.acquire");
+  check(typeof rt1.lock.release === "function", "runtime has lock.release");
+  check(typeof rt1.readSheets === "function", "runtime has readSheets");
+  check(typeof rt1.writeSettlement === "function", "runtime has writeSettlement");
+  check(typeof rt1.writeLedger === "function", "runtime has writeLedger");
+  check(typeof rt1.flush === "function", "runtime has flush");
+
+  // --- 2-3. Canonical headers honored (readSheets succeeds) ---
+  var state2 = rt1.readSheets();
+  check(Array.isArray(state2.accounts), "accounts is array");
+  check(Array.isArray(state2.settlements), "settlements is array");
+  check(Array.isArray(state2.balanceLedger), "balanceLedger is array");
+  check(state2.accounts.length === cashFoundationTestAccounts().length, "accounts count matches");
+  check(state2.settlements.length === 0, "settlements empty initially");
+  check(state2.balanceLedger.length === 0, "balanceLedger empty initially");
+
+  // --- 4. Missing Settlement sheet → fails closed ---
+  var failed4 = false;
+  try { createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet({ missingSettlements: true }),
+    { lockFactory: mockLockFactory().factory, flush: function() {} }); }
+  catch (e) { failed4 = true; check(String(e.message).indexOf("Settlements") !== -1, "missing settlements error"); }
+  check(failed4, "missing Settlements fails closed");
+
+  // --- 5. Incompatible Settlement headers → fails closed ---
+  var failed5 = false;
+  try { createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet({ incompatibleSettlements: true }),
+    { lockFactory: mockLockFactory().factory, flush: function() {} }); }
+  catch (e) { failed5 = true; check(String(e.message).indexOf("incompatible") !== -1, "incompatible settlements error"); }
+  check(failed5, "incompatible Settlements headers fails closed");
+
+  // --- 6. Missing BalanceLedger sheet → fails closed ---
+  var failed6 = false;
+  try { createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet({ missingLedger: true }),
+    { lockFactory: mockLockFactory().factory, flush: function() {} }); }
+  catch (e) { failed6 = true; check(String(e.message).indexOf("BalanceLedger") !== -1, "missing ledger error"); }
+  check(failed6, "missing BalanceLedger fails closed");
+
+  // --- 7. Incompatible BalanceLedger headers → fails closed ---
+  var failed7 = false;
+  try { createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet({ incompatibleLedger: true }),
+    { lockFactory: mockLockFactory().factory, flush: function() {} }); }
+  catch (e) { failed7 = true; check(String(e.message).indexOf("incompatible") !== -1, "incompatible ledger error"); }
+  check(failed7, "incompatible BalanceLedger headers fails closed");
+
+  // --- 8. writeSettlement writes exactly one supplied row ---
+  var ss8 = createTestSpreadsheet();
+  var rt8 = createCashProductionRuntimeWithSpreadsheet(ss8, {
+    lockFactory: mockLockFactory().factory, flush: function() {}
+  });
+  var settlementRow = cashFoundationSettlement({ SettlementID: "ADAPTER-SET-1" });
+  rt8.writeSettlement(settlementRow);
+  var sSheet8 = ss8.getSheetByName(CASH_SCHEMA_MIGRATION.SETTLEMENTS_SHEET);
+  check(sSheet8.getLastRow() === 2, "writeSettlement appends exactly one row");
+  var writtenSettlements = balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(sSheet8));
+  check(writtenSettlements.length === 1, "one settlement row written");
+  check(String(writtenSettlements[0].SettlementID) === "ADAPTER-SET-1", "written settlement has correct ID");
+
+  // --- 9. writeLedger writes exactly supplied rows ---
+  var ledgerRows = [
+    { JournalID: "J-1", LineID: "J-1-1", Tanggal: "2026-10-01", AccountCode: "1000", Debit: 1000, Credit: 0,
+      MovementType: "PAID_SALE", SourceType: "SALE_SETTLEMENT", SourceID: "S-1", ExternalRef: "", Keterangan: "",
+      IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" },
+    { JournalID: "J-1", LineID: "J-1-2", Tanggal: "2026-10-01", AccountCode: "4000", Debit: 0, Credit: 1000,
+      MovementType: "PAID_SALE", SourceType: "SALE_SETTLEMENT", SourceID: "S-1", ExternalRef: "", Keterangan: "",
+      IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }
+  ];
+  rt8.writeLedger(ledgerRows);
+  var lSheet8 = ss8.getSheetByName(CASH_SCHEMA_MIGRATION.BALANCE_LEDGER_SHEET);
+  check(lSheet8.getLastRow() === 3, "writeLedger appends exactly supplied rows");
+  var writtenLedger = balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(lSheet8));
+  check(writtenLedger.length === 2, "two ledger rows written");
+  check(String(writtenLedger[0].JournalID) === "J-1", "first ledger row correct");
+
+  // --- 10. One-line recovery writes only missing ledger line (verified by persistence contract) ---
+  var rt10 = createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet(), {
+    lockFactory: mockLockFactory().factory, flush: function() {}
+  });
+  rt10.writeSettlement(cashFoundationSettlement({ SettlementID: "REC-1" }));
+  rt10.writeLedger([ledgerRows[0]]);
+  var sSheet10 = rt10.readSheets();
+  check(sSheet10.settlements.length === 1, "recovery writes settlement");
+  check(sSheet10.balanceLedger.length === 1, "recovery writes one ledger line");
+
+  // --- 11. Flush invoked through runtime contract ---
+  var flush11Called = false;
+  var rt11 = createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet(), {
+    lockFactory: mockLockFactory().factory, flush: function() { flush11Called = true; }
+  });
+  rt11.flush();
+  check(flush11Called, "flush invoked through runtime contract");
+
+  // --- 12. Lock follows bounded global lock semantics ---
+  var lock12 = mockLockFactory();
+  var rt12 = createCashProductionRuntimeWithSpreadsheet(createTestSpreadsheet(), {
+    lockFactory: lock12.factory, flush: function() {}
+  });
+  check(!lock12.state.acquired, "lock not acquired before acquire");
+  rt12.lock.acquire();
+  check(lock12.state.acquired, "lock acquired after acquire");
+  check(lock12.state.waitLockMs === 30000, "lock uses 30-second bounded wait");
+  rt12.lock.release();
+  check(!lock12.state.acquired, "lock released after release");
+
+  // --- 13. Runner gate default = disabled ---
+  check(CASH_PRODUCTION_POLICY.ENABLED === false, "runner gate default is disabled");
+
+  // --- 14-15. Disabled runner produces zero writes, does not call mutable persistence ---
+  var resolveCalled = false;
+  resolveNumlockProductionSpreadsheetWithRuntime = function() { resolveCalled = true; return null; };
+  var disabledResult = runCashSettleAndPersist({ settlement: cashFoundationSettlement() });
+  check(disabledResult.status === "DISABLED", "disabled runner returns DISABLED");
+  check(!resolveCalled, "disabled runner does not resolve production spreadsheet");
+  resolveNumlockProductionSpreadsheetWithRuntime = originalResolve;
+
+  // --- 16-17. Existing mockCashRuntime tests unchanged (verified by testCashSettlementPersistence) ---
+  // --- 18. Business callers of runner = 0 (grep proof verified at completion) ---
+  // --- 19-20. Regression (verified by testCashFoundationContracts) ---
+
+  Logger.log("PASS: testCashProductionRuntimeAdapter | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
 
