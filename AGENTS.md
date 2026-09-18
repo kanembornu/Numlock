@@ -73,6 +73,7 @@ Every completed task must report:
 ### Execution Performance
 
 For bounded tasks, execute in phases:
+
 1. Baseline verification (one batch)
 2. Single batched discovery
 3. Single primary implementation pass
@@ -83,6 +84,11 @@ For bounded tasks, execute in phases:
 Avoid repeated unchanged file reads, repeated git status without mutation,
 re-running tests without code changes, broad scans after dependency closure,
 and permission retries for known-denied commands.
+
+Start from current state and supplied context. Inspect history only when the task
+requires it or a concrete unresolved dependency points there. Keep discovery
+bounded to the known dependency closure. Keep deterministic work with the
+current specialist when its permissions cover the work.
 
 Batch independent operations. Read files once unless changed. Combine
 final verification where safe. Stop immediately on true blocker.
@@ -147,6 +153,7 @@ For structural code inspection, use CodeGraph first when `.codegraph/`
 is available, especially before modifying shared logic.
 
 Before editing shared Dashboard or Performance logic:
+
 - inspect relevant symbols and callers/callees;
 - check blast radius into frozen or out-of-scope sections;
 - identify relevant tests.
@@ -164,14 +171,14 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 
 ### Specialist Agents
 
-| Agent | Scope | Implementation |
-|---|---|---|
-| numlock-explore | Read-only exploration, audit, trace | No |
-| numlock-light | L1/R1 trivial local | Yes (bounded) |
-| numlock-medium | L2/R1-R2 bounded multi-file | Yes (bounded) |
-| numlock-heavy | L3-L4/R1-R3 | Yes (local implementation + validation) |
-| numlock-critical | ANY/R4 | Local preparation; risky action only within explicit human authorization |
-| numlock-commit | Local Git staging/commit only | No (explicit-path staging + commit) |
+| Agent            | Scope                               | Implementation                                                           |
+| ---------------- | ----------------------------------- | ------------------------------------------------------------------------ |
+| numlock-explore  | Read-only exploration, audit, trace | No                                                                       |
+| numlock-light    | L1/R1 trivial local                 | Yes (bounded)                                                            |
+| numlock-medium   | L2/R1-R2 bounded multi-file         | Yes (bounded)                                                            |
+| numlock-heavy    | L3-L4/R1-R3                         | Yes (local implementation + validation)                                  |
+| numlock-critical | ANY/R4                              | Local preparation; risky action only within explicit human authorization |
+| numlock-commit   | Local Git staging/commit only       | No (explicit-path staging + commit)                                      |
 
 ### Routing
 
@@ -185,20 +192,24 @@ Primary entrypoint: `numlock` (read-only classifier/delegator).
 
 ### Premium Model Routing
 
-| Agent | Default Model | Premium Model | Fallback |
-|---|---|---|---|
-| numlock-explore | numlock-explore-free | — | — |
-| numlock-light | numlock-explore-free | — | — |
-| numlock-medium | numlock-explore-free | — | — |
-| numlock-heavy | numlock-sol | cx/gpt-5.6-sol | free combo |
-| numlock-critical | numlock-sol-premium | cx/gpt-5.6-sol | NONE (PREMIUM_REQUIRED) |
-| numlock-commit | numlock-explore-free | — | — |
+| Agent            | Default Model        | Premium Model  | Fallback   |
+| ---------------- | -------------------- | -------------- | ---------- |
+| numlock-explore  | numlock-explore-free | —              | -          |
+| numlock-light    | numlock-explore-free | —              | -          |
+| numlock-medium   | numlock-explore-free | —              | -          |
+| numlock-heavy    | numlock-sol          | cx/gpt-5.6-sol | NONE       |
+| numlock-critical | numlock-sol          | cx/gpt-5.6-sol | NONE       |
+| numlock-commit   | numlock-explore-free | —              | -          |
+| numlock-ops      | numlock-explore-free | —              | -          |
 
 Premium route: OpenCode → 9Router → Codex OAuth → GPT-5.6 Sol
-Free fallback: numlock-explore-free → oc/mimo-v2.5-free → oc/big-pickle
+Free route: OpenCode → 9Router → numlock-explore-free → oc/mimo-v2.5-free → oc/big-pickle
 
-Heavy uses Sol by default. Reasoning effort (medium/high) is a request parameter, not a model selector.
+Primary, helper, and ordinary specialists use the 9router free combo. Heavy and
+Critical use the strict Sol-only route through 9router. Reasoning effort
+(medium/high) is a request parameter, not a model selector.
 Escalate to HIGH reasoning only when:
+
 - Architecture must be derived
 - Multiple modules have non-trivial invariants
 - Competing designs require resolution
@@ -208,8 +219,9 @@ Critical uses Sol by default. Reasoning effort (medium/high) is a request parame
 Escalate to HIGH when complexity/risk requires it. Do not automatically choose HIGH because classification = Critical.
 
 Fallback policy:
-- Heavy: free fallback permitted on quota/temp availability
-- Critical: NO free fallback — premium-only route enforced
+
+- Primary/Explore/Light/Medium/Commit/Ops: `9router/numlock-explore-free`
+- Heavy/Critical: premium-only route; no proxy fallback to OpenCode free tier
 - If premium unavailable: PREMIUM_BACKEND_REQUIRED
 - Auth/config errors surface as configuration failures, not quota exhaustion
 
@@ -221,11 +233,20 @@ R4 overrides complexity. Heavy floor applies when the task may CHANGE (not merel
 
 Specialists must return `ESCALATION_REQUIRED` with reason, target class, modification status, and validation performed when task exceeds assigned scope.
 
+For one parent objective, allow one normal Free execution and at most one bounded Free recovery. Recovery must use current-state evidence, address a concrete failure with a changed approach or repair, and stay within existing scope and permissions. After both fail, prohibit more Free retries. Escalate to Heavy/Sol only when the unresolved objective warrants L3-L4/R1-R3; otherwise stop and report the blocker. Routine Light/Medium work must not auto-route to Sol. R4 always routes to Critical and retains the exact human authorization gate.
+
 ### Execution architecture
 
-OpenCode is the sole execution and agent coordination application. All model requests, including helper agents, use the project 9router provider. Codex, ChatGPT, and OpenAI agents are not required backends, reviewers, or escalation destinations. An OpenAI-compatible HTTP client is a protocol adapter, not an OpenAI agent.
+OpenCode is the sole execution and agent coordination application. Primary and
+ordinary specialist requests use the project 9router free combo; Heavy and
+Critical use the project 9router provider for Sol. Codex, ChatGPT, and OpenAI
+agents are not required handoff targets, reviewers, or coordinators. An
+OpenAI-compatible HTTP client is a protocol adapter, not an OpenAI agent.
 
-The existing alias `9router/numlock-explore-free` currently routes to `oc/mimo-v2.5-free`, then `oc/big-pickle` (verified 2026-09-10). Its name is retained for compatibility; class names describe scope/risk, not model quality. Do not claim premium capability or switch providers silently. Recheck the 9router combo before changing backend policy; unavailable routes return `BACKEND_UNAVAILABLE`.
+The project config selects `9router/numlock-explore-free` for Primary, helper,
+and ordinary specialists, and `9router/numlock-sol` for Heavy/Critical. Config
+selection does not prove route contents or runtime availability. Unavailable
+premium routes return `PREMIUM_BACKEND_REQUIRED`.
 
 HEAVY performs authorized local implementation in small validated steps. CRITICAL prepares the exact files, target, operation count, expected write footprint, checks and reconciliation first. If the risky action is not already explicitly authorized, return `HUMAN_GATE_REQUIRED` for that concrete action. Existing specific authorization persists within its stated scope and count; do not ask again merely because the class is CRITICAL. Ambiguous or stale authorization is not permission.
 

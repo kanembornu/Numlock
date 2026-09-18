@@ -60,11 +60,15 @@ read-only.
 
 ## Retry Policy
 
-- One implementation pass. One validation pass. Repair only on failure.
-- Do not repeat unchanged file reads, re-run tests without code changes, or
-  retry known-denied commands.
-- If the same failure recurs after one repair attempt: escalate, do not retry
-  again.
+- For one parent objective, allow one normal Free execution and at most one
+  bounded Free recovery. Recovery must address a concrete failure with a
+  changed approach or repair, within the original scope and permissions.
+- Do not repeat unchanged file reads, re-run tests without code changes, retry
+  known-denied commands, or start a second Free recovery.
+- After normal Free execution and one bounded Free recovery fail, stop Free
+  retries. Escalate to Heavy/Sol only when unresolved complexity or risk
+  warrants L3-L4/R1-R3; otherwise report the blocker. Routine Light/Medium work
+  must not auto-route to Sol. R4 remains Critical with its human gate.
 
 ## Infrastructure Blocker vs Source Failure
 

@@ -36,7 +36,8 @@ For ANY task that requires file modification, code changes, test creation, or de
 2. SELECT the target specialist from the routing table.
 3. **IMMEDIATELY INVOKE THE TASK TOOL** — call the task tool with the selected specialist agent. You MUST actually call the task tool. Do NOT describe what you would do. Do NOT explain the delegation. Just CALL the task tool.
 4. The task tool call MUST include a briefing with: goal, scope boundaries, classification (L/R), and required validation.
-5. If the specialist returns ESCALATION_REQUIRED, reclassify and re-delegate to the appropriate target via the task tool.
+5. If a Free specialist fails, permit one bounded Free recovery for the same parent objective. Recovery must use current-state evidence, change approach or repair a concrete failure, and remain within the original permissions.
+6. If normal Free execution and that one recovery both fail, prohibit further Free retries. Escalate the parent objective to `numlock-heavy` only when unresolved complexity/risk warrants L3-L4/R1-R3; otherwise stop and report the blocker. Never route routine L1-L2 work directly to Sol.
 
 CRITICAL: You MUST use the task tool. You CANNOT edit files yourself. If you try to edit, it will fail because you have no edit permission. The specialist agent has its own edit permission and will handle all file modifications when you invoke it via the task tool.
 
@@ -112,12 +113,22 @@ authoritative task contract instead of re-discovering the full context.
 
 ## One Specialist Principle
 
-After classification, delegate once to the selected specialist. For Heavy
-tasks, numlock-heavy owns the full execution path including implementation,
-local commands, focused tests, repair, and final audit.
+After classification, delegate once to the selected specialist. Keep deterministic
+work with that specialist when permissions allow. Start discovery from current
+state and supplied context. Bound it to known dependency closure; do not repeat
+unchanged glob, grep, or read loops or inspect history unless the task requires
+history or a concrete unresolved dependency points there. For Heavy tasks,
+numlock-heavy owns the full execution path including implementation, local
+commands, focused tests, repair, and final audit.
 
 Do NOT delegate to numlock-medium for test execution, Node commands, Git
 status, diff audit, or file inspection. A downstream delegation is allowed
 only when a genuinely distinct capability is required.
 
-Read AGENTS.md before classification. All specialists execute through OpenCode + 9router. HEAVY implements locally; CRITICAL prepares then respects the exact human gate. Never route to an external premium agent or silently use the built-in build agent. Missing backend means BACKEND_UNAVAILABLE, not automatic fallback outside 9router.
+Read AGENTS.md before classification. All specialists execute inside OpenCode
+through the configured 9router routes. Ordinary specialists use
+`9router/numlock-explore-free`; HEAVY and CRITICAL use
+`9router/numlock-sol`. HEAVY implements locally; CRITICAL prepares then respects
+the exact human gate. Never route to an external agent or silently use the
+built-in build agent. Missing premium backend means PREMIUM_BACKEND_REQUIRED, not silent
+provider substitution.
