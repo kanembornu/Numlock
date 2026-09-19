@@ -22,7 +22,8 @@ NUMLOCK is a Google Apps Script V8 web application and business-intelligence das
 
 ## Agent Skills Policy
 
-- `AGENTS.md` is the authoritative project-specific contract. User scope and this contract override generic skill guidance.
+- `AGENTS.md` is the sole authority for cross-cutting workflow, routing, escalation, recovery, safety, and evidence policy. User scope and this contract override generic skill guidance.
+- Specialist agent contracts inherit this file. They must contain only role-specific behavior and overrides plus concise references to inherited authority; they must not duplicate cross-cutting policy.
 - Route skills selectively; do not invoke them unnecessarily for simple isolated tasks. For small isolated patches, follow `AGENTS.md` alone unless extra workflow guidance is materially useful.
 - For multi-file or non-trivial implementation, prefer `@incremental-implementation`.
 - For bugs, failing tests, or unexpected runtime behavior, prefer `@debugging-and-error-recovery`; add `@test-driven-development` when the behavior can be covered by tests.
@@ -149,8 +150,9 @@ reconstruction. Repository/source remains authoritative on conflict.
 
 ### CodeGraph
 
-For structural code inspection, use CodeGraph first when `.codegraph/`
-is available, especially before modifying shared logic.
+For structural code inspection, check CodeGraph availability once. If available,
+use it first, especially before modifying shared logic. If unavailable, move
+immediately to targeted source discovery; do not retry availability checks.
 
 Before editing shared Dashboard or Performance logic:
 
@@ -159,11 +161,9 @@ Before editing shared Dashboard or Performance logic:
 - identify relevant tests.
 
 CodeGraph is advisory. Source code, explicit scope/freeze rules,
-runtime behavior, and tests remain authoritative.
-
-For HTML/CSS, Apps Script client/server runtime boundaries, and visual
-work, use targeted source/runtime inspection where CodeGraph cannot
-establish the relationship confidently.
+runtime behavior, and tests remain authoritative. Use targeted source/runtime
+inspection where CodeGraph is unavailable or cannot confidently establish
+HTML/CSS, Apps Script client/server, or visual relationships.
 
 ## OpenCode Routing
 
