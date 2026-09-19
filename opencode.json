@@ -40,6 +40,8 @@
       "node tests/browser/*.js": "ask",
       "node --check tests/browser/*.js": "allow",
       "clasp run testCashFoundationContracts*": "allow",
+      "clasp run validateFinanceProductionRuntime": "allow",
+      "clasp show-authorized-user": "allow",
       "npm install --package-lock-only --ignore-scripts": "ask",
       "rm -rf tests/tmp/": "allow",
       "*": "deny"

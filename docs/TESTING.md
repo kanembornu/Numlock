@@ -76,6 +76,81 @@ Phase 10F.5.2 supplied the live code evidence: `testCashFoundationContracts()` p
 with 121 scenarios and no production mutation, followed by one `runAllBackendTests()` pass at 57/57. That runtime
 acceptance validated code only; it did not supply accounting evidence, authorize production writes, or activate Cash.
 
+## Finance Phase 12B.5F Production read-only runtime evidence contract
+
+Phase 12B.5F proves that the existing Finance foundation can read canonical
+production state and return diagnostic/reconciliation evidence without
+production mutation. This is a read-only evidence gate; it does not activate,
+backfill, wire workflow, post, or mutate any schema or journal.
+
+### Execution bridge
+
+`validateFinanceProductionRuntime()` is the sole execution bridge. It is a
+zero-argument, `clasp run`-reachable function in `36.Finance.Service.js`. It
+returns a structured report with `status`, `readOnly`, `periods`,
+`performance`, and `failures` fields.
+
+### Canonical read paths
+
+The function reads these canonical spreadsheet tables through read-only paths:
+
+| Table | Required columns | Source function |
+|---|---|---|
+| `tabsal` (Sales) | `ID_Trx, Tanggal, ID_Prod, Tipe, Qty, HPP, HJ, Source, IsActive` | `getCanonicalTransactionData` |
+| `tabops` (Expenses) | `ID_Trx, Tanggal, ID_Ops, Nilai, Source, IsActive` | `getCanonicalTransactionData` |
+| `Products` | `ID_Prod, Produk, Kategori, Kind, RevenueAccountCode, COGSAccountCode, IsActive` | `getCanonicalTransactionData` |
+| `ExpenseItems` | `ID_Ops, Item, Kategori, Kind, Group, AccountCode, IsActive` | `getCanonicalTransactionData` |
+| `Accounts` | `AccountCode, AccountName, AccountType, StatementGroup, CashFlowGroup, IsActive` | direct `readCanonicalTable` |
+| `DepreciationLedger` | `ID_Dep, Period, ID_Asset, OpeningBookValue, Depreciation, AccumulatedDepreciation, ClosingBookValue, GeneratedAt` | `getFinanceDepreciationSource` |
+| `Assets` | `ID_Asset` | `getFinanceDepreciationSource` |
+
+### Acceptance criteria
+
+1. **Runtime reachability:** `validateFinanceProductionRuntime()` completes
+   without throwing when invoked via `clasp run` against the production-bound
+   spreadsheet.
+
+2. **Readable canonical sources:** All seven tables listed above are readable.
+   The function must not throw a sheet-not-found or column-mismatch error.
+
+3. **Schema compatibility:** The function returns a report object with the
+   expected structure: `status` is `"PASS"` or `"FAIL"`, `readOnly` is `true`,
+   `periods` is a non-empty array, `performance` contains timing fields.
+
+4. **Validation-period construction:** `buildFinanceRuntimeValidationPeriods`
+   derives at least one period window from the canonical data without throwing.
+
+5. **Reconciliation diagnostics:** Each period result contains
+   `formulaReconciliation` and `expenseReconciliation` fields, each `"PASS"` or
+   `"FAIL"`. The report-level `failures` array is empty when all periods pass.
+
+6. **Data-quality diagnostics:** Each period result contains a `dataQuality`
+   object with fields: `unresolvedProducts`, `unresolvedExpenseItems`,
+   `inactiveAccountMappings`, `duplicateDepreciationLogicalKeys`,
+   `invalidDepreciationRows`, `invalidDepreciationPeriods`,
+   `unresolvedDepreciationAssets`, `depreciationOverlapTransactions`.
+
+7. **Zero-write invariant:** The report object contains `readOnly: true`. The
+   function's call path contains no `appendRow`, `getRange().setValue()`,
+   `setValues()`, `insertSheet`, `deleteSheet`, or other write-side SpreadsheetApp
+   methods. No tabops, tabsal, BalanceLedger, or journal mutation occurs.
+
+8. **Fail-closed incompatibility:** If any canonical read fails, schema is
+   incompatible, or reconciliation fails, the function throws
+   `"Finance production validation failed: ..."` with a diagnostic message. It
+   does not return a degraded partial result.
+
+9. **No activation scope:** This contract does not authorize activation,
+   backfill, workflow wiring, posting, journal mutation, schema migration, or
+   any production write. It is a read-only evidence gate only.
+
+### Frozen status
+
+As of the contract freeze, `validateFinanceProductionRuntime` is a defined,
+zero-argument, `clasp run`-reachable function. Production execution has not
+been measured. The acceptance criteria above define what must pass before this
+gate is satisfied.
+
 ## Finance Phase 10F.5.1 Cash opening evidence validation
 
 The existing 57-entry ordered suite retains `testCashFoundationContracts()` as its Cash owner. The focused test now

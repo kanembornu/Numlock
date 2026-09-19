@@ -123,7 +123,7 @@ function scopeFinanceDepreciation(source, period) {
 function validateFinanceProductionRuntime() {
   var totalStartedAt = Date.now();
   var acquisitionStartedAt = Date.now();
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = requireNumlockProductionSpreadsheet();
   var canonicalData = getCanonicalTransactionData(ss);
   var canonicalAcquisitionMs = Date.now() - acquisitionStartedAt;
   var accountReadStartedAt = Date.now();
@@ -159,6 +159,16 @@ function validateFinanceProductionRuntime() {
       formulaReconciliation: formulaReconciles ? "PASS" : "FAIL",
       accountingPolicy: finance.accountingPolicy,
       dataQuality: quality,
+      dataQualitySummary: JSON.stringify({
+        unresolvedProducts: quality.unresolvedProducts.length,
+        unresolvedExpenseItems: quality.unresolvedExpenseItems.length,
+        inactiveAccountMappings: quality.inactiveAccountMappings.length,
+        duplicateDepreciationLogicalKeys: quality.duplicateDepreciationLogicalKeys.length,
+        invalidDepreciationRows: quality.invalidDepreciationRows.length,
+        invalidDepreciationPeriods: quality.invalidDepreciationPeriods.length,
+        unresolvedDepreciationAssets: quality.unresolvedDepreciationAssets.length,
+        depreciationOverlapTransactions: quality.depreciationOverlapTransactions.length
+      }),
       unresolvedMappingCount: unresolvedCount,
       buildMs: Date.now() - buildStartedAt
     };
