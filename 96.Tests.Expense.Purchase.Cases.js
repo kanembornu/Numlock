@@ -339,7 +339,7 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
     sheet.getLastColumn = function() { return headers.length; };
     sheet.getRange = function(row, column, height, width) { return {
       getValues: function() { return [headers.slice()]; },
-      setNumberFormat: function(format) { check(format === '@', 'text storage'); },
+      setNumberFormat: function(format) { check(format === '@' || format === 'General', 'canonical storage format'); },
       setValues: function(values) {
         check(base.runtime.lock.hasLock() && column === 1 && height === 1 && width === 25 && row === f.rows.length + 2, 'locked exact append');
         f.writes++;
@@ -347,7 +347,8 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
         f.rows.push(Object.fromEntries(headers.map(function(h, i) { return [h, values[0][i]]; })));
         if (f.failure === 'AFTER') throw new Error('TEST_LOST_RESPONSE');
       },
-      setValue: function(value) { f.rows[row - 2][headers[column - 1]] = value; }
+      setValue: function(value) { f.rows[row - 2][headers[column - 1]] = value; },
+      getValue: function() { return f.rows[row - 2][headers[column - 1]]; }
     }; };
     var ss = { getSheetByName: function(name) {
       f.reads++; check(base.runtime.lock.hasLock(), 'storage read under lock');
@@ -550,25 +551,23 @@ function testPurchaseEventIsActiveTypeContract() {
     event.RecoveryKey = 'pe-receipt-receipt-' + 'd'.repeat(32);
     formatApplied = false; setActiveValue = null; setActiveTarget = null;
 
-    // Simulate what appendEvent does
+    // Test canonical boolean persistence primitive
     var headers = PURCHASE_EVENT_POLICY.headers;
-    var target = { setNumberFormat: function(fmt) { formatApplied = true; },
-      setValues: function(values) {
-        values[0] = values[0].map(function(v, idx) {
-          if (headers[idx] === 'IsActive' && v === true) return 'true'; // coercion
-          return v;
-        });
+    var isActiveIdx = headers.indexOf('IsActive');
+    var cellFormat = '@';
+    var simSheet = {
+      getRange: function(r, c) {
+        return {
+          setNumberFormat: function(fmt) { cellFormat = fmt; },
+          setValue: function(v) { setActiveValue = v; setActiveTarget = { row: r, col: c }; },
+          getValue: function() { return setActiveValue; }
+        };
       }
     };
-    // Apply the fix logic
-    target.setNumberFormat('@');
-    target.setValues([headers.map(function(h) { return event[h]; })]);
-    var isActiveIdx = headers.indexOf('IsActive');
-    if (isActiveIdx !== -1 && event.IsActive === true) {
-      setActiveValue = true; setActiveTarget = { row: rows.length + 1, col: isActiveIdx + 1 };
-    }
-    check(setActiveValue === true, 'IsActive re-asserted as boolean');
-    check(setActiveTarget.col === isActiveIdx + 1, 'IsActive column correct');
+    var verified = writeCanonicalBoolean_(simSheet, 1, isActiveIdx + 1);
+    check(cellFormat === 'General', 'format changed to General');
+    check(verified === true && setActiveValue === true, 'readback is boolean true');
+    check(typeof setActiveValue === 'boolean', 'readback type is boolean');
 
     // Test 2: New PurchaseEvent reads IsActive as boolean
     // After the fix, the sheet should have boolean true for IsActive

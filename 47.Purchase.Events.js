@@ -28,14 +28,27 @@ function purchaseEventProductionRuntime_(ss, lock, expenses, timestamp, policies
       var target = sheet.getRange(sheet.getLastRow() + 1, 1, 1, PURCHASE_EVENT_POLICY.headers.length);
       target.setNumberFormat('@');
       target.setValues([PURCHASE_EVENT_POLICY.headers.map(function(header) { return row[header]; })]);
-      // Preserve boolean IsActive through text-format coercion: setValues on text-formatted
-      // cells converts boolean true to string "true". Re-assert canonical boolean after write.
+      // Canonical boolean persistence: change IsActive cell from text format to General,
+      // write boolean true, and verify readback. Text format coerces setValue(true) to string.
       var isActiveIdx = PURCHASE_EVENT_POLICY.headers.indexOf('IsActive');
       if (isActiveIdx !== -1 && row.IsActive === true) {
-        sheet.getRange(sheet.getLastRow(), isActiveIdx + 1).setValue(true);
+        if (!writeCanonicalBoolean_(sheet, sheet.getLastRow(), isActiveIdx + 1)) {
+          inventoryReceiptFail_('ISACTIVE_BOOLEAN_PERSISTENCE_FAILED');
+        }
       }
     }
   };
+}
+
+// Canonical boolean persistence: changes cell format from text (@) to General,
+// writes boolean true, and verifies readback. Returns true if verified.
+function writeCanonicalBoolean_(sheet, row, col) {
+  var cell = sheet.getRange(row, col);
+  cell.setNumberFormat('General');
+  cell.setValue(true);
+  // Readback verification
+  var readback = sheet.getRange(row, col).getValue();
+  return readback === true && typeof readback === 'boolean';
 }
 
 function normalizePurchaseEventRequest_(payload) {
@@ -478,7 +491,11 @@ function remediatePurchaseEventIsActiveType_(dryRun) {
     if (!otherPredicatesPass) { skipped++; continue; }
     eligible.push({ row: i + 2, requestKey: row.RequestKey });
     if (!dryRun) {
-      sheet.getRange(i + 2, isActiveIdx + 1).setValue(true);
+      if (!writeCanonicalBoolean_(sheet, i + 2, isActiveIdx + 1)) {
+        // Readback failed — do not count as remediated
+        skipped++;
+        continue;
+      }
       remediated++;
     }
   }
