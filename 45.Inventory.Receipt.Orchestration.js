@@ -10,7 +10,7 @@ var INVENTORY_EXPENSE_ROUTING = Object.freeze({
   version: "EXPENSE-ROUTING-V2", revision: 2,
   evidenceRef: "docs/evidence/finance-phase-11v8b/README.md",
   rows: Object.freeze(["OSS01","OSK01","OSK02","OSK03","OSK04","OSK05","OSR01","OSR02","OSR03","OSR04","OSR05","OSR06","OSR07","OSR08","OSR09","OSR10","OSR11","OSR12","OSR13","OSR14","OSR15","OSR16","OSR17","OSR18","OSR19","OSR20","OSR21","OUR01","OUU01","OUS01","OUS02","OUS03","OUS04","OEE01"].map(function(id) {
-    var ordinary = ["OSS01", "OSK02", "OUR01", "OUS01", "OUS02", "OUS03", "OUS04"].indexOf(id) !== -1;
+    var ordinary = ["OSS01", "OSK02", "OSK05", "OUR01", "OUS01", "OUS02", "OUS03", "OUS04", "OEE01"].indexOf(id) !== -1;
     return Object.freeze({ expenseItemId: id,
       classification: ordinary ? "ORDINARY_EXPENSE" : "BLOCKED_FOR_PROSPECTIVE_EXPENSE",
       reason: "USER_APPROVED_11V8B" });

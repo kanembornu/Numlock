@@ -49,7 +49,7 @@ function normalizePurchaseEventRequest_(payload) {
   p.PurchaseUOM = p.PurchaseUOM.toLowerCase();
   p.ReceiptDate = p.ReceiptDate || p.ExpenseDate;
   ['ExpenseDate', 'ReceiptDate'].forEach(function(key) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(p[key]) || !capitalEquityDateKey(p[key]) || p[key] < EXPENSE_PURCHASE_POLICY.effectiveFrom) inventoryReceiptFail_('INVALID_PURCHASE_DATE');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(p[key]) || !capitalEquityDateKey(p[key])) inventoryReceiptFail_('INVALID_PURCHASE_DATE');
   });
   if (p.PurchaseQty) {
     var qty = inventoryReceiptDecimal_(p.PurchaseQty, 6);

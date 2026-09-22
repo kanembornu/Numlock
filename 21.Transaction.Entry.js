@@ -269,9 +269,10 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
   } catch (error) {
     var result = canonicalEntryFailure(error);
     // Only pre-persistence routing refusals carry a definite zero-write claim.
-    if (/^(ROUTING_|EXPENSE_POLICY_|EXPENSE_ROUTE_|EXPENSE_ID_|EXPENSE_ITEM_NOT_ACTIVE_OR_MAPPED|INVALID_ROUTING_REGISTRY)/.test(error.message)) {
+    if (/^(ROUTING_|EXPENSE_POLICY_|EXPENSE_ROUTE_|EXPENSE_ID_|EXPENSE_ITEM_NOT_ACTIVE_OR_MAPPED|INVALID_ROUTING_REGISTRY|UNKNOWN_PURCHASE_FIELD|INVALID_PURCHASE_DATE|INVALID_PURCHASE_REQUEST|INVALID_PURCHASE_QUANTITY|INVALID_PURCHASE_COST|PURCHASE_EVIDENCE_REQUIRED|NOT_PURCHASE_POLICY)/.test(error.message)) {
       result.status = "REFUSED"; result.writeCount = 0; result.tabopsWrites = 0;
       result.error.code = error.message;
+      result.error.message = error.message;
     }
     return result;
   } finally { if (scope) scope.active = false; if (acquired) lock.releaseLock(); }

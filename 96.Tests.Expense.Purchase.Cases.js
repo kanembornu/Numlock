@@ -60,7 +60,7 @@ function testPurchaseEventOrchestrationContracts(authority, expenses) {
   f = fixture(); f.request.input.PurchaseUOM = 'unknown-package';
   check(f.run().status === 'PURCHASE_CAPTURED' && f.ledger.length === 0, 'unsupported package preserves cost only');
   f = fixture(); f.request.input.ExpenseDate = '2026-09-30';
-  check(f.run().status === 'NOT_STARTED' && f.events.length === 0, 'prospective date boundary');
+  check(f.run().status === 'PURCHASE_CAPTURED' && f.events.length === 1, 'pre-cutoff date captured');
   check(JSON.stringify(authority) === baseline, 'conversion authority preserved');
   return { status: 'PASS', assertions: count };
 }
