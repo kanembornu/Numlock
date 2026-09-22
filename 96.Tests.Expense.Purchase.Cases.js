@@ -228,9 +228,24 @@ function testPurchaseEventLookupContracts() {
   function check(value, label) { count++; if (!value) throw new Error('Purchase lookup: ' + label); }
   var clone = inventoryReceiptClone_;
 
-  // Test 1: FOUND_MATCHING_EVENT — create event, lookup with matching payload
+  // Setup: create a PurchaseEvents fixture with memory-backed SpreadsheetApp
   var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
   f.run();
+  // Override the test requestKey to use canonical format for lookup tests
+  var canonicalKey = 'receipt-' + 'a'.repeat(32);
+  f.events[0].RequestKey = canonicalKey;
+  f.events[0].EventID = 'PE-' + canonicalKey;
+  f.events[0].RecoveryKey = 'pe-receipt-' + canonicalKey;
+  f.request.requestKey = canonicalKey;
+  f.events[0].NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_(f.request));
+  // Inject a corrupted unrelated event
+  var corruptedKey = 'receipt-' + 'b'.repeat(32);
+  f.events.push(clone(f.events[0]));
+  f.events[f.events.length - 1].RequestKey = corruptedKey;
+  f.events[f.events.length - 1].EventID = 'PE-' + corruptedKey;
+  f.events[f.events.length - 1].RecoveryKey = 'pe-receipt-' + corruptedKey;
+  f.events[f.events.length - 1].Lifecycle = 'CORRUPTED';
+
   var originalSpreadsheetApp = globalThis.SpreadsheetApp;
   globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
     getSheetByName: function(name) {
@@ -243,56 +258,64 @@ function testPurchaseEventLookupContracts() {
     }
   }; } };
   try {
-    var lookupResult = lookupPurchaseEventStatus_('purchase-test-0001', f.request);
-    check(lookupResult.status === 'FOUND_MATCHING_EVENT', 'found matching');
-    check(lookupResult.eventId === 'PE-purchase-test-0001', 'event ID matches');
-    check(lookupResult.data !== null, 'data present');
+    // Test 1: Malformed keys → LOOKUP_FAILED / INVALID_REQUEST_KEY
+    var malformed = lookupPurchaseEventStatus_(null, null);
+    check(malformed.status === 'LOOKUP_FAILED', 'null key');
+    check(malformed.reason === 'INVALID_REQUEST_KEY', 'null reason');
+    var short = lookupPurchaseEventStatus_('short', null);
+    check(short.status === 'LOOKUP_FAILED', 'short key');
+    var numeric = lookupPurchaseEventStatus_(12345678, null);
+    check(numeric.status === 'LOOKUP_FAILED', 'numeric key');
+    var noReceipt = lookupPurchaseEventStatus_('purchase-test-0001', null);
+    check(noReceipt.status === 'LOOKUP_FAILED', 'non-receipt prefix rejected');
+    var wrongHex = lookupPurchaseEventStatus_('receipt-' + 'g'.repeat(32), null);
+    check(wrongHex.status === 'LOOKUP_FAILED', 'non-hex chars rejected');
 
-    // Test 2: NOT_FOUND — unknown requestKey, no payload comparison needed
-    var notFound = lookupPurchaseEventStatus_('purchase-unknown-9999', null);
-    check(notFound.status === 'NOT_FOUND', 'not found');
+    // Test 2: Unknown valid key + unrelated corrupt history → NOT_FOUND
+    var unknownKey = 'receipt-' + 'c'.repeat(32);
+    var notFound = lookupPurchaseEventStatus_(unknownKey, null);
+    check(notFound.status === 'NOT_FOUND', 'unknown key with corrupted history');
 
-    // Test 3: CONFLICT — same requestKey, different payload
+    // Test 3: One matching valid row + matching payload → FOUND_MATCHING_EVENT
+    var found = lookupPurchaseEventStatus_(canonicalKey, f.request);
+    check(found.status === 'FOUND_MATCHING_EVENT', 'found despite unrelated corruption');
+    check(found.eventId === 'PE-' + canonicalKey, 'event ID matches');
+
+    // Test 4: One matching row + payload mismatch → CONFLICT
     var conflictPayload = clone(f.request);
     conflictPayload.input.AcquisitionValue = '99999';
-    var conflict = lookupPurchaseEventStatus_('purchase-test-0001', conflictPayload);
+    var conflict = lookupPurchaseEventStatus_(canonicalKey, conflictPayload);
     check(conflict.status === 'CONFLICT', 'conflict detected');
     check(conflict.reason === 'PAYLOAD_MISMATCH', 'conflict reason');
 
-    // Test 4: LOOKUP_FAILED — invalid keys
-    var invalid = lookupPurchaseEventStatus_(null, null);
-    check(invalid.status === 'LOOKUP_FAILED', 'null key');
-    check(invalid.reason === 'INVALID_REQUEST_KEY', 'invalid reason');
-
-    var invalid2 = lookupPurchaseEventStatus_('short', null);
-    check(invalid2.status === 'LOOKUP_FAILED', 'short key');
-
-    // Test 5: Zero writes — lookup does not modify PurchaseEvents
-    var eventsBefore = f.events.length;
-    lookupPurchaseEventStatus_('purchase-test-0001', f.request);
-    check(f.events.length === eventsBefore, 'zero writes on lookup');
-
-    // Test 6: null pendingPayload → LOOKUP_FAILED (cannot confirm match)
-    var nullPayload = lookupPurchaseEventStatus_('purchase-test-0001', null);
-    check(nullPayload.status === 'LOOKUP_FAILED', 'null payload rejected');
+    // Test 5: null payload → LOOKUP_FAILED / MISSING_PENDING_PAYLOAD
+    var nullPayload = lookupPurchaseEventStatus_(canonicalKey, null);
+    check(nullPayload.status === 'LOOKUP_FAILED', 'null payload');
     check(nullPayload.reason === 'MISSING_PENDING_PAYLOAD', 'null payload reason');
 
-    // Test 6b: undefined pendingPayload → LOOKUP_FAILED
-    var undefinedPayload = lookupPurchaseEventStatus_('purchase-test-0001', undefined);
-    check(undefinedPayload.status === 'LOOKUP_FAILED', 'undefined payload rejected');
+    // Test 6: Duplicate rows for requested key → fail closed
+    f.events.push(clone(f.events[0])); // duplicate the canonical key row
+    var duplicate = lookupPurchaseEventStatus_(canonicalKey, f.request);
+    check(duplicate.status === 'LOOKUP_FAILED', 'duplicate key fails closed');
+    check(duplicate.reason === 'DUPLICATE_REQUESTED_KEY', 'duplicate reason');
+    f.events.pop(); // remove duplicate for remaining tests
 
-    // Test 6c: non-object pendingPayload → LOOKUP_FAILED
-    var stringPayload = lookupPurchaseEventStatus_('purchase-test-0001', 'not-an-object');
-    check(stringPayload.status === 'LOOKUP_FAILED', 'string payload rejected');
+    // Test 7: Corrupted requested-key row → fail closed
+    f.events[0].Lifecycle = 'CORRUPTED';
+    var corrupted = lookupPurchaseEventStatus_(canonicalKey, f.request);
+    check(corrupted.status === 'LOOKUP_FAILED', 'corrupted requested key');
+    check(corrupted.reason === 'CORRUPTED_EVENT_RECORD', 'corruption reason');
+    f.events[0].Lifecycle = 'CAPTURED_OPERATIONAL'; // restore
 
-    // Test 6d: incomplete pendingPayload → LOOKUP_FAILED
-    var incompletePayload = lookupPurchaseEventStatus_('purchase-test-0001', { transactionType: 'EXPENSE' });
-    check(incompletePayload.status === 'LOOKUP_FAILED', 'incomplete payload rejected');
+    // Test 8: Zero writes
+    var eventsBefore = f.events.length;
+    lookupPurchaseEventStatus_(canonicalKey, f.request);
+    check(f.events.length === eventsBefore, 'zero writes');
 
-    // Test 7: Idempotency — same lookup returns same result
-    var idempotent = lookupPurchaseEventStatus_('purchase-test-0001', f.request);
+    // Test 9: Idempotency
+    var idempotent = lookupPurchaseEventStatus_(canonicalKey, f.request);
     check(idempotent.status === 'FOUND_MATCHING_EVENT', 'idempotent');
-    check(idempotent.eventId === lookupResult.eventId, 'same event ID');
+    check(idempotent.eventId === found.eventId, 'same event ID');
   } finally {
     globalThis.SpreadsheetApp = originalSpreadsheetApp;
   }

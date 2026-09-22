@@ -217,9 +217,15 @@ function projectPurchaseEventTransaction_(row) {
     financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: false };
 }
 
-// Read-only status lookup with payload matching. Zero writes.
+// Purchase lookup canonical requestKey: receipt- prefix + 32 hex chars from crypto.getRandomValues.
+// Production-only format. Test fixtures may use broader keys via normalizePurchaseEventRequest_.
+var PURCHASE_LOOKUP_KEY_PATTERN = /^receipt-[0-9a-f]{32}$/;
+
+// Read-only status lookup with targeted single-key inspection. Zero writes.
+// Does NOT call purchaseEventHistory_ (which validates all rows globally).
+// Inspects only records relevant to the requested requestKey.
 function lookupPurchaseEventStatus_(requestKey, pendingPayload) {
-  if (typeof requestKey !== 'string' || !requestKey || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,100}$/.test(requestKey)) {
+  if (typeof requestKey !== 'string' || !requestKey || !PURCHASE_LOOKUP_KEY_PATTERN.test(requestKey)) {
     return { status: 'LOOKUP_FAILED', reason: 'INVALID_REQUEST_KEY', requestKey: requestKey || null };
   }
   try {
@@ -227,10 +233,20 @@ function lookupPurchaseEventStatus_(requestKey, pendingPayload) {
     var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!sheet || sheet.getLastRow() <= 1) return { status: 'NOT_FOUND', requestKey: requestKey };
     var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
-    var history = purchaseEventHistory_(rows);
-    var match = history[requestKey];
-    if (!match) return { status: 'NOT_FOUND', requestKey: requestKey };
-    // Require valid pending payload for comparison — missing payload cannot confirm match
+    // Targeted scan: collect ALL rows matching this requestKey
+    var matches = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].RequestKey === requestKey) matches.push(rows[i]);
+    }
+    if (matches.length === 0) return { status: 'NOT_FOUND', requestKey: requestKey };
+    // Duplicate rows for the same requestKey → fail closed
+    if (matches.length > 1) return { status: 'LOOKUP_FAILED', reason: 'DUPLICATE_REQUESTED_KEY', requestKey: requestKey };
+    var match = matches[0];
+    // Validate the matched row's basic integrity (not the entire history)
+    if (match.EventID !== 'PE-' + requestKey || match.IsActive !== true || match.Lifecycle !== 'CAPTURED_OPERATIONAL') {
+      return { status: 'LOOKUP_FAILED', reason: 'CORRUPTED_EVENT_RECORD', requestKey: requestKey };
+    }
+    // Require valid pending payload for comparison
     if (!pendingPayload || typeof pendingPayload !== 'object' || !pendingPayload.transactionType || !pendingPayload.requestKey || !pendingPayload.input) {
       return { status: 'LOOKUP_FAILED', reason: 'MISSING_PENDING_PAYLOAD', requestKey: requestKey };
     }
