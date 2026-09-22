@@ -27,6 +27,9 @@ permission:
     "clasp push --force": allow
     "clasp version *": ask
     "clasp deploy *": ask
+    "clasp run runAllBackendTests": allow
+    "clasp run validateFinanceProductionRuntime": allow
+    "clasp run runAllBackendTestsDiagnostic": allow
     "node tests/browser/*.js": ask
     "node --check tests/browser/*.js": allow
   read: allow
