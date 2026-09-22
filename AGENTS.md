@@ -11,6 +11,30 @@ NUMLOCK is a Google Apps Script V8 web application and business-intelligence das
 - Treat a prompt as a `CURRENT TASK` when it continues, corrects, or narrows work already in progress.
 - Use token-saving mode for simple tasks: inspect only what is relevant, communicate concisely, avoid unnecessary tooling, and stop immediately when the requested scope is complete.
 
+## Task Prompt Minimality Contract
+
+Task prompts are the authoritative delta layer over repository contracts.
+
+- Task prompts contain only task-specific deltas. Existing repository contracts are inherited automatically.
+- Routing, execution, safety, evidence, testing, recovery, Git/clasp policy, and other established rules must not be repeated unless the task introduces an exception or new boundary.
+- COMPACT is the default task format. EXTENDED is used only when additional task-specific boundaries or acceptance semantics are not already authoritative. EXPLICIT/CRITICAL is reserved for new contracts, ambiguous/high-risk boundaries, activation/migration/destructive operations, or explicit operational exceptions.
+- Technical complexity alone does not justify a longer prompt.
+- Omit empty or non-applicable task sections.
+- Reports request only fields needed to determine acceptance and the next gate.
+
+### Default Compact Structure
+
+````markdown
+[TASK TYPE] — <Task Name>
+
+OBJECTIVE
+SCOPE
+REQUIRED OUTCOME
+TASK-SPECIFIC INVARIANTS   # omit when none
+ACCEPTANCE
+REPORT
+````
+
 ## Required Workflow
 
 1. Inspect the repository state, applicable instructions, and every relevant target or reference file before editing.
