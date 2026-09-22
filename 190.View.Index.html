@@ -3463,7 +3463,7 @@
 
               <section id="receiptEntryFields" class="transaction-entry-fields" aria-labelledby="receiptEntryHeading" hidden>
                 <h3 id="receiptEntryHeading">Purchase details</h3>
-                <p>Purchase recording is not active yet.</p>
+                <p>Record purchase details for cost tracking.</p>
                 <fieldset id="receiptEntryControls" class="transaction-entry-fieldset">
                 <div class="transaction-entry-control"><label for="receiptDate">Receipt date (if different)</label><input id="receiptDate" type="date" aria-describedby="receiptDateError"><p id="receiptDateError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptQty">Received quantity (leave blank if unknown)</label><input id="receiptQty" type="text" inputmode="decimal" onchange="validateReceiptEntry(true)" aria-describedby="receiptQtyError"><p id="receiptQtyError" class="transaction-entry-error" role="alert"></p></div>
@@ -3476,6 +3476,7 @@
                 </fieldset>
                 <p id="receiptChoicesState" role="status" aria-live="polite"></p>
                 <button id="receiptRecovery" type="button" class="transaction-entry-secondary" onclick="recoverReceiptEntry()" hidden>Check purchase status</button>
+                <button id="receiptRetry" type="button" class="transaction-entry-primary" onclick="retryPurchaseEntry()" hidden>Retry Purchase</button>
               </section>
 
               <div id="transactionCorrectionWorkspace" class="transaction-correction-workspace">
@@ -4030,7 +4031,8 @@
         "transactionCorrectionReasonError", "transactionCorrectionReview", "transactionCorrectionComparison"
       ];
       var receiptIds = { fields: "receiptEntryFields", controls: "receiptEntryControls",
-        costType: "expenseCostType", expenseDate: "expenseDate", expenseDateError: "expenseDateError", policyFields: "expensePolicyFields", status: "receiptChoicesState", recovery: "receiptRecovery" };
+        costType: "expenseCostType", expenseDate: "expenseDate", expenseDateError: "expenseDateError", policyFields: "expensePolicyFields", status: "receiptChoicesState",
+        recovery: "receiptRecovery", retry: "receiptRetry" };
       ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested"].forEach(function(key) {
         receiptIds[key] = "receipt" + key; receiptIds[key + "Error"] = "receipt" + key + "Error";
       });

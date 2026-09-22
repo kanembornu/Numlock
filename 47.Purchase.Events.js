@@ -147,6 +147,7 @@ function purchaseEventResult_(status, reason, row, key, writes, receipt) {
 // Policy injection is private and test-only; the public dispatcher supplies no override.
 function orchestratePurchaseEventUnderLock_(payload, runtime, scope, policies) {
   var row = null, writes = 0, key = payload && payload.requestKey;
+  var writePhase = null;
   try {
     requireInventoryReceiptLock_(runtime, scope);
     if (policies === undefined) policies = { expenseEnabled: EXPENSE_PURCHASE_POLICY.enabled, purchaseEnabled: PURCHASE_EVENT_POLICY.enabled };
@@ -164,11 +165,14 @@ function orchestratePurchaseEventUnderLock_(payload, runtime, scope, policies) {
     if (!row) {
       row = buildPurchaseEvent_(request, state.expenses, state, runtime.audit());
       // Mark uncertainty before calling the append: exceptions cannot establish a zero write.
+      writePhase = 'APPEND';
       writes = 'UNKNOWN';
       runtime.appendEvent(inventoryReceiptClone_(row));
+      writePhase = 'READBACK';
       var stored = purchaseEventHistory_(runtime.read().events)[key];
       if (!stored || JSON.stringify(stored) !== JSON.stringify(row)) inventoryReceiptFail_('PURCHASE_READBACK_UNCERTAIN');
       row = stored; writes = 1;
+      writePhase = 'CONFIRMED';
     }
     var plan = JSON.parse(row.ReceiptPlan);
     if (!plan) return purchaseEventResult_('PURCHASE_CAPTURED', null, row, key, writes);
@@ -186,8 +190,10 @@ function orchestratePurchaseEventUnderLock_(payload, runtime, scope, policies) {
     return purchaseEventResult_(result.status === 'OPERATIONAL_POSTED' ? result.status :
       result.status === 'WRITE_UNCERTAIN' ? 'WRITE_UNCERTAIN' : 'PURCHASE_PENDING', result.reason, row, key, writes, result);
   } catch (error) {
+    var reason = error.message;
+    if (writes === 'UNKNOWN' && writePhase) reason = writePhase + ':' + reason;
     return purchaseEventResult_(writes === 'UNKNOWN' ? 'WRITE_UNCERTAIN' : /CONFLICT/.test(error.message) ? 'CONFLICT' :
-      row ? 'PURCHASE_PENDING' : 'NOT_STARTED', error.message, row, key, writes);
+      row ? 'PURCHASE_PENDING' : 'NOT_STARTED', reason, row, key, writes);
   }
 }
 
@@ -209,6 +215,44 @@ function projectPurchaseEventTransaction_(row) {
       'Cost recorded. Quantity or package is not verified for stock tracking.' :
       'Purchase recorded. Stock tracking requires separate verification.',
     financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: false };
+}
+
+// Read-only status lookup with payload matching. Zero writes.
+function lookupPurchaseEventStatus_(requestKey, pendingPayload) {
+  if (typeof requestKey !== 'string' || !requestKey || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,100}$/.test(requestKey)) {
+    return { status: 'LOOKUP_FAILED', reason: 'INVALID_REQUEST_KEY', requestKey: requestKey || null };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: 'NOT_FOUND', requestKey: requestKey };
+    var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
+    var history = purchaseEventHistory_(rows);
+    var match = history[requestKey];
+    if (!match) return { status: 'NOT_FOUND', requestKey: requestKey };
+    // Require valid pending payload for comparison — missing payload cannot confirm match
+    if (!pendingPayload || typeof pendingPayload !== 'object' || !pendingPayload.transactionType || !pendingPayload.requestKey || !pendingPayload.input) {
+      return { status: 'LOOKUP_FAILED', reason: 'MISSING_PENDING_PAYLOAD', requestKey: requestKey };
+    }
+    // Payload matching: normalize pending payload and compare with stored NormalizedPayload
+    try {
+      var normalized = normalizePurchaseEventRequest_(pendingPayload);
+      if (match.NormalizedPayload !== JSON.stringify(normalized)) {
+        return { status: 'CONFLICT', requestKey: requestKey, reason: 'PAYLOAD_MISMATCH' };
+      }
+    } catch (e) {
+      return { status: 'LOOKUP_FAILED', reason: 'INVALID_PENDING_PAYLOAD', requestKey: requestKey };
+    }
+    return { status: 'FOUND_MATCHING_EVENT', requestKey: requestKey, eventId: match.EventID,
+      data: projectPurchaseEventTransaction_(match) };
+  } catch (error) {
+    return { status: 'LOOKUP_FAILED', reason: error.message, requestKey: requestKey };
+  }
+}
+
+// Public RPC entry point — callable from google.script.run.
+function lookupPurchaseEventStatus(requestKey, pendingPayload) {
+  return lookupPurchaseEventStatus_(requestKey, pendingPayload);
 }
 
 function readPurchaseEventTransactionRows_(ss) {

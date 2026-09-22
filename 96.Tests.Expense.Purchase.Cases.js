@@ -223,6 +223,83 @@ function testCanonicalPurchaseDispatcherContracts(authority, expenses) {
   return {status:'PASS',assertions:count};
 }
 
+function testPurchaseEventLookupContracts() {
+  var count = 0;
+  function check(value, label) { count++; if (!value) throw new Error('Purchase lookup: ' + label); }
+  var clone = inventoryReceiptClone_;
+
+  // Test 1: FOUND_MATCHING_EVENT — create event, lookup with matching payload
+  var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  f.run();
+  var originalSpreadsheetApp = globalThis.SpreadsheetApp;
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name !== PURCHASE_EVENT_POLICY.sheet) return null;
+      return { getLastRow: function() { return f.events.length + 1; }, getDataRange: function() { return { getValues: function() {
+        return [PURCHASE_EVENT_POLICY.headers.slice()].concat(f.events.map(function(row) {
+          return PURCHASE_EVENT_POLICY.headers.map(function(header) { return row[header]; });
+        }));
+      } }; } };
+    }
+  }; } };
+  try {
+    var lookupResult = lookupPurchaseEventStatus_('purchase-test-0001', f.request);
+    check(lookupResult.status === 'FOUND_MATCHING_EVENT', 'found matching');
+    check(lookupResult.eventId === 'PE-purchase-test-0001', 'event ID matches');
+    check(lookupResult.data !== null, 'data present');
+
+    // Test 2: NOT_FOUND — unknown requestKey, no payload comparison needed
+    var notFound = lookupPurchaseEventStatus_('purchase-unknown-9999', null);
+    check(notFound.status === 'NOT_FOUND', 'not found');
+
+    // Test 3: CONFLICT — same requestKey, different payload
+    var conflictPayload = clone(f.request);
+    conflictPayload.input.AcquisitionValue = '99999';
+    var conflict = lookupPurchaseEventStatus_('purchase-test-0001', conflictPayload);
+    check(conflict.status === 'CONFLICT', 'conflict detected');
+    check(conflict.reason === 'PAYLOAD_MISMATCH', 'conflict reason');
+
+    // Test 4: LOOKUP_FAILED — invalid keys
+    var invalid = lookupPurchaseEventStatus_(null, null);
+    check(invalid.status === 'LOOKUP_FAILED', 'null key');
+    check(invalid.reason === 'INVALID_REQUEST_KEY', 'invalid reason');
+
+    var invalid2 = lookupPurchaseEventStatus_('short', null);
+    check(invalid2.status === 'LOOKUP_FAILED', 'short key');
+
+    // Test 5: Zero writes — lookup does not modify PurchaseEvents
+    var eventsBefore = f.events.length;
+    lookupPurchaseEventStatus_('purchase-test-0001', f.request);
+    check(f.events.length === eventsBefore, 'zero writes on lookup');
+
+    // Test 6: null pendingPayload → LOOKUP_FAILED (cannot confirm match)
+    var nullPayload = lookupPurchaseEventStatus_('purchase-test-0001', null);
+    check(nullPayload.status === 'LOOKUP_FAILED', 'null payload rejected');
+    check(nullPayload.reason === 'MISSING_PENDING_PAYLOAD', 'null payload reason');
+
+    // Test 6b: undefined pendingPayload → LOOKUP_FAILED
+    var undefinedPayload = lookupPurchaseEventStatus_('purchase-test-0001', undefined);
+    check(undefinedPayload.status === 'LOOKUP_FAILED', 'undefined payload rejected');
+
+    // Test 6c: non-object pendingPayload → LOOKUP_FAILED
+    var stringPayload = lookupPurchaseEventStatus_('purchase-test-0001', 'not-an-object');
+    check(stringPayload.status === 'LOOKUP_FAILED', 'string payload rejected');
+
+    // Test 6d: incomplete pendingPayload → LOOKUP_FAILED
+    var incompletePayload = lookupPurchaseEventStatus_('purchase-test-0001', { transactionType: 'EXPENSE' });
+    check(incompletePayload.status === 'LOOKUP_FAILED', 'incomplete payload rejected');
+
+    // Test 7: Idempotency — same lookup returns same result
+    var idempotent = lookupPurchaseEventStatus_('purchase-test-0001', f.request);
+    check(idempotent.status === 'FOUND_MATCHING_EVENT', 'idempotent');
+    check(idempotent.eventId === lookupResult.eventId, 'same event ID');
+  } finally {
+    globalThis.SpreadsheetApp = originalSpreadsheetApp;
+  }
+
+  return { status: 'PASS', assertions: count };
+}
+
 // Actual production adapter over memory sheets; no global services or flag mutation.
 function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
   var count = 0;

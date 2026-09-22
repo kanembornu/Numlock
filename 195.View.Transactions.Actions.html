@@ -545,7 +545,62 @@
 
     function recoverReceiptEntry()
     {
-      if (transactionEntryState.receiptUnresolved && transactionEntryState.receiptPayload) submitReceiptEntry();
+      var state = transactionEntryState;
+      if (!state.receiptUnresolved || !state.receiptPayload) return;
+      state.submitting = true;
+      receiptEntryElements().recovery.disabled = true;
+      updateTransactionEntrySubmitState();
+      google.script.run.withSuccessHandler(function(response) {
+        if (state !== transactionEntryState) return;
+        state.submitting = false;
+        handleLookupResponse(response);
+      }).withFailureHandler(function() {
+        if (state !== transactionEntryState) return;
+        state.submitting = false;
+        handleLookupResponse({ status: 'LOOKUP_FAILED' });
+      }).lookupPurchaseEventStatus(state.receiptPayload.requestKey, state.receiptPayload);
+    }
+
+    function handleLookupResponse(response)
+    {
+      var state = transactionEntryState, e = receiptEntryElements();
+      var entry = initializeStableDashboardElements().transactionEntry;
+      e.recovery.disabled = false;
+      if (response && response.status === 'FOUND_MATCHING_EVENT') {
+        window.sessionStorage.removeItem("numlock.receipt.pending");
+        state.receiptUnresolved = false; state.submissionComplete = true;
+        state.successResult = response.data;
+        var input = state.receiptPayload.input;
+        entry.form.hidden = true; entry.submitRegion.hidden = true;
+        entry.success.querySelector("h3").innerText = "Purchase found";
+        entry.successDetails.innerHTML = detailRowsHtml([["Status", response.data.operationalNote || "Purchase recorded."], ["Receipt date", input.ReceiptDate],
+          ["Acquisition cost", formatEntryCurrency(input.AcquisitionValue)]]);
+        entry.success.hidden = false; entry.success.focus();
+        invalidateTransactionsClientCaches(); requestTransactionsPage();
+        return;
+      }
+      // All other states preserve pending — do NOT clear receiptPayload or sessionStorage
+      state.receiptUnresolved = true;
+      if (response && response.status === 'NOT_FOUND') {
+        entry.generalError.innerText = "Purchase not found on server. You may retry this purchase.";
+        e.recovery.hidden = true;
+        e.retry.hidden = false;
+      } else if (response && response.status === 'CONFLICT') {
+        entry.generalError.innerText = "Purchase conflicts with an existing record. Review the receipt details.";
+      } else {
+        entry.generalError.innerText = "Could not check purchase status. Try again later.";
+      }
+      updateExpensePurchaseFields();
+      updateTransactionEntrySubmitState();
+    }
+
+    function retryPurchaseEntry()
+    {
+      var state = transactionEntryState;
+      if (!state.receiptUnresolved || !state.receiptPayload) return;
+      receiptEntryElements().retry.hidden = true;
+      receiptEntryElements().recovery.hidden = false;
+      submitReceiptEntry();
     }
 
     function handleReceiptEntryResponse(response)
@@ -588,7 +643,8 @@
         var field = fields[reason];
         if (field) { e[field + "Error"].innerText = "Review this " + ({ expenseDate: "expense date", Date: "receipt date", Qty: "quantity", Uom: "unit or package", Cost: "acquisition cost" }[field]) + "."; e[field].setAttribute("aria-invalid", "true"); }
       } else {
-        entry.generalError.innerText = "The purchase result is uncertain. Do not enter a new purchase. Check this purchase status using the same request.";
+        var diagnostic = reason && reason.indexOf(':') !== -1 ? ' (' + reason.split(':')[0] + ')' : '';
+        entry.generalError.innerText = "The purchase result is uncertain" + diagnostic + ". Check purchase status to verify, or retry with the same request.";
       }
       if (definitiveRefusal) { state.receiptPayload = null; window.sessionStorage.removeItem("numlock.receipt.pending"); }
       updateExpensePurchaseFields();

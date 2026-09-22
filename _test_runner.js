@@ -107,7 +107,10 @@ run('testCanonicalPurchaseDispatcherContracts', 'testCanonicalPurchaseDispatcher
 // 4. Runtime wiring — production-runtime adapter over memory sheets
 run('testPurchaseEventRuntimeWiringContracts', 'testPurchaseEventRuntimeWiringContracts(_authority, _testItems)');
 
-// 5. Schema migration — pre-activation operation; guard proves post-activation safety.
+// 5. Read-only purchase-event status lookup.
+run('testPurchaseEventLookupContracts', 'testPurchaseEventLookupContracts()');
+
+// 6. Schema migration — pre-activation operation; guard proves post-activation safety.
 run('testPurchaseEventSchemaMigrationContracts', 'testPurchaseEventSchemaMigrationContracts()');
 
 console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
