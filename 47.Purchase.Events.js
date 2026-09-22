@@ -5,6 +5,12 @@ var PURCHASE_EVENT_POLICY = Object.freeze({ version: 'PURCHASE-EVENTS-V1', enabl
     'SupplierSource', 'ExternalRef', 'ExternalDocumentStatus', 'Attestation', 'AllocationStatus', 'RequestKey',
     'NormalizedPayload', 'ReceiptPlan', 'Lifecycle', 'RecoveryKey', 'CreatedAt', 'CreatedBy', 'IsActive']) });
 
+// One-shot evidence resolution for PurchaseEvents. One resolution per EventID.
+var PURCHASE_RESOLUTION_POLICY = Object.freeze({ version: 'PURCHASE-RESOLUTIONS-V1', enabled: true,
+  sheet: 'PurchaseEventResolutions',
+  headers: Object.freeze(['ResolutionID', 'RequestKey', 'EventID', 'ResolutionPayload',
+    'ReceiptPlan', 'AllocationStatus', 'Status', 'CreatedAt', 'CreatedBy']) });
+
 // Construction is lazy: disabled dispatch never reads or writes the purchase store.
 function purchaseEventProductionRuntime_(ss, lock, expenses, timestamp, policies) {
   if (policies === undefined) policies = { expenseEnabled: EXPENSE_PURCHASE_POLICY.enabled, purchaseEnabled: PURCHASE_EVENT_POLICY.enabled };
@@ -224,15 +230,27 @@ function orchestratePurchaseEvent_(payload, runtime, policies) {
   } finally { if (scope) { scope.active = false; runtime.lock.releaseLock(); } }
 }
 
-function projectPurchaseEventTransaction_(row) {
+function projectPurchaseEventTransaction_(row, resolution) {
+  var receiptPlan = row.ReceiptPlan;
+  var allocationStatus = row.AllocationStatus;
+  // Derive effective state from resolution if present
+  if (resolution) {
+    if (resolution.ReceiptPlan && resolution.ReceiptPlan !== 'null') {
+      receiptPlan = resolution.ReceiptPlan;
+    }
+    if (resolution.AllocationStatus) {
+      allocationStatus = resolution.AllocationStatus;
+    }
+  }
   return { id: row.EventID, transactionType: 'PurchaseEvent', canonicalTransactionType: 'PurchaseEvent',
     date: row.ExpenseDate, dateKey: row.ExpenseDate, item: row.BusinessLabel, expenseId: row.ExpenseID,
     purchaseQuantity: row.PurchaseQty, purchaseUOM: row.PurchaseUOM, acquisitionValue: Number(row.AcquisitionValue),
     supplier: row.SupplierSource, reference: row.ExternalRef || 'Document unavailable', isActive: true,
     receiptDate: row.ReceiptDate, operationalStatus: 'Cost recorded',
-    operationalNote: row.ReceiptPlan === 'null' ?
+    operationalNote: receiptPlan === 'null' || receiptPlan === null ?
       'Cost recorded. Quantity or package is not verified for stock tracking.' :
       'Purchase recorded. Stock tracking requires separate verification.',
+    receiptPlan: receiptPlan, allocationStatus: allocationStatus,
     financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: false };
 }
 
@@ -290,11 +308,137 @@ function lookupPurchaseEventStatus(requestKey, pendingPayload) {
   return lookupPurchaseEventStatus_(requestKey, pendingPayload);
 }
 
+// One-shot evidence resolution: enriches quantity/package/conversion evidence
+// for an existing PurchaseEvent without creating a second event.
+function resolvePurchaseEventEvidence_(requestKey, resolution) {
+  if (typeof requestKey !== 'string' || !requestKey || !PURCHASE_LOOKUP_KEY_PATTERN.test(requestKey)) {
+    return { status: 'INVALID_REQUEST_KEY', requestKey: requestKey || null };
+  }
+  if (!resolution || typeof resolution !== 'object') {
+    return { status: 'LOOKUP_FAILED', reason: 'INVALID_RESOLUTION_PAYLOAD', requestKey: requestKey };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    // Read PurchaseEvents
+    var peSheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+    if (!peSheet || peSheet.getLastRow() <= 1) return { status: 'NOT_FOUND', requestKey: requestKey };
+    var peRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
+    var match = null;
+    for (var i = 0; i < peRows.length; i++) {
+      if (peRows[i].RequestKey === requestKey) { match = peRows[i]; break; }
+    }
+    if (!match) return { status: 'NOT_FOUND', requestKey: requestKey };
+    // Validate event state
+    if (match.EventID !== 'PE-' + requestKey || match.IsActive !== true ||
+        match.Lifecycle !== 'CAPTURED_OPERATIONAL') {
+      return { status: 'INVALID_EVENT_STATE', requestKey: requestKey };
+    }
+    // Check existing resolution (one-shot: at most one)
+    var resSheet = ss.getSheetByName(PURCHASE_RESOLUTION_POLICY.sheet);
+    if (resSheet && resSheet.getLastRow() > 1) {
+      var resHeaders = PURCHASE_RESOLUTION_POLICY.headers;
+      var resRows = readCanonicalTable(ss, PURCHASE_RESOLUTION_POLICY.sheet, resHeaders);
+      for (var j = 0; j < resRows.length; j++) {
+        if (resRows[j].RequestKey === requestKey) {
+          // Existing resolution found — check idempotency
+          if (resRows[j].ResolutionPayload === JSON.stringify(resolution)) {
+            return { status: 'ALREADY_RESOLVED', requestKey: requestKey, resolutionId: resRows[j].ResolutionID };
+          }
+          return { status: 'RESOLUTION_CONFLICT', requestKey: requestKey,
+            reason: 'EXISTING_RESOLUTION_DIFFERENT_PAYLOAD' };
+        }
+      }
+    }
+    // Validate resolution payload — must include quantity evidence
+    if (!resolution.PurchaseQty || !resolution.PurchaseUOM) {
+      return { status: 'LOOKUP_FAILED', reason: 'MISSING_QUANTITY_EVIDENCE', requestKey: requestKey };
+    }
+    if (resolution.ConversionEvidenceConfirmed !== true) {
+      return { status: 'LOOKUP_FAILED', reason: 'CONVERSION_EVIDENCE_NOT_CONFIRMED', requestKey: requestKey };
+    }
+    // Build receipt plan from resolution
+    var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === match.ExpenseID; })[0];
+    if (!route) return { status: 'LOOKUP_FAILED', reason: 'INVALID_EXPENSE_POLICY', requestKey: requestKey };
+    var plan = null, allocation = match.AllocationStatus;
+    if (route.PurchaseRelationship === 'DIRECT_HPP_COMPONENT' && resolution.PurchaseQty &&
+        resolution.ConversionEvidenceConfirmed && resolution.ExternalRef) {
+      var resInput = { ItemID: route.inventoryItemIds[0], ReceiptDate: resolution.ReceiptDate || match.ReceiptDate,
+        PurchaseQty: resolution.PurchaseQty, PurchaseUOM: resolution.PurchaseUOM,
+        AcquisitionValue: match.AcquisitionValue, SupplierSource: resolution.SupplierSource || match.SupplierSource,
+        ExternalRef: resolution.ExternalRef, ExternalDocumentStatus: resolution.ExternalDocumentStatus || 'AVAILABLE',
+        Attested: true, PackageIdentity: resolution.PackageIdentity, SupplierRef: resolution.SupplierRef };
+      try {
+        var derived = deriveInventoryReceipt_(resInput, { items: readCanonicalTable(ss, 'InventoryItems', BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS),
+          conversions: readCanonicalTable(ss, 'InventoryUOMConversions', BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS) });
+        var snapshot = derived.row.ConversionSnapshot && JSON.parse(derived.row.ConversionSnapshot);
+        var matching = snapshot && (snapshot.normalization === 'DIRECT_METRIC' ||
+          resInput.ItemID === 'ING-018' && ['gr', 'kg'].indexOf(resolution.PurchaseUOM) !== -1 ||
+          resolution.PackageIdentity && resolution.SupplierRef &&
+          resolution.PackageIdentity === snapshot.authority.PackageIdentity &&
+          resolution.SupplierRef === snapshot.authority.SupplierRef);
+        if (derived.row.Status === 'READY' && matching) {
+          plan = { input: resInput, conversionSnapshot: derived.row.ConversionSnapshot };
+          allocation = 'SINGLE_COMPONENT_EVIDENCED';
+        }
+      } catch (e) { allocation = 'QUANTITY_PACKAGE_UNRESOLVED'; }
+    }
+    // Only write resolution if derivation produced READY state
+    if (!plan) {
+      return { status: 'RESOLUTION_EVIDENCE_INCOMPLETE', requestKey: requestKey,
+        reason: 'deriveInventoryReceipt_ did not produce READY status', writes: 0 };
+    }
+    // Write resolution record
+    var resolutionId = 'PER-' + requestKey;
+    var now = new Date().toISOString();
+    var resolutionRow = {};
+    PURCHASE_RESOLUTION_POLICY.headers.forEach(function(h) { resolutionRow[h] = ''; });
+    resolutionRow.ResolutionID = resolutionId;
+    resolutionRow.RequestKey = requestKey;
+    resolutionRow.EventID = match.EventID;
+    resolutionRow.ResolutionPayload = JSON.stringify(resolution);
+    resolutionRow.ReceiptPlan = JSON.stringify(plan);
+    resolutionRow.AllocationStatus = allocation;
+    resolutionRow.Status = 'RESOLVED';
+    resolutionRow.CreatedAt = now;
+    resolutionRow.CreatedBy = CANONICAL_ENTRY.USER;
+    // Schema must exist before resolution — fail closed if absent
+    if (!resSheet) {
+      return { status: 'SCHEMA_NOT_READY', requestKey: requestKey,
+        reason: 'PurchaseEventResolutions sheet not initialized', writes: 0 };
+    }
+    // Validate headers
+    if (resSheet.getLastColumn() < PURCHASE_RESOLUTION_POLICY.headers.length) {
+      return { status: 'SCHEMA_NOT_READY', requestKey: requestKey,
+        reason: 'PurchaseEventResolutions schema incomplete', writes: 0 };
+    }
+    var target = resSheet.getRange(resSheet.getLastRow() + 1, 1, 1, PURCHASE_RESOLUTION_POLICY.headers.length);
+    target.setNumberFormat('@');
+    target.setValues([PURCHASE_RESOLUTION_POLICY.headers.map(function(h) { return resolutionRow[h]; })]);
+    return { status: 'RESOLVED', requestKey: requestKey, resolutionId: resolutionId,
+      allocationStatus: allocation, receiptPlan: true, writes: 1 };
+  } catch (error) {
+    return { status: 'LOOKUP_FAILED', reason: error.message, requestKey: requestKey };
+  }
+}
+
+// Public RPC — callable from google.script.run.
+function resolvePurchaseEventEvidence(requestKey, resolution) {
+  return resolvePurchaseEventEvidence_(requestKey, resolution);
+}
+
 function readPurchaseEventTransactionRows_(ss) {
   if (!ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet)) return [];
   var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
   purchaseEventHistory_(rows);
-  return rows.map(projectPurchaseEventTransaction_);
+  // Build resolution index
+  var resolutions = {};
+  if (ss.getSheetByName(PURCHASE_RESOLUTION_POLICY.sheet)) {
+    var resRows = readCanonicalTable(ss, PURCHASE_RESOLUTION_POLICY.sheet, PURCHASE_RESOLUTION_POLICY.headers);
+    resRows.forEach(function(r) { resolutions[r.RequestKey] = r; });
+  }
+  return rows.map(function(row) {
+    return projectPurchaseEventTransaction_(row, resolutions[row.RequestKey]);
+  });
 }
 
 // Read-only diagnostic: inspects a specific PurchaseEvent row and evaluates

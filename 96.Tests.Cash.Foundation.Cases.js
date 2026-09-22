@@ -87,10 +87,10 @@ function testCashFoundationContracts() {
     RelatedTransactionID: "PE-REQ-001" });
   var purchasePosting = buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
     purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] });
-  check(purchasePosting.status === "READY" && purchasePosting.rows[0].AccountCode === "6100" &&
+  check(purchasePosting.status === "READY" && purchasePosting.rows[0].AccountCode === "1100" &&
     purchasePosting.rows[0].Debit === 1000 && purchasePosting.rows[1].Credit === 1000 &&
     purchasePosting.rows[1].AccountCode === "1000" && purchasePosting.rows[0].MovementType === "PAID_PURCHASE",
-    "valid purchase settlement");
+    "valid purchase settlement DIRECT_HPP Dr 1100");
   check(purchasePosting.externalCashFlowClassification === "BY_TRANSACTION_SUBSTANCE",
     "purchase settlement has external cash flow classification");
   check(buildCashPostingCandidate(changed(purchaseSettlement, { Amount: 500 }), { accounts: accounts,
@@ -123,10 +123,10 @@ function testCashFoundationContracts() {
   check(buildCashPostingCandidate(purchaseDateEarlier, { accounts: accounts, transactions: transactions,
     purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] }).status === "READY",
     "purchase settlement date earlier than transaction date accepted");
-  var purchaseNoExpenseAccount = changed(purchaseEvents[0], { expenseId: "EXP-NO-ACCT" });
+  var nonHppPurchase = changed(purchaseEvents[0], { purchaseRelationship: "NON_HPP" });
   check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
-    purchaseEvents: [purchaseNoExpenseAccount], balanceLedgerRows: [] }).reason ===
-    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "purchase linked to expense without account code refused");
+    purchaseEvents: [nonHppPurchase], balanceLedgerRows: [] }).reason ===
+    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "NON_HPP purchase event settlement refused");
   var purchaseWrongType = cashFoundationSettlement({ SettlementID: "SET-PE-WRONG", Direction: "OUTFLOW", AccountCode: "1000",
     SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-WRONG", RelatedTransactionType: "Expense",
     RelatedTransactionID: "PE-REQ-001" });
@@ -1253,8 +1253,9 @@ function cashFoundationTestAccounts() {
     { AccountCode: "1000", AccountName: "Cash on Hand", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "1010", AccountName: "DANA Business", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "1020", AccountName: "Cash in Owner Custody - BluBCA", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
-    { AccountCode: "4000", AccountName: "Sales Revenue", AccountType: "Revenue", IsActive: true },
-    { AccountCode: "6100", AccountName: "Salary Expense", AccountType: "Expense", IsActive: true }
+    { AccountCode: "1100", AccountName: "Inventory Asset", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
+    { AccountCode: "4000", AccountName: "Sales Revenue", AccountType: "Revenue", StatementGroup: "Operating Revenue", CashFlowGroup: "Operating", NormalBalance: "CREDIT", IsActive: true },
+    { AccountCode: "6100", AccountName: "Salary Expense", AccountType: "Expense", StatementGroup: "Personnel Expense", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true }
   ];
 }
 
@@ -1278,7 +1279,8 @@ function cashFoundationTransactions() {
 function cashFoundationPurchaseEvents() {
   return [
     { id: "PE-REQ-001", canonicalTransactionType: "PurchaseEvent", dateKey: "2026-10-02",
-      acquisitionValue: 1000, expenseId: "EXP-1", isActive: true }
+      acquisitionValue: 1000, expenseId: "EXP-1", isActive: true,
+      purchaseRelationship: "DIRECT_HPP_COMPONENT", costType: "VARIABLE_COST" }
   ];
 }
 

@@ -609,3 +609,78 @@ function testPurchaseEventIsActiveTypeContract() {
 
   return { status: 'PASS', assertions: count };
 }
+
+function testPurchaseEventResolutionContracts() {
+  var count = 0;
+  function check(value, label) { count++; if (!value) throw new Error('Resolution: ' + label); }
+  var clone = inventoryReceiptClone_;
+  var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  f.run();
+  var canonicalKey = 'receipt-' + 'a'.repeat(32);
+  f.events[0].RequestKey = canonicalKey;
+  f.events[0].EventID = 'PE-' + canonicalKey;
+  f.events[0].RecoveryKey = 'pe-receipt-' + canonicalKey;
+
+  var resolutions = [];
+  function table(headers, objects) {
+    return { getDataRange: function() { return { getValues: function() {
+      return [headers.slice()].concat(objects.map(function(row) {
+        return headers.map(function(header) { return row[header]; });
+      }));
+    } }; } };
+  }
+  var resolutionSheet = {
+    getLastRow: function() { return resolutions.length + 1; },
+    getLastColumn: function() { return PURCHASE_RESOLUTION_POLICY.headers.length; },
+    getRange: function(r, c, rh, cw) { return {
+      setNumberFormat: function() {},
+      setValues: function(values) { resolutions.push(values[0]); }
+    }; },
+    getDataRange: function() { return { getValues: function() {
+      return [PURCHASE_RESOLUTION_POLICY.headers.slice()].concat(resolutions);
+    } }; }
+  };
+  var originalSpreadsheetApp = globalThis.SpreadsheetApp;
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) {
+        var sheet = table(PURCHASE_EVENT_POLICY.headers, f.events);
+        sheet.getLastRow = function() { return f.events.length + 1; };
+        return sheet;
+      }
+      // SCHEMA_NOT_READY is covered by the resolver's null-sheet branch.
+      if (name === PURCHASE_RESOLUTION_POLICY.sheet) return resolutionSheet;
+      if (name === 'InventoryItems') return table(BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS, _authority.items);
+      if (name === 'InventoryUOMConversions') return table(BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS, _authority.conversions);
+      return null;
+    }
+  }; } };
+
+  try {
+    var resolution = { PurchaseQty: '2', PurchaseUOM: 'kg', AcquisitionValue: '20000',
+      SupplierSource: 'TEST', ExternalRef: 'TEST-REF', ExternalDocumentStatus: 'AVAILABLE',
+      ConversionEvidenceConfirmed: true, ExpenseDate: '2026-10-01', ReceiptDate: '2026-10-01' };
+    var result = resolvePurchaseEventEvidence_(canonicalKey, resolution);
+    check(result.status === 'RESOLVED', 'resolved');
+    check(result.resolutionId === 'PER-' + canonicalKey, 'resolution ID');
+    check(resolutions.length === 1, 'one resolution written');
+    check(resolvePurchaseEventEvidence_(canonicalKey, resolution).status === 'ALREADY_RESOLVED', 'idempotent retry');
+    check(resolutions.length === 1, 'no additional write');
+    var different = clone(resolution); different.PurchaseQty = '5';
+    check(resolvePurchaseEventEvidence_(canonicalKey, different).status === 'RESOLUTION_CONFLICT', 'conflict on different payload');
+    check(resolutions.length === 1, 'no write on conflict');
+    check(resolvePurchaseEventEvidence_('short', resolution).status === 'INVALID_REQUEST_KEY', 'invalid key');
+    check(resolvePurchaseEventEvidence_('receipt-' + 'b'.repeat(32), resolution).status === 'NOT_FOUND', 'not found');
+    check(f.events[0].NormalizedPayload !== undefined && f.events[0].RequestKey === canonicalKey, 'original event preserved');
+    check(f.events[0].AcquisitionValue === '20000', 'acquisition value unchanged');
+    check(resolutions.length === 1, 'exactly one resolution total');
+    var projected = projectPurchaseEventTransaction_(f.events[0], {
+      ReceiptPlan: resolutions[0][PURCHASE_RESOLUTION_POLICY.headers.indexOf('ReceiptPlan')],
+      AllocationStatus: resolutions[0][PURCHASE_RESOLUTION_POLICY.headers.indexOf('AllocationStatus')]
+    });
+    check(projected.allocationStatus === result.allocationStatus && projected.receiptPlan !== 'null', 'effective state projected');
+  } finally {
+    globalThis.SpreadsheetApp = originalSpreadsheetApp;
+  }
+  return { status: 'PASS', assertions: count };
+}

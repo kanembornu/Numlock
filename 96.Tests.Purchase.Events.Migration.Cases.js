@@ -36,7 +36,8 @@ function testPurchaseEventSchemaMigrationContracts() {
 
   // Reader: accepts migrated empty schema (mock).
   var ss = { getSheetByName: function(name) {
-    check(name === 'PurchaseEvents', 'reader touches only PurchaseEvents');
+    if (name === 'PurchaseEventResolutions') return null; // no resolutions in migration test
+    check(name === 'PurchaseEvents', 'reader touches only PurchaseEvents and PurchaseEventResolutions');
     return { getDataRange: function() { return { getValues: function() { return [expected]; } }; } };
   } };
   check(readPurchaseEventTransactionRows_(ss).length === 0, 'reader accepts migrated empty schema');
@@ -46,7 +47,8 @@ function testPurchaseEventSchemaMigrationContracts() {
   var purchase = purchaseEventTestFixture_({ items: [], conversions: [] }, expenses, check, 'OSR03');
   var writerData = [expected.slice()];
   var writerSS = { getSheetByName: function(name) {
-    check(name === 'PurchaseEvents', 'writer touches only PurchaseEvents');
+    if (name === 'PurchaseEventResolutions') return null;
+    check(name === 'PurchaseEvents', 'writer touches only PurchaseEvents and PurchaseEventResolutions');
     return { getDataRange: function() { return { getValues: function() { return writerData; } }; } };
   } };
   purchase.runtime.appendEvent = function(row) {
@@ -76,4 +78,61 @@ function testPurchaseEventSchemaMigrationContracts() {
 
   var summary = { status: 'PASS', checks: count, evidence: 'LOCAL_FIXTURE', productionMutation: false };
   Logger.log(JSON.stringify(summary)); return summary;
+}
+
+function testPurchaseResolutionSchemaMigrationContracts() {
+  var count = 0;
+  function check(value, label) { count++; if (!value) throw new Error('Resolution migration: ' + label); }
+
+  // Test 1: Headers validation
+  var headers = purchaseResolutionMigrationHeaders_();
+  check(headers.length === 9, '9 headers');
+  check(headers[0] === 'ResolutionID', 'first header');
+  check(headers[headers.length - 1] === 'CreatedBy', 'last header');
+
+  // Test 2: Classify missing sheet → READY_CREATE
+  var empty = { sheets: [] };
+  var classify1 = purchaseResolutionMigrationClassify_(empty);
+  check(classify1.status === 'READY_CREATE', 'missing sheet READY_CREATE');
+
+  // Test 3: Classify existing compatible sheet → ALREADY_MIGRATED
+  var compatible = { sheets: [{ properties: { title: 'PurchaseEventResolutions', sheetType: 'GRID',
+    sheetId: 1, gridProperties: { columnCount: 9 } },
+    data: [{ startRow: 0, startColumn: 0, rowData: [{ values: headers.map(function(h) {
+      return { userEnteredValue: { stringValue: h } }; }) }] }] }] };
+  var classify2 = purchaseResolutionMigrationClassify_(compatible);
+  check(classify2.status === 'ALREADY_MIGRATED', 'compatible ALREADY_MIGRATED');
+
+  // Test 4: Classify incompatible sheet → BLOCKED
+  var incompatible = { sheets: [{ properties: { title: 'PurchaseEventResolutions', sheetType: 'GRID',
+    sheetId: 1, gridProperties: { columnCount: 5 } },
+    data: [{ startRow: 0, startColumn: 0, rowData: [{ values: [{ userEnteredValue: { stringValue: 'Wrong' } }] }] }] }] };
+  var classify3 = purchaseResolutionMigrationClassify_(incompatible);
+  check(classify3.status === 'BLOCKED', 'incompatible BLOCKED');
+
+  // Test 5: Execute migration on empty state
+  var migrated = false;
+  var mockRuntime = {
+    read: function() { return migrated ? compatible : empty; },
+    batch: function(body) { migrated = true; return { spreadsheetId: 'test' }; }
+  };
+  var result = executePurchaseResolutionSchemaMigration_(mockRuntime);
+  check(result.status === 'MIGRATED', 'migration MIGRATED');
+  check(result.writeCount === 1, 'one write');
+  check(result.headerCount === 9, '9 headers');
+
+  // Test 6: Migration retry is idempotent
+  var retry = executePurchaseResolutionSchemaMigration_(mockRuntime);
+  check(retry.status === 'ALREADY_MIGRATED', 'retry ALREADY_MIGRATED');
+
+  // Test 7: Existing PurchaseEvents migration behavior preserved
+  var purchaseGuarded = false;
+  try { purchaseEventMigrationHeaders_(); } catch (error) {
+    purchaseGuarded = error.message === 'PURCHASE_SCHEMA_OR_ACTIVATION_DRIFT';
+  }
+  check(purchaseGuarded, 'PurchaseEvents post-activation guard unchanged');
+  check(PURCHASE_EVENT_POLICY.headers.length === 25 && PURCHASE_EVENT_POLICY.headers[0] === 'EventID',
+    'PurchaseEvents headers unchanged');
+
+  return { status: 'PASS', assertions: count };
 }

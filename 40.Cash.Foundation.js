@@ -268,22 +268,22 @@ function buildCashPostingCandidate(settlement, context) {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
     var purchaseAmount = Number(purchaseEvent.acquisitionValue || purchaseEvent.AcquisitionValue || 0);
-    var purchaseDate = purchaseEvent.dateKey || purchaseEvent.ExpenseDate || "";
     if (purchaseAmount !== amount) {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
-    var purchaseExpenseId = purchaseEvent.expenseId || purchaseEvent.ExpenseID || "";
-    var linkedExpense = cashTransactionById(context.transactions, purchaseExpenseId, "Expense");
-    if (!linkedExpense || !String(linkedExpense.expenseAccountCode || "").trim()) {
+    // DIRECT_HPP_COMPONENT: debit canonical Inventory Asset (1100), not Expense account.
+    // NON_HPP and other relationships are not routeable through PurchaseEvent settlement.
+    var purchaseRelationship = String(purchaseEvent.purchaseRelationship || purchaseEvent.PurchaseRelationship || "").trim();
+    if (purchaseRelationship !== "DIRECT_HPP_COMPONENT") {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
-    var purchaseExpenseAccountCode = String(linkedExpense.expenseAccountCode).trim();
+    var inventoryAssetAccountCode = BALANCE_FOUNDATION_POLICY.INVENTORY_ASSET_ACCOUNT.AccountCode;
     if (cashTransactionEffectAlreadyPosted(context.balanceLedgerRows, transactionId,
-        purchaseExpenseAccountCode, "Debit")) {
+        inventoryAssetAccountCode, "Debit")) {
       return { status: "REFUSED", reason: "TRANSACTION_EFFECT_ALREADY_POSTED", readOnly: true, writeCount: 0 };
     }
     lines = [
-      cashLedgerLine(journalId, "1", settlement, purchaseExpenseAccountCode, amount, 0,
+      cashLedgerLine(journalId, "1", settlement, inventoryAssetAccountCode, amount, 0,
         "PAID_PURCHASE", sourceType, sourceId),
       cashLedgerLine(journalId, "2", settlement, String(settlement.AccountCode), 0, amount,
         "PAID_PURCHASE", sourceType, sourceId)

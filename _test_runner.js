@@ -115,6 +115,8 @@ run('testPurchaseEventSchemaMigrationContracts', 'testPurchaseEventSchemaMigrati
 
 run('testPurchaseEventDiagnosticContracts', 'testPurchaseEventDiagnosticContracts()');
 run('testPurchaseEventIsActiveTypeContract', 'testPurchaseEventIsActiveTypeContract()');
+run('testPurchaseEventResolutionContracts', 'testPurchaseEventResolutionContracts()');
+run('testPurchaseResolutionSchemaMigrationContracts', 'testPurchaseResolutionSchemaMigrationContracts()');
 
 console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
