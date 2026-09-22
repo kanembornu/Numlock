@@ -28,6 +28,12 @@ function purchaseEventProductionRuntime_(ss, lock, expenses, timestamp, policies
       var target = sheet.getRange(sheet.getLastRow() + 1, 1, 1, PURCHASE_EVENT_POLICY.headers.length);
       target.setNumberFormat('@');
       target.setValues([PURCHASE_EVENT_POLICY.headers.map(function(header) { return row[header]; })]);
+      // Preserve boolean IsActive through text-format coercion: setValues on text-formatted
+      // cells converts boolean true to string "true". Re-assert canonical boolean after write.
+      var isActiveIdx = PURCHASE_EVENT_POLICY.headers.indexOf('IsActive');
+      if (isActiveIdx !== -1 && row.IsActive === true) {
+        sheet.getRange(sheet.getLastRow(), isActiveIdx + 1).setValue(true);
+      }
     }
   };
 }
@@ -441,4 +447,44 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
 // Public RPC entry point — callable from google.script.run.
 function diagnosePurchaseEventIntegrity(requestKey) {
   return diagnosePurchaseEventIntegrity_(requestKey);
+}
+
+// Bounded remediation: fix IsActive type for rows where the ONLY defect is
+// string "true" instead of boolean true. All other integrity predicates must pass.
+// Returns count of remediated rows. Zero writes if no eligible rows found.
+function remediatePurchaseEventIsActiveType_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+  if (!sheet || sheet.getLastRow() <= 1) return { remediated: 0, reason: 'NO_DATA' };
+  var headers = PURCHASE_EVENT_POLICY.headers;
+  var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
+  var isActiveIdx = headers.indexOf('IsActive');
+  if (isActiveIdx === -1) return { remediated: 0, reason: 'NO_ISACTIVE_COLUMN' };
+  var remediated = 0;
+  var skipped = 0;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    // Only remediate rows where IsActive is string "true"
+    if (typeof row.IsActive !== 'string' || row.IsActive !== 'true') { skipped++; continue; }
+    // Check all other integrity predicates (same as purchaseEventHistory_ minus IsActive)
+    var otherPredicatesPass =
+      row.EventID && row.RequestKey && row.EventID === 'PE-' + row.RequestKey &&
+      row.RecoveryKey === 'pe-receipt-' + row.RequestKey &&
+      row.Lifecycle === 'CAPTURED_OPERATIONAL' &&
+      row.ExpenseID && row.ExpenseDate && row.ReceiptDate &&
+      row.AllocationStatus && row.ReceiptPlan &&
+      row.NormalizedPayload && row.PolicyVersion &&
+      row.BusinessLabel && row.CreatedBy &&
+      inventoryTimestampMillis(row.CreatedAt) !== null;
+    if (!otherPredicatesPass) { skipped++; continue; }
+    // Eligible: fix IsActive to boolean true
+    sheet.getRange(i + 2, isActiveIdx + 1).setValue(true);
+    remediated++;
+  }
+  return { remediated: remediated, skipped: skipped, total: rows.length };
+}
+
+// Public RPC — callable from google.script.run.
+function remediatePurchaseEventIsActiveType() {
+  return remediatePurchaseEventIsActiveType_();
 }
