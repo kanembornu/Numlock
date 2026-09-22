@@ -614,5 +614,17 @@
       e.Date.value = input.ReceiptDate; e.Qty.value = input.PurchaseQty; e.Uom.value = input.PurchaseUOM; e.Cost.value = input.AcquisitionValue;
       e.Supplier.value = input.SupplierSource; e.Reference.value = input.ExternalRef;
       e.Unavailable.checked = input.ExternalDocumentStatus === "EXTERNAL_DOCUMENT_UNAVAILABLE"; e.Attested.checked = input.Attested;
-      handleReceiptEntryResponse({ status: "WRITE_UNCERTAIN" });
+      // Automatically check if the purchase was already persisted
+      state.submitting = true;
+      receiptEntryElements().recovery.disabled = true;
+      updateTransactionEntrySubmitState();
+      google.script.run.withSuccessHandler(function(response) {
+        if (state !== transactionEntryState) return;
+        state.submitting = false;
+        handleLookupResponse(response);
+      }).withFailureHandler(function() {
+        if (state !== transactionEntryState) return;
+        state.submitting = false;
+        handleLookupResponse({ status: "WRITE_UNCERTAIN" });
+      }).lookupPurchaseEventStatus(state.receiptPayload.requestKey, state.receiptPayload);
     }
