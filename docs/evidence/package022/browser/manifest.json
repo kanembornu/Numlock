@@ -1,0 +1,888 @@
+{
+  "target": "http://numlock.local/",
+  "source": "local assembled frontend",
+  "version": 586,
+  "frameCount": 80,
+  "frames": [
+    {
+      "frameId": "P022-V001",
+      "filename": "P022-V001-dashboard-overview-1440x900-light-expanded.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V002",
+      "filename": "P022-V002-dashboard-overview-1440x900-light-collapsed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V003",
+      "filename": "P022-V003-dashboard-overview-1440x900-dark-expanded.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V004",
+      "filename": "P022-V004-dashboard-overview-1440x900-dark-collapsed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V005",
+      "filename": "P022-V005-dashboard-overview-1280x768-light-expanded.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V006",
+      "filename": "P022-V006-dashboard-overview-1280x768-light-collapsed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V007",
+      "filename": "P022-V007-dashboard-overview-1280x768-dark-expanded.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V008",
+      "filename": "P022-V008-dashboard-overview-1280x768-dark-collapsed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V009",
+      "filename": "P022-V009-dashboard-overview-768x900-light-drawer-closed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V010",
+      "filename": "P022-V010-dashboard-overview-768x900-light-drawer-open.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V011",
+      "filename": "P022-V011-dashboard-overview-768x900-dark-drawer-closed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V012",
+      "filename": "P022-V012-dashboard-overview-768x900-dark-drawer-open.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V013",
+      "filename": "P022-V013-dashboard-overview-375x812-light-drawer-closed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V014",
+      "filename": "P022-V014-dashboard-overview-375x812-light-drawer-open.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V015",
+      "filename": "P022-V015-dashboard-overview-375x812-dark-drawer-closed.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V016",
+      "filename": "P022-V016-dashboard-overview-375x812-dark-drawer-open.png",
+      "view": "Dashboard Overview",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V017",
+      "filename": "P022-V017-dashboard-performance-1440x900-light-expanded.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V018",
+      "filename": "P022-V018-dashboard-performance-1440x900-light-collapsed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V019",
+      "filename": "P022-V019-dashboard-performance-1440x900-dark-expanded.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V020",
+      "filename": "P022-V020-dashboard-performance-1440x900-dark-collapsed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V021",
+      "filename": "P022-V021-dashboard-performance-1280x768-light-expanded.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V022",
+      "filename": "P022-V022-dashboard-performance-1280x768-light-collapsed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V023",
+      "filename": "P022-V023-dashboard-performance-1280x768-dark-expanded.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V024",
+      "filename": "P022-V024-dashboard-performance-1280x768-dark-collapsed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V025",
+      "filename": "P022-V025-dashboard-performance-768x900-light-drawer-closed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V026",
+      "filename": "P022-V026-dashboard-performance-768x900-light-drawer-open.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V027",
+      "filename": "P022-V027-dashboard-performance-768x900-dark-drawer-closed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V028",
+      "filename": "P022-V028-dashboard-performance-768x900-dark-drawer-open.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V029",
+      "filename": "P022-V029-dashboard-performance-375x812-light-drawer-closed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V030",
+      "filename": "P022-V030-dashboard-performance-375x812-light-drawer-open.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V031",
+      "filename": "P022-V031-dashboard-performance-375x812-dark-drawer-closed.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V032",
+      "filename": "P022-V032-dashboard-performance-375x812-dark-drawer-open.png",
+      "view": "Dashboard Performance",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V033",
+      "filename": "P022-V033-transactions-1440x900-light-expanded.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V034",
+      "filename": "P022-V034-transactions-1440x900-light-collapsed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V035",
+      "filename": "P022-V035-transactions-1440x900-dark-expanded.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V036",
+      "filename": "P022-V036-transactions-1440x900-dark-collapsed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V037",
+      "filename": "P022-V037-transactions-1280x768-light-expanded.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V038",
+      "filename": "P022-V038-transactions-1280x768-light-collapsed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V039",
+      "filename": "P022-V039-transactions-1280x768-dark-expanded.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V040",
+      "filename": "P022-V040-transactions-1280x768-dark-collapsed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V041",
+      "filename": "P022-V041-transactions-768x900-light-drawer-closed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V042",
+      "filename": "P022-V042-transactions-768x900-light-drawer-open.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V043",
+      "filename": "P022-V043-transactions-768x900-dark-drawer-closed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V044",
+      "filename": "P022-V044-transactions-768x900-dark-drawer-open.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V045",
+      "filename": "P022-V045-transactions-375x812-light-drawer-closed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V046",
+      "filename": "P022-V046-transactions-375x812-light-drawer-open.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V047",
+      "filename": "P022-V047-transactions-375x812-dark-drawer-closed.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V048",
+      "filename": "P022-V048-transactions-375x812-dark-drawer-open.png",
+      "view": "Transactions",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V049",
+      "filename": "P022-V049-settings-1440x900-light-expanded.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V050",
+      "filename": "P022-V050-settings-1440x900-light-collapsed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V051",
+      "filename": "P022-V051-settings-1440x900-dark-expanded.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V052",
+      "filename": "P022-V052-settings-1440x900-dark-collapsed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V053",
+      "filename": "P022-V053-settings-1280x768-light-expanded.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V054",
+      "filename": "P022-V054-settings-1280x768-light-collapsed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V055",
+      "filename": "P022-V055-settings-1280x768-dark-expanded.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V056",
+      "filename": "P022-V056-settings-1280x768-dark-collapsed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V057",
+      "filename": "P022-V057-settings-768x900-light-drawer-closed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V058",
+      "filename": "P022-V058-settings-768x900-light-drawer-open.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V059",
+      "filename": "P022-V059-settings-768x900-dark-drawer-closed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V060",
+      "filename": "P022-V060-settings-768x900-dark-drawer-open.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V061",
+      "filename": "P022-V061-settings-375x812-light-drawer-closed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V062",
+      "filename": "P022-V062-settings-375x812-light-drawer-open.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V063",
+      "filename": "P022-V063-settings-375x812-dark-drawer-closed.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V064",
+      "filename": "P022-V064-settings-375x812-dark-drawer-open.png",
+      "view": "Settings",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V065",
+      "filename": "P022-V065-logs-1440x900-light-expanded.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V066",
+      "filename": "P022-V066-logs-1440x900-light-collapsed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V067",
+      "filename": "P022-V067-logs-1440x900-dark-expanded.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V068",
+      "filename": "P022-V068-logs-1440x900-dark-collapsed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V069",
+      "filename": "P022-V069-logs-1280x768-light-expanded.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V070",
+      "filename": "P022-V070-logs-1280x768-light-collapsed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "light",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V071",
+      "filename": "P022-V071-logs-1280x768-dark-expanded.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "expanded"
+    },
+    {
+      "frameId": "P022-V072",
+      "filename": "P022-V072-logs-1280x768-dark-collapsed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 1280,
+        "height": 768
+      },
+      "theme": "dark",
+      "shell": "collapsed"
+    },
+    {
+      "frameId": "P022-V073",
+      "filename": "P022-V073-logs-768x900-light-drawer-closed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V074",
+      "filename": "P022-V074-logs-768x900-light-drawer-open.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V075",
+      "filename": "P022-V075-logs-768x900-dark-drawer-closed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V076",
+      "filename": "P022-V076-logs-768x900-dark-drawer-open.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 768,
+        "height": 900
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V077",
+      "filename": "P022-V077-logs-375x812-light-drawer-closed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V078",
+      "filename": "P022-V078-logs-375x812-light-drawer-open.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "light",
+      "shell": "drawer-open"
+    },
+    {
+      "frameId": "P022-V079",
+      "filename": "P022-V079-logs-375x812-dark-drawer-closed.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-closed"
+    },
+    {
+      "frameId": "P022-V080",
+      "filename": "P022-V080-logs-375x812-dark-drawer-open.png",
+      "view": "Logs",
+      "viewport": {
+        "width": 375,
+        "height": 812
+      },
+      "theme": "dark",
+      "shell": "drawer-open"
+    }
+  ]
+}

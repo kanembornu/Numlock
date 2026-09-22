@@ -30,7 +30,7 @@ The bounded v1.0 feature/backend baseline remains stable. Package 025 establishe
 
 **UI/UX 2.0 Package 021 — COMPLETE locally on 2026-08-06.** Source-search evidence removed only two zero-reference authored selectors, one behavior-free Transactions wrapper, two obsolete comments, and one brittle raw-template assertion. Existing ownership, geometry, behavior, data boundaries, accessibility, performance, response contracts, and Packages 017–020 composition remain unchanged.
 
-**UI/UX 2.0 Package 022 — CLOSURE CANDIDATE locally on 2026-08-06.** The directly runnable closure contract raises the ordered gate to 41 entries and preserves nine-destination, accessibility, theme/chart, performance, and exact-response contracts while explicitly refusing a static visual PASS. Completion remains blocked by the current live, upload/deployment, browser, screenshot, production-health, and rollback evidence listed above.
+**UI/UX 2.0 Package 022 — CLOSED on 2026-09-22.** Production v587 is active. Backend passed 114/114, functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 is remediated. Immutable v585 is the rollback target; rollback drill was not required.
 
 **Package 025 — DESIGN SYSTEM FOUNDATION is COMPLETE locally on 2026-08-09.** Six focused theme/UI contracts and the ordered local `runAllBackendTests()` gate pass at 41/41. Two Tailwind builds produced the same SHA-256 hash, and `git diff --check` passed. The authored CSS and generated Tailwind candidate were uploaded during Packages 025/025A; no upload was performed during closure because source did not change. Apps Script runtime remains unverified because the configured API executable does not expose the current focused or unified functions; deployment and browser visual acceptance were not run.
 
@@ -67,7 +67,7 @@ The bounded v1.0 feature/backend baseline remains stable. Package 025 establishe
 | Current UI/UX 2.0 secondary destinations local/static | Package 019: ten focused contracts and the ordered local 38/38 suite passed. The composition contract reports three destinations, four transaction tabs, five visible columns, maximum ten rows, zero navigation backend requests, 71 ID queries, and two document selectors. Screenshot-based visual fidelity remains unverified. |
 | Current UI/UX 2.0 theme parity local/static | Package 020: 12 focused contracts and the ordered local 39/39 suite passed. The parity contract reports 45 paired Light/Dark tokens, zero chart recreation, zero theme backend requests, 71 ID queries, and two document selectors. Browser contrast and screenshot fidelity remain unverified. |
 | Current UI/UX 2.0 bounded refactor local/static | Package 021: 13 focused contracts and the ordered local 40/40 suite passed. The refactor contract reports five removed symbols, zero tab/navigation requests, 71 ID queries, two selectors, one deferred phase, and no response mutation. Browser regression and screenshot fidelity remain unverified. |
-| Current UI/UX 2.0 closure local/static | Package 022: 15 focused contracts pass; the closure contract records 16 viewport/state combinations and exactly 18 criteria without claiming visual PASS. The ordered runner is 41 entries; live and deployed evidence remain unverified. |
+| Current UI/UX 2.0 closure | Package 022 CLOSED on production v587: backend 114/114 PASS, functional 24/24 PASS, visual 80/80 PASS with 1,440/1,440 criterion decisions, production health 17/17 PASS, VD-001 remediated, and v585 retained for rollback. Rollback drill was not required. |
 | Current UI/UX 2.0 Apps Script runtime | Final `runAllBackendTests()` PASS 34/34. |
 | Current UI/UX 2.0 browser | PASS at 320px, 375px, 768px, 1280×768, and 1440×900 across responsive containment, accessibility, Light/Dark/System, navigation, charts, tables, print, CSV, drill-down, Settings, and Logs. |
 | Current UI/UX 2.0 Git completion | Final stabilization committed as `7fbd2a3` and pushed; `main`, `origin/main`, and `HEAD` align. |
@@ -103,7 +103,7 @@ The bounded dashboard capability set is implemented: Aggregate Engine analytics,
 
 ## 9. Implementation-ready backlog
 
-**Count: 5 remaining UI/UX completion packages (018–022).** Packages 014–017 are complete locally; remaining work is page-level presentation reconstruction and acceptance over the stable feature/backend baseline. The three data/API expansion scopes remain blocked.
+**Count: 0 remaining UI/UX completion packages.** Packages 014–022 are complete, and Package 022 is closed on production v587. The three data/API expansion scopes remain blocked.
 
 ## 10. Blocked backlog
 
@@ -160,8 +160,8 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 - [x] Feature Complete v1.0 status is supported by explicit acceptance evidence.
 - [x] Active runner membership is 40; the production v1.0 runtime evidence remains historical 25/25.
-- [x] Final former-scope UI/UX 2.0 Apps Script live evidence is 34/34 and functional browser acceptance is complete; visual fidelity remains unverified.
-- [x] Three data/API expansion scopes remain blocked; one UI/UX completion package remains active.
+- [x] Package 022 closure evidence is complete: backend 114/114, functional 24/24, visual 80/80 with 1,440/1,440 decisions, and production health 17/17 passed on production v587.
+- [x] Three data/API expansion scopes remain blocked; no UI/UX completion package remains active.
 - [x] Reconcile stale `10/10` and legacy runner references in `RELEASE.md` before executing a release.
 - [x] Start release operations from a clean, reviewed Git worktree.
 - [x] Run the then-current 25-entry unified gate locally against the exact v1.0 release candidate.
@@ -173,7 +173,7 @@ The v1.0 readiness audit on 2026-08-05 produced this criterion matrix. `PASS` me
 
 ## 14. Active-development boundary
 
-Continue UI/UX 2.0 development only within Package 022 while all of these conditions remain true:
+Package 022 is closed. Any later UI/UX work requires separately approved bounded scope while all of these conditions remain true:
 
 - the feature/backend baseline remains stable and unchanged unless separately authorized;
 - version `1.0.0` continues to satisfy the documented bounded product need;
@@ -202,13 +202,13 @@ After v1.0 stabilization, NUMLOCK may evolve from a bounded dashboard into a gov
 
 ## 18. UI/UX 2.0 closure
 
-**CLOSURE CANDIDATE.** Packages 014–021 are implemented and the local Package 022 contract is present. COMPLETE requires current local 41/41, Apps Script live 41/41, exact upload/deployment identity, functional browser PASS, all required screenshots at 18/18, production-health PASS, and the retained prior immutable rollback version. Missing later evidence cannot be inferred from static checks.
+**CLOSED on 2026-09-22.** Production v587 is active. Backend passed 114/114, functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 is remediated. Immutable v585 is retained for rollback; rollback drill was not required.
 
 UI/UX 2.0 must not imply editable targets, broader transaction access, API projection, or new persistence until the corresponding backlog blockers are resolved.
 
 ## 19. Next milestone
 
-**UI/UX 2.0 Package 022 — regression and visual acceptance.** Execute the complete functional, runtime, viewport, theme, state, and approved screenshot matrix before any renewed UI/UX 2.0 closure claim.
+**Package 022 is closed.** Next work is maintenance-only or separately approved demand-driven scope; blocked data/API concepts remain gated.
 
 ## 20. Status-history log
 
@@ -236,3 +236,4 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-06 | UI/UX 2.0 Package 019 | Aligned Transactions, Settings, and Logs with the high-fidelity system, added the secondary-destination composition contract, and raised the ordered local gate to 38/38 without broadening product scope. |
 | 2026-08-06 | UI/UX 2.0 Package 020 | Centralized Light/Dark/System, chart, skeleton, state, and print-light color ownership, added listener lifecycle coverage, and raised the ordered local gate to 39/39 without changing geometry or product behavior. |
 | 2026-08-06 | UI/UX 2.0 Package 021 | Removed five proven reconstruction-debt symbols, replaced one brittle metadata assertion, and raised the ordered local gate to 40/40 without changing geometry or product behavior. |
+| 2026-09-22 | UI/UX 2.0 Package 022 closed | Production v587 active; backend 114/114, functional 24/24, visual 80/80 (1,440/1,440 decisions), and production health 17/17 passed. VD-001 remediated; v585 retained for rollback; rollback drill not required. |

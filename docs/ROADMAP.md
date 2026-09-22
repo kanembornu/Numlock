@@ -278,9 +278,9 @@ Implemented locally. The compiled semantic-token layer now owns Light/Dark divid
 
 Implemented locally. Source-search evidence removed exactly two zero-reference authored selectors, one behavior-free Transactions pass-through helper, two obsolete phase comments, and one brittle raw-template assertion. The remaining shared Transactions renderer has two legitimate callers under one owner; metadata uses distinct utility/About/Print targets from `PROJECT_CONFIG`; listener guards, theme/chart ownership, nine destinations, geometry, and response behavior remain unchanged. `testBoundedUiRefactorContract()` raises the ordered local gate to 40/40 with 71 ID queries, two selectors, one deferred phase, zero tab/navigation requests, and no response mutation. Apps Script runtime, upload, browser regression, and visual acceptance remain separate evidence. Package 022 is the final regression and screenshot-acceptance slice.
 
-### Package 022 — functional and visual regression closure
+### Package 022 — functional and visual regression closure — COMPLETE/CLOSED
 
-Closure Candidate locally. The directly runnable closure contract raises the ordered runner to 41 entries and preserves the full functional, navigation, accessibility, theme/chart, performance, and 37-field response boundaries. No implementation-ready UI package remains. Final closure still requires current live 41/41, exact-candidate upload and immutable deployment, functional browser acceptance, all 80 required screen captures at 18/18, production health, and a recorded prior immutable rollback version; static checks do not satisfy visual acceptance.
+Closed on 2026-09-22. Production v587 is active. Backend passed 114/114, deployed functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 was remediated. Immutable v585 is retained as the rollback target; rollback drill was not required.
 
 ## Design System Foundation
 

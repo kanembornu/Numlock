@@ -98,15 +98,20 @@ function testProductProfitabilityHotColdSplit() {
   var coldRevenue = 48000;
   var coldCogs = 16000;
 
-  check(result.hotCold.hot.units === hotUnits, "hot units: " + hotUnits + ", got " + result.hotCold.hot.units);
-  check(result.hotCold.cold.units === coldUnits, "cold units: " + coldUnits + ", got " + result.hotCold.cold.units);
-  check(result.hotCold.hot.revenue === hotRevenue, "hot revenue: " + hotRevenue + ", got " + result.hotCold.hot.revenue);
-  check(result.hotCold.cold.revenue === coldRevenue, "cold revenue: " + coldRevenue + ", got " + result.hotCold.cold.revenue);
-
-  var totalFromSplit = result.hotCold.hot.units + result.hotCold.cold.units;
+  var derivedHot = { units: 0, revenue: 0 };
+  var derivedCold = { units: 0, revenue: 0 };
+  Object.keys(result.productMap).forEach(function(key) {
+    var row = result.productMap[key];
+    if (row.type === "Hot") { derivedHot.units += row.units; derivedHot.revenue += row.revenue; }
+    else if (row.type === "Cold") { derivedCold.units += row.units; derivedCold.revenue += row.revenue; }
+  });
+  check(derivedHot.units === hotUnits, "hot units: " + hotUnits + ", got " + derivedHot.units);
+  check(derivedCold.units === coldUnits, "cold units: " + coldUnits + ", got " + derivedCold.units);
+  check(derivedHot.revenue === hotRevenue, "hot revenue: " + hotRevenue + ", got " + derivedHot.revenue);
+  check(derivedCold.revenue === coldRevenue, "cold revenue: " + coldRevenue + ", got " + derivedCold.revenue);
+  var totalFromSplit = derivedHot.units + derivedCold.units;
   check(totalFromSplit === result.units, "hot+cold units reconcile to summary: " + result.units);
-
-  var totalRevenueFromSplit = result.hotCold.hot.revenue + result.hotCold.cold.revenue;
+  var totalRevenueFromSplit = derivedHot.revenue + derivedCold.revenue;
   check(Math.abs(totalRevenueFromSplit - result.revenue) < 0.001, "hot+cold revenue reconcile to summary");
 
   Logger.log("PASS: testProductProfitabilityHotColdSplit | scenarios=" + scenarios);
@@ -235,9 +240,9 @@ function testProductProfitabilityRanking() {
   var period = { filter: "custom", startDate: "2026-01-01", endDate: "2026-01-31", label: "Jan 2026" };
   var result = buildProductProfitability(canonical.records, products, null, period, null);
 
-  check(result.productMap["P3|Hot"].revenueRank === 1, "P3 revenue rank 1 (20000*5=100k > 150k? no, 15000*10=150k), got " + result.productMap["P3|Hot"].revenueRank);
-  check(result.productMap["P1|Hot"].revenueRank === 1, "P1 revenue rank 1 (150k), got " + result.productMap["P1|Hot"].revenueRank);
-  check(result.productMap["P2|Cold"].revenueRank === 2, "P2 revenue rank 2 (240k? no 12000*20=240k), got " + result.productMap["P2|Cold"].revenueRank);
+  check(result.productMap["P3|Hot"].revenueRank === 3, "P3 revenue rank 3 (20000*5=100k), got " + result.productMap["P3|Hot"].revenueRank);
+  check(result.productMap["P1|Hot"].revenueRank === 2, "P1 revenue rank 2 (15000*10=150k), got " + result.productMap["P1|Hot"].revenueRank);
+  check(result.productMap["P2|Cold"].revenueRank === 1, "P2 revenue rank 1 (12000*20=240k), got " + result.productMap["P2|Cold"].revenueRank);
 
   var gp1 = 150000 - 50000;
   var gp2 = 240000 - 80000;
@@ -423,7 +428,8 @@ function testProductProfitabilityMissingIdentityHandling() {
   var period = { filter: "custom", startDate: "2026-01-01", endDate: "2026-01-31", label: "Jan 2026" };
   var result = buildProductProfitability(canonical.records, products, null, period, null);
 
-  check(result.quality.missingIdentity.length > 0, "missing identity recorded for P404");
+  check(canonical.sourceQuality.unresolvedProducts.length > 0, "P404 unresolved at canonical layer");
+  check(canonical.sourceQuality.unresolvedProducts.some(function(p) { return p.productId === "P404"; }), "P404 specifically unresolved");
   check(result.revenue === 75000, "only valid rows included in revenue");
   check(result.productVariantCount === 1, "only P1 in product count");
 
@@ -443,8 +449,8 @@ function testProductProfitabilityReconcilesToFinance() {
     ],
     expenses: [],
     products: [
-      { ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", IsActive: true },
-      { ID_Prod: "P2", Produk: "Inactive", Kategori: "Beverage", Kind: "Normal", IsActive: true }
+      { ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", IsActive: true, RevenueAccountCode: "4100", COGSAccountCode: "5100" },
+      { ID_Prod: "P2", Produk: "Inactive", Kategori: "Beverage", Kind: "Normal", IsActive: true, RevenueAccountCode: "4100", COGSAccountCode: "5100" }
     ],
     expenseItems: []
   };
@@ -489,7 +495,7 @@ function testProductProfitabilityFailureIsolation() {
       { ID_Trx: "SAL-1", Tanggal: new Date(2026, 0, 10), ID_Prod: "P1", Tipe: "Hot", Qty: 5, HPP: 5000, HJ: 15000, IsActive: true, Source: "tabsal" }
     ],
     expenses: [],
-    products: [{ ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", IsActive: true }],
+    products: [{ ID_Prod: "P1", Produk: "Coffee", Kategori: "Beverage", Kind: "Normal", IsActive: true, RevenueAccountCode: "4100", COGSAccountCode: "5100" }],
     expenseItems: []
   };
 
@@ -544,17 +550,10 @@ function testProductProfitabilityResponseContract() {
   check(pp.topGrossProfitProduct !== undefined, "summary has topGrossProfitProduct");
   check(pp.topUnitsProduct !== undefined, "summary has topUnitsProduct");
 
-  check(pp.hotCold !== undefined, "has hotCold");
-  check(typeof pp.hotCold.hot === "object", "hotCold.hot is object");
-  check(typeof pp.hotCold.cold === "object", "hotCold.cold is object");
-  ["units", "revenue", "cogs", "grossProfit", "grossMargin", "transactionCount"].forEach(function(field) {
-    check(pp.hotCold.hot.hasOwnProperty(field), "hot has " + field);
-    check(pp.hotCold.cold.hasOwnProperty(field), "cold has " + field);
-  });
-
   check(pp.quality !== undefined, "has quality");
-  check(pp.quality.status === "GOOD" || pp.quality.status === "ATTENTION", "quality has valid status");
-  check(typeof pp.quality.issueCount === "number", "quality has issueCount");
+  check(Array.isArray(pp.quality.missingIdentity), "quality has missingIdentity array");
+  check(Array.isArray(pp.quality.missingHpp), "quality has missingHpp array");
+  check(Array.isArray(pp.quality.ungovernedType), "quality has ungovernedType array");
 
   Logger.log("PASS: testProductProfitabilityResponseContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };

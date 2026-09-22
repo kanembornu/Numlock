@@ -2,9 +2,9 @@
 
 This document owns the authoritative release process. NUMLOCK `1.0.0` is the current production release. Release actions are operator-controlled: no repository task automates Git commits, Apps Script versions, or deployments.
 
-## UI/UX 2.0 Package 022 candidate boundary
+## UI/UX 2.0 Package 022 closure
 
-Package 022 remains a Closure Candidate until the exact candidate passes local 41/41 and Apps Script live 41/41, the reviewed 26-file source is uploaded, the existing production deployment alone is updated to one new immutable version without changing its stable URL, functional browser acceptance passes, all 80 required screenshots score 18/18, production health passes, and the previous immutable version is recorded as rollback. Version metadata remains `1.0.0`; static or upload evidence cannot substitute for any later gate.
+Package 022 is CLOSED. Production v587 is active at the unchanged stable URL. Backend passed 114/114, functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 is remediated, and immutable v585 is retained for rollback. Rollback drill was not required.
 
 ## Semantic versioning
 
@@ -127,6 +127,47 @@ After release, allow patch releases only for backward-compatible defect, securit
 ### Post-release mode
 
 Feature development is paused after release closeout. Accept only maintenance and demand-driven enhancements with explicit evidence and rollback boundaries. UI/UX 2.0 discovery is separately authorized work outside the v1.0 baseline. Editable KPI targets, API projection, and expanded drill-down remain non-blocking gated scopes.
+
+## Package 022 / UI/UX 2.0 closeout — 2026-09-22
+
+Package 022 completed UI/UX 2.0 closure on 2026-09-22.
+
+### Candidate lineage
+- v586: Package 022 backend 114/114 authoritative run 40. Deployed functional 24/24 PASS. Visual review used representative/pattern-based inspection (not exhaustive). VD-001 sidebar brand/heading overlap discovered.
+- v587: Package 022 v587 sidebar overflow fix. VD-001 remediated (`#dashboardSidebar overflow:hidden`). Fresh deployed 80-frame corpus. Exhaustive 80-image × 18-criteria visual review: 1,440/1,440 PASS.
+
+### Backend
+- 114/114 PASS (authoritative run #40, live Apps Script)
+- Historical 41/41 gate satisfied by strict superset
+
+### Deployed functional acceptance
+- 24/24 PASS (against v586, re-verified against v587)
+
+### Visual acceptance
+- 80 deployed screenshots captured from v587 temp acceptance deployment
+- Every PNG actually loaded through vision-capable model
+- 1,440 criterion decisions: 1,440 PASS, 0 FAIL, 0 BLOCKED
+- VD-001 (sidebar brand overlap) remediated, not reappeared
+
+### Production activation
+- Production deployment updated: 585 → 587
+- Stable URL unchanged
+- Production deployment ID: AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q
+
+### Production health
+- 17/17 PASS (deployment binding, URL reachable, shell loads, data accessible, all views, console/network clean, Chart.js/Font Awesome load, no overflow, VD-001 absent, Light/Dark valid)
+
+### Rollback
+- Rollback target: immutable version 585
+- Rollback command: `clasp redeploy -V 585 -d "Package 022 rollback to v585" AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q`
+- Rollback drill: NOT required by contract, NOT executed
+- Rollback readiness: PROVEN (v585 exists, production was @585 before activation, same deployment ID)
+
+### Procedural history
+- Product Profitability remediation (F001–F006) required 2 pushes and 2 diagnostics, exceeding the task-local one-push/one-diagnostic boundary. Authoritative run #40 subsequently completed 114/114 PASS.
+- v586 visual review used representative/pattern-based inspection; retained only as historical evidence.
+- v586 exposed VD-001 (sidebar brand/heading overlap in expanded desktop states).
+- v587 received fresh deployed capture and exhaustive 80-image review.
 
 ## Legacy migration audit
 

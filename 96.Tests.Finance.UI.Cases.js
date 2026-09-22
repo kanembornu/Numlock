@@ -18,7 +18,7 @@ function testFinanceProfitAndLossUiContract()
 
   requireToken(shell, 'data-page="finance"', "active Profit & Loss route");
   requireToken(shell, 'data-page="finance" data-navigation-destination="capital-equity"', "active Capital & Equity route");
-  requireToken(shell, 'data-navigation-destination="balance-sheet" class="ui-sidebar-item', "active Balance Position route");
+  requireToken(shell, 'data-navigation-destination="balance-sheet" aria-label="Balance Position"', "active Balance Position route");
   requireToken(shell, 'data-navigation-destination="cash-flow" class="ui-future-module', "gated Cash Flow");
   requireToken(controller, ".getFinanceData(", "Finance backend request");
   forbidToken(financeSource, "getDashboardData(", "Dashboard request coupling");
@@ -87,12 +87,12 @@ function testFinanceDestinationSwitchContract()
   // Defect 1 — shared data contamination: compatibility function exists
   check(controllerSource.indexOf("function isFinanceDataCompatible") !== -1,
     "compatibility check function declared");
-  check(controllerSource.indexOf("isFinanceDataCompatible(financeState.data") !== -1,
+  check(controllerSource.indexOf("isFinanceDataCompatible(response") !== -1,
     "setFinanceDestination checks data compatibility before render");
 
   // Defect 1 — incompatible data triggers fresh request on switch
   check(controllerSource.indexOf('setFinanceViewState("loading")') !== -1 &&
-    controllerSource.indexOf("requestFinanceData(getFinanceRequestFromControls())") !== -1,
+    controllerSource.indexOf("requestFinanceData(request)") !== -1,
     "incompatible destination switch issues fresh request");
 
   // Defect 1 — P&L→PP: P&L data has no products → incompatible
@@ -143,11 +143,11 @@ function testFinanceDestinationSwitchContract()
     "onFailure validates destination alignment");
 
   // Defect 4 — ensureFinanceData checks compatibility
-  check(controllerSource.indexOf("isFinanceDataCompatible(financeState.data") !== -1,
+  check(controllerSource.indexOf("isValidFinanceCacheEntry") !== -1,
     "ensureFinanceData checks data compatibility");
 
   // Defect 4 — no stale data reuse without compatibility
-  check(controllerSource.indexOf("financeState.hasLoaded && financeState.data") !== -1,
+  check(controllerSource.indexOf("isValidFinanceCacheEntry(cacheEntry)") !== -1,
     "destination switch requires both hasLoaded and data");
 
   // Error isolation — no hardcoded P&L in PP/CE paths
@@ -279,8 +279,7 @@ function testFinanceBalancePositionUiContract()
     "balance-sheet destination exists");
   check(shell.indexOf('data-page="finance" data-navigation-destination="balance-sheet"') !== -1,
     "balance-sheet route is active finance page");
-  check(shell.indexOf('class="ui-future-module') === -1 ||
-    shell.indexOf('balance-sheet" class="ui-future-module') === -1,
+  check(shell.indexOf('balance-sheet" class="ui-future-module') === -1,
     "balance-sheet no longer gated");
   check(shell.indexOf('Balance Position') !== -1,
     "label shows Balance Position");

@@ -1,0 +1,27 @@
+[
+  {
+    "type": "error",
+    "text": "Failed to load resource: net::ERR_FAILED",
+    "url": "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"
+  },
+  {
+    "type": "error",
+    "text": "Failed to load resource: net::ERR_FAILED",
+    "url": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css"
+  },
+  {
+    "type": "error",
+    "text": "Chart.js unavailable; chart rendering was skipped.",
+    "url": "http://numlock.local/"
+  },
+  {
+    "type": "info",
+    "text": "DashboardTiming {serverMs: 0, transportApproxMs: 57, renderMs: 47, totalObservedMs: 104, cacheHit: true}",
+    "url": "http://numlock.local/"
+  },
+  {
+    "type": "info",
+    "text": "NUMLOCK Startup Profile {firstUsableMs: 263, preWindowLoadMs: 165, windowLoadToRequestMs: 11, navigationToRequestMs: 176, serverRoundtripMs: 57}",
+    "url": "http://numlock.local/"
+  }
+]

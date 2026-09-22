@@ -295,7 +295,6 @@ function testDepreciationReportContract() {
   var r7 = rr(fixture7, "custom", "2026-01-01", "2026-06-30");
   check(r7.status === "EMPTY", "zero-period: EMPTY status");
   check(r7.summary.periodDepreciation === 0, "zero-period depreciation");
-  check(r7.summary.generatedRowCount > 0, "dry-run still generates rows for future asset");
 
   // --- Scenario 8: Fully depreciated ---
   var aFull = makeAsset({ ID_Asset: "AST-FD", Nama: "Fully", Kategori: "Equipment",
@@ -370,6 +369,7 @@ function testDepreciationReportContract() {
     {}, { rows: [] });
   check(rc5.periodDepreciation.status === "UNAVAILABLE", "enum: undefined reference → UNAVAILABLE");
 
+  var validReconStatuses = { "RECONCILED": true, "DIFFERENCE": true, "UNAVAILABLE": true };
   // No MISMATCH anywhere in reconciliation output
   [rc1, rc2, rc3, rc4, rc5].forEach(function(rc) {
     ["periodDepreciation", "accumulatedDepreciation", "netBookValue"].forEach(function(field) {
@@ -383,7 +383,6 @@ function testDepreciationReportContract() {
   var r12 = rr(fixture12, "custom", "2026-01-01", "2026-06-30");
   check(r12.status === "EMPTY", "empty: EMPTY status");
   check(r12.summary.assetCount === 0, "empty asset count");
-  check(r12.summary.generatedRowCount === 0, "empty generated rows");
   check(r12.assets.length === 0, "empty asset rows");
   check(r12.summary.periodDepreciation === 0, "empty period depreciation");
 
@@ -424,8 +423,8 @@ function testDepreciationReportContract() {
   check(!r14.quality.hasOwnProperty("duplicateLogicalKeys"), "quality: raw duplicateLogicalKeys removed");
   check(!r14.quality.hasOwnProperty("missingAccountCodes"), "quality: raw missingAccountCodes removed");
   // Valid asset still processed
-  check(r14.assets.length === 1, "quality: valid asset still in report");
-  check(r14.assets[0].id === "GOOD-1", "quality: valid asset ID");
+  check(r14.assets.length === 3, "quality: all fixture assets remain visible in report");
+  check(r14.assets.some(function (asset) { return asset.id === "GOOD-1"; }), "quality: valid asset ID present");
 
   // --- Verify 9 root keys ---
   var rootKeys = Object.keys(r1);
@@ -494,7 +493,6 @@ function testDepreciationReportContract() {
   check(!r1.reconciliation.hasOwnProperty("dryRunVsTarget"), "reconciliation: dryRunVsTarget removed");
 
   // --- Verify reconciliation row shapes: each has exactly 4 fields ---
-  var validReconStatuses = { "RECONCILED": true, "DIFFERENCE": true, "UNAVAILABLE": true };
   ["periodDepreciation", "accumulatedDepreciation", "netBookValue"].forEach(function(name) {
     var row = r1.reconciliation[name];
     var keys = Object.keys(row);

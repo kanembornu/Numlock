@@ -66,6 +66,10 @@
 !96.Tests.Inventory.Receipt.Orchestration.Cases.js
 !97.Inventory.Receipt.Runtime.Proof.js
 !97.Inventory.Receipt.Operational.Runtime.Proof.js
+!96.Tests.Bounded.Read.Cases.js
+!96.Tests.ColdStart.Profiling.Cases.js
+!96.Tests.Finance.WarmCache.Cases.js
+!96.Tests.ProductProfitability.Cases.js
 !98.Tests.Runner.js
 !100.Code.js
 !189.View.Tailwind.html

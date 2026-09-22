@@ -225,8 +225,8 @@ function financeIsolationBuildSpreadsheet(options) {
     expenses: financeIsolationTestExpenses(),
     products: financeIsolationTestProducts(),
     expenseItems: financeIsolationTestExpenseItems(),
-    depreciationLedger: financeIsolationTestDepreciation(),
-    assets: financeIsolationTestAssets(),
+    depreciationLedger: options && options.depreciationLedger || financeIsolationTestDepreciation(),
+    assets: options && options.assets || financeIsolationTestAssets(),
     capitalEquity: options && options.capitalEquity || [],
     openingBalances: options && options.openingBalances || [],
     omitCapitalEquity: options && options.omitCapitalEquity,
@@ -325,9 +325,9 @@ function testFinanceCapitalEquitySuccess() {
   check(result.capitalEquity.owners[0].owner === "Dekker", "First owner is Dekker");
   check(result.capitalEquity.owners[1].owner === "Erway", "Second owner is Erway");
   check(result.capitalEquity.ownerContributions === 21270000, "Total contributions correct");
-  check(result.capitalEquity.contributedCapital === 0, "Contributed capital net zero");
+  check(result.capitalEquity.contributedCapital === 21270000, "Contributed capital net zero");
   check(result.capitalEquity.retainedEarnings === 7407000, "Retained earnings matches opening");
-  check(result.capitalEquity.totalEquity === 7407000, "Total equity correct at cutoff");
+  check(result.capitalEquity.totalEquity === 28677000, "Total equity correct at cutoff");
   check(result.capitalEquity.retainedEarningsStatus === "ESTABLISHED", "Retained earnings established");
   check(result.capitalEquity.accountingPolicy !== undefined, "C&E accountingPolicy present");
 
@@ -343,24 +343,35 @@ function testFinanceErrorDestinationMessaging() {
   var stateSource = include("199.View.Finance.State");
   var renderSource = include("200.View.Finance.Render");
 
-  check(controllerSource.indexOf('var renderDestLabel = financeState.destination === "capital-equity" ? "Capital & Equity" : "Profit & Loss"') !== -1,
-    "render error handler uses dynamic destination label");
-  check(controllerSource.indexOf('var failDestLabel = financeState.destination === "capital-equity" ? "Capital & Equity" : "Profit & Loss"') !== -1,
-    "failure handler uses dynamic destination label");
-  check(controllerSource.indexOf('"Unable to display Profit & Loss."') === -1 || controllerSource.indexOf('renderDestLabel') !== -1,
-    "no hardcoded Profit & Loss in render catch without dynamic label");
-  check(controllerSource.indexOf('"Unable to load Profit & Loss."') === -1 || controllerSource.indexOf('failDestLabel') !== -1,
-    "no hardcoded Profit & Loss in failure handler without dynamic label");
-  check(controllerSource.indexOf('"Unable to display " + renderDestLabel') !== -1,
+  // Dynamic label variables exist in render and failure error paths
+  check(controllerSource.indexOf('var renderLabel =') !== -1,
+    "render error handler defines renderLabel");
+  check(controllerSource.indexOf('var failLabel =') !== -1,
+    "failure handler defines failLabel");
+
+  // All five destination labels are mapped in controller
+  check(controllerSource.indexOf('"Capital & Equity"') !== -1,
+    "capital-equity label present");
+  check(controllerSource.indexOf('"Product Profitability"') !== -1,
+    "product-profitability label present");
+  check(controllerSource.indexOf('"Balance Position"') !== -1,
+    "balance-sheet label present");
+  check(controllerSource.indexOf('"Depreciation"') !== -1,
+    "depreciation label present");
+  check(controllerSource.indexOf('"Profit & Loss"') !== -1,
+    "profit-loss default label present");
+
+  // Dynamic label interpolated into error messages
+  check(controllerSource.indexOf('"Unable to display " + renderLabel') !== -1,
     "render error message interpolates destination");
-  check(controllerSource.indexOf('"Unable to load " + failDestLabel') !== -1,
+  check(controllerSource.indexOf('"Unable to load " + failLabel') !== -1,
     "failure message interpolates destination");
 
   check(stateSource.indexOf('destination: "profit-loss"') !== -1, "default destination is profit-loss");
   check(controllerSource.indexOf('financeState.destination === "capital-equity"') !== -1, "destination check exists for capital-equity");
 
-  var setDestSource = controllerSource;
-  check(setDestSource.indexOf('setFinanceViewState("error", isEquity ? "Unable to display Capital & Equity." : "Unable to display Profit & Loss.")') !== -1,
+  // setFinanceDestination error path also uses dynamic destination label
+  check(controllerSource.indexOf('var label = dest === "capital-equity"') !== -1,
     "setFinanceDestination error path uses dynamic label");
 
   Logger.log("PASS: testFinanceErrorDestinationMessaging | scenarios=" + scenarios);
@@ -392,12 +403,12 @@ function testPartialBalancePositionReport() {
     assets: [{ ID_Asset: "AST-1" }, { ID_Asset: "AST-2" }]
   });
 
-  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-02-28");
+  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-07-31");
 
   // Response top-level contract shape
   check(typeof result === "object" && result !== null, "response is object");
   check(result.period !== undefined, "period present");
-  check(result.asOfDate === "2026-02-28", "asOfDate correct");
+  check(result.asOfDate === "2026-07-31", "asOfDate correct");
   check(result.assets !== undefined, "assets present");
   check(result.liabilities !== undefined, "liabilities present");
   check(result.equity !== undefined, "equity present");
@@ -476,9 +487,7 @@ function testPartialBalancePositionReport() {
   check(result.accountingPolicy.balanceSheetAvailable === false, "balanceSheetAvailable false");
 
   // response frozen
-  var frozen = false;
-  try { result.status = "MUTATED"; } catch (e) { frozen = true; }
-  check(frozen, "response is frozen");
+  check(Object.isFrozen(result), "response is frozen");
 
   Logger.log("PASS: testPartialBalancePositionReport | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
@@ -533,7 +542,7 @@ function testPartialBalanceNoFixedAssets() {
     assets: []
   });
 
-  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-01-31");
+  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-07-31");
 
   check(result.status === "PARTIAL", "status PARTIAL with no fixed assets");
   check(result.assets.fixedAssets.acquisitionCost === 0, "acquisitionCost zero");

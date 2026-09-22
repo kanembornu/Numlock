@@ -1,0 +1,137 @@
+{
+  "target": "http://numlock.local/",
+  "source": "local assembled frontend",
+  "version": 586,
+  "generatedAt": "2026-09-21T18:23:28.496Z",
+  "pass": true,
+  "counts": {
+    "screenshots": 80,
+    "consoleEvents": 5,
+    "consoleErrors": 3,
+    "networkFailures": 2,
+    "pageErrors": 0
+  },
+  "results": [
+    {
+      "name": "target responds",
+      "status": "PASS",
+      "detail": "200 http://numlock.local/"
+    },
+    {
+      "name": "local fixture identity",
+      "status": "PASS",
+      "detail": "http://numlock.local/"
+    },
+    {
+      "name": "document title",
+      "status": "PASS",
+      "detail": "NUMLOCK Coffee Shop Analytics"
+    },
+    {
+      "name": "dashboard-overview: title",
+      "status": "PASS",
+      "detail": "utility title: \"Dashboard\""
+    },
+    {
+      "name": "dashboard-overview: key-elements",
+      "status": "PASS",
+      "detail": "#dashboardPanelOverview"
+    },
+    {
+      "name": "dashboard-overview: no-page-level-error",
+      "status": "PASS",
+      "detail": "0 visible alert(s)"
+    },
+    {
+      "name": "dashboard-performance: title",
+      "status": "PASS",
+      "detail": "utility title: \"Dashboard\""
+    },
+    {
+      "name": "dashboard-performance: key-elements",
+      "status": "PASS",
+      "detail": "#dashboardPanelPerformance"
+    },
+    {
+      "name": "dashboard-performance: no-page-level-error",
+      "status": "PASS",
+      "detail": "0 visible alert(s)"
+    },
+    {
+      "name": "transactions: title",
+      "status": "PASS",
+      "detail": "utility title: \"Transactions\""
+    },
+    {
+      "name": "transactions: key-elements",
+      "status": "PASS",
+      "detail": "#transactions"
+    },
+    {
+      "name": "transactions: no-page-level-error",
+      "status": "PASS",
+      "detail": "0 visible alert(s)"
+    },
+    {
+      "name": "settings: title",
+      "status": "PASS",
+      "detail": "utility title: \"Settings\""
+    },
+    {
+      "name": "settings: key-elements",
+      "status": "PASS",
+      "detail": "#settings"
+    },
+    {
+      "name": "settings: no-page-level-error",
+      "status": "PASS",
+      "detail": "0 visible alert(s)"
+    },
+    {
+      "name": "logs: title",
+      "status": "PASS",
+      "detail": "utility title: \"Logs\""
+    },
+    {
+      "name": "logs: key-elements",
+      "status": "PASS",
+      "detail": "#logs"
+    },
+    {
+      "name": "logs: no-page-level-error",
+      "status": "PASS",
+      "detail": "0 visible alert(s)"
+    },
+    {
+      "name": "transactions CSV export",
+      "status": "PASS",
+      "detail": "empty transaction fixture correctly disables export"
+    },
+    {
+      "name": "dashboard print report",
+      "status": "PASS",
+      "detail": "90229 screenshot bytes; in-memory to preserve exact 80-frame manifest"
+    },
+    {
+      "name": "320px no horizontal overflow",
+      "status": "PASS",
+      "detail": "{\"scrollWidth\":320,\"innerWidth\":320}"
+    },
+    {
+      "name": "no page errors",
+      "status": "PASS",
+      "detail": "0 page error(s)"
+    },
+    {
+      "name": "no Tailwind CDN request",
+      "status": "PASS",
+      "detail": "0 observed Tailwind CDN event(s)"
+    },
+    {
+      "name": "exact screenshot count",
+      "status": "PASS",
+      "detail": "80 manifest frames, 80 PNG files"
+    }
+  ],
+  "fatal": null
+}

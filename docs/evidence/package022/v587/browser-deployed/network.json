@@ -1,0 +1,172 @@
+[
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/exec",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "document"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/static/macros/client/css/2208734863-mae_html_css_ltr.css",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "stylesheet"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "script"
+  },
+  {
+    "type": "response",
+    "url": "https://fonts.googleapis.com/icon?family=Material+Icons",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "stylesheet"
+  },
+  {
+    "type": "response",
+    "url": "https://csp.withgoogle.com/csp/proto/26981ed0d57bbad37e728ff58134270c",
+    "method": "POST",
+    "status": 204,
+    "resourceType": "ping"
+  },
+  {
+    "type": "response",
+    "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/userCodeAppPanel",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "document"
+  },
+  {
+    "type": "response",
+    "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/static/macros/client/js/3922063318-mae_html_user_bin_i18n_mae_html_user__id.js",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "script"
+  },
+  {
+    "type": "response",
+    "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/blank",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "document"
+  },
+  {
+    "type": "response",
+    "url": "https://www.google.com/jsapi",
+    "method": "GET",
+    "status": 301,
+    "resourceType": "script"
+  },
+  {
+    "type": "response",
+    "url": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "stylesheet"
+  },
+  {
+    "type": "response",
+    "url": "https://www.gstatic.com/charts/loader.js",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "script"
+  },
+  {
+    "type": "response",
+    "url": "https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "script"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/wardeninit?_reqid=6564&rt=j",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "fetch"
+  },
+  {
+    "type": "requestfailed",
+    "url": "https://script.google.com/wardeninit?_reqid=6564&rt=j",
+    "method": "POST",
+    "resourceType": "fetch",
+    "error": {
+      "errorText": "net::ERR_ABORTED"
+    }
+  },
+  {
+    "type": "response",
+    "url": "https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/webfonts/fa-solid-900.woff2",
+    "method": "GET",
+    "status": 200,
+    "resourceType": "font"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=6",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=11",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=9",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=7",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=8",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=10",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=13",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=12",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  },
+  {
+    "type": "response",
+    "url": "https://script.google.com/macros/s/AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR/callback?nocache_id=14",
+    "method": "POST",
+    "status": 200,
+    "resourceType": "xhr"
+  }
+]

@@ -8,14 +8,14 @@ The v1.0 feature/backend baseline is stable, but UI/UX 2.0 is reopened for the o
 
 | Classification | Count | Items | Resume boundary |
 | --- | ---: | --- | --- |
-| Active UI/UX closure evidence | 1 package | Package 022: live, deployed-browser, screenshot, production-health, and rollback acceptance | No implementation work is ready; complete only the exact evidence gates. |
+| Closed UI/UX package | 1 package | Package 022: CLOSED on 2026-09-22 | Production v587 active; backend 114/114, functional 24/24, visual 80/80 (1,440/1,440 decisions), and production health 17/17 passed; v585 retained for rollback. |
 | Blocked by requirements, governance, privacy, or permissions | 3 | Editable KPI targets; API projection/payload reduction; expanded transaction history/drill-down | Resolve every documented persistence, governance, consumer, permission, privacy, pagination, measurement, compatibility, and rollback prerequisite. |
 | Future major capability | 5 | Migrated Products module; Capital & Equity; Assets; Depreciation; Financial Statements | Sidebar entries may be unavailable; usable pages require approved architecture, migration, calculations, permissions, acceptance, versioning, and rollback. |
 | Maintenance-only | Demand-driven | Defect, security, dependency, accessibility, documentation, operational, monitoring, or behavior-preserving performance work | Require a reproducible need, bounded scope, preserved contracts, validation, and release evidence appropriate to risk. |
 
 The blocked and future-major items are not current defects. Their supporting data, permissions, governance, or migration contracts do not yet exist.
 
-UI/UX 2.0 has **zero implementation-ready UI items** after Packages 014–021. Package 022 remains a Closure Candidate because its outstanding work is acceptance evidence, not another redesign or feature package.
+UI/UX 2.0 has **zero implementation-ready UI items** after Packages 014–022. Package 022 is CLOSED on production v587 with backend 114/114, functional 24/24, visual 80/80 (1,440/1,440 criterion decisions), and production health 17/17 PASS. VD-001 is remediated; v585 is retained for rollback.
 
 ## Scope and evidence
 

@@ -1,0 +1,47 @@
+[
+  {
+    "type": "warning",
+    "text": "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.",
+    "url": "about:blank"
+  },
+  {
+    "type": "info",
+    "text": "Net state changed from IDLE to BUSY",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js"
+  },
+  {
+    "type": "info",
+    "text": "Net state changed from BUSY to IDLE",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js"
+  },
+  {
+    "type": "info",
+    "text": "DashboardTiming {serverMs: 3851, transportApproxMs: 1793, renderMs: 82, totalObservedMs: 5726, cacheHit: false}",
+    "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/userCodeAppPanel"
+  },
+  {
+    "type": "info",
+    "text": "NUMLOCK Startup Profile {firstUsableMs: 6626, preWindowLoadMs: 955, windowLoadToRequestMs: 8, navigationToRequestMs: 963, serverRoundtripMs: 5644}",
+    "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/userCodeAppPanel"
+  },
+  {
+    "type": "info",
+    "text": "Net state changed from IDLE to BUSY",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js"
+  },
+  {
+    "type": "info",
+    "text": "Net state changed from BUSY to IDLE",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js"
+  },
+  {
+    "type": "info",
+    "text": "Net state changed from IDLE to BUSY",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js"
+  },
+  {
+    "type": "info",
+    "text": "Net state changed from BUSY to IDLE",
+    "url": "https://script.google.com/static/macros/client/js/1880953893-warden_bin_i18n_warden__id.js"
+  }
+]

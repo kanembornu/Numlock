@@ -1,6 +1,11 @@
-function runAllBackendTests()
+/**
+ * Authoritative backend test registry.
+ * Single source of truth for both runAllBackendTests and runAllBackendTestsDiagnostic.
+ * 114 registered entries. Membership, order, and function references are frozen.
+ */
+function getBackendTestRegistry()
 {
-  var tests = [
+  return [
     { name: "testExpensePurchasePolicyContracts", run: testExpensePurchasePolicyContracts },
     { name: "getDashboardData", run: getDashboardData },
     { name: "testAggregate", run: testAggregate },
@@ -116,6 +121,15 @@ function runAllBackendTests()
     { name: "testProductProfitabilityEmptyDataset", run: testProductProfitabilityEmptyDataset },
     { name: "testColdBackendSegmentation", run: testColdBackendSegmentation }
   ];
+}
+
+/**
+ * Authoritative fail-fast backend test runner.
+ * Runs all 114 registered tests. Stops on first failure.
+ */
+function runAllBackendTests()
+{
+  var tests = getBackendTestRegistry();
   var passedTests = [];
 
   Logger.log("===== NUMLOCK BACKEND TEST SUITE START =====");
@@ -155,5 +169,67 @@ function runAllBackendTests()
     failed: tests.length - passedTests.length,
     total: tests.length,
     tests: passedTests
+  };
+}
+
+/**
+ * Non-fail-fast diagnostic backend test runner.
+ * Runs all 114 registered tests. Catches every failure and continues.
+ * Returns aggregate result with all failures.
+ */
+function runAllBackendTestsDiagnostic()
+{
+  var tests = getBackendTestRegistry();
+  var passedTests = [];
+  var failures = [];
+
+  Logger.log("===== NUMLOCK DIAGNOSTIC TEST SUITE START =====");
+
+  for (var i = 0; i < tests.length; i++)
+  {
+    var test = tests[i];
+
+    try
+    {
+      test.run();
+      passedTests.push(test.name);
+      Logger.log("PASS: " + test.name);
+    }
+    catch (error)
+    {
+      var message =
+        error && error.message
+          ? error.message
+          : String(error);
+      var stack =
+        error && error.stack
+          ? String(error.stack)
+          : "";
+
+      Logger.log("FAIL: " + test.name + " | " + message);
+      failures.push({
+        index: i + 1,
+        name: test.name,
+        message: message,
+        stack: stack
+      });
+    }
+  }
+
+  Logger.log(
+    "===== NUMLOCK DIAGNOSTIC SUITE: " +
+    passedTests.length +
+    " PASS, " +
+    failures.length +
+    " FAIL, " +
+    tests.length +
+    " TOTAL ====="
+  );
+
+  return {
+    total: tests.length,
+    passed: passedTests.length,
+    failed: failures.length,
+    failures: failures
   };
 }

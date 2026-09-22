@@ -13,7 +13,7 @@ function testFinanceWarmCacheKeyGeneration()
 function testFinanceCacheStructureExists()
 {
   var source = getAssembledFrontendSource();
-  assertSourceContains(source, 'financeCache = { finance: {}, productProfitability: {} }', '11X.3K cache structure declared');
+  assertSourceContains(source, 'financeCache = { finance: {}, productProfitability: {}', '11X.3K cache structure declared');
   assertSourceContains(source, 'financeInflight = {}', '11X.3K in-flight structure declared');
 }
 
@@ -38,7 +38,7 @@ function testFinanceCacheServesCE()
 {
   var source = getAssembledFrontendSource();
   // C&E shares "finance" cache type with P&L
-  assertSourceContains(source, 'dest === "product-profitability" ? "productProfitability" : "finance"', '11X.3K C&E and P&L share finance cache type');
+  assertSourceContains(source, 'dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : dest === "depreciation" ? "depreciation" : "finance"', '11X.3K C&E and P&L share finance cache type');
 }
 
 function testFinanceCacheServesPP()
@@ -84,7 +84,7 @@ function testFinanceCacheInvalidation()
 {
   var source = getAssembledFrontendSource();
   assertSourceContains(source, 'function invalidateFinanceCache()', '11X.3K invalidateFinanceCache exists');
-  assertSourceContains(source, 'financeCache = { finance: {}, productProfitability: {} }', '11X.3K invalidation resets both cache pools');
+  assertSourceContains(source, 'financeCache = { finance: {}, productProfitability: {}', '11X.3K invalidation resets both cache pools');
   assertSourceContains(source, 'financeInflight = {}', '11X.3K invalidation clears in-flight state');
 }
 
@@ -120,7 +120,7 @@ function testFinanceNoCrossDestinationRender()
 {
   var source = getAssembledFrontendSource();
   // Cache entry stores destination; ensureFinanceData uses cacheType based on current dest
-  assertSourceContains(source, 'var cacheType = dest === "product-profitability" ? "productProfitability" : "finance"', '11X.3K cache type derived from active destination');
+  assertSourceContains(source, 'var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : dest === "depreciation" ? "depreciation" : "finance"', '11X.3K cache type derived from active destination');
   // Cache entry destination must match for validation
   assertSourceContains(source, 'entry.destination', '11X.3K cache entry carries destination tag');
 }
@@ -158,17 +158,18 @@ function testFinanceWarmCacheMutationInvalidatesOutstandingRequest()
   assertSourceContains(source, 'financeState.activeRequestId = ++financeState.requestSequence',
     '11X.3M invalidation bumps activeRequestId');
 
-  // Prove bump is inside invalidateFinanceCache — extract the function body
-  var fnMatch = source.match(/function invalidateFinanceCache\(\)[^}]*\{([\s\S]*?)\n    \}/);
-  if (!fnMatch) throw new Error('11X.3M could not extract invalidateFinanceCache body');
-  var body = fnMatch[1];
-  if (body.indexOf('financeState.activeRequestId = ++financeState.requestSequence') === -1) {
+  // Prove bump is inside invalidateFinanceCache — scope to function region
+  var fnStart = source.indexOf('function invalidateFinanceCache()');
+  var fnEnd = source.indexOf('function renderActiveFinanceDestination(');
+  if (fnStart === -1 || fnEnd === -1 || fnEnd <= fnStart) throw new Error('11X.3M could not extract invalidateFinanceCache region');
+  var region = source.slice(fnStart, fnEnd);
+  if (region.indexOf('financeState.activeRequestId = ++financeState.requestSequence') === -1) {
     throw new Error('11X.3M activeRequestId bump not inside invalidateFinanceCache');
   }
   // Bump must come AFTER cache and inflight clearing
-  var cacheClearPos = body.indexOf('financeCache = { finance: {}, productProfitability: {} }');
-  var inflightClearPos = body.indexOf('financeInflight = {}');
-  var bumpPos = body.indexOf('financeState.activeRequestId = ++financeState.requestSequence');
+  var cacheClearPos = region.indexOf('financeCache = { finance: {}, productProfitability: {}');
+  var inflightClearPos = region.indexOf('financeInflight = {}');
+  var bumpPos = region.indexOf('financeState.activeRequestId = ++financeState.requestSequence');
   if (cacheClearPos === -1 || inflightClearPos === -1) throw new Error('11X.3M cache/inflight clearing not found in invalidation body');
   if (bumpPos <= cacheClearPos || bumpPos <= inflightClearPos) {
     throw new Error('11X.3M activeRequestId bump must come after cache and inflight clearing');

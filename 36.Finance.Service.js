@@ -561,6 +561,7 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation
 
   return {
     period: { filter: period.filter, startDate: period.startDate, endDate: period.endDate, label: period.label },
+    grossProfit: grossProfit,
     summary: { revenue: revenue, cogs: cogs, grossProfit: grossProfit,
       operatingExpenses: operatingExpenses, depreciationExpense: depreciationExpense,
       operatingNetProfit: operatingNetProfit,
