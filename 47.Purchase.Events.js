@@ -451,8 +451,8 @@ function diagnosePurchaseEventIntegrity(requestKey) {
 
 // Bounded remediation: fix IsActive type for rows where the ONLY defect is
 // string "true" instead of boolean true. All other integrity predicates must pass.
-// Returns count of remediated rows. Zero writes if no eligible rows found.
-function remediatePurchaseEventIsActiveType_() {
+// If dryRun is true, returns eligibility report without writing.
+function remediatePurchaseEventIsActiveType_(dryRun) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
   if (!sheet || sheet.getLastRow() <= 1) return { remediated: 0, reason: 'NO_DATA' };
@@ -462,11 +462,10 @@ function remediatePurchaseEventIsActiveType_() {
   if (isActiveIdx === -1) return { remediated: 0, reason: 'NO_ISACTIVE_COLUMN' };
   var remediated = 0;
   var skipped = 0;
+  var eligible = [];
   for (var i = 0; i < rows.length; i++) {
     var row = rows[i];
-    // Only remediate rows where IsActive is string "true"
     if (typeof row.IsActive !== 'string' || row.IsActive !== 'true') { skipped++; continue; }
-    // Check all other integrity predicates (same as purchaseEventHistory_ minus IsActive)
     var otherPredicatesPass =
       row.EventID && row.RequestKey && row.EventID === 'PE-' + row.RequestKey &&
       row.RecoveryKey === 'pe-receipt-' + row.RequestKey &&
@@ -477,14 +476,73 @@ function remediatePurchaseEventIsActiveType_() {
       row.BusinessLabel && row.CreatedBy &&
       inventoryTimestampMillis(row.CreatedAt) !== null;
     if (!otherPredicatesPass) { skipped++; continue; }
-    // Eligible: fix IsActive to boolean true
-    sheet.getRange(i + 2, isActiveIdx + 1).setValue(true);
-    remediated++;
+    eligible.push({ row: i + 2, requestKey: row.RequestKey });
+    if (!dryRun) {
+      sheet.getRange(i + 2, isActiveIdx + 1).setValue(true);
+      remediated++;
+    }
   }
+  if (dryRun) return { dryRun: true, eligible: eligible.length, eligibleRows: eligible, skipped: skipped, total: rows.length };
   return { remediated: remediated, skipped: skipped, total: rows.length };
 }
 
+// Read-only eligibility scan: reports which rows need IsActive remediation
+// without performing any writes. Returns full inventory before any mutation.
+function scanPurchaseEventIsActiveEligibility_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+  if (!sheet || sheet.getLastRow() <= 1) return { total: 0, eligible: 0, reason: 'NO_DATA' };
+  var headers = PURCHASE_EVENT_POLICY.headers;
+  var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
+  var isActiveIdx = headers.indexOf('IsActive');
+  if (isActiveIdx === -1) return { total: rows.length, eligible: 0, reason: 'NO_ISACTIVE_COLUMN' };
+  var eligible = [];
+  var alreadyCanonical = [];
+  var otherCorrupted = [];
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var rowNum = i + 2; // sheet row: +1 for headers, +1 for 0-index
+    if (typeof row.IsActive === 'boolean' && row.IsActive === true) {
+      alreadyCanonical.push({ row: rowNum, requestKey: row.RequestKey });
+    } else if (typeof row.IsActive === 'string' && row.IsActive === 'true') {
+      // Candidate — check all other predicates
+      var otherPredicatesPass =
+        row.EventID && row.RequestKey && row.EventID === 'PE-' + row.RequestKey &&
+        row.RecoveryKey === 'pe-receipt-' + row.RequestKey &&
+        row.Lifecycle === 'CAPTURED_OPERATIONAL' &&
+        row.ExpenseID && row.ExpenseDate && row.ReceiptDate &&
+        row.AllocationStatus && row.ReceiptPlan &&
+        row.NormalizedPayload && row.PolicyVersion &&
+        row.BusinessLabel && row.CreatedBy &&
+        inventoryTimestampMillis(row.CreatedAt) !== null;
+      if (otherPredicatesPass) {
+        eligible.push({ row: rowNum, requestKey: row.RequestKey, expenseId: row.ExpenseID });
+      } else {
+        otherCorrupted.push({ row: rowNum, requestKey: row.RequestKey, expenseId: row.ExpenseID,
+          defect: 'IsActive=string plus other predicate failures' });
+      }
+    } else {
+      otherCorrupted.push({ row: rowNum, requestKey: row.RequestKey, expenseId: row.ExpenseID,
+        defect: 'IsActive=' + String(row.IsActive) + ' (type=' + typeof row.IsActive + ')' });
+    }
+  }
+  return {
+    total: rows.length,
+    eligible: eligible.length,
+    eligibleRows: eligible,
+    alreadyCanonical: alreadyCanonical.length,
+    alreadyCanonicalRows: alreadyCanonical,
+    otherCorrupted: otherCorrupted.length,
+    otherCorruptedRows: otherCorrupted
+  };
+}
+
+// Public RPC — callable from google.script.run. Zero writes.
+function scanPurchaseEventIsActiveEligibility() {
+  return scanPurchaseEventIsActiveEligibility_();
+}
+
 // Public RPC — callable from google.script.run.
-function remediatePurchaseEventIsActiveType() {
-  return remediatePurchaseEventIsActiveType_();
+function remediatePurchaseEventIsActiveType(dryRun) {
+  return remediatePurchaseEventIsActiveType_(dryRun === true);
 }
