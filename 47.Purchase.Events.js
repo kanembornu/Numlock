@@ -457,11 +457,6 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
   }
 }
 
-// Public RPC entry point — callable from google.script.run.
-function diagnosePurchaseEventIntegrity(requestKey) {
-  return diagnosePurchaseEventIntegrity_(requestKey);
-}
-
 // Bounded remediation: fix IsActive type for rows where the ONLY defect is
 // string "true" instead of boolean true. All other integrity predicates must pass.
 // If dryRun is true, returns eligibility report without writing.
@@ -552,14 +547,4 @@ function scanPurchaseEventIsActiveEligibility_() {
     otherCorrupted: otherCorrupted.length,
     otherCorruptedRows: otherCorrupted
   };
-}
-
-// Public RPC — callable from google.script.run. Zero writes.
-function scanPurchaseEventIsActiveEligibility() {
-  return scanPurchaseEventIsActiveEligibility_();
-}
-
-// Public RPC — callable from google.script.run.
-function remediatePurchaseEventIsActiveType(dryRun) {
-  return remediatePurchaseEventIsActiveType_(dryRun === true);
 }

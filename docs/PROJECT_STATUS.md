@@ -237,3 +237,45 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-06 | UI/UX 2.0 Package 020 | Centralized Light/Dark/System, chart, skeleton, state, and print-light color ownership, added listener lifecycle coverage, and raised the ordered local gate to 39/39 without changing geometry or product behavior. |
 | 2026-08-06 | UI/UX 2.0 Package 021 | Removed five proven reconstruction-debt symbols, replaced one brittle metadata assertion, and raised the ordered local gate to 40/40 without changing geometry or product behavior. |
 | 2026-09-22 | UI/UX 2.0 Package 022 closed | Production v587 active; backend 114/114, functional 24/24, visual 80/80 (1,440/1,440 decisions), and production health 17/17 passed. VD-001 remediated; v585 retained for rollback; rollback drill not required. |
+| 2026-09-22 | Purchase Recovery Incident — Hakaes CLOSED | Canonical boolean persistence fixed; Hakaes row remediated; automatic pending recovery added; incident-only public RPCs removed. Production v595. |
+
+## 21. Purchase Recovery Incident — Hakaes (CLOSED)
+
+**Status:** CLOSED
+**Production version at closure:** v595
+**Date:** 2026-09-22
+
+### Root Cause
+`appendEvent` in `purchaseEventProductionRuntime_` applied `setNumberFormat('@')` (text format) to the entire PurchaseEvents row before `setValues`. Boolean `IsActive: true` was coerced to string `"true"` in text-formatted cells. The corrupted row blocked `purchaseEventHistory_` global validation, which blocked the Transactions page read path.
+
+### Impact
+- Hakaes PurchaseEvent (requestKey: `receipt-155ac0faba8815dcd59fdd3a20130669`) could not be found by status lookup
+- `purchaseEventHistory_` threw `PURCHASE_HISTORY_CONFLICT` for the corrupted row
+- Transactions page displayed "Transactions unavailable"
+
+### Resolution
+1. Added `writeCanonicalBoolean_` helper: changes cell format from `@` to `General`, writes boolean `true`, verifies readback
+2. `appendEvent` now uses the canonical primitive with fail-closed readback verification
+3. Bounded remediation fixed the existing Hakaes row (IsActive: string `"true"` → boolean `true`)
+4. Added automatic pending Purchase recovery: `restoreReceiptEntryPending` now calls `lookupPurchaseEventStatus` instead of forcing uncertain state
+5. Removed temporary incident-only public RPCs (diagnose, scan, remediate) — private helpers retained
+
+### Commits
+- `998b999` — fix: decouple purchase capture from activation cutoff
+- `89e606c` — fix: add read-only Purchase status lookup and WRITE_UNCERTAIN diagnostics
+- `10a426d` — fix: enforce canonical requestKey and targeted lookup isolation
+- `89e606c` — fix: add read-only Purchase status lookup
+- `735eef9` — diagnostic: add read-only PurchaseEvent integrity inspector
+- `ca9e1e0` — fix: preserve boolean IsActive in PurchaseEvent writer
+- `639f58a` — feat: add zero-write IsActive eligibility scanner and dry-run remediation
+- `fa38832` — fix: canonical boolean persistence for PurchaseEvent IsActive
+- `7fd7aa2` — fix: auto-check pending Purchase status on dialog reopen
+
+### Verification
+- 114/114 backend regression PASS
+- Finance runtime validation PASS/read-only
+- Hakaes: matchingRowCount=1, IsActive=boolean true, overallPass=true, normalizedPayloadMatchesRow=true
+- FOUND_MATCHING_EVENT with original pending payload
+- Automatic pending recovery PASS
+- Transactions page loads normally
+- No duplicate PurchaseEvent created
