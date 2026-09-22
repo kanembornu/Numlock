@@ -432,3 +432,68 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
     INVENTORY_RECEIPT_ACTIVATION.enabled === false && EXPENSE_PURCHASE_POLICY.activationEvent === null, 'authorized activation state');
   return { status: 'PASS', assertions: count, evidence: 'LOCAL_FIXTURE' };
 }
+
+function testPurchaseEventDiagnosticContracts() {
+  var count = 0;
+  function check(value, label) { count++; if (!value) throw new Error('Diagnostic: ' + label); }
+  var clone = inventoryReceiptClone_;
+
+  var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  f.run();
+
+  var originalSpreadsheetApp = globalThis.SpreadsheetApp;
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name !== PURCHASE_EVENT_POLICY.sheet) return null;
+      return { getLastRow: function() { return f.events.length + 1; }, getDataRange: function() { return { getValues: function() {
+        return [PURCHASE_EVENT_POLICY.headers.slice()].concat(f.events.map(function(row) {
+          return PURCHASE_EVENT_POLICY.headers.map(function(header) { return row[header]; });
+        }));
+      } }; } };
+    }
+  }; } };
+  try {
+    // Test 1: Valid key returns full diagnostic
+    var result = diagnosePurchaseEventIntegrity_('purchase-test-0001');
+    check(result.matchingRowCount === 1, 'found one row');
+    check(result.rawFields.EventID === 'PE-purchase-test-0001', 'EventID correct');
+    check(result.rawFields.IsActive === true, 'IsActive is boolean true');
+    check(result.fieldRuntimeTypes.IsActive === 'boolean', 'IsActive type is boolean');
+    check(result.rawFields.Lifecycle === 'CAPTURED_OPERATIONAL', 'Lifecycle correct');
+    check(result.predicates.overallPass === true, 'all predicates pass');
+    check(result.transactionsReadError === null, 'no transactions error');
+
+    // Test 2: Unknown key returns zero matches
+    var unknown = diagnosePurchaseEventIntegrity_('purchase-unknown-9999');
+    check(unknown.matchingRowCount === 0, 'no matches for unknown');
+
+    // Test 3: Invalid key
+    var invalid = diagnosePurchaseEventIntegrity_(null);
+    check(invalid.error === 'INVALID_REQUEST_KEY', 'invalid key');
+
+    // Test 4: Corrupted row detected
+    var saved = f.events[0].Lifecycle;
+    f.events[0].Lifecycle = 'CORRUPTED';
+    var corrupted = diagnosePurchaseEventIntegrity_('purchase-test-0001');
+    check(corrupted.predicates.lifecycleCorrect === false, 'lifecycle predicate fails');
+    check(corrupted.predicates.overallPass === false, 'overall fails');
+    f.events[0].Lifecycle = saved;
+
+    // Test 5: IsActive type mismatch detected
+    var savedActive = f.events[0].IsActive;
+    f.events[0].IsActive = 'true';
+    var typeMismatch = diagnosePurchaseEventIntegrity_('purchase-test-0001');
+    check(typeMismatch.fieldRuntimeTypes.IsActive === 'string', 'IsActive is string');
+    check(typeMismatch.predicates.isActiveStrict === false, 'isActive strict fails');
+    f.events[0].IsActive = savedActive;
+
+    // Test 6: Zero writes
+    var eventsBefore = f.events.length;
+    diagnosePurchaseEventIntegrity_('purchase-test-0001');
+    check(f.events.length === eventsBefore, 'zero writes');
+  } finally {
+    globalThis.SpreadsheetApp = originalSpreadsheetApp;
+  }
+
+  return { status: 'PASS', assertions: count };
+}

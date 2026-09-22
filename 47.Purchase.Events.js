@@ -277,3 +277,168 @@ function readPurchaseEventTransactionRows_(ss) {
   purchaseEventHistory_(rows);
   return rows.map(projectPurchaseEventTransaction_);
 }
+
+// Read-only diagnostic: inspects a specific PurchaseEvent row and evaluates
+// each purchaseEventHistory_ integrity predicate independently. Zero writes.
+function diagnosePurchaseEventIntegrity_(requestKey) {
+  if (typeof requestKey !== 'string' || !requestKey) {
+    return { error: 'INVALID_REQUEST_KEY', requestKey: requestKey || null };
+  }
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+    if (!sheet || sheet.getLastRow() <= 1) return { matchingRowCount: 0, error: 'NO_SHEET_DATA' };
+    var headers = PURCHASE_EVENT_POLICY.headers;
+    var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
+    // Find all matching rows
+    var matches = [];
+    var matchIndices = [];
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].RequestKey === requestKey) {
+        matches.push(rows[i]);
+        matchIndices.push(i + 2); // +2 because row 1 is headers, data starts at row 2
+      }
+    }
+    if (matches.length === 0) return { matchingRowCount: 0, requestKey: requestKey };
+    var row = matches[0];
+    // Evaluate each purchaseEventHistory_ predicate independently
+    var predicates = {};
+    // Predicate 1: all headers present
+    predicates.allHeadersPresent = headers.every(function(key) {
+      return Object.prototype.hasOwnProperty.call(row, key);
+    });
+    // Predicate 2: RequestKey present
+    predicates.requestKeyPresent = !!row.RequestKey;
+    // Predicate 3: EventID format
+    predicates.eventIdFormat = row.EventID === 'PE-' + requestKey;
+    // Predicate 4: RecoveryKey format
+    predicates.recoveryKeyFormat = row.RecoveryKey === 'pe-receipt-' + requestKey;
+    // Predicate 5: Lifecycle
+    predicates.lifecycleCorrect = row.Lifecycle === 'CAPTURED_OPERATIONAL';
+    // Predicate 6: IsActive — check both value and type
+    predicates.isActiveValue = row.IsActive;
+    predicates.isActiveType = typeof row.IsActive;
+    predicates.isActiveStrict = row.IsActive === true;
+    // Predicate 7: NormalizedPayload parseable
+    var parsedPayload = null;
+    var payloadParseable = false;
+    var payloadMatchesRow = false;
+    try {
+      parsedPayload = JSON.parse(row.NormalizedPayload);
+      payloadParseable = true;
+      var normalized = normalizePurchaseEventRequest_(parsedPayload);
+      payloadMatchesRow = JSON.stringify(normalized) === row.NormalizedPayload;
+    } catch (e) { /* parse failed */ }
+    predicates.normalizedPayloadParseable = payloadParseable;
+    predicates.normalizedPayloadMatchesRow = payloadMatchesRow;
+    // Predicate 8: Policy version
+    predicates.policyVersion = row.PolicyVersion;
+    predicates.policyRevision = row.PolicyRevision;
+    predicates.policyVersionCorrect = row.PolicyVersion === EXPENSE_PURCHASE_POLICY.version;
+    predicates.policyRevisionCorrect = row.PolicyRevision === EXPENSE_PURCHASE_POLICY.revision;
+    // Predicate 9: ExpenseID in policy
+    var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === row.ExpenseID; })[0];
+    predicates.expenseIdInPolicy = !!route;
+    predicates.costType = row.CostType;
+    predicates.costTypeCorrect = route ? row.CostType === route.CostType : false;
+    predicates.purchaseRelationship = row.PurchaseRelationship;
+    predicates.purchaseRelationshipCorrect = route ? row.PurchaseRelationship === route.PurchaseRelationship : false;
+    // Predicate 10: BusinessLabel present
+    predicates.businessLabelPresent = !!row.BusinessLabel;
+    // Predicate 11: CreatedBy present
+    predicates.createdByPresent = !!row.CreatedBy;
+    // Predicate 12: CreatedAt valid timestamp
+    predicates.createdAtValid = inventoryTimestampMillis(row.CreatedAt) !== null;
+    // Predicate 13: Attestation format
+    predicates.attestationExpected = row.Attestation;
+    try {
+      var attParsed = JSON.parse(row.Attestation);
+      predicates.attestationFormat = attParsed.attested === true && typeof attParsed.conversionEvidenceConfirmed === 'boolean';
+    } catch (e) { predicates.attestationFormat = false; }
+    // Predicate 14: ReceiptPlan
+    predicates.receiptPlan = row.ReceiptPlan;
+    try {
+      var plan = JSON.parse(row.ReceiptPlan);
+      predicates.receiptPlanParsed = true;
+      predicates.receiptPlanIsNull = plan === null;
+      if (plan && plan.input) {
+        predicates.receiptPlanHasInput = true;
+        predicates.receiptPlanItemId = plan.input.ItemID;
+      }
+    } catch (e) { predicates.receiptPlanParsed = false; }
+    // Overall integrity: all critical predicates must pass
+    predicates.overallPass = predicates.allHeadersPresent && predicates.requestKeyPresent &&
+      predicates.eventIdFormat && predicates.recoveryKeyFormat && predicates.lifecycleCorrect &&
+      predicates.isActiveStrict && predicates.normalizedPayloadParseable &&
+      predicates.normalizedPayloadMatchesRow && predicates.policyVersionCorrect &&
+      predicates.policyRevisionCorrect && predicates.expenseIdInPolicy &&
+      predicates.costTypeCorrect && predicates.purchaseRelationshipCorrect &&
+      predicates.businessLabelPresent && predicates.createdByPresent &&
+      predicates.createdAtValid && predicates.attestationFormat;
+
+    // Also capture the Transactions read path error
+    var transactionsReadError = null;
+    try {
+      readPurchaseEventTransactionRows_(ss);
+    } catch (e) {
+      transactionsReadError = { message: e.message, code: e.message };
+    }
+
+    return {
+      matchingRowCount: matches.length,
+      matchRowNumbers: matchIndices,
+      requestKey: requestKey,
+      rawFields: {
+        EventID: row.EventID,
+        RequestKey: row.RequestKey,
+        IsActive: row.IsActive,
+        Lifecycle: row.Lifecycle,
+        RecoveryKey: row.RecoveryKey,
+        ExpenseID: row.ExpenseID,
+        ExpenseDate: row.ExpenseDate,
+        ReceiptDate: row.ReceiptDate,
+        AcquisitionValue: row.AcquisitionValue,
+        AllocationStatus: row.AllocationStatus,
+        ReceiptPlan: row.ReceiptPlan,
+        NormalizedPayload: row.NormalizedPayload ? row.NormalizedPayload.substring(0, 500) : null,
+        PolicyVersion: row.PolicyVersion,
+        PolicyRevision: row.PolicyRevision,
+        CostType: row.CostType,
+        PurchaseRelationship: row.PurchaseRelationship,
+        BusinessLabel: row.BusinessLabel,
+        CreatedAt: row.CreatedAt,
+        CreatedBy: row.CreatedBy,
+        Attestation: row.Attestation ? row.Attestation.substring(0, 200) : null
+      },
+      fieldRuntimeTypes: {
+        EventID: typeof row.EventID,
+        RequestKey: typeof row.RequestKey,
+        IsActive: typeof row.IsActive,
+        Lifecycle: typeof row.Lifecycle,
+        RecoveryKey: typeof row.RecoveryKey,
+        ExpenseID: typeof row.ExpenseID,
+        ExpenseDate: typeof row.ExpenseDate,
+        ReceiptDate: typeof row.ReceiptDate,
+        AcquisitionValue: typeof row.AcquisitionValue,
+        AllocationStatus: typeof row.AllocationStatus,
+        ReceiptPlan: typeof row.ReceiptPlan,
+        PolicyVersion: typeof row.PolicyVersion,
+        PolicyRevision: typeof row.PolicyRevision,
+        CostType: typeof row.CostType,
+        PurchaseRelationship: typeof row.PurchaseRelationship,
+        BusinessLabel: typeof row.BusinessLabel,
+        CreatedAt: typeof row.CreatedAt,
+        CreatedBy: typeof row.CreatedBy
+      },
+      predicates: predicates,
+      transactionsReadError: transactionsReadError
+    };
+  } catch (error) {
+    return { error: error.message, requestKey: requestKey };
+  }
+}
+
+// Public RPC entry point — callable from google.script.run.
+function diagnosePurchaseEventIntegrity(requestKey) {
+  return diagnosePurchaseEventIntegrity_(requestKey);
+}

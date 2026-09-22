@@ -113,5 +113,7 @@ run('testPurchaseEventLookupContracts', 'testPurchaseEventLookupContracts()');
 // 6. Schema migration — pre-activation operation; guard proves post-activation safety.
 run('testPurchaseEventSchemaMigrationContracts', 'testPurchaseEventSchemaMigrationContracts()');
 
+run('testPurchaseEventDiagnosticContracts', 'testPurchaseEventDiagnosticContracts()');
+
 console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
