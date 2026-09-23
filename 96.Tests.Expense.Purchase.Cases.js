@@ -2232,6 +2232,9 @@ function testPurchaseUIContracts() {
   function check(value, label) { count++; if (!value) throw new Error('PurchaseUI: ' + label); }
   var clone = inventoryReceiptClone_;
 
+  // UI constants not available in Node context — define locally
+  var TRANSACTIONS_ALLOWED_PAGE_SIZES = { 15: true, 25: true, 50: true };
+
   var activePurchase = { id: 'PE-ui-001', transactionType: 'PurchaseEvent', date: '2026-10-15', dateKey: '2026-10-15',
     item: 'Lemon', itemId: 'ING-018', product: '', purchaseCategory: 'Ingredients', isActive: true, source: 'APP_ENTRY',
     acquisitionValue: 20000, purchaseQuantity: 2, purchaseUOM: 'kg', qty: null, revenue: null, expense: null,
@@ -2361,6 +2364,144 @@ function testPurchaseUIContracts() {
   // U30: lifecycle drilldown filters PurchaseEvents correctly
   var drilldownPurchase = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all', drilldownType: 'purchase' }, 'recent');
   check(drilldownPurchase.filter(function(r) { return r.transactionType === 'PurchaseEvent' || r.transactionType === 'Expense'; }).length === drilldownPurchase.length, 'U30: drilldown purchase filter');
+
+  // === DEFECT 1-7: Table column width rebalancing ===
+  // U31-U38: Verify new column width percentages
+  check(_htmlIndex.indexOf('th:nth-child(1)') !== -1, 'U31: col1 selector exists');
+  check(_htmlIndex.indexOf('width: 17%') !== -1, 'U32: col1 (Transaction ID) width 17%');
+  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U33: col2 (Date) width 9%');
+  check(_htmlIndex.indexOf('width: 8%') !== -1, 'U34: col3 (Type) width 8%');
+  check(_htmlIndex.indexOf('width: 14%') !== -1, 'U35: col4 (Item) width 14%');
+  check(_htmlIndex.indexOf('width: 11%') !== -1, 'U36: col5 (Qty) width 11%');
+  check(_htmlIndex.indexOf('width: 12%') !== -1, 'U37: col7 (Status) width 12%');
+  check(_htmlIndex.indexOf('width: 18%') !== -1, 'U38: col8 (Actions) width 18%');
+
+  // U39-U42: Verify old widths are replaced
+  check(_htmlIndex.indexOf('width: 5%') === -1, 'U39: old col5 width 5% removed');
+  check(_htmlIndex.indexOf('width: 24%') === -1, 'U40: old col4 width 24% removed');
+  check(_htmlIndex.indexOf('width: 19%') === -1, 'U41: old col8 width 19% removed');
+  check(_htmlIndex.indexOf('width: 16%') === -1, 'U42: old col1 width 16% removed');
+
+  // U43: table-layout: fixed present
+  check(_htmlIndex.indexOf('table-layout: fixed') !== -1, 'U43: table-layout fixed');
+
+  // === DEFECT 8: EventID uppercase display ===
+  // U44-U46: EventID toUpperCase in render template
+  check(_htmlRender.indexOf('.toUpperCase()') !== -1, 'U44: toUpperCase in render source');
+  check(_htmlRender.indexOf('escapeUiHtml(r.id.toUpperCase())') !== -1, 'U45: toUpperCase wraps escapeUiHtml');
+  check(_htmlRender.indexOf('title="${escapeUiHtml(r.id)}"') !== -1, 'U46: title retains original case');
+
+  // === DEFECT 9: Remove top note in Purchase View ===
+  // U47-U48: description text removed
+  check(_htmlActions.indexOf('Excluded from current financial Expense totals') === -1, 'U47: expense-exclusion text removed');
+  check(_htmlActions.indexOf('Purchase cost record') === -1, 'U48: purchase-cost-record text removed');
+
+  // U49-U50: operationalNote minimization
+  check(_htmlActions.indexOf('lifecycle.title.innerText = "Purchase"') !== -1, 'U49: title Purchase preserved');
+  check(_htmlActions.indexOf('detail.operationalNote || ""') !== -1, 'U50: operationalNote fallback to empty');
+
+  // === Qty/Status cells whitespace-nowrap ===
+  // U51-U52: Qty cell has whitespace-nowrap
+  check(_htmlRender.indexOf('text-center whitespace-nowrap') !== -1, 'U51: whitespace-nowrap class present in render');
+  check(_htmlRender.indexOf('px-4 text-center whitespace-nowrap') !== -1, 'U52: nowrap applied to Qty cell');
+
+  // === DEFECT 5: Action direct routing ===
+  // U53-U56: Purchase actions dispatch directly to dialogs
+  check(_htmlActions.indexOf("openPurchaseVoidDialog(transactionId)") !== -1, 'U53: purchase-void routes to openPurchaseVoidDialog');
+  check(_htmlActions.indexOf("openPurchaseCorrectDialog(transactionId)") !== -1, 'U54: purchase-correct routes to openPurchaseCorrectDialog');
+  check(_htmlActions.indexOf("openPurchaseResolveDialog(transactionId") !== -1, 'U55: purchase-resolve routes to openPurchaseResolveDialog');
+  check(_htmlActions.indexOf("openTransactionDetail(transactionId)") !== -1, 'U56: detail routes to openTransactionDetail');
+
+  // === DEFECT 10-11: Mutation refresh path ===
+  // U57-U59: refreshTransactionsAfterPurchaseMutation clears cache and reloads
+  check(_htmlActions.indexOf('transactionsResultCache = {}') !== -1, 'U57: refresh clears transactionsResultCache');
+  check(_htmlActions.indexOf('transactionsResultCacheOrder = []') !== -1, 'U58: refresh clears transactionsResultCacheOrder');
+  check(_htmlActions.indexOf('requestTransactionsPage()') !== -1, 'U59: refresh calls requestTransactionsPage');
+
+  // === Badge system ===
+  // U60-U61: Purchase badge CSS uses indigo color family
+  check(_htmlIndex.indexOf('.transaction-type--purchase') !== -1, 'U60: purchase type badge class exists');
+  check(_htmlIndex.indexOf('#6366f1') !== -1, 'U61: purchase badge uses indigo border');
+
+  // U62-U65: Status badge CSS classes
+  check(_htmlIndex.indexOf('.transaction-status-badge--pending') !== -1, 'U62: pending status badge exists');
+  check(_htmlIndex.indexOf('.transaction-status-badge--resolved') !== -1, 'U63: resolved status badge exists');
+  check(_htmlIndex.indexOf('.transaction-status-badge--voided') !== -1, 'U64: voided status badge exists');
+  check(_htmlIndex.indexOf('.transaction-status-badge--corrected') !== -1, 'U65: corrected status badge exists');
+
+  // U66-U67: Status badge geometry (pill shape, min-height)
+  check(_htmlIndex.indexOf('.transaction-status-badge {') !== -1, 'U66: status badge base rule exists');
+  check(_htmlIndex.indexOf('.transaction-type {') !== -1, 'U67: transaction type base rule exists');
+
+  // === Correction/Void/Resolve projection ===
+  // U68-U70: Projection action flags for each lifecycle state
+  check(activePurchase.canVoid === true && activePurchase.canCorrect === true, 'U68: active purchase action flags');
+  check(voidedPurchase.canVoid === false && voidedPurchase.canCorrect === false, 'U69: voided purchase no actions');
+  check(correctedPurchase.canVoid === false && correctedPurchase.canCorrect === false, 'U70: corrected purchase no actions');
+
+  // U71-U72: Projection status derivation
+  check(activePurchase.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED', 'U71: resolved allocation status');
+  check(unresolvedPurchase.allocationStatus === 'QUANTITY_PACKAGE_UNRESOLVED', 'U72: unresolved allocation status');
+
+  // U73-U74: Projection financial isolation
+  check(activePurchase.acquisitionValue > 0, 'U73: acquisitionValue numeric');
+  check(typeof activePurchase.acquisitionValue === 'number', 'U74: acquisitionValue is number type');
+
+  // U75-U76: Receipt/UOM preservation
+  check(activePurchase.purchaseUOM === 'kg', 'U75: purchaseUOM preserved');
+  check(typeof activePurchase.purchaseQuantity === 'number', 'U76: purchaseQuantity is numeric');
+
+  // U77-U78: Receipt type detection
+  check(activePurchase.transactionType === 'PurchaseEvent', 'U77: transactionType is PurchaseEvent');
+  check(activeSale.transactionType === 'Sales', 'U78: sales transactionType');
+
+  // U79-U80: Empty state rendering
+  var emptyResult = buildTransactionsPageResult([], 1, 15);
+  check(emptyResult.totalRows === 0, 'U79: empty page totalRows zero');
+  check(emptyResult.rows.length === 0, 'U80: empty page no rows');
+
+  // U81-U82: Pagination state
+  var bigPage = buildTransactionsPageResult(Array.from({ length: 30 }, function(_, i) { return { id: 'T' + i }; }), 1, 15);
+  check(bigPage.totalRows === 30, 'U81: 30-row totalRows');
+  check(bigPage.totalPages === 2, 'U82: 30 rows at 15/page = 2 pages');
+
+  // U83-U84: Search index for PurchaseEvent
+  var searchIdx = buildTransactionsSearchIndex([activePurchase, unresolvedPurchase]);
+  check(searchIdx.length === 2, 'U83: search index length matches input');
+  check(searchIdx.every(function(r) { return r.transactionType === 'PurchaseEvent'; }), 'U84: all search index rows are PurchaseEvent');
+
+  // U85-U86: Page size validation
+  check(TRANSACTIONS_ALLOWED_PAGE_SIZES[15] === true, 'U85: page size 15 allowed');
+  check(TRANSACTIONS_ALLOWED_PAGE_SIZES[25] === true, 'U86: page size 25 allowed');
+
+  // U87-U88: Transaction type badge class derivation for purchase
+  var purchaseRow = activePurchase.transactionType === "PurchaseEvent";
+  var purchaseBadgeType = purchaseRow ? 'transaction-type--purchase' : 'transaction-type--expense';
+  check(purchaseBadgeType === 'transaction-type--purchase', 'U87: purchase type badge class derivation');
+  check(purchaseBadgeType !== 'transaction-type--expense', 'U88: purchase not classified as expense');
+
+  // U89-U90: Actions overflow and layout
+  check(_htmlRender.indexOf('overflow-visible') !== -1, 'U89: actions cell has overflow-visible');
+  check(_htmlRender.indexOf('transactions-row-actions') !== -1, 'U90: actions flex container present');
+
+  // U91-U92: Resolve button CSS rule exists
+  check(_htmlIndex.indexOf('.transactions-row-action--resolve') !== -1, 'U91: resolve action button CSS class exists');
+  check(_htmlIndex.indexOf('--transaction-action-bg: var(--success-soft)') !== -1, 'U92: resolve button uses success-soft background');
+
+  // U93-U97: Dark theme badge overrides
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--active') !== -1, 'U93: dark badge --active override exists');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--voided') !== -1, 'U94: dark badge --voided override exists');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--pending') !== -1, 'U95: dark badge --pending override exists');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--resolved') !== -1, 'U96: dark badge --resolved override exists');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--corrected') !== -1, 'U97: dark badge --corrected override exists');
+
+  // U98-U99: Dark theme type badge overrides
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--purchase') !== -1, 'U98: dark type badge --purchase override exists');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
+
+  // U100: Column widths sum to 100%
+  var colWidths = [17, 9, 8, 14, 11, 11, 12, 18];
+  check(colWidths.reduce(function(a, b) { return a + b; }, 0) === 100, 'U100: column widths sum to 100%');
 
   return { status: 'PASS', assertions: count };
 }

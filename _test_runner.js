@@ -19,6 +19,7 @@ globalThis.CacheService = {
 globalThis.SpreadsheetApp = {
   getActiveSpreadsheet: function() { throw new Error('NO_SPREADSHEET_MOCK'); }
 };
+globalThis.invalidateDashboardCache = function() {};
 globalThis.getDashboardCacheRevision = function() { return 'LOCAL_FIXTURE'; };
 globalThis.dateFormat = function() { return 'yyyy-MM-dd'; };
 
@@ -104,6 +105,13 @@ vm.runInContext(
   'var _testItems = EXPENSE_PURCHASE_POLICY.rows.map(function(r) { return { ID_Ops: r.expenseItemId, Item: "Test-" + r.expenseItemId, Kategori: "Test", Kind: "Test", Group: "Test", AccountCode: "1100", IsActive: true }; });',
   ctx
 );
+
+// HTML source files for UI contract tests
+vm.runInContext([
+  'var _htmlIndex = ' + JSON.stringify(fs.readFileSync('190.View.Index.html', 'utf8')) + ';',
+  'var _htmlRender = ' + JSON.stringify(fs.readFileSync('193.View.Transactions.Render.html', 'utf8')) + ';',
+  'var _htmlActions = ' + JSON.stringify(fs.readFileSync('195.View.Transactions.Actions.html', 'utf8')) + ';'
+].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
 

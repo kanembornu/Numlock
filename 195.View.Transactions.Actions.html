@@ -685,8 +685,8 @@
       }
       var lifecycle = initializeStableDashboardElements().lifecycle;
       lifecycle.title.innerText = "Purchase";
-      lifecycle.description.innerText = "Purchase cost record. Excluded from current financial Expense totals.";
-      lifecycle.state.innerText = detail.operationalNote || "Cost recorded.";
+      lifecycle.description.innerText = "";
+      lifecycle.state.innerText = detail.operationalNote || "";
       lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Purchase details</h3><dl>' + detailRowsHtml([
         ["Event ID", detail.id], ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
         ["Receipt date", formatTransactionDate(detail.receiptDate || detail.date)],

@@ -362,16 +362,16 @@
       #transactionsTableScroll th + th { border-left: 1px solid var(--border-subtle); }
       #transactionsTableScroll td { height: 40px; padding: 0 10px; font-size: 14px; line-height: 20px; vertical-align: middle; }
       #transactionsTableScroll th { text-align: center; }
-      #transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 16%; }
+      #transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 17%; }
       #transactionsTableScroll td:nth-child(1) { font-size: 11px; letter-spacing: -0.01em; }
-      #transactionsTableScroll th:nth-child(2), #transactionsTableScroll td:nth-child(2) { width: 10%; text-align: center; }
+      #transactionsTableScroll th:nth-child(2), #transactionsTableScroll td:nth-child(2) { width: 9%; text-align: center; }
       #transactionsTableScroll th:nth-child(3), #transactionsTableScroll td:nth-child(3) { width: 8%; text-align: center; }
-      #transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 24%; }
-      #transactionsTableScroll th:nth-child(5), #transactionsTableScroll td:nth-child(5) { width: 5%; padding-right: 6px; padding-left: 6px; text-align: center; }
-      #transactionsTableScroll th:nth-child(6), #transactionsTableScroll td:nth-child(6) { width: 10%; }
+      #transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 14%; }
+      #transactionsTableScroll th:nth-child(5), #transactionsTableScroll td:nth-child(5) { width: 11%; padding-right: 6px; padding-left: 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(6), #transactionsTableScroll td:nth-child(6) { width: 11%; }
       #transactionsTableScroll td:nth-child(6) { text-align: left; }
-      #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 8%; padding: 0 6px; text-align: center; }
-      #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 19%; padding: 0 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 12%; padding: 0 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 18%; padding: 0 6px; text-align: center; }
       #transactionsTableCard { overflow: hidden; }
       .transactions-row-actions { display: flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
       .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
@@ -380,6 +380,8 @@
       .transactions-row-action--view:hover { --transaction-action-bg: var(--hover); color: var(--text-primary); }
       .transactions-row-action--correct { --transaction-action-bg: var(--brand-soft); color: var(--brand); }
       .transactions-row-action--correct:hover { --transaction-action-bg: var(--selected); }
+      .transactions-row-action--resolve { --transaction-action-bg: var(--success-soft); color: var(--success); }
+      .transactions-row-action--resolve:hover { filter: brightness(.96); }
       .transactions-row-action--void { --transaction-action-bg: var(--critical-soft); color: var(--critical); }
       .transactions-row-action--void:hover { filter: brightness(.96); }
       #transactionsPagination { min-height: 50px; border-top: 1px solid var(--divider); padding: 7px 12px; }
@@ -2014,6 +2016,14 @@
       :root[data-theme="dark"] .text-green-700 { color: var(--success) !important; }
       :root[data-theme="dark"] .shadow-lg,
       :root[data-theme="dark"] .shadow-sm { box-shadow: var(--shadow-1) !important; }
+
+      :root[data-theme="dark"] .transaction-type--purchase { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+      :root[data-theme="dark"] .transaction-type--receipt { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      :root[data-theme="dark"] .transaction-status-badge--active { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      :root[data-theme="dark"] .transaction-status-badge--voided { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
+      :root[data-theme="dark"] .transaction-status-badge--pending { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
+      :root[data-theme="dark"] .transaction-status-badge--resolved { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      :root[data-theme="dark"] .transaction-status-badge--corrected { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
 
       button:disabled,
       select:disabled,

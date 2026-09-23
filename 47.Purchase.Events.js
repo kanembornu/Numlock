@@ -456,7 +456,9 @@ function resolvePurchaseEventEvidence_(requestKey, resolution) {
 
 // Public RPC — callable from google.script.run.
 function resolvePurchaseEventEvidence(requestKey, resolution) {
-  return resolvePurchaseEventEvidence_(requestKey, resolution);
+  var result = resolvePurchaseEventEvidence_(requestKey, resolution);
+  if (result.status === 'RESOLVED') invalidateDashboardCache();
+  return result;
 }
 
 function readPurchaseEventTransactionRows_(ss) {
@@ -781,7 +783,9 @@ function voidPurchaseEvent(payload) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var timestamp = new Date();
     var runtime = { flush: function() { SpreadsheetApp.flush(); } };
-    return voidPurchaseEventUnderLock_(identity.trim(), reason, ss, runtime);
+    var result = voidPurchaseEventUnderLock_(identity.trim(), reason, ss, runtime);
+    if (result.status === 'VOIDED') invalidateDashboardCache();
+    return result;
   } catch (error) {
     return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0 };
   } finally {
@@ -975,7 +979,9 @@ function correctPurchaseEvent(payload) {
     var runtime = { flush: function() { SpreadsheetApp.flush(); },
       audit: function() { return { actor: CANONICAL_ENTRY.USER, at: new Date().toISOString() }; },
       uuid: function() { return Utilities.getUuid(); } };
-    return correctPurchaseEventUnderLock_(payload, SpreadsheetApp.getActiveSpreadsheet(), runtime);
+    var result = correctPurchaseEventUnderLock_(payload, SpreadsheetApp.getActiveSpreadsheet(), runtime);
+    if (result.status === 'CORRECTED') invalidateDashboardCache();
+    return result;
   } catch (error) { return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0 }; }
   finally { if (acquired) lock.releaseLock(); }
 }
