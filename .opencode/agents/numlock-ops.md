@@ -1,7 +1,7 @@
 ---
 description: NUMLOCK bounded operational acceptance operator. Executes exact-command-allowlisted clasp commands for controlled acceptance verification and runtime validation.
 mode: subagent
-model: 9router/numlock-explore-free
+model: 9router/numlock-sol
 permission:
   edit: deny
   bash:
