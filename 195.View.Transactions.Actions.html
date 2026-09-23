@@ -275,6 +275,7 @@
       lifecycle.title.innerText = mode === "void" ? "Void Transaction" : "Transaction Details";
       lifecycle.description.innerText = mode === "void" ? "Review the impact and provide a reason." : "Loading canonical server data.";
       lifecycle.state.innerText = "Loading transaction…";
+      lifecycle.state.hidden = false;
       lifecycle.content.innerHTML = "";
       lifecycle.voidRegion.hidden = true;
       lifecycle.footer.innerHTML = "";
@@ -685,8 +686,9 @@
       }
       var lifecycle = initializeStableDashboardElements().lifecycle;
       lifecycle.title.innerText = "Purchase";
-      lifecycle.description.innerText = "";
+      lifecycle.description.innerText = "Cost recorded. Quantity or package is not verified for stock tracking.";
       lifecycle.state.innerText = detail.operationalNote || "";
+      lifecycle.state.hidden = !detail.operationalNote;
       lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Purchase details</h3><dl>' + detailRowsHtml([
         ["Event ID", detail.id], ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
         ["Receipt date", formatTransactionDate(detail.receiptDate || detail.date)],
@@ -711,6 +713,7 @@
     var purchaseVoidState = { eventOrRequestKey: null, reason: "" };
 
     function openPurchaseVoidDialog(eventId) {
+      openTransactionLifecycleDialog("void");
       purchaseVoidState.eventOrRequestKey = eventId;
       purchaseVoidState.reason = "";
       var lifecycle = initializeStableDashboardElements().lifecycle;
@@ -782,6 +785,7 @@
     }
 
     function openPurchaseCorrectDialog(eventId) {
+      openTransactionLifecycleDialog("void");
       purchaseCorrectState.originalEventOrRequestKey = eventId;
       purchaseCorrectState.correctionRequestKey = generateCorrectionRequestKey();
       purchaseCorrectState.reason = "";
@@ -987,6 +991,7 @@
     var purchaseResolveState = { requestKey: null, reason: "" };
 
     function openPurchaseResolveDialog(eventId, requestKey) {
+      openTransactionLifecycleDialog("void");
       var rk = requestKey || eventId.replace('PE-', '');
       purchaseResolveState.requestKey = rk;
       var lifecycle = initializeStableDashboardElements().lifecycle;

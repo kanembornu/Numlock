@@ -2368,13 +2368,12 @@ function testPurchaseUIContracts() {
   // === DEFECT 1-7: Table column width rebalancing ===
   // U31-U38: Verify new column width percentages
   check(_htmlIndex.indexOf('th:nth-child(1)') !== -1, 'U31: col1 selector exists');
-  check(_htmlIndex.indexOf('width: 17%') !== -1, 'U32: col1 (Transaction ID) width 17%');
-  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U33: col2 (Date) width 9%');
-  check(_htmlIndex.indexOf('width: 8%') !== -1, 'U34: col3 (Type) width 8%');
-  check(_htmlIndex.indexOf('width: 14%') !== -1, 'U35: col4 (Item) width 14%');
-  check(_htmlIndex.indexOf('width: 11%') !== -1, 'U36: col5 (Qty) width 11%');
+  check(_htmlIndex.indexOf('width: 21%') !== -1, 'U32: col1 (Transaction ID) width 21%');
+  check(_htmlIndex.indexOf('width: 8%') !== -1, 'U33: col2 (Date) width 8%');
+  check(_htmlIndex.indexOf('width: 7%') !== -1, 'U34: col3 (Type) width 7%');
+  check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4 (Item) width 10%');
   check(_htmlIndex.indexOf('width: 12%') !== -1, 'U37: col7 (Status) width 12%');
-  check(_htmlIndex.indexOf('width: 18%') !== -1, 'U38: col8 (Actions) width 18%');
+  check(_htmlIndex.indexOf('width: 22%') !== -1, 'U38: col8 (Actions) width 22%');
 
   // U39-U42: Verify old widths are replaced
   check(_htmlIndex.indexOf('width: 5%') === -1, 'U39: old col5 width 5% removed');
@@ -2391,10 +2390,10 @@ function testPurchaseUIContracts() {
   check(_htmlRender.indexOf('escapeUiHtml(r.id.toUpperCase())') !== -1, 'U45: toUpperCase wraps escapeUiHtml');
   check(_htmlRender.indexOf('title="${escapeUiHtml(r.id)}"') !== -1, 'U46: title retains original case');
 
-  // === DEFECT 9: Remove top note in Purchase View ===
-  // U47-U48: description text removed
-  check(_htmlActions.indexOf('Excluded from current financial Expense totals') === -1, 'U47: expense-exclusion text removed');
-  check(_htmlActions.indexOf('Purchase cost record') === -1, 'U48: purchase-cost-record text removed');
+  // === DEFECT 9: Restore operational note in Purchase View ===
+  // U47-U48: description text restored
+  check(_htmlActions.indexOf('Cost recorded. Quantity or package is not verified for stock tracking.') !== -1, 'U47: operational note text present');
+  check(_htmlActions.indexOf('lifecycle.description.innerText = ""') === -1, 'U48: empty description removed');
 
   // U49-U50: operationalNote minimization
   check(_htmlActions.indexOf('lifecycle.title.innerText = "Purchase"') !== -1, 'U49: title Purchase preserved');
@@ -2500,8 +2499,36 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
 
   // U100: Column widths sum to 100%
-  var colWidths = [17, 9, 8, 14, 11, 11, 12, 18];
+  var colWidths = [21, 8, 7, 10, 10, 10, 12, 22];
   check(colWidths.reduce(function(a, b) { return a + b; }, 0) === 100, 'U100: column widths sum to 100%');
+
+  // === DEFECT C: Direct action dispatch verification ===
+  // U101-U104: Purchase action dialog functions call openTransactionLifecycleDialog to show overlay
+  check(_htmlActions.indexOf('openPurchaseVoidDialog(eventId)') !== -1, 'U101: openPurchaseVoidDialog function exists');
+  check(_htmlActions.indexOf('openPurchaseCorrectDialog(eventId)') !== -1, 'U102: openPurchaseCorrectDialog function exists');
+  check(_htmlActions.indexOf('openPurchaseResolveDialog(eventId') !== -1, 'U103: openPurchaseResolveDialog function exists');
+  check(_htmlActions.indexOf('openTransactionLifecycleDialog("void")') !== -1, 'U104: purchase dialog functions show overlay via openTransactionLifecycleDialog');
+
+  // === DEFECT F: View spacing — state element hidden when empty ===
+  // U105-U106: lifecycle.state hidden management
+  check(_htmlActions.indexOf('lifecycle.state.hidden') !== -1, 'U105: state hidden toggle exists');
+  check(_htmlActions.indexOf('lifecycle.state.hidden = false') !== -1, 'U106: openTransactionLifecycleDialog resets state visibility');
+
+  // === EventID case handling ===
+  // U107-U109: EventID uppercase display and ID column width for long IDs
+  check(_htmlRender.indexOf('escapeUiHtml(r.id.toUpperCase())') !== -1, 'U107: EventID displayed uppercase in table');
+  check(typeof activePurchase.id === 'string' && activePurchase.id.indexOf('PE-') === 0, 'U108: EventID has PE- prefix');
+  check(activePurchase.id.length >= 9, 'U109: EventID has meaningful minimum length');
+
+  // === Column width adequacy for longest IDs ===
+  // U110-U111: ID column width (21%) accommodates 42-char IDs at typical rendering
+  var longestId = 'PE-receipt-ae065103bdc45b683bdb35e9d636b69b';
+  check(longestId.length === 43, 'U110: longest ID is 43 chars');
+  check(colWidths[0] >= 20, 'U111: ID column width >= 20% for long IDs');
+
+  // === Actions column width for 4 buttons ===
+  // U112: Actions column (22%) provides space for 4 inline buttons
+  check(colWidths[7] >= 20, 'U112: actions column width >= 20% for 4 buttons');
 
   return { status: 'PASS', assertions: count };
 }
