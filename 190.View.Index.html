@@ -373,7 +373,7 @@
       #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 8%; padding: 0 6px; text-align: center; }
       #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 19%; padding: 0 6px; text-align: center; }
       #transactionsTableCard { overflow: hidden; }
-      .transactions-row-actions { display: inline-flex; height: 40px; align-items: center; justify-content: center; gap: 6px; }
+      .transactions-row-actions { display: flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
       .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
       .transactions-row-action::before { position: absolute; z-index: -1; inset: 0; border-radius: 8px; background: var(--transaction-action-bg); content: ""; }
       .transactions-row-action--view { --transaction-action-bg: var(--surface-3); color: var(--text-secondary); }
@@ -404,6 +404,13 @@
       .transaction-type--sales { border-color: var(--success); background: var(--success-soft); color: var(--success); }
       .transaction-type--expense { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
       .transaction-type--purchase { border-color: #6366f1; background: #eef2ff; color: #4f46e5; }
+      .transaction-type--receipt { border-color: #0d9488; background: #f0fdfa; color: #0f766e; }
+      .transaction-status-badge { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 1px 8px; font-size: 12px; font-weight: 600; line-height: 18px; }
+      .transaction-status-badge--active { border-color: #10b981; background: #d1fae5; color: #065f46; }
+      .transaction-status-badge--voided { border-color: #ef4444; background: #fee2e2; color: #991b1b; }
+      .transaction-status-badge--pending { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
+      .transaction-status-badge--resolved { border-color: #10b981; background: #d1fae5; color: #065f46; }
+      .transaction-status-badge--corrected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
       .hf-settings-grid { width: 100%; max-width: 960px; }
       .hf-setting-choice { min-height: 88px; }
       .hf-about-row { min-height: 36px; }

@@ -150,5 +150,7 @@ run('testPurchaseRecoveryContracts', 'testPurchaseRecoveryContracts()');
 
 run('testPurchaseResolveEvidenceContracts', 'testPurchaseResolveEvidenceContracts()');
 
+run('testPurchaseUIContracts', 'testPurchaseUIContracts()');
+
 console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

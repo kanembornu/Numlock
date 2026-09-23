@@ -187,7 +187,10 @@
       if (diagnosticAction === "correct") transactionDiagnostics.actions.correctEventCount++;
       if (diagnosticAction === "void") transactionDiagnostics.actions.voidEventCount++;
       transactionDiagnosticPending[diagnosticAction] = { startedAt: performance.now() };
-      if (action === "detail" || action === "purchase-void" || action === "purchase-correct" || action === "purchase-resolve") { openTransactionDetail(transactionId); return; }
+      if (action === "detail") { openTransactionDetail(transactionId); return; }
+      if (action === "purchase-void") { openPurchaseVoidDialog(transactionId); return; }
+      if (action === "purchase-correct") { openPurchaseCorrectDialog(transactionId); return; }
+      if (action === "purchase-resolve") { openPurchaseResolveDialog(transactionId, transactionId.replace('PE-', '')); return; }
       loadTransactionForMutation(transactionId, action);
     }
 

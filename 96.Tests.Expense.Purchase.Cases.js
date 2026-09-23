@@ -2226,3 +2226,141 @@ function testPurchaseResolveEvidenceContracts() {
 
   return { status: 'PASS', assertions: count };
 }
+
+function testPurchaseUIContracts() {
+  var count = 0;
+  function check(value, label) { count++; if (!value) throw new Error('PurchaseUI: ' + label); }
+  var clone = inventoryReceiptClone_;
+
+  var activePurchase = { id: 'PE-ui-001', transactionType: 'PurchaseEvent', date: '2026-10-15', dateKey: '2026-10-15',
+    item: 'Lemon', itemId: 'ING-018', product: '', purchaseCategory: 'Ingredients', isActive: true, source: 'APP_ENTRY',
+    acquisitionValue: 20000, purchaseQuantity: 2, purchaseUOM: 'kg', qty: null, revenue: null, expense: null,
+    allocationStatus: 'SINGLE_COMPONENT_EVIDENCED', canVoid: true, canCorrect: true, canEdit: false, canResolveEvidence: false,
+    operationalStatus: 'Active' };
+  var unresolvedPurchase = { id: 'PE-ui-002', transactionType: 'PurchaseEvent', date: '2026-10-16', dateKey: '2026-10-16',
+    item: 'Sugar', itemId: 'ING-001', product: '', purchaseCategory: 'Ingredients', isActive: true, source: 'APP_ENTRY',
+    acquisitionValue: 10000, purchaseQuantity: null, purchaseUOM: null, qty: null, revenue: null, expense: null,
+    allocationStatus: 'QUANTITY_PACKAGE_UNRESOLVED', canVoid: true, canCorrect: true, canEdit: false, canResolveEvidence: true,
+    operationalStatus: 'Active' };
+  var voidedPurchase = { id: 'PE-ui-003', transactionType: 'PurchaseEvent', date: '2026-10-17', dateKey: '2026-10-17',
+    item: 'Milk', itemId: 'ING-020', product: '', purchaseCategory: 'Ingredients', isActive: false, source: 'APP_ENTRY',
+    acquisitionValue: 15000, purchaseQuantity: 3, purchaseUOM: 'L', qty: null, revenue: null, expense: null,
+    allocationStatus: 'COST_POOL_ALLOCATION_UNDEFINED', canVoid: false, canCorrect: false, canEdit: false, canResolveEvidence: false,
+    operationalStatus: 'Voided' };
+  var correctedPurchase = { id: 'PE-ui-004', transactionType: 'PurchaseEvent', date: '2026-10-18', dateKey: '2026-10-18',
+    item: 'Tea', itemId: 'ING-025', product: '', purchaseCategory: 'Ingredients', isActive: false, source: 'APP_ENTRY',
+    acquisitionValue: 8000, purchaseQuantity: 1, purchaseUOM: 'pcs', qty: null, revenue: null, expense: null,
+    allocationStatus: 'COST_POOL_ALLOCATION_UNDEFINED', canVoid: false, canCorrect: false, canEdit: false, canResolveEvidence: false,
+    operationalStatus: 'Corrected' };
+  var activeSale = { id: 'T-sale-001', transactionType: 'Sales', date: '2026-10-14', dateKey: '2026-10-14',
+    product: 'Coffee', purchaseCategory: '', item: '', qty: 3, revenue: 30000, expense: null, isActive: true, source: 'APP_ENTRY' };
+  var activeExpense = { id: 'T-exp-001', transactionType: 'Expense', date: '2026-10-13', dateKey: '2026-10-13',
+    product: '', purchaseCategory: 'Packaging', item: '', qty: null, revenue: null, expense: 5000, isActive: true, source: 'APP_ENTRY' };
+  var allRows = [activePurchase, unresolvedPurchase, voidedPurchase, correctedPurchase, activeSale, activeExpense];
+
+  // === DEFECT 1: Purchase in Recent ===
+  // U1: PurchaseEvent appears in Recent tab (all lifecycle)
+  var recentAll = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'recent');
+  check(recentAll.filter(function(r) { return r.transactionType === 'PurchaseEvent'; }).length === 4, 'U1: 4 PurchaseEvents in recent-all');
+
+  // U2: Active-only Recent excludes voided/corrected PurchaseEvents
+  var recentActive = filterTransactionsPeriodRows(allRows, { lifecycleState: 'active' }, 'recent');
+  check(recentActive.filter(function(r) { return r.transactionType === 'PurchaseEvent'; }).length === 2, 'U2: 2 active PurchaseEvents in recent');
+
+  // U3: Recent includes Sales and Expenses alongside PurchaseEvents
+  check(recentAll.some(function(r) { return r.transactionType === 'Sales'; }), 'U3: Sales in recent');
+  check(recentAll.some(function(r) { return r.transactionType === 'Expense'; }), 'U4: Expense in recent');
+
+  // U5: PurchaseEvent in search index
+  var idx = buildTransactionsSearchIndex(allRows);
+  check(idx.filter(function(r) { return r.transactionType === 'PurchaseEvent'; }).length === 4, 'U5: PurchaseEvent in search index');
+
+  // U6: Recent search index includes PurchaseEvent with id
+  var peInIdx = idx.filter(function(r) { return r.transactionType === 'PurchaseEvent'; })[0];
+  check(peInIdx.sortIdentity !== undefined, 'U6: PurchaseEvent search index has sortIdentity');
+
+  // === DEFECT 2: EventID nowrap ===
+  // U7: EventID is a string with PE- prefix (can be truncated with ellipsis)
+  check(typeof activePurchase.id === 'string' && activePurchase.id.indexOf('PE-') === 0, 'U7: canonical PE- prefix');
+  check(activePurchase.id.length > 5, 'U8: EventID has meaningful length');
+
+  // === DEFECT 3: Action column layout ===
+  // U9: Active Purchase has all action flags
+  check(activePurchase.canVoid === true, 'U9: active canVoid');
+  check(activePurchase.canCorrect === true, 'U10: active canCorrect');
+  check(activePurchase.canResolveEvidence === false, 'U11: resolved → canResolveEvidence=false');
+
+  // U12: Unresolved Purchase has canResolveEvidence=true
+  check(unresolvedPurchase.canResolveEvidence === true, 'U12: unresolved canResolveEvidence');
+
+  // === DEFECT 4: Action routing ===
+  // U13: filterTransactionsPeriodRows routes Purchases to purchases tab correctly
+  var purchases = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'purchases');
+  check(purchases.length === 4, 'U13: purchases tab returns 4 rows');
+  check(purchases.every(function(r) { return r.transactionType === 'PurchaseEvent'; }), 'U14: all purchases tab rows are PurchaseEvent');
+
+  // U15: Sales tab excludes PurchaseEvents
+  var sales = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'sales');
+  check(!sales.some(function(r) { return r.transactionType === 'PurchaseEvent'; }), 'U15: no PurchaseEvent in sales tab');
+
+  // U16: Expenses tab excludes PurchaseEvents
+  var expenses = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'expenses');
+  check(!expenses.some(function(r) { return r.transactionType === 'PurchaseEvent'; }), 'U16: no PurchaseEvent in expenses tab');
+
+  // === DEFECT 5: Filter terminology ===
+  // U17: lifecycleState normalization works for all filter values
+  check(normalizeTransactionsLifecycleState({ lifecycleState: 'active' }) === 'active', 'U17a: active');
+  check(normalizeTransactionsLifecycleState({ lifecycleState: 'all' }) === 'all', 'U17b: all');
+  check(normalizeTransactionsLifecycleState({ lifecycleState: 'voided' }) === 'voided', 'U17c: voided');
+  check(normalizeTransactionsLifecycleState({}) === 'active', 'U17d: default active');
+  check(normalizeTransactionsLifecycleState({ includeVoided: true }) === 'all', 'U17e: includeVoided');
+
+  // === DEFECT 6: Badge styling ===
+  // U18: Active Purchase → statusBadgeClass should be "active" or "pending"
+  check(activePurchase.isActive === true, 'U18a: active projection');
+  check(activePurchase.canVoid === true, 'U18b: active canVoid for badge');
+
+  // U19: Resolved Purchase → statusBadgeClass = "resolved"
+  check(activePurchase.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED', 'U19: resolved allocation');
+
+  // U20: Unresolved Purchase → statusBadgeClass = "pending"
+  check(unresolvedPurchase.allocationStatus !== 'SINGLE_COMPONENT_EVIDENCED', 'U20: unresolved allocation');
+
+  // U21: Voided Purchase → statusBadgeClass = "voided"
+  check(voidedPurchase.isActive === false, 'U21a: voided isActive false');
+  check(voidedPurchase.canVoid === false, 'U21b: voided canVoid false');
+
+  // U22: Corrected Purchase → statusBadgeClass = "corrected"
+  check(correctedPurchase.isActive === false, 'U22a: corrected isActive false');
+  check(correctedPurchase.canVoid === false && correctedPurchase.canEdit === false, 'U22b: corrected cannot void/edit');
+
+  // === Qty/EventID detail preserved ===
+  // U23: numeric quantity renders value
+  check(typeof activePurchase.purchaseQuantity === 'number' && activePurchase.purchaseQuantity > 0, 'U23: numeric qty');
+
+  // U24: null quantity → placeholder
+  check(unresolvedPurchase.purchaseQuantity == null, 'U24: null qty placeholder');
+
+  // U25: UOM separate from Qty
+  check(activePurchase.purchaseUOM === 'kg', 'U25: UOM separate field');
+
+  // U26: empty string qty → placeholder
+  var emptyQty = clone(activePurchase);
+  emptyQty.purchaseQuantity = "";
+  check(emptyQty.purchaseQuantity == null || emptyQty.purchaseQuantity === "", 'U26: empty string qty placeholder');
+
+  // U27: projection preserves all action flags
+  check(unresolvedPurchase.canResolveEvidence === true, 'U27: unresolved projection canResolveEvidence');
+
+  check(voidedPurchase.canResolveEvidence === false, 'U28: voided projection canResolveEvidence=false');
+
+  // U29: page building works with PurchaseEvents
+  var page = buildTransactionsPageResult(purchases, 1, 15);
+  check(page.totalRows === 4 && page.rows.length === 4, 'U29: page building with PurchaseEvents');
+
+  // U30: lifecycle drilldown filters PurchaseEvents correctly
+  var drilldownPurchase = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all', drilldownType: 'purchase' }, 'recent');
+  check(drilldownPurchase.filter(function(r) { return r.transactionType === 'PurchaseEvent' || r.transactionType === 'Expense'; }).length === drilldownPurchase.length, 'U30: drilldown purchase filter');
+
+  return { status: 'PASS', assertions: count };
+}

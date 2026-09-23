@@ -47,6 +47,7 @@
               var receipt = r.transactionType === "InventoryReceipt" || purchase;
               var amount = receipt ? Number(r.acquisitionValue) : r.revenue || r.expense || 0;
               var status = purchase ? (r.isActive === false ? (r.canVoid === false && r.canEdit === false ? "Corrected" : "Voided") : (r.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "Resolved" : "Evidence pending")) : receipt ? "Receipt captured" : r.isActive === false ? "Voided" : "Active";
+              var statusBadgeClass = purchase ? (r.isActive === false ? (r.canVoid === false && r.canEdit === false ? "corrected" : "voided") : (r.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "resolved" : "pending")) : r.isActive === false ? "voided" : "active";
               var canMutate = purchase ? (r.canVoid || r.canCorrect) : (!receipt && r.source === "APP_ENTRY" && r.isActive !== false);
               var actions = '<button type="button" class="transactions-row-action transactions-row-action--view" onclick="runTransactionRowAction(\'detail\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-eye" aria-hidden="true"></i><span>View</span></button>';
               if (purchase) {
@@ -58,7 +59,7 @@
               }
               return `
               <tr class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}">
-                  <td class="px-4 font-medium max-w-[200px] overflow-hidden text-ellipsis" title="${escapeUiHtml(r.id)}">${escapeUiHtml(r.id)}</td>
+                  <td class="px-4 whitespace-nowrap font-medium max-w-[200px] overflow-hidden text-ellipsis" title="${escapeUiHtml(r.id)}">${escapeUiHtml(r.id)}</td>
                   <td class="px-4 whitespace-nowrap">
                     ${formatTransactionDate(r.date)}
                   </td>
@@ -74,8 +75,8 @@
                   <td class="max-w-[280px] px-4 break-words"> ${receipt ? escapeUiHtml(r.item || r.itemId) : r.product || r.purchaseCategory || "-"} </td>
                   <td class="px-4 text-center"> ${receipt ? escapeUiHtml(r.purchaseQuantity != null && r.purchaseQuantity !== "" ? r.purchaseQuantity + " " + (r.purchaseUOM || "") : "—") : r.qty || "-"} </td>
                   <td class="whitespace-nowrap px-4 text-left font-semibold ${amount < 0 ? "text-red-600" : ""}"> Rp ${amount.toLocaleString("id-ID")}</td>
-                  <td class="px-4 text-center"><span class="transaction-status-badge transaction-status-badge--${r.isActive === false ? "voided" : "active"}">${status}</span></td>
-                  <td class="px-2 text-center"><span class="transactions-row-actions flex flex-wrap justify-center gap-1">${actions}</span></td>
+                  <td class="px-4 text-center"><span class="transaction-status-badge transaction-status-badge--${statusBadgeClass}">${status}</span></td>
+                  <td class="px-1 text-center overflow-visible"><span class="transactions-row-actions flex flex-wrap justify-center gap-1">${actions}</span></td>
                 </tr>`;
             }).join("")
           : '<tr><td colspan="8" class="p-8 text-center text-sm ui-theme-muted">No transactions match this view for the selected period.</td></tr>';
