@@ -3,7 +3,7 @@ var TRANSACTIONS_DEFAULT_PAGE_SIZE = 15;
 function getTransactionsPage(request) {
   var startedAt = Date.now();
   var safeRequest = request || {};
-  var allowedTabs = { recent: true, sales: true, expenses: true };
+  var allowedTabs = { recent: true, sales: true, expenses: true, purchases: true };
   var allowedPageSizes = { 15: true, 25: true, 50: true };
   var tab = allowedTabs[safeRequest.tab] ? safeRequest.tab : "recent";
   var pageSize = Number(safeRequest.pageSize);
@@ -16,6 +16,15 @@ function getTransactionsPage(request) {
   var rows = filterTransactionsPeriodRows(periodRows, safeRequest, tab);
 
   var response = buildTransactionsPageResult(rows, requestedPage, pageSize);
+  // Purchase-specific field normalization
+  if (tab === "purchases") {
+    response.rows = response.rows.map(function(row) {
+      return Object.assign({}, row, {
+        purchaseQuantity: row.purchaseQuantity != null ? Number(row.purchaseQuantity) || null : null,
+        purchaseUOM: row.purchaseUOM || null
+      });
+    });
+  }
   response.cacheHit = periodResult.cacheHit;
   response.cacheRevision = getDashboardCacheRevision();
   response.executionMs = Date.now() - startedAt;
@@ -24,7 +33,7 @@ function getTransactionsPage(request) {
       !String(safeRequest.search || "").trim() && !safeRequest.drilldownType) {
     response.searchIndex = buildTransactionsSearchIndex(periodRows);
     response.prefetchedPages = {};
-    ["sales", "expenses"].forEach(function(prefetchTab) {
+    ["sales", "expenses", "purchases"].forEach(function(prefetchTab) {
       response.prefetchedPages[prefetchTab] = buildTransactionsPageResult(
         filterTransactionsPeriodRows(periodRows, {}, prefetchTab), 1, pageSize);
     });
@@ -45,6 +54,7 @@ function filterTransactionsPeriodRows(periodRows, request, tabName) {
     if (lifecycleState === "voided" && row.isActive !== false) return false;
     if (tab === "sales" && type !== "Sales") return false;
     if (tab === "expenses" && type !== "Expense") return false;
+    if (tab === "purchases" && type !== "PurchaseEvent") return false;
     if (type !== "Sales" && type !== "Expense" && type !== "InventoryReceipt" && type !== "PurchaseEvent") return false;
     if (!search) return true;
     return [row.id, row.product, row.purchaseCategory, row.item, row.date, formatTransactionsSearchDate(row.date)].some(function(value) {
@@ -101,7 +111,7 @@ function buildTransactionsSearchIndex(periodRows) {
 
 function getTransactionsExport(request) {
   var safeRequest = request || {};
-  var allowedTabs = { recent: true, sales: true, expenses: true };
+  var allowedTabs = { recent: true, sales: true, expenses: true, purchases: true };
   var tab = allowedTabs[safeRequest.tab] ? safeRequest.tab : "recent";
   var range = resolveDashboardDateRange(safeRequest.filter, safeRequest.customStart, safeRequest.customEnd);
   var periodResult = getTransactionsPeriodRows(range);

@@ -22,6 +22,27 @@ globalThis.SpreadsheetApp = {
 globalThis.getDashboardCacheRevision = function() { return 'LOCAL_FIXTURE'; };
 globalThis.dateFormat = function() { return 'yyyy-MM-dd'; };
 
+// Client-side recovery stubs (used by test PurchaseResolveEvidenceContracts)
+var _purchaseRecoveryStore = {};
+globalThis.sessionStorage = {
+  getItem: function(k) { return _purchaseRecoveryStore[k] || null; },
+  setItem: function(k, v) { _purchaseRecoveryStore[k] = v; },
+  removeItem: function(k) { delete _purchaseRecoveryStore[k]; }
+};
+globalThis.PURCHASE_RECOVERY_STORAGE_KEY = "numlock.purchase.mutationRecovery";
+globalThis.savePurchaseRecoveryState = function(state) {
+  try { globalThis.sessionStorage.setItem(globalThis.PURCHASE_RECOVERY_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+};
+globalThis.loadPurchaseRecoveryState = function() {
+  try {
+    var raw = globalThis.sessionStorage.getItem(globalThis.PURCHASE_RECOVERY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+};
+globalThis.clearPurchaseRecoveryState = function() {
+  try { globalThis.sessionStorage.removeItem(globalThis.PURCHASE_RECOVERY_STORAGE_KEY); } catch (e) {}
+};
+
 var files = [
   '20.Data.Source.js',
   '22.Transaction.Lifecycle.js',
@@ -35,6 +56,7 @@ var files = [
   '47.Purchase.Events.js',
   '48.Purchase.Events.Migration.js',
   '21.Transaction.Entry.js',
+  '91.Transactions.Query.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
   '96.Tests.Purchase.Events.Migration.Cases.js'
@@ -121,6 +143,12 @@ run('testPurchaseResolutionSchemaMigrationContracts', 'testPurchaseResolutionSch
 run('testPurchaseEventLifecycleReadModel_', 'testPurchaseEventLifecycleReadModel_()');
 run('testPurchaseEventVoidContracts', 'testPurchaseEventVoidContracts()');
 run('testPurchaseEventCorrectionContracts', 'testPurchaseEventCorrectionContracts()');
+
+run('testPurchaseViewContracts', 'testPurchaseViewContracts()');
+
+run('testPurchaseRecoveryContracts', 'testPurchaseRecoveryContracts()');
+
+run('testPurchaseResolveEvidenceContracts', 'testPurchaseResolveEvidenceContracts()');
 
 console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

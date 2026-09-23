@@ -279,12 +279,12 @@ function projectPurchaseEventTransaction_(row, resolution) {
     date: row.ExpenseDate, dateKey: row.ExpenseDate, item: row.BusinessLabel, expenseId: row.ExpenseID,
     purchaseQuantity: row.PurchaseQty, purchaseUOM: row.PurchaseUOM, acquisitionValue: Number(row.AcquisitionValue),
     supplier: row.SupplierSource, reference: row.ExternalRef || 'Document unavailable', isActive: isActive,
-    receiptDate: row.ReceiptDate, operationalStatus: isActive ? 'Cost recorded' : 'Voided',
+    receiptDate: row.ReceiptDate, operationalStatus: isActive ? 'Cost recorded' : (row.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED ? 'Corrected' : 'Voided'),
     operationalNote: receiptPlan === 'null' || receiptPlan === null ?
       'Cost recorded. Quantity or package is not verified for stock tracking.' :
       'Purchase recorded. Stock tracking requires separate verification.',
     receiptPlan: receiptPlan, allocationStatus: allocationStatus,
-    financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: canVoid, canCorrect: false };
+    financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: canVoid, canCorrect: canVoid, canResolveEvidence: canVoid && allocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' };
 }
 
 // Purchase lookup canonical requestKey: receipt- prefix + 32 hex chars from crypto.getRandomValues.
@@ -1070,4 +1070,127 @@ function scanPurchaseEventIsActiveEligibility_() {
     otherCorrupted: otherCorrupted.length,
     otherCorruptedRows: otherCorrupted
   };
+}
+
+// Read-only Void status check. Zero writes.
+// Accepts: { eventOrRequestKey: string }
+function lookupPurchaseVoidStatus(payload) {
+  try {
+    var identity = payload && payload.eventOrRequestKey;
+    if (typeof identity !== 'string' || !identity || !identity.trim()) {
+      return { status: 'LOOKUP_FAILED', reason: 'INVALID_IDENTITY' };
+    }
+    identity = identity.trim();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: 'LOOKUP_FAILED', reason: 'NO_DATA' };
+    var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
+    var match = null;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].EventID === identity || rows[i].RequestKey === identity) { match = rows[i]; break; }
+    }
+    if (!match) return { status: 'LOOKUP_FAILED', reason: 'NOT_FOUND' };
+    if (match.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED && match.IsActive === false) {
+      return { status: 'VOID_CONFIRMED', eventId: match.EventID };
+    }
+    if (match.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL && match.IsActive === true) {
+      return { status: 'NOT_VOIDED', eventId: match.EventID };
+    }
+    return { status: 'STATE_CONFLICT', eventId: match.EventID, lifecycle: match.Lifecycle, isActive: match.IsActive };
+  } catch (error) {
+    return { status: 'LOOKUP_FAILED', reason: error.message };
+  }
+}
+
+// Read-only Correction status check. Zero writes.
+// Accepts: { originalEventOrRequestKey: string, correctionRequestKey: string,
+//            expectedReplacement: { expenseItemId: string, input: object } }
+function lookupPurchaseCorrectionStatus(payload) {
+  try {
+    var identity = payload && payload.originalEventOrRequestKey;
+    var correctionKey = payload && payload.correctionRequestKey;
+    if (typeof identity !== 'string' || !identity || !identity.trim()) {
+      return { status: 'LOOKUP_FAILED', reason: 'INVALID_IDENTITY' };
+    }
+    if (typeof correctionKey !== 'string' || !correctionKey || !correctionKey.trim()) {
+      return { status: 'LOOKUP_FAILED', reason: 'INVALID_CORRECTION_KEY' };
+    }
+    identity = identity.trim();
+    correctionKey = correctionKey.trim();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+    if (!sheet || sheet.getLastRow() <= 1) return { status: 'LOOKUP_FAILED', reason: 'NO_DATA' };
+    var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
+    var original = null;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].EventID === identity || rows[i].RequestKey === identity) { original = rows[i]; break; }
+    }
+    if (!original) return { status: 'LOOKUP_FAILED', reason: 'NOT_FOUND' };
+    var integrity = validatePurchaseEventCorrectionIntegrity_(ss, original.EventID, rows);
+    if (integrity.replacementId) {
+      if (!integrity.valid) return { status: 'CORRECTION_INTEGRITY_CONFLICT', reason: integrity.reason };
+      if (integrity.correctionRequestKey !== correctionKey) {
+        return { status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'KEY_MISMATCH' };
+      }
+      var replacement = rows.filter(function(r) { return r.EventID === integrity.replacementId; })[0];
+      var payloadMatch = true;
+      var expectedPayload = payload.expectedReplacementPayload;
+      if (typeof expectedPayload === 'string' && expectedPayload && replacement) {
+        payloadMatch = replacement.NormalizedPayload === expectedPayload;
+      }
+      if (!payloadMatch) return { status: 'CORRECTION_CONFLICT', reason: 'PAYLOAD_MISMATCH', replacementEventId: integrity.replacementId };
+      return { status: 'CORRECTION_CONFIRMED', eventId: original.EventID, replacementEventId: integrity.replacementId };
+    }
+    // No correction relationship found — check if original is still active
+    if (original.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL && original.IsActive === true) {
+      return { status: 'NOT_CORRECTED', eventId: original.EventID };
+    }
+    // Original is in unexpected state without correction relationship
+    return { status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'ORIGINAL_UNEXPECTED_STATE' };
+  } catch (error) {
+    return { status: 'LOOKUP_FAILED', reason: error.message };
+  }
+}
+
+// Read-only Resolution status check. Zero writes.
+// Accepts: { requestKey: string, expectedResolutionPayload: string (JSON) }
+function lookupPurchaseResolutionStatus(payload) {
+  try {
+    var requestKey = payload && payload.requestKey;
+    if (typeof requestKey !== 'string' || !requestKey || !PURCHASE_LOOKUP_KEY_PATTERN.test(requestKey)) {
+      return { status: 'LOOKUP_FAILED', reason: 'INVALID_REQUEST_KEY' };
+    }
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var peSheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+    if (!peSheet || peSheet.getLastRow() <= 1) return { status: 'LOOKUP_FAILED', reason: 'NO_DATA' };
+    var peRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
+    var match = null;
+    for (var i = 0; i < peRows.length; i++) {
+      if (peRows[i].RequestKey === requestKey) { match = peRows[i]; break; }
+    }
+    if (!match) return { status: 'LOOKUP_FAILED', reason: 'NOT_FOUND' };
+    if (match.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL || match.IsActive !== true) {
+      return { status: 'LOOKUP_FAILED', reason: 'INVALID_EVENT_STATE' };
+    }
+    // Check for existing resolution
+    var resSheet = ss.getSheetByName(PURCHASE_RESOLUTION_POLICY.sheet);
+    if (!resSheet || resSheet.getLastRow() <= 1) {
+      return { status: 'NOT_RESOLVED', requestKey: requestKey };
+    }
+    var resRows = readCanonicalTable(ss, PURCHASE_RESOLUTION_POLICY.sheet, PURCHASE_RESOLUTION_POLICY.headers);
+    for (var j = 0; j < resRows.length; j++) {
+      if (resRows[j].RequestKey === requestKey) {
+        var payloadMatch = true;
+        var expectedPayload = payload.expectedResolutionPayload;
+        if (typeof expectedPayload === 'string' && expectedPayload) {
+          payloadMatch = resRows[j].ResolutionPayload === expectedPayload;
+        }
+        if (!payloadMatch) return { status: 'RESOLUTION_CONFLICT', requestKey: requestKey, reason: 'PAYLOAD_MISMATCH' };
+        return { status: 'RESOLUTION_CONFIRMED', requestKey: requestKey, resolutionId: resRows[j].ResolutionID };
+      }
+    }
+    return { status: 'NOT_RESOLVED', requestKey: requestKey };
+  } catch (error) {
+    return { status: 'LOOKUP_FAILED', reason: error.message };
+  }
 }

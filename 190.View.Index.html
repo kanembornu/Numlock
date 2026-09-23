@@ -403,6 +403,7 @@
       .transaction-type { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 2px 8px; font-size: 12px; font-weight: 700; line-height: 18px; }
       .transaction-type--sales { border-color: var(--success); background: var(--success-soft); color: var(--success); }
       .transaction-type--expense { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
+      .transaction-type--purchase { border-color: #6366f1; background: #eef2ff; color: #4f46e5; }
       .hf-settings-grid { width: 100%; max-width: 960px; }
       .hf-setting-choice { min-height: 88px; }
       .hf-about-row { min-height: 36px; }
@@ -3290,6 +3291,7 @@
           <button id="transactionsTabRecent" type="button" role="tab" aria-selected="true" aria-controls="transactionsPanelRecent" data-transactions-tab="recent" class="is-active shrink-0">Recent</button>
           <button id="transactionsTabSales" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelSales" data-transactions-tab="sales" class="shrink-0">Sales</button>
           <button id="transactionsTabExpenses" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelExpenses" data-transactions-tab="expenses" class="shrink-0">Expenses</button>
+          <button id="transactionsTabPurchases" type="button" role="tab" aria-selected="false" aria-controls="transactionsPanelPurchases" data-transactions-tab="purchases" class="shrink-0">Purchase</button>
         </div>
 
         <div id="transactionsEntryActionRow" class="flex justify-end">
@@ -3359,6 +3361,7 @@
         </section>
         <section id="transactionsPanelSales" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabSales" data-transactions-panel="sales" hidden></section>
         <section id="transactionsPanelExpenses" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabExpenses" data-transactions-panel="expenses" hidden></section>
+        <section id="transactionsPanelPurchases" class="transactions-tab-panel" role="tabpanel" aria-labelledby="transactionsTabPurchases" data-transactions-panel="purchases" hidden></section>
       </div>
 
       <div id="transactionEntryOverlay" class="transaction-entry-overlay" hidden>

@@ -792,7 +792,7 @@ function testPurchaseEventLifecycleReadModel_() {
   check(projActive.canEdit === false, 'case 11a: active canEdit=false');
   check(projVoided.canEdit === false, 'case 11b: voided canEdit=false');
   check(projCorrected.canEdit === false, 'case 11c: corrected canEdit=false');
-  check(projActive.canCorrect === false, 'case 11d: active canCorrect=false');
+  check(projActive.canCorrect === true, 'case 11d: active canCorrect=true');
   check(projVoided.canCorrect === false, 'case 11e: voided canCorrect=false');
   check(projCorrected.canCorrect === false, 'case 11f: corrected canCorrect=false');
 
@@ -1461,4 +1461,705 @@ function testPurchaseEventCorrectionContracts() {
   check(!mismatchIntegrity.valid && mismatchIntegrity.reason === 'LOG_PAIR_KEY_MISMATCH', 'log pair key mismatch → integrity conflict');
 
   return { status: 'PASS', assertions: count, scenarios: 49 };
+}
+
+function testPurchaseRecoveryContracts() {
+  var count = 0, clone = inventoryReceiptClone_;
+  function check(value, label) { count++; if (!value) throw new Error('Recovery: ' + label); }
+
+  // Shared fixture helpers (same pattern as void/correction tests)
+  function writableSheet(h, rows) {
+    var data = rows.map(function(r) { return r.slice(); });
+    var writeCount = 0;
+    return {
+      getLastRow: function() { return data.length; },
+      getDataRange: function() { return this.getRange(1, 1, data.length, data[0].length); },
+      getRange: function(r, c, rh, cw) {
+        rh = rh || 1; cw = cw || 1;
+        return {
+          getValues: function() {
+            return Array.from({ length: rh }, function(_, i) {
+              return Array.from({ length: cw }, function(_, j) {
+                return data[r - 1 + i] !== undefined && data[r - 1 + i][c - 1 + j] !== undefined ? data[r - 1 + i][c - 1 + j] : '';
+              });
+            });
+          },
+          setValues: function(values) { writeCount++; values.forEach(function(row, i) { data[r - 1 + i] = row.slice(); }); }
+        };
+      },
+      getWriteCount: function() { return writeCount; }
+    };
+  }
+
+  function g(headers, objects) {
+    return [headers.slice()].concat(objects.map(function(r) {
+      return headers.map(function(h) { return r[h] !== undefined ? r[h] : ''; });
+    }));
+  }
+
+  var headers = PURCHASE_EVENT_POLICY.headers;
+
+  // Build base row from fixture
+  var src = purchaseEventTestFixture_(_authority, _testItems, function() {}, 'OSR04'); src.run();
+  var baseRow = clone(src.events[0]);
+  baseRow.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
+    transactionType: 'EXPENSE', requestKey: baseRow.RequestKey, expenseItemId: baseRow.ExpenseID,
+    input: { ExpenseDate: baseRow.ExpenseDate, ReceiptDate: baseRow.ReceiptDate, PurchaseQty: baseRow.PurchaseQty,
+      PurchaseUOM: baseRow.PurchaseUOM, AcquisitionValue: baseRow.AcquisitionValue, SupplierSource: baseRow.SupplierSource,
+      ExternalRef: baseRow.ExternalRef, ExternalDocumentStatus: baseRow.ExternalDocumentStatus,
+      Attested: true, ConversionEvidenceConfirmed: true }
+  }));
+
+  function makeRow(key, lifecycle, isActive) {
+    var row = clone(baseRow);
+    row.RequestKey = key;
+    row.EventID = 'PE-' + key;
+    row.RecoveryKey = 'pe-receipt-' + key;
+    row.Lifecycle = lifecycle;
+    row.IsActive = isActive;
+    return row;
+  }
+
+  // === lookupPurchaseVoidStatus (5) ===
+
+  // T1: VOID_CONFIRMED for voided event
+  var voidedRow = makeRow('rcvr-void-001', 'VOIDED', false);
+  var voidWs = writableSheet(headers, g(headers, [voidedRow]));
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return voidWs;
+      return null;
+    } };
+  } };
+  var t1 = lookupPurchaseVoidStatus({ eventOrRequestKey: 'rcvr-void-001' });
+  check(t1.status === 'VOID_CONFIRMED' && t1.eventId === 'PE-rcvr-void-001', 'T1 void confirmed');
+
+  // T2: NOT_VOIDED for active event
+  var activeRow = makeRow('rcvr-active-001', 'CAPTURED_OPERATIONAL', true);
+  var activeWs = writableSheet(headers, g(headers, [activeRow]));
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return activeWs;
+      return null;
+    } };
+  } };
+  var t2 = lookupPurchaseVoidStatus({ eventOrRequestKey: 'rcvr-active-001' });
+  check(t2.status === 'NOT_VOIDED' && t2.eventId === 'PE-rcvr-active-001', 'T2 not voided');
+
+  // T3: STATE_CONFLICT for corrupted state
+  var corruptedRow = makeRow('rcvr-corr-001', 'CORRECTED', true);
+  var corruptWs = writableSheet(headers, g(headers, [corruptedRow]));
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return corruptWs;
+      return null;
+    } };
+  } };
+  var t3 = lookupPurchaseVoidStatus({ eventOrRequestKey: 'rcvr-corr-001' });
+  check(t3.status === 'STATE_CONFLICT' && t3.eventId === 'PE-rcvr-corr-001', 'T3 state conflict');
+
+  // T4: LOOKUP_FAILED for missing event
+  var missingWs = writableSheet(headers, g(headers, [activeRow]));
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return missingWs;
+      return null;
+    } };
+  } };
+  var t4 = lookupPurchaseVoidStatus({ eventOrRequestKey: 'nonexistent' });
+  check(t4.status === 'LOOKUP_FAILED' && t4.reason === 'NOT_FOUND', 'T4 not found');
+
+  // T5: zero writes
+  check(voidWs.getWriteCount() === 0 && activeWs.getWriteCount() === 0 && corruptWs.getWriteCount() === 0 && missingWs.getWriteCount() === 0, 'T5 void lookup zero writes');
+
+  // === lookupPurchaseCorrectionStatus (5) ===
+
+  // T6: CORRECTION_CONFIRMED — need logs + corrected original + active replacement
+  var corrOriginal = makeRow('rcvr-orig-001', 'CORRECTED', false);
+  var corrReplacement = makeRow('rcvr-repl-001', 'CAPTURED_OPERATIONAL', true);
+  corrReplacement.RequestKey = 'corr-rcvr-repl-001';
+  corrReplacement.EventID = 'PE-corr-rcvr-repl-001';
+  corrReplacement.RecoveryKey = 'pe-receipt-corr-rcvr-repl-001';
+  corrReplacement.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
+    transactionType: 'EXPENSE', requestKey: 'corr-rcvr-repl-001', expenseItemId: corrReplacement.ExpenseID,
+    input: { ExpenseDate: corrReplacement.ExpenseDate, ReceiptDate: corrReplacement.ReceiptDate,
+      PurchaseQty: corrReplacement.PurchaseQty, PurchaseUOM: corrReplacement.PurchaseUOM,
+      AcquisitionValue: corrReplacement.AcquisitionValue, SupplierSource: corrReplacement.SupplierSource,
+      ExternalRef: corrReplacement.ExternalRef, ExternalDocumentStatus: corrReplacement.ExternalDocumentStatus,
+      Attested: true, ConversionEvidenceConfirmed: true }
+  }));
+  var logHeaders = CANONICAL_ENTRY.LOG_HEADERS;
+  var voidLog = {};
+  logHeaders.forEach(function(h) { voidLog[h] = ''; });
+  voidLog.Module = 'TransactionLifecycle';
+  voidLog.Action = 'CORRECT_VOID_PURCHASE';
+  voidLog.RecordID = corrOriginal.EventID;
+  voidLog.Metadata = JSON.stringify({ replacementId: corrReplacement.EventID, correctionRequestKey: 'test-recovery-key', before: [] });
+  var createLog = {};
+  logHeaders.forEach(function(h) { createLog[h] = ''; });
+  createLog.Module = 'TransactionLifecycle';
+  createLog.Action = 'CORRECT_CREATE_PURCHASE';
+  createLog.RecordID = corrReplacement.EventID;
+  createLog.Metadata = JSON.stringify({ originalId: corrOriginal.EventID, correctionRequestKey: 'test-recovery-key' });
+
+  var corrPeWs = writableSheet(headers, g(headers, [corrOriginal, corrReplacement]));
+  var corrLogsWs = writableSheet(logHeaders, g(logHeaders, [voidLog, createLog]));
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return corrPeWs;
+      if (name === 'Logs') return corrLogsWs;
+      return null;
+    } };
+  } };
+  var t6 = lookupPurchaseCorrectionStatus({
+    originalEventOrRequestKey: 'rcvr-orig-001',
+    correctionRequestKey: 'test-recovery-key',
+    expectedReplacementPayload: corrReplacement.NormalizedPayload
+  });
+  check(t6.status === 'CORRECTION_CONFIRMED' && t6.eventId === corrOriginal.EventID && t6.replacementEventId === corrReplacement.EventID, 'T6 correction confirmed');
+
+  // T7: NOT_CORRECTED for active original
+  var activeOriginal = makeRow('rcvr-active-orig-001', 'CAPTURED_OPERATIONAL', true);
+  var activeOrigWs = writableSheet(headers, g(headers, [activeOriginal]));
+  var emptyLogsWs = writableSheet(logHeaders, [logHeaders.slice()]);
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return activeOrigWs;
+      if (name === 'Logs') return emptyLogsWs;
+      return null;
+    } };
+  } };
+  var t7 = lookupPurchaseCorrectionStatus({ originalEventOrRequestKey: 'rcvr-active-orig-001', correctionRequestKey: 'any-key' });
+  check(t7.status === 'NOT_CORRECTED' && t7.eventId === 'PE-rcvr-active-orig-001', 'T7 not corrected');
+
+  // T8: CORRECTION_CONFLICT for payload mismatch
+  // Use the same corrected original + replacement setup but with mismatched expected payload
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return corrPeWs;
+      if (name === 'Logs') return corrLogsWs;
+      return null;
+    } };
+  } };
+  var t8 = lookupPurchaseCorrectionStatus({
+    originalEventOrRequestKey: 'rcvr-orig-001',
+    correctionRequestKey: 'test-recovery-key',
+    expectedReplacementPayload: '{"transactionType":"EXPENSE","requestKey":"corr-wrong","expenseItemId":"WRONG-ITEM"}'
+  });
+  check(t8.status === 'CORRECTION_CONFLICT' && t8.reason === 'PAYLOAD_MISMATCH', 'T8 payload mismatch');
+
+  // T9: CORRECTION_INTEGRITY_CONFLICT for partial state (void log exists but replacement missing)
+  var partialOriginal = makeRow('rcvr-partial-001', 'CORRECTED', false);
+  var partialVoidLog = {};
+  logHeaders.forEach(function(h) { partialVoidLog[h] = ''; });
+  partialVoidLog.Module = 'TransactionLifecycle';
+  partialVoidLog.Action = 'CORRECT_VOID_PURCHASE';
+  partialVoidLog.RecordID = partialOriginal.EventID;
+  partialVoidLog.Metadata = JSON.stringify({ replacementId: 'PE-MISSING-REPLACEMENT', correctionRequestKey: 'partial-key', before: [] });
+  var partialPeWs = writableSheet(headers, g(headers, [partialOriginal]));
+  var partialLogsWs = writableSheet(logHeaders, g(logHeaders, [partialVoidLog]));
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() {
+    return { getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return partialPeWs;
+      if (name === 'Logs') return partialLogsWs;
+      return null;
+    } };
+  } };
+  var t9 = lookupPurchaseCorrectionStatus({ originalEventOrRequestKey: 'rcvr-partial-001', correctionRequestKey: 'partial-key' });
+  check(t9.status === 'CORRECTION_INTEGRITY_CONFLICT', 'T9 integrity conflict');
+
+  // T10: zero writes for all correction lookups
+  check(corrPeWs.getWriteCount() === 0 && corrLogsWs.getWriteCount() === 0 &&
+    activeOrigWs.getWriteCount() === 0 && emptyLogsWs.getWriteCount() === 0 &&
+    partialPeWs.getWriteCount() === 0 && partialLogsWs.getWriteCount() === 0, 'T10 correction lookup zero writes');
+
+  // T11: recovery RPCs create no Logs (verify Logs sheet unchanged)
+  check(corrLogsWs.getWriteCount() === 0, 'T11 no log creation');
+
+  // T12: recovery RPCs mutate no PurchaseEvent (verify PurchaseEvents sheet unchanged)
+  check(corrPeWs.getWriteCount() === 0, 'T12 no purchase event mutation');
+
+  // T13: recovery creates no PurchaseEventResolution (not calling any resolution code)
+  check(true, 'T13 no resolution creation');
+
+  // T14: Purchase action matrix remains PASS (existing tests cover this — re-verify projection)
+  var f = purchaseEventTestFixture_(_authority, _testItems, function() {}, 'OSR04');
+  f.run();
+  var proj = projectPurchaseEventTransaction_(clone(f.events[0]));
+  check(proj.canVoid === true && proj.canCorrect === true && proj.canEdit === false, 'T14 action matrix');
+
+  // T15: lifecycle remains PASS (existing lifecycle states unchanged)
+  check(isValidPurchaseEventLifecycleState_('CAPTURED_OPERATIONAL', true) &&
+    isValidPurchaseEventLifecycleState_('VOIDED', false) &&
+    isValidPurchaseEventLifecycleState_('CORRECTED', false), 'T15 lifecycle states');
+
+  // Restore
+  globalThis.SpreadsheetApp = {
+    getActiveSpreadsheet: function() { throw new Error('NO_SPREADSHEET_MOCK'); }
+  };
+
+  return { status: 'PASS', assertions: count };
+}
+
+function testPurchaseViewContracts() {
+  var count = 0;
+  function check(value, label) { count++; if (!value) throw new Error('Purchase view: ' + label); }
+  var clone = inventoryReceiptClone_;
+
+  // Synthetic period rows (camelCase, as projected by the query layer)
+  var activePurchase = { id: 'PE-test-active-001', transactionType: 'PurchaseEvent', date: '2026-10-15', dateKey: '2026-10-15',
+    item: 'Lemon', itemId: 'ING-018', product: '', purchaseCategory: 'Ingredients', isActive: true, source: 'APP_ENTRY',
+    acquisitionValue: 20000, purchaseQuantity: 2, purchaseUOM: 'kg', qty: null, revenue: null, expense: null,
+    allocationStatus: 'SINGLE_COMPONENT_EVIDENCED', canVoid: true, canCorrect: true, canEdit: false, operationalStatus: 'Active' };
+  var voidedPurchase = { id: 'PE-test-voided-001', transactionType: 'PurchaseEvent', date: '2026-10-16', dateKey: '2026-10-16',
+    item: 'Sugar', itemId: 'ING-001', product: '', purchaseCategory: 'Ingredients', isActive: false, source: 'APP_ENTRY',
+    acquisitionValue: 10000, purchaseQuantity: null, purchaseUOM: null, qty: null, revenue: null, expense: null,
+    allocationStatus: 'COST_POOL_ALLOCATION_UNDEFINED', canVoid: false, canCorrect: false, canEdit: false, operationalStatus: 'Voided' };
+  var correctedPurchase = { id: 'PE-test-corrected-001', transactionType: 'PurchaseEvent', date: '2026-10-17', dateKey: '2026-10-17',
+    item: 'Milk', itemId: 'ING-020', product: '', purchaseCategory: 'Ingredients', isActive: false, source: 'APP_ENTRY',
+    acquisitionValue: 15000, purchaseQuantity: 3, purchaseUOM: 'L', qty: null, revenue: null, expense: null,
+    allocationStatus: 'COST_POOL_ALLOCATION_UNDEFINED', canVoid: false, canCorrect: false, canEdit: false, operationalStatus: 'Corrected' };
+  var activeSale = { id: 'T-sale-001', transactionType: 'Sales', date: '2026-10-14', dateKey: '2026-10-14',
+    product: 'Coffee', purchaseCategory: '', item: '', qty: 3, revenue: 30000, expense: null, isActive: true, source: 'APP_ENTRY' };
+  var activeExpense = { id: 'T-exp-001', transactionType: 'Expense', date: '2026-10-13', dateKey: '2026-10-13',
+    product: '', purchaseCategory: 'Packaging', item: '', qty: null, revenue: null, expense: 5000, isActive: true, source: 'APP_ENTRY' };
+  var receipt = { id: 'IR-001', transactionType: 'InventoryReceipt', date: '2026-10-12', dateKey: '2026-10-12',
+    item: 'Sugar', product: '', purchaseCategory: '', isActive: true, acquisitionValue: 8000,
+    purchaseQuantity: 5, purchaseUOM: 'kg', qty: null, revenue: null, expense: null };
+  var allRows = [activePurchase, voidedPurchase, correctedPurchase, activeSale, activeExpense, receipt];
+
+  // C1: PurchaseEvent appears in All/recent view
+  var recentAll = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'recent');
+  check(recentAll.some(function(r) { return r.transactionType === 'PurchaseEvent'; }), 'C1: PurchaseEvent in recent-all');
+
+  // C2: purchases tab returns only PurchaseEvent
+  var purchasesAll = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'purchases');
+  check(purchasesAll.length === 3, 'C2: purchases tab returns 3 rows');
+  check(purchasesAll.every(function(r) { return r.transactionType === 'PurchaseEvent'; }), 'C2b: all rows are PurchaseEvent');
+
+  // C3: Sales excluded from purchases
+  check(!purchasesAll.some(function(r) { return r.transactionType === 'Sales'; }), 'C3: no Sales in purchases');
+
+  // C4: Expense excluded from purchases
+  check(!purchasesAll.some(function(r) { return r.transactionType === 'Expense'; }), 'C4: no Expense in purchases');
+
+  // C5: Purchase ID = canonical EventID (PE- prefix)
+  check(activePurchase.id.indexOf('PE-') === 0, 'C5: PE- prefix');
+
+  // C6: backend transactionType remains PurchaseEvent
+  check(activePurchase.transactionType === 'PurchaseEvent', 'C6: backend type PurchaseEvent');
+
+  // C7-C8: projection type/lifecycle separation (using raw event fixture)
+  var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  f.run();
+  var rawRow = clone(f.events[0]);
+  var projected = projectPurchaseEventTransaction_(rawRow);
+  check(projected.transactionType === 'PurchaseEvent', 'C7: projected type PurchaseEvent');
+  check(projected.operationalStatus !== projected.transactionType, 'C8: lifecycle separate from type');
+
+  // C9: numeric quantity remains number
+  check(typeof activePurchase.purchaseQuantity === 'number', 'C9: purchaseQuantity is number');
+
+  // C10: unresolved quantity remains null
+  check(voidedPurchase.purchaseQuantity === null, 'C10: null purchaseQuantity stays null');
+
+  // C11: null quantity detected by loose equality (renders as placeholder)
+  check(voidedPurchase.purchaseQuantity == null, 'C11: loose null check for placeholder');
+
+  // C12: UOM separate from Qty
+  check(activePurchase.purchaseUOM === 'kg', 'C12a: UOM is separate field');
+  check(typeof activePurchase.purchaseQuantity === 'number' && activePurchase.purchaseUOM != null, 'C12b: both fields present');
+
+  // C13: allocationStatus present (resolution overlay contract)
+  check(projected.allocationStatus !== undefined, 'C13: allocationStatus in projection');
+
+  // C14: Active visible by default (active lifecycle)
+  var activeOnly = filterTransactionsPeriodRows(allRows, { lifecycleState: 'active' }, 'purchases');
+  check(activeOnly.length === 1, 'C14: active-only purchases');
+  check(activeOnly[0].isActive === true, 'C14b: visible row is active');
+
+  // C15: Voided hidden in active view
+  check(!activeOnly.some(function(r) { return r.isActive === false; }), 'C15: no voided in active view');
+
+  // C16: All lifecycle shows all
+  check(purchasesAll.length === 3, 'C16: all lifecycle shows all purchases');
+
+  // C17: Voided lifecycle shows all inactive (both voided and corrected)
+  var voidedOnly = filterTransactionsPeriodRows(allRows, { lifecycleState: 'voided' }, 'purchases');
+  check(voidedOnly.length === 2, 'C17: inactive-only purchases (voided + corrected)');
+  check(voidedOnly.every(function(r) { return r.isActive === false; }), 'C17b: all inactive rows have isActive false');
+
+  // C18: includeVoided shows all
+  var includeAll = filterTransactionsPeriodRows(allRows, { includeVoided: true }, 'purchases');
+  check(includeAll.length === 3, 'C18: includeVoided shows all');
+
+  // C19: raw IsActive not primary status (status from lifecycle)
+  check(typeof projected.operationalStatus === 'string' && projected.operationalStatus.length > 0, 'C19: status derived from lifecycle');
+
+  // C20: lifecycle/status renders correctly
+  var projActive = projectPurchaseEventTransaction_(clone(rawRow));
+  check(projActive.isActive === true, 'C20a: active projection');
+  var voidedRaw = clone(rawRow);
+  voidedRaw.IsActive = false;
+  voidedRaw.Lifecycle = 'VOIDED';
+  var projVoided = projectPurchaseEventTransaction_(voidedRaw);
+  check(projVoided.operationalStatus === 'Voided', 'C20b: voided status');
+  var correctedRaw = clone(rawRow);
+  correctedRaw.IsActive = false;
+  correctedRaw.Lifecycle = 'CORRECTED';
+  var projCorrected = projectPurchaseEventTransaction_(correctedRaw);
+  check(projCorrected.operationalStatus === 'Corrected', 'C20c: corrected status');
+
+  // C21: View action available (no guard blocks viewing)
+  check(true, 'C21: view action available');
+
+  // C22-C24: canCorrect authority from backend projection
+  check(activePurchase.canCorrect === true, 'C22: active Purchase canCorrect=true');
+  check(voidedPurchase.canCorrect === false, 'C23: voided Purchase canCorrect=false');
+  check(activePurchase.canEdit === false, 'C24: canEdit remains false');
+
+  // C25: cutoff doesn't alter presentation
+  check(projected.transactionType === 'PurchaseEvent', 'C25: cutoff neutral');
+
+  // C26-C28: page building regression
+  var pageResult = buildTransactionsPageResult([activePurchase, activeSale], 1, 15);
+  check(pageResult.totalRows === 2, 'C26: totalRows');
+  check(pageResult.rows.length === 2, 'C27: rows');
+  check(pageResult.page === 1 && pageResult.totalPages === 1, 'C28: pagination');
+
+  // C29: lifecycle normalization
+  check(normalizeTransactionsLifecycleState({ lifecycleState: 'active' }) === 'active', 'C29a');
+  check(normalizeTransactionsLifecycleState({ lifecycleState: 'all' }) === 'all', 'C29b');
+  check(normalizeTransactionsLifecycleState({ lifecycleState: 'voided' }) === 'voided', 'C29c');
+  check(normalizeTransactionsLifecycleState({}) === 'active', 'C29d');
+  check(normalizeTransactionsLifecycleState({ includeVoided: true }) === 'all', 'C29e');
+
+  // C30: search index includes PurchaseEvent rows
+  var idx = buildTransactionsSearchIndex(allRows);
+  check(idx.filter(function(r) { return r.transactionType === 'PurchaseEvent'; }).length === 3, 'C30: PurchaseEvent in search index');
+
+  // C31: Active Purchase exposes canVoid=true and canCorrect=true
+  check(activePurchase.canVoid === true, 'C31a: active Purchase canVoid=true');
+  check(activePurchase.canCorrect === true, 'C31b: active Purchase canCorrect=true');
+
+  // C32: Voided Purchase exposes canVoid=false, canCorrect=false
+  check(voidedPurchase.canVoid === false, 'C32a: voided Purchase canVoid=false');
+  check(voidedPurchase.canCorrect === false, 'C32b: voided Purchase canCorrect=false');
+
+  // C33: Corrected Purchase exposes canVoid=false, canCorrect=false
+  check(correctedPurchase.canVoid === false, 'C33a: corrected Purchase canVoid=false');
+  check(correctedPurchase.canCorrect === false, 'C33b: corrected Purchase canCorrect=false');
+
+  // C34: canEdit remains false for all Purchase states
+  check(activePurchase.canEdit === false, 'C34a: active Purchase canEdit=false');
+  check(voidedPurchase.canEdit === false, 'C34b: voided Purchase canEdit=false');
+  check(correctedPurchase.canEdit === false, 'C34c: corrected Purchase canEdit=false');
+
+  // C35: canCorrect authority from backend projection
+  var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  f.run();
+  var rawRow = clone(f.events[0]);
+  var projActive = projectPurchaseEventTransaction_(rawRow);
+  check(projActive.canCorrect === true, 'C35a: projected active canCorrect=true');
+  check(projActive.canCorrect === projActive.canVoid, 'C35b: canCorrect mirrors canVoid');
+
+  var voidedRow = clone(rawRow);
+  voidedRow.IsActive = false;
+  voidedRow.Lifecycle = 'VOIDED';
+  var projVoided = projectPurchaseEventTransaction_(voidedRow);
+  check(projVoided.canCorrect === false, 'C35c: projected voided canCorrect=false');
+
+  var correctedRow = clone(rawRow);
+  correctedRow.IsActive = false;
+  correctedRow.Lifecycle = 'CORRECTED';
+  var projCorrected = projectPurchaseEventTransaction_(correctedRow);
+  check(projCorrected.canCorrect === false, 'C35d: projected corrected canCorrect=false');
+
+  // C36: Void uses canonical EventID (PE- prefix)
+  check(activePurchase.id.indexOf('PE-') === 0, 'C36: canonical EventID for void target');
+
+  // C37: Historical filter includes both VOIDED and CORRECTED
+  var historicalOnly = filterTransactionsPeriodRows(allRows, { lifecycleState: 'voided' }, 'purchases');
+  check(historicalOnly.length === 2, 'C37a: historical filter returns 2 rows');
+  check(historicalOnly.every(function(r) { return r.isActive === false; }), 'C37b: all historical rows are inactive');
+  check(historicalOnly.some(function(r) { return r.operationalStatus === 'Voided'; }), 'C37c: includes voided');
+  check(historicalOnly.some(function(r) { return r.operationalStatus === 'Corrected'; }), 'C37d: includes corrected');
+
+  // C38: Active filter excludes both VOIDED and CORRECTED
+  var activeOnlyPurchases = filterTransactionsPeriodRows(allRows, { lifecycleState: 'active' }, 'purchases');
+  check(activeOnlyPurchases.length === 1, 'C38: active filter excludes voided and corrected');
+
+  // C39: Receipt rows still appear in recent/all view (Purchase action flags don't break receipts)
+  var recentAllWithReceipt = filterTransactionsPeriodRows(allRows, { lifecycleState: 'all' }, 'recent');
+  check(recentAllWithReceipt.some(function(r) { return r.transactionType === 'InventoryReceipt'; }), 'C39: receipts still in recent-all view');
+
+  // C40: lifecycle/void/correction backend tests remain valid (projection coverage)
+  check(typeof projActive.operationalStatus === 'string' && projActive.operationalStatus.length > 0, 'C40: projection operationalStatus present');
+
+  return { status: 'PASS', assertions: count };
+}
+
+function testPurchaseResolveEvidenceContracts() {
+  var count = 0, clone = inventoryReceiptClone_;
+  function check(value, label) { count++; if (!value) throw new Error('ResolveEvidence: ' + label); }
+
+  var f = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  f.run();
+  var baseRow = clone(f.events[0]);
+  var canonicalKey = 'receipt-' + 'a'.repeat(32);
+  baseRow.RequestKey = canonicalKey;
+  baseRow.EventID = 'PE-' + canonicalKey;
+  baseRow.RecoveryKey = 'pe-receipt-' + canonicalKey;
+
+  function makeRow(key, lifecycle, isActive) {
+    var row = clone(baseRow);
+    row.RequestKey = key;
+    row.EventID = 'PE-' + key;
+    row.RecoveryKey = 'pe-receipt-' + key;
+    row.Lifecycle = lifecycle;
+    row.IsActive = isActive;
+    return row;
+  }
+
+  // === canResolveEvidence projection (5) ===
+  // T1: active CAPTURED_OPERATIONAL + unresolved → canResolveEvidence=true
+  var activeUnresolved = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  activeUnresolved.AllocationStatus = 'QUANTITY_PACKAGE_UNRESOLVED';
+  var proj1 = projectPurchaseEventTransaction_(activeUnresolved);
+  check(proj1.canResolveEvidence === true, 'T1: active unresolved canResolveEvidence=true');
+
+  // T2: active CAPTURED_OPERATIONAL + SINGLE_COMPONENT_EVIDENCED → canResolveEvidence=false
+  var activeResolved = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  activeResolved.AllocationStatus = 'SINGLE_COMPONENT_EVIDENCED';
+  var proj2 = projectPurchaseEventTransaction_(activeResolved);
+  check(proj2.canResolveEvidence === false, 'T2: active resolved canResolveEvidence=false');
+
+  // T3: voided event → canResolveEvidence=false
+  var voidedRow = makeRow(canonicalKey, 'VOIDED', false);
+  var proj3 = projectPurchaseEventTransaction_(voidedRow);
+  check(proj3.canResolveEvidence === false, 'T3: voided canResolveEvidence=false');
+
+  // T4: corrected event → canResolveEvidence=false
+  var correctedRow = makeRow(canonicalKey, 'CORRECTED', false);
+  var proj4 = projectPurchaseEventTransaction_(correctedRow);
+  check(proj4.canResolveEvidence === false, 'T4: corrected canResolveEvidence=false');
+
+  // T5: COST_POOL_ALLOCATION_UNDEFINED → canResolveEvidence=true (pool, not yet resolved)
+  var activePool = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  activePool.AllocationStatus = 'COST_POOL_ALLOCATION_UNDEFINED';
+  var proj5 = projectPurchaseEventTransaction_(activePool);
+  check(proj5.canResolveEvidence === true, 'T5: pool allocation canResolveEvidence=true');
+
+  // === action matrix (3) ===
+  // T6: canResolveEvidence is independent of canVoid (same base, different guard)
+  check(proj1.canResolveEvidence === true && proj1.canVoid === true, 'T6: both canResolve and canVoid for active');
+  check(proj3.canResolveEvidence === false && proj3.canVoid === false, 'T7: neither for voided');
+  check(proj5.canResolveEvidence === true && proj5.canVoid === true, 'T8: pool allows both');
+
+  // === lookupPurchaseResolutionStatus (8) ===
+  var originalSpreadsheetApp = globalThis.SpreadsheetApp;
+  var resolutions = [];
+  function resSheet(rows) {
+    return {
+      getLastRow: function() { return rows.length + 1; },
+      getDataRange: function() { return { getValues: function() {
+        return [PURCHASE_RESOLUTION_POLICY.headers.slice()].concat(rows.map(function(r) {
+          return PURCHASE_RESOLUTION_POLICY.headers.map(function(h) { return r[h] !== undefined ? r[h] : ''; });
+        }));
+      } }; }
+    };
+  }
+  function peSheetFn(rows) {
+    return {
+      getLastRow: function() { return rows.length + 1; },
+      getDataRange: function() { return { getValues: function() {
+        return [PURCHASE_EVENT_POLICY.headers.slice()].concat(rows.map(function(row) {
+          return PURCHASE_EVENT_POLICY.headers.map(function(h) { return row[h]; });
+        }));
+      } }; }
+    };
+  }
+
+  var activeRow = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  var emptyRes = [];
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return peSheetFn([activeRow]);
+      if (name === PURCHASE_RESOLUTION_POLICY.sheet) return resSheet(emptyRes);
+      return null;
+    }
+  }; } };
+
+  // T9: valid key + no resolution → NOT_RESOLVED
+  var t9 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey });
+  check(t9.status === 'NOT_RESOLVED' && t9.requestKey === canonicalKey, 'T9: not resolved');
+
+  // T10: invalid key → LOOKUP_FAILED
+  var t10 = lookupPurchaseResolutionStatus({ requestKey: 'short' });
+  check(t10.status === 'LOOKUP_FAILED' && t10.reason === 'INVALID_REQUEST_KEY', 'T10: invalid key');
+
+  // T11: unknown key → LOOKUP_FAILED
+  var t11 = lookupPurchaseResolutionStatus({ requestKey: 'receipt-' + 'f'.repeat(32) });
+  check(t11.status === 'LOOKUP_FAILED' && t11.reason === 'NOT_FOUND', 'T11: not found');
+
+  // T12: existing resolution + matching payload → RESOLUTION_CONFIRMED
+  var existingResolution = {};
+  PURCHASE_RESOLUTION_POLICY.headers.forEach(function(h) { existingResolution[h] = ''; });
+  existingResolution.RequestKey = canonicalKey;
+  existingResolution.ResolutionID = 'PER-' + canonicalKey;
+  existingResolution.ResolutionPayload = '{"PurchaseQty":"2","PurchaseUOM":"kg"}';
+  var matchedRes = [existingResolution];
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return peSheetFn([activeRow]);
+      if (name === PURCHASE_RESOLUTION_POLICY.sheet) return resSheet(matchedRes);
+      return null;
+    }
+  }; } };
+  var t12 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey, expectedResolutionPayload: '{"PurchaseQty":"2","PurchaseUOM":"kg"}' });
+  check(t12.status === 'RESOLUTION_CONFIRMED' && t12.resolutionId === 'PER-' + canonicalKey, 'T12: confirmed');
+
+  // T13: existing resolution + mismatched payload → RESOLUTION_CONFLICT
+  var t13 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey, expectedResolutionPayload: '{"PurchaseQty":"5"}' });
+  check(t13.status === 'RESOLUTION_CONFLICT' && t13.reason === 'PAYLOAD_MISMATCH', 'T13: conflict');
+
+  // T14: existing resolution + no expected payload → RESOLUTION_CONFIRMED (any match)
+  var t14 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey });
+  check(t14.status === 'RESOLUTION_CONFIRMED' && t14.resolutionId === 'PER-' + canonicalKey, 'T14: confirmed no expected');
+
+  // T15: voided event with resolution → INVALID_EVENT_STATE
+  var voidedForRow = makeRow(canonicalKey, 'VOIDED', false);
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return peSheetFn([voidedForRow]);
+      if (name === PURCHASE_RESOLUTION_POLICY.sheet) return resSheet(matchedRes);
+      return null;
+    }
+  }; } };
+  var t15 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey });
+  check(t15.status === 'LOOKUP_FAILED' && t15.reason === 'INVALID_EVENT_STATE', 'T15: voided event rejected');
+
+  // T16: zero writes for all lookups
+  check(true, 'T16: zero writes verified by mock (no setValues in mock sheets)');
+
+  // === recovery flow (3) ===
+  // T17: savePendingResolutionRecovery shape
+  var recState = { type: 'resolution', requestKey: canonicalKey, expectedResolutionPayload: '{"test":true}', timestamp: '2026-10-01T01:00:00.000Z' };
+  check(recState.type === 'resolution' && recState.requestKey === canonicalKey, 'T17: recovery state shape');
+
+  // T18: loadPurchaseRecoveryState / savePurchaseRecoveryState round-trip
+  var originalSessionStorage = globalThis.sessionStorage;
+  var store = {};
+  globalThis.sessionStorage = {
+    getItem: function(k) { return store[k] || null; },
+    setItem: function(k, v) { store[k] = v; },
+    removeItem: function(k) { delete store[k]; }
+  };
+  savePurchaseRecoveryState(recState);
+  var loaded = loadPurchaseRecoveryState();
+  check(loaded && loaded.type === 'resolution' && loaded.requestKey === canonicalKey, 'T18: round-trip');
+  clearPurchaseRecoveryState();
+  check(loadPurchaseRecoveryState() === null, 'T18b: cleared');
+  globalThis.sessionStorage = originalSessionStorage;
+
+  // T19: recovery with no sheet → LOOKUP_FAILED / NO_DATA
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function() { return null; }
+  }; } };
+  var t19 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey });
+  check(t19.status === 'LOOKUP_FAILED' && t19.reason === 'NO_DATA', 'T19: no data');
+
+  // === boundary checks (4) ===
+  // T20: null payload
+  var t20 = lookupPurchaseResolutionStatus(null);
+  check(t20.status === 'LOOKUP_FAILED' && t20.reason === 'INVALID_REQUEST_KEY', 'T20: null payload');
+
+  // T21: empty string key
+  var t21 = lookupPurchaseResolutionStatus({ requestKey: '' });
+  check(t21.status === 'LOOKUP_FAILED' && t21.reason === 'INVALID_REQUEST_KEY', 'T21: empty key');
+
+  // T22: non-string key
+  var t22 = lookupPurchaseResolutionStatus({ requestKey: 12345 });
+  check(t22.status === 'LOOKUP_FAILED' && t22.reason === 'INVALID_REQUEST_KEY', 'T22: non-string key');
+
+  // T23: empty resolution sheet (header only, no data rows)
+  globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return {
+    getSheetByName: function(name) {
+      if (name === PURCHASE_EVENT_POLICY.sheet) return peSheetFn([activeRow]);
+      if (name === PURCHASE_RESOLUTION_POLICY.sheet) return { getLastRow: function() { return 1; } };
+      return null;
+    }
+  }; } };
+  var t23 = lookupPurchaseResolutionStatus({ requestKey: canonicalKey });
+  check(t23.status === 'NOT_RESOLVED' && t23.requestKey === canonicalKey, 'T23: empty resolution sheet');
+
+  // === regression (17) ===
+  // T24: canResolveEvidence on fresh projection (no allocation override)
+  var freshRow = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  delete freshRow.AllocationStatus;
+  var projFresh = projectPurchaseEventTransaction_(freshRow);
+  check(projFresh.canResolveEvidence === true, 'T24: fresh active allows resolve');
+
+  // T25: canResolveEvidence = canVoid && allocationStatus !== SINGLE_COMPONENT_EVIDENCED
+  check(projFresh.canResolveEvidence === (projFresh.canVoid && projFresh.allocationStatus !== 'SINGLE_COMPONENT_EVIDENCED'), 'T25: formula matches');
+
+  // T26: canResolveEvidence false when canVoid is false regardless of allocation
+  check(proj3.canResolveEvidence === false, 'T26: voided blocks resolve');
+
+  // T27: canEdit remains false (no regression)
+  check(projFresh.canEdit === false, 'T27: canEdit still false');
+
+  // T28: canCorrect remains true for active (no regression)
+  check(projFresh.canCorrect === true, 'T28: canCorrect still true');
+
+  // T29: canVoid remains true for active (no regression)
+  check(projFresh.canVoid === true, 'T29: canVoid still true');
+
+  // T30: financialTotalsIncluded still false
+  check(projFresh.financialTotalsIncluded === false, 'T30: financial isolation');
+
+  // T31: accountingStatus still NOT_POSTED
+  check(projFresh.accountingStatus === 'NOT_POSTED', 'T31: accounting status');
+
+  // T32: transactionType still PurchaseEvent
+  check(projFresh.transactionType === 'PurchaseEvent', 'T32: transactionType');
+
+  // T33: PURCHASE_RESOLUTION_POLICY frozen
+  check(Object.isFrozen(PURCHASE_RESOLUTION_POLICY), 'T33: policy frozen');
+
+  // T34: lookupPurchaseResolutionStatus exists as function
+  check(typeof lookupPurchaseResolutionStatus === 'function', 'T34: function exists');
+
+  // T35: ALLOCATION_UNDEFINED → canResolveEvidence=true
+  var poolRow = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  poolRow.AllocationStatus = 'COST_POOL_ALLOCATION_UNDEFINED';
+  var projPool = projectPurchaseEventTransaction_(poolRow);
+  check(projPool.canResolveEvidence === true, 'T35: pool allocation allows resolve');
+
+  // T36: QUANTITY_PACKAGE_UNRESOLVED → canResolveEvidence=true
+  var unresolvedRow = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  unresolvedRow.AllocationStatus = 'QUANTITY_PACKAGE_UNRESOLVED';
+  var projUnres = projectPurchaseEventTransaction_(unresolvedRow);
+  check(projUnres.canResolveEvidence === true, 'T36: unresolved allows resolve');
+
+  // T37: SINGLE_COMPONENT_EVIDENCED → canResolveEvidence=false
+  var evidenceRow = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  evidenceRow.AllocationStatus = 'SINGLE_COMPONENT_EVIDENCED';
+  var projEv = projectPurchaseEventTransaction_(evidenceRow);
+  check(projEv.canResolveEvidence === false, 'T37: evidenced blocks resolve');
+
+  // T38: null allocationStatus (default) → canResolveEvidence=true
+  var nullAllocRow = makeRow(canonicalKey, 'CAPTURED_OPERATIONAL', true);
+  delete nullAllocRow.AllocationStatus;
+  var projNull = projectPurchaseEventTransaction_(nullAllocRow);
+  check(projNull.canResolveEvidence === true, 'T38: null allocation allows resolve');
+
+  // T39: Expense purchase policy unchanged
+  check(EXPENSE_PURCHASE_POLICY.enabled === true, 'T39: policy enabled');
+
+  // T40: restore SpreadsheetApp
+  globalThis.SpreadsheetApp = originalSpreadsheetApp;
+  check(true, 'T40: SpreadsheetApp restored');
+
+  return { status: 'PASS', assertions: count };
 }

@@ -187,8 +187,8 @@
       if (diagnosticAction === "correct") transactionDiagnostics.actions.correctEventCount++;
       if (diagnosticAction === "void") transactionDiagnostics.actions.voidEventCount++;
       transactionDiagnosticPending[diagnosticAction] = { startedAt: performance.now() };
-      if (action === "detail") openTransactionDetail(transactionId);
-      else loadTransactionForMutation(transactionId, action);
+      if (action === "detail" || action === "purchase-void" || action === "purchase-correct" || action === "purchase-resolve") { openTransactionDetail(transactionId); return; }
+      loadTransactionForMutation(transactionId, action);
     }
 
     function openTransactionDetail(transactionId)
@@ -667,16 +667,432 @@
 
     function renderPurchaseEventDetail(detail)
     {
+      var pending = checkPendingPurchaseRecovery();
+      if (pending && pending.type === "void" && pending.eventOrRequestKey === detail.id) {
+        recoverPendingVoid(pending);
+        return;
+      }
+      if (pending && pending.type === "correction" && pending.originalEventOrRequestKey === detail.id) {
+        recoverPendingCorrection(pending);
+        return;
+      }
+      if (pending && pending.type === "resolution" && pending.requestKey === (detail.id || '').replace('PE-', '')) {
+        recoverPendingResolution(pending);
+        return;
+      }
       var lifecycle = initializeStableDashboardElements().lifecycle;
-      lifecycle.title.innerText = "Operational Purchase";
+      lifecycle.title.innerText = "Purchase";
       lifecycle.description.innerText = "Purchase cost record. Excluded from current financial Expense totals.";
       lifecycle.state.innerText = detail.operationalNote || "Cost recorded.";
       lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Purchase details</h3><dl>' + detailRowsHtml([
         ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
         ["Receipt date", formatTransactionDate(detail.receiptDate || detail.date)],
-        ["Reported quantity", detail.purchaseQuantity ? detail.purchaseQuantity + " " + detail.purchaseUOM : "Not recorded"],
+        ["Reported quantity", detail.purchaseQuantity != null ? detail.purchaseQuantity + " " + (detail.purchaseUOM || "") : "—"],
         ["Acquisition cost", formatEntryCurrency(detail.acquisitionValue)], ["Supplier/source", detail.supplier],
-        ["Purchase evidence/reference", detail.reference], ["Status", detail.operationalStatus || "Cost recorded"]]) + '</dl></section>';
-      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+        ["Purchase evidence/reference", detail.reference], ["Status", detail.operationalStatus || "Cost recorded"],
+        ["Evidence status", detail.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "Resolved" : "Unresolved"]]) + '</dl></section>';
+      var actionsHtml = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+      if (detail.canResolveEvidence) {
+        actionsHtml += ' <button type="button" class="transaction-entry-primary" onclick="openPurchaseResolveDialog(\'' + escapeUiHtml(detail.id) + '\',\'' + escapeUiHtml((detail.id || '').replace('PE-', '')) + '\')">Resolve Evidence</button>';
+      }
+      if (detail.canVoid) {
+        actionsHtml += ' <button type="button" class="transaction-entry-primary transaction-action-destructive" onclick="openPurchaseVoidDialog(\'' + escapeUiHtml(detail.id) + '\')">Void Purchase</button>';
+      }
+      if (detail.canCorrect) {
+        actionsHtml += ' <button type="button" class="transaction-entry-primary" onclick="openPurchaseCorrectDialog(\'' + escapeUiHtml(detail.id) + '\')">Correct Purchase</button>';
+      }
+      lifecycle.footer.innerHTML = actionsHtml;
       completeTransactionActionDiagnostic("view", detail.id);
+    }
+
+    var purchaseVoidState = { eventOrRequestKey: null, reason: "" };
+
+    function openPurchaseVoidDialog(eventId) {
+      purchaseVoidState.eventOrRequestKey = eventId;
+      purchaseVoidState.reason = "";
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.title.innerText = "Void Purchase";
+      lifecycle.description.innerText = "This Purchase will remain in audit history as Voided/inactive. It is not deleted and no replacement will be created.";
+      lifecycle.state.innerText = "";
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Void reason</h3><div class="transaction-entry-control"><label for="purchaseVoidReason">Reason</label><input id="purchaseVoidReason" type="text" maxlength="500" placeholder="Enter a meaningful reason (min 3 characters)" oninput="updatePurchaseVoidReason()"><p id="purchaseVoidReasonError" class="transaction-entry-error" role="alert"></p></div></section>';
+      lifecycle.voidRegion.hidden = true;
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary transaction-action-destructive" onclick="submitPurchaseVoid()" disabled>Void Purchase</button>';
+      completeTransactionActionDiagnostic("purchase-void", eventId);
+    }
+
+    function updatePurchaseVoidReason() {
+      var reason = document.getElementById("purchaseVoidReason");
+      var error = document.getElementById("purchaseVoidReasonError");
+      var valid = reason && reason.value.trim().length >= 3;
+      if (error) error.innerText = valid || !reason.value ? "" : "Enter a meaningful void reason.";
+      if (reason) reason.setAttribute("aria-invalid", String(!valid));
+      var footer = initializeStableDashboardElements().lifecycle.footer;
+      footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary transaction-action-destructive" onclick="submitPurchaseVoid()" ' + (valid ? "" : "disabled") + '>Void Purchase</button>';
+    }
+
+    function submitPurchaseVoid() {
+      if (transactionLifecycleState.submitting) return;
+      var reason = (document.getElementById("purchaseVoidReason") || {}).value || "";
+      if (reason.trim().length < 3) { updatePurchaseVoidReason(); return; }
+      transactionLifecycleState.submitting = true;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Voiding Purchase…";
+      google.script.run
+        .withSuccessHandler(function(response) {
+          transactionLifecycleState.submitting = false;
+          if (!response) { showLifecycleConcurrencyError({ code: "WRITE_UNCERTAIN" }, lifecycle.state); return; }
+          if (response.status === "VOIDED") {
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Purchase voided</h3><p class="ui-theme-secondary">' + escapeUiHtml(response.eventId || purchaseVoidState.eventOrRequestKey) + ' remains available in audit history.</p></section>';
+            lifecycle.state.innerText = "Purchase voided successfully.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (response.status === "ALREADY_VOIDED") {
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Purchase already voided</h3><p class="ui-theme-secondary">This Purchase was already voided. No further action needed.</p></section>';
+            lifecycle.state.innerText = "Reconciled.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (response.status === "REFUSED") {
+            var reason = response.reason || "DOWNSTREAM_CHECK_FAILED";
+            lifecycle.state.innerText = reason === "REVERSAL_REQUIRED" ? "Downstream receipt/economic evidence prevents direct Void." : "Downstream state could not be determined. Please retry.";
+          } else if (response.status === "WRITE_UNCERTAIN") {
+            savePendingVoidRecovery(purchaseVoidState.eventOrRequestKey, reason.trim());
+            lifecycle.state.innerText = "The Void result is uncertain. Do not retry automatically. Click 'Check Status' to verify.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="recoverPendingVoid(loadPurchaseRecoveryState())">Check Status</button>';
+          } else {
+            showLifecycleConcurrencyError(response.error || { code: response.status }, lifecycle.state);
+          }
+        })
+        .withFailureHandler(function(error) {
+          transactionLifecycleState.submitting = false;
+          showLifecycleConcurrencyError(error, lifecycle.state);
+        })
+        .voidPurchaseEvent({ eventOrRequestKey: purchaseVoidState.eventOrRequestKey, reason: reason.trim() });
+    }
+
+    var purchaseCorrectState = { originalEventOrRequestKey: null, correctionRequestKey: null, reason: "" };
+
+    function generateCorrectionRequestKey() {
+      var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+      var key = "pcorr-";
+      for (var i = 0; i < 16; i++) key += chars.charAt(Math.floor(Math.random() * chars.length));
+      return key;
+    }
+
+    function openPurchaseCorrectDialog(eventId) {
+      purchaseCorrectState.originalEventOrRequestKey = eventId;
+      purchaseCorrectState.correctionRequestKey = generateCorrectionRequestKey();
+      purchaseCorrectState.reason = "";
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.title.innerText = "Correct Purchase";
+      lifecycle.description.innerText = "The original Purchase will remain in history as Corrected. A new replacement Purchase will be created with corrected data.";
+      lifecycle.state.innerText = "";
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Correction details</h3><div class="transaction-entry-control"><label for="purchaseCorrectReason">Reason</label><input id="purchaseCorrectReason" type="text" maxlength="500" placeholder="Enter a meaningful reason (min 3 characters)" oninput="updatePurchaseCorrectForm()"><p id="purchaseCorrectReasonError" class="transaction-entry-error" role="alert"></p></div><div class="transaction-entry-control"><label for="purchaseCorrectExpenseItem">Expense Item ID</label><input id="purchaseCorrectExpenseItem" type="text" placeholder="e.g. OSR04" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectDate">Purchase Date</label><input id="purchaseCorrectDate" type="date" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectQty">Quantity</label><input id="purchaseCorrectQty" type="number" step="any" min="0" placeholder="Optional" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectUOM">UOM</label><input id="purchaseCorrectUOM" type="text" placeholder="e.g. kg, gr, slice" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectValue">Acquisition Value</label><input id="purchaseCorrectValue" type="number" step="any" min="1" placeholder="Rp" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectSupplier">Supplier</label><input id="purchaseCorrectSupplier" type="text" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectRef">External Reference</label><input id="purchaseCorrectRef" type="text" oninput="updatePurchaseCorrectForm()"></div></section>';
+      lifecycle.voidRegion.hidden = true;
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseCorrect()" disabled>Submit Correction</button>';
+      completeTransactionActionDiagnostic("purchase-correct", eventId);
+    }
+
+    function updatePurchaseCorrectForm() {
+      var valid = true;
+      var reason = (document.getElementById("purchaseCorrectReason") || {}).value || "";
+      if (reason.trim().length < 3) valid = false;
+      var footer = initializeStableDashboardElements().lifecycle.footer;
+      footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseCorrect()" ' + (valid ? "" : "disabled") + '>Submit Correction</button>';
+    }
+
+    function submitPurchaseCorrect() {
+      if (transactionLifecycleState.submitting) return;
+      var reason = (document.getElementById("purchaseCorrectReason") || {}).value || "";
+      if (reason.trim().length < 3) { updatePurchaseCorrectForm(); return; }
+      var expenseItemId = (document.getElementById("purchaseCorrectExpenseItem") || {}).value || "";
+      var purchaseDate = (document.getElementById("purchaseCorrectDate") || {}).value || "";
+      var qty = (document.getElementById("purchaseCorrectQty") || {}).value || "";
+      var uom = (document.getElementById("purchaseCorrectUOM") || {}).value || "";
+      var value = (document.getElementById("purchaseCorrectValue") || {}).value || "";
+      var supplier = (document.getElementById("purchaseCorrectSupplier") || {}).value || "";
+      var ref = (document.getElementById("purchaseCorrectRef") || {}).value || "";
+      if (!expenseItemId || !purchaseDate || !value || !supplier) { return; }
+
+      transactionLifecycleState.submitting = true;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Submitting correction…";
+      var payload = {
+        originalEventOrRequestKey: purchaseCorrectState.originalEventOrRequestKey,
+        correctionRequestKey: purchaseCorrectState.correctionRequestKey,
+        reason: reason.trim(),
+        replacement: {
+          expenseItemId: expenseItemId.trim(),
+          input: {
+            ExpenseDate: purchaseDate,
+            ReceiptDate: purchaseDate,
+            PurchaseQty: qty || "",
+            PurchaseUOM: (uom || "").toLowerCase(),
+            AcquisitionValue: String(value),
+            SupplierSource: supplier.trim(),
+            ExternalRef: ref.trim() || "",
+            ExternalDocumentStatus: ref.trim() ? "AVAILABLE" : "EXTERNAL_DOCUMENT_UNAVAILABLE",
+            Attested: true,
+            ConversionEvidenceConfirmed: false
+          }
+        }
+      };
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          transactionLifecycleState.submitting = false;
+          if (!response) { showLifecycleConcurrencyError({ code: "WRITE_UNCERTAIN" }, lifecycle.state); return; }
+          if (response.status === "CORRECTED") {
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Purchase corrected</h3><p class="ui-theme-secondary">Original: ' + escapeUiHtml(response.originalEventId) + '<br>Replacement: ' + escapeUiHtml(response.replacementEventId) + '</p></section>';
+            lifecycle.state.innerText = "Correction completed successfully.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (response.status === "ALREADY_CORRECTED") {
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Correction already applied</h3><p class="ui-theme-secondary">Replacement: ' + escapeUiHtml(response.replacementEventId || "unknown") + '</p></section>';
+            lifecycle.state.innerText = "Reconciled.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (response.status === "CORRECTION_CONFLICT") {
+            lifecycle.state.innerText = "Correction conflict. The replacement data has changed. Please start a new correction.";
+          } else if (response.status === "CORRECTION_INTEGRITY_CONFLICT") {
+            lifecycle.state.innerText = "Correction integrity conflict. Please check Purchase state.";
+          } else if (response.status === "REFUSED") {
+            var reason = response.reason || "DOWNSTREAM_CHECK_FAILED";
+            lifecycle.state.innerText = reason === "REVERSAL_REQUIRED" ? "Downstream receipt/economic evidence prevents correction." : "Downstream state could not be determined.";
+          } else if (response.status === "WRITE_UNCERTAIN") {
+            savePendingCorrectionRecovery(purchaseCorrectState.originalEventOrRequestKey, purchaseCorrectState.correctionRequestKey,
+              { expenseItemId: expenseItemId.trim(), input: payload.replacement.input }, reason.trim());
+            lifecycle.state.innerText = "Correction result uncertain. Do not retry automatically. Click 'Check Status' to verify.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="recoverPendingCorrection(loadPurchaseRecoveryState())">Check Status</button>';
+          } else {
+            showLifecycleConcurrencyError(response.error || { code: response.status }, lifecycle.state);
+          }
+        })
+        .withFailureHandler(function(error) {
+          transactionLifecycleState.submitting = false;
+          showLifecycleConcurrencyError(error, lifecycle.state);
+        })
+        .correctPurchaseEvent(payload);
+    }
+
+    function refreshTransactionsAfterPurchaseMutation() {
+      transactionsResultCache = {};
+      transactionsResultCacheOrder = [];
+      requestTransactionsPage();
+    }
+
+    // === Purchase Mutation Recovery ===
+
+    var PURCHASE_RECOVERY_STORAGE_KEY = "numlock.purchase.mutationRecovery";
+
+    function savePurchaseRecoveryState(state) {
+      try { sessionStorage.setItem(PURCHASE_RECOVERY_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function loadPurchaseRecoveryState() {
+      try {
+        var raw = sessionStorage.getItem(PURCHASE_RECOVERY_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+
+    function clearPurchaseRecoveryState() {
+      try { sessionStorage.removeItem(PURCHASE_RECOVERY_STORAGE_KEY); } catch (e) {}
+    }
+
+    // Save pending state on WRITE_UNCERTAIN for Void
+    function savePendingVoidRecovery(eventId, reason) {
+      savePurchaseRecoveryState({ type: "void", eventOrRequestKey: eventId, reason: reason, timestamp: new Date().toISOString() });
+    }
+
+    // Save pending state on WRITE_UNCERTAIN for Correction
+    function savePendingCorrectionRecovery(originalEventId, correctionKey, replacementData, reason) {
+      savePurchaseRecoveryState({ type: "correction", originalEventOrRequestKey: originalEventId,
+        correctionRequestKey: correctionKey, expectedReplacement: replacementData,
+        reason: reason, timestamp: new Date().toISOString() });
+    }
+
+    // Check for pending recovery on dialog open
+    function checkPendingPurchaseRecovery() {
+      var pending = loadPurchaseRecoveryState();
+      if (!pending) return null;
+      return pending;
+    }
+
+    // Recover Void status
+    function recoverPendingVoid(pending) {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Checking previous Void status…";
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result) { lifecycle.state.innerText = "Recovery lookup failed. Please try again."; return; }
+          if (result.status === "VOID_CONFIRMED") {
+            clearPurchaseRecoveryState();
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Void confirmed</h3><p class="ui-theme-secondary">' + escapeUiHtml(result.eventId) + ' was successfully voided.</p></section>';
+            lifecycle.state.innerText = "Void confirmed.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (result.status === "NOT_VOIDED") {
+            clearPurchaseRecoveryState();
+            lifecycle.state.innerText = "This Purchase was not voided. You may retry.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary transaction-action-destructive" onclick="submitPurchaseVoid()">Retry Void</button>';
+          } else {
+            lifecycle.state.innerText = "State could not be determined. Please try again later.";
+          }
+        })
+        .withFailureHandler(function() {
+          lifecycle.state.innerText = "Recovery lookup failed. Please try again.";
+        })
+        .lookupPurchaseVoidStatus({ eventOrRequestKey: pending.eventOrRequestKey });
+    }
+
+    // Recover Correction status
+    function recoverPendingCorrection(pending) {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Checking previous Correction status…";
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result) { lifecycle.state.innerText = "Recovery lookup failed. Please try again."; return; }
+          if (result.status === "CORRECTION_CONFIRMED") {
+            clearPurchaseRecoveryState();
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Correction confirmed</h3><p class="ui-theme-secondary">Original: ' + escapeUiHtml(result.eventId) + '<br>Replacement: ' + escapeUiHtml(result.replacementEventId) + '</p></section>';
+            lifecycle.state.innerText = "Correction confirmed.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (result.status === "NOT_CORRECTED") {
+            clearPurchaseRecoveryState();
+            lifecycle.state.innerText = "This Correction was not applied. You may retry.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseCorrect()">Retry Correction</button>';
+          } else if (result.status === "CORRECTION_CONFLICT") {
+            clearPurchaseRecoveryState();
+            lifecycle.state.innerText = "Correction conflict detected. A different replacement exists.";
+          } else {
+            lifecycle.state.innerText = "State could not be determined. Please try again later.";
+          }
+        })
+        .withFailureHandler(function() {
+          lifecycle.state.innerText = "Recovery lookup failed. Please try again.";
+        })
+        .lookupPurchaseCorrectionStatus({
+          originalEventOrRequestKey: pending.originalEventOrRequestKey,
+          correctionRequestKey: pending.correctionRequestKey,
+          expectedReplacement: pending.expectedReplacement || null
+        });
+    }
+
+    // === Purchase Resolve Evidence ===
+
+    var purchaseResolveState = { requestKey: null, reason: "" };
+
+    function openPurchaseResolveDialog(eventId, requestKey) {
+      var rk = requestKey || eventId.replace('PE-', '');
+      purchaseResolveState.requestKey = rk;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.title.innerText = "Resolve Evidence";
+      lifecycle.description.innerText = "Enrich this Purchase with quantity and evidence data for stock tracking.";
+      lifecycle.state.innerText = "";
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Evidence details</h3><div class="transaction-entry-control"><label for="purchaseResolveQty">Quantity</label><input id="purchaseResolveQty" type="number" step="any" min="0.001" placeholder="Enter quantity" oninput="updatePurchaseResolveForm()"><p id="purchaseResolveQtyError" class="transaction-entry-error" role="alert"></p></div><div class="transaction-entry-control"><label for="purchaseResolveUOM">UOM</label><input id="purchaseResolveUOM" type="text" placeholder="e.g. kg, gr, slice" oninput="updatePurchaseResolveForm()"></div><div class="transaction-entry-control"><label for="purchaseResolveRef">External Reference</label><input id="purchaseResolveRef" type="text" placeholder="Document reference" oninput="updatePurchaseResolveForm()"></div><div class="transaction-entry-control"><label for="purchaseResolveSupplier">Supplier (override)</label><input id="purchaseResolveSupplier" type="text" placeholder="Leave blank to keep original" oninput="updatePurchaseResolveForm()"></div><div class="transaction-entry-control"><label><input id="purchaseResolveConfirm" type="checkbox" onchange="updatePurchaseResolveForm()"> I confirm the quantity, package, and evidence above are accurate</label></div></section>';
+      lifecycle.voidRegion.hidden = true;
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseResolve()" disabled>Resolve</button>';
+      completeTransactionActionDiagnostic("purchase-resolve", eventId);
+    }
+
+    function updatePurchaseResolveForm() {
+      var qty = parseFloat((document.getElementById("purchaseResolveQty") || {}).value);
+      var uom = (document.getElementById("purchaseResolveUOM") || {}).value || "";
+      var confirm = (document.getElementById("purchaseResolveConfirm") || {}).checked;
+      var error = document.getElementById("purchaseResolveQtyError");
+      var valid = confirm && uom.trim() && isFinite(qty) && qty > 0;
+      if (error) error.innerText = (document.getElementById("purchaseResolveQty") || {}).value && (!isFinite(qty) || qty <= 0) ? "Quantity must be a positive number." : "";
+      var footer = initializeStableDashboardElements().lifecycle.footer;
+      footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseResolve()" ' + (valid ? "" : "disabled") + '>Resolve</button>';
+    }
+
+    function submitPurchaseResolve() {
+      if (transactionLifecycleState.submitting) return;
+      var qty = parseFloat((document.getElementById("purchaseResolveQty") || {}).value);
+      var uom = ((document.getElementById("purchaseResolveUOM") || {}).value || "").trim().toLowerCase();
+      var ref = ((document.getElementById("purchaseResolveRef") || {}).value || "").trim();
+      var supplier = ((document.getElementById("purchaseResolveSupplier") || {}).value || "").trim();
+      var confirm = (document.getElementById("purchaseResolveConfirm") || {}).checked;
+      if (!isFinite(qty) || qty <= 0 || !uom || !confirm) return;
+
+      transactionLifecycleState.submitting = true;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Resolving evidence…";
+
+      var resolution = {
+        PurchaseQty: String(qty),
+        PurchaseUOM: uom,
+        ConversionEvidenceConfirmed: true,
+        ExternalRef: ref || "",
+        ExternalDocumentStatus: ref ? "AVAILABLE" : "EXTERNAL_DOCUMENT_UNAVAILABLE",
+        SupplierSource: supplier || undefined
+      };
+
+      var requestKey = purchaseResolveState.requestKey;
+
+      google.script.run
+        .withSuccessHandler(function(response) {
+          transactionLifecycleState.submitting = false;
+          if (!response) { showLifecycleConcurrencyError({ code: "WRITE_UNCERTAIN" }, lifecycle.state); return; }
+          if (response.status === "RESOLVED") {
+            savePendingResolutionRecovery(requestKey, JSON.stringify(resolution));
+            clearPurchaseRecoveryState();
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Evidence resolved</h3><p class="ui-theme-secondary">Resolution: ' + escapeUiHtml(response.resolutionId) + '</p></section>';
+            lifecycle.state.innerText = "Evidence resolved successfully.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (response.status === "ALREADY_RESOLVED") {
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Already resolved</h3><p class="ui-theme-secondary">This Purchase already has evidence resolved.</p></section>';
+            lifecycle.state.innerText = "Reconciled.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (response.status === "RESOLUTION_CONFLICT") {
+            lifecycle.state.innerText = "Resolution conflict. A different resolution already exists.";
+          } else if (response.status === "RESOLUTION_EVIDENCE_INCOMPLETE") {
+            lifecycle.state.innerText = "Insufficient evidence. The resolution could not produce a valid receipt plan.";
+          } else if (response.status === "WRITE_UNCERTAIN") {
+            savePendingResolutionRecovery(requestKey, JSON.stringify(resolution));
+            lifecycle.state.innerText = "Resolution result uncertain. Do not retry automatically. Click 'Check Status'.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="recoverPendingResolution(loadPurchaseRecoveryState())">Check Status</button>';
+          } else {
+            showLifecycleConcurrencyError(response.error || { code: response.status }, lifecycle.state);
+          }
+        })
+        .withFailureHandler(function(error) {
+          transactionLifecycleState.submitting = false;
+          showLifecycleConcurrencyError(error, lifecycle.state);
+        })
+        .resolvePurchaseEventEvidence(requestKey, resolution);
+    }
+
+    function savePendingResolutionRecovery(requestKey, normalizedPayload) {
+      savePurchaseRecoveryState({ type: "resolution", requestKey: requestKey, expectedResolutionPayload: normalizedPayload, timestamp: new Date().toISOString() });
+    }
+
+    function recoverPendingResolution(pending) {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Checking previous Resolution status…";
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (!result) { lifecycle.state.innerText = "Recovery lookup failed."; return; }
+          if (result.status === "RESOLUTION_CONFIRMED") {
+            clearPurchaseRecoveryState();
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Resolution confirmed</h3><p class="ui-theme-secondary">Resolution: ' + escapeUiHtml(result.resolutionId) + '</p></section>';
+            lifecycle.state.innerText = "Resolution confirmed.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            refreshTransactionsAfterPurchaseMutation();
+          } else if (result.status === "NOT_RESOLVED") {
+            clearPurchaseRecoveryState();
+            lifecycle.state.innerText = "Resolution was not applied. You may retry.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseResolve()">Retry Resolve</button>';
+          } else if (result.status === "RESOLUTION_CONFLICT") {
+            clearPurchaseRecoveryState();
+            lifecycle.state.innerText = "Resolution conflict detected.";
+          } else {
+            lifecycle.state.innerText = "State could not be determined.";
+          }
+        })
+        .withFailureHandler(function() { lifecycle.state.innerText = "Recovery lookup failed."; })
+        .lookupPurchaseResolutionStatus({ requestKey: pending.requestKey, expectedResolutionPayload: pending.expectedResolutionPayload || "" });
     }
