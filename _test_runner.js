@@ -24,6 +24,7 @@ globalThis.dateFormat = function() { return 'yyyy-MM-dd'; };
 
 var files = [
   '20.Data.Source.js',
+  '22.Transaction.Lifecycle.js',
   '38.CapitalEquity.Service.js',
   '39.Balance.Foundation.js',
   '42.Inventory.Receipt.Foundation.js',
@@ -117,6 +118,9 @@ run('testPurchaseEventDiagnosticContracts', 'testPurchaseEventDiagnosticContract
 run('testPurchaseEventIsActiveTypeContract', 'testPurchaseEventIsActiveTypeContract()');
 run('testPurchaseEventResolutionContracts', 'testPurchaseEventResolutionContracts()');
 run('testPurchaseResolutionSchemaMigrationContracts', 'testPurchaseResolutionSchemaMigrationContracts()');
+run('testPurchaseEventLifecycleReadModel_', 'testPurchaseEventLifecycleReadModel_()');
+run('testPurchaseEventVoidContracts', 'testPurchaseEventVoidContracts()');
+run('testPurchaseEventCorrectionContracts', 'testPurchaseEventCorrectionContracts()');
 
 console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

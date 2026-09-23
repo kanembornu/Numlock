@@ -5,6 +5,26 @@ var PURCHASE_EVENT_POLICY = Object.freeze({ version: 'PURCHASE-EVENTS-V1', enabl
     'SupplierSource', 'ExternalRef', 'ExternalDocumentStatus', 'Attestation', 'AllocationStatus', 'RequestKey',
     'NormalizedPayload', 'ReceiptPlan', 'Lifecycle', 'RecoveryKey', 'CreatedAt', 'CreatedBy', 'IsActive']) });
 
+// Accepted lifecycle states for PurchaseEvent rows. Append-only — new states
+// require policy revision and migration.
+var PURCHASE_EVENT_LIFECYCLE_STATES = Object.freeze({
+  CAPTURED_OPERATIONAL: 'CAPTURED_OPERATIONAL',
+  VOIDED: 'VOIDED',
+  CORRECTED: 'CORRECTED'
+});
+var PURCHASE_EVENT_ACTIVE_LIFECYCLE = PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL;
+
+// CorrectionRequestKey format: alphanumeric start, 8-64 chars, no corr- prefix.
+var PURCHASE_CORRECTION_KEY_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{7,63}$/;
+
+function validatePurchaseCorrectionKey_(key) {
+  if (typeof key !== 'string') return false;
+  var trimmed = key.trim();
+  if (!trimmed || trimmed.length < 8 || trimmed.length > 64) return false;
+  if (trimmed.indexOf('corr-') === 0) return false; // reject double-prefixed
+  return PURCHASE_CORRECTION_KEY_PATTERN.test(trimmed);
+}
+
 // One-shot evidence resolution for PurchaseEvents. One resolution per EventID.
 var PURCHASE_RESOLUTION_POLICY = Object.freeze({ version: 'PURCHASE-RESOLUTIONS-V1', enabled: true,
   sheet: 'PurchaseEventResolutions',
@@ -132,12 +152,23 @@ function buildPurchaseEvent_(request, expenses, authority, audit) {
     CreatedAt: audit.at, CreatedBy: audit.actor, IsActive: true };
 }
 
+// Strict lifecycle+IsActive validation. Unknown lifecycles and invalid
+// IsActive combinations fail closed.
+function isValidPurchaseEventLifecycleState_(lifecycle, isActive) {
+  if (typeof isActive !== 'boolean') return false;
+  if (lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL) return isActive === true;
+  if (lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED) return isActive === false;
+  if (lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED) return isActive === false;
+  return false; // unknown lifecycle → fail closed
+}
+
 function purchaseEventHistory_(rows) {
   var keys = Object.create(null), ids = Object.create(null);
   rows.forEach(function(row) {
     if (PURCHASE_EVENT_POLICY.headers.some(function(key) { return !Object.prototype.hasOwnProperty.call(row, key); }) ||
         !row.RequestKey || keys[row.RequestKey] || ids[row.EventID] || row.EventID !== 'PE-' + row.RequestKey ||
-        row.RecoveryKey !== 'pe-receipt-' + row.RequestKey || row.Lifecycle !== 'CAPTURED_OPERATIONAL' || row.IsActive !== true) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+        row.RecoveryKey !== 'pe-receipt-' + row.RequestKey ||
+        !isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive)) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     var request = normalizePurchaseEventRequest_(JSON.parse(row.NormalizedPayload));
     if (JSON.stringify(request) !== row.NormalizedPayload || request.requestKey !== row.RequestKey || request.expenseItemId !== row.ExpenseID ||
         ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].some(function(k) { return request.input[k] !== row[k]; })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
@@ -242,16 +273,18 @@ function projectPurchaseEventTransaction_(row, resolution) {
       allocationStatus = resolution.AllocationStatus;
     }
   }
+  var isActive = row.IsActive === true;
+  var canVoid = isActive && row.Lifecycle === PURCHASE_EVENT_ACTIVE_LIFECYCLE;
   return { id: row.EventID, transactionType: 'PurchaseEvent', canonicalTransactionType: 'PurchaseEvent',
     date: row.ExpenseDate, dateKey: row.ExpenseDate, item: row.BusinessLabel, expenseId: row.ExpenseID,
     purchaseQuantity: row.PurchaseQty, purchaseUOM: row.PurchaseUOM, acquisitionValue: Number(row.AcquisitionValue),
-    supplier: row.SupplierSource, reference: row.ExternalRef || 'Document unavailable', isActive: true,
-    receiptDate: row.ReceiptDate, operationalStatus: 'Cost recorded',
+    supplier: row.SupplierSource, reference: row.ExternalRef || 'Document unavailable', isActive: isActive,
+    receiptDate: row.ReceiptDate, operationalStatus: isActive ? 'Cost recorded' : 'Voided',
     operationalNote: receiptPlan === 'null' || receiptPlan === null ?
       'Cost recorded. Quantity or package is not verified for stock tracking.' :
       'Purchase recorded. Stock tracking requires separate verification.',
     receiptPlan: receiptPlan, allocationStatus: allocationStatus,
-    financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: false };
+    financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: canVoid, canCorrect: false };
 }
 
 // Purchase lookup canonical requestKey: receipt- prefix + 32 hex chars from crypto.getRandomValues.
@@ -280,7 +313,7 @@ function lookupPurchaseEventStatus_(requestKey, pendingPayload) {
     if (matches.length > 1) return { status: 'LOOKUP_FAILED', reason: 'DUPLICATE_REQUESTED_KEY', requestKey: requestKey };
     var match = matches[0];
     // Validate the matched row's basic integrity (not the entire history)
-    if (match.EventID !== 'PE-' + requestKey || match.IsActive !== true || match.Lifecycle !== 'CAPTURED_OPERATIONAL') {
+    if (match.EventID !== 'PE-' + requestKey || !isValidPurchaseEventLifecycleState_(match.Lifecycle, match.IsActive)) {
       return { status: 'LOOKUP_FAILED', reason: 'CORRUPTED_EVENT_RECORD', requestKey: requestKey };
     }
     // Require valid pending payload for comparison
@@ -477,7 +510,7 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
     // Predicate 4: RecoveryKey format
     predicates.recoveryKeyFormat = row.RecoveryKey === 'pe-receipt-' + requestKey;
     // Predicate 5: Lifecycle
-    predicates.lifecycleCorrect = row.Lifecycle === 'CAPTURED_OPERATIONAL';
+    predicates.lifecycleCorrect = isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive);
     // Predicate 6: IsActive — check both value and type
     predicates.isActiveValue = row.IsActive;
     predicates.isActiveType = typeof row.IsActive;
@@ -599,6 +632,352 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
   } catch (error) {
     return { error: error.message, requestKey: requestKey };
   }
+}
+
+// === PurchaseEvent Void Operations ===
+
+// Validate that a PurchaseEvent row is eligible for void.
+// Returns null on success, or a result object on refusal.
+function validatePurchaseEventVoidEligibility_(row) {
+  if (!row || typeof row !== 'object') return { status: 'INVALID_REQUEST', reason: 'MISSING_EVENT' };
+  if (row.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED && row.IsActive === false) {
+    return { status: 'ALREADY_VOIDED' };
+  }
+  if (row.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED) {
+    return { status: 'INVALID_EVENT_STATE', reason: 'CORRECTED_EVENT' };
+  }
+  if (!isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive)) {
+    return { status: 'INVALID_EVENT_STATE', reason: 'CORRUPTED_LIFECYCLE' };
+  }
+  // Must be active CAPTURED_OPERATIONAL
+  if (row.Lifecycle !== PURCHASE_EVENT_ACTIVE_LIFECYCLE || row.IsActive !== true) {
+    return { status: 'INVALID_EVENT_STATE', reason: 'NOT_VOIDABLE' };
+  }
+  return null; // eligible
+}
+
+// Check if downstream InventoryReceipt or Cash settlement evidence exists for this event.
+// Returns null if SAFE, or a result object if downstream blocks or check fails.
+// Canonical linkage: PurchaseEvent.RecoveryKey === InventoryReceipt.IdempotencyKey
+function checkPurchaseEventDownstreamEvidence_(ss, row) {
+  if (!ss.getSheetByName) return null;
+  var receiptSheet = ss.getSheetByName('InventoryReceipts');
+  // Sheet absence is an established valid state (no receipts exist yet) → SAFE
+  if (!receiptSheet) return null;
+  // Sheet exists — must read authoritatively
+  try {
+    var receipts = readCanonicalTable(ss, 'InventoryReceipts', INVENTORY_RECEIPT_POLICY.HEADERS);
+    for (var i = 0; i < receipts.length; i++) {
+      if (receipts[i].IdempotencyKey === row.RecoveryKey && receipts[i].IsActive === true) {
+        return { status: 'REFUSED', reason: 'REVERSAL_REQUIRED' };
+      }
+    }
+    return null; // authoritative read completed, no active receipt linked → SAFE
+  } catch (e) {
+    // Sheet exists but read failed — cannot determine downstream state → fail closed
+    return { status: 'REFUSED', reason: 'DOWNSTREAM_CHECK_FAILED' };
+  }
+}
+
+// Persist the void mutation on a PurchaseEvent row. Single-row write.
+// Returns the after-values array on success.
+// Throws on write failure (caller handles rollback).
+function persistPurchaseEventVoid_(sheet, rowNumber, before, runtime) {
+  var headers = PURCHASE_EVENT_POLICY.headers;
+  var after = before.slice();
+  var lifecycleIdx = headers.indexOf('Lifecycle');
+  var isActiveIdx = headers.indexOf('IsActive');
+  after[lifecycleIdx] = PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED;
+  after[isActiveIdx] = false;
+  sheet.getRange(rowNumber, 1, 1, after.length).setValues([after]);
+  runtime.flush();
+  // Readback verification
+  var readback = sheet.getRange(rowNumber, 1, 1, after.length).getValues()[0];
+  if (readback[lifecycleIdx] !== PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED ||
+      readback[isActiveIdx] !== false || typeof readback[isActiveIdx] !== 'boolean') {
+    // Rollback
+    sheet.getRange(rowNumber, 1, 1, before.length).setValues([before]);
+    runtime.flush();
+    var verifyBack = sheet.getRange(rowNumber, 1, 1, before.length).getValues()[0];
+    if (verifyBack[lifecycleIdx] !== before[lifecycleIdx] || verifyBack[isActiveIdx] !== before[isActiveIdx]) {
+      throw canonicalEntryError('ROLLBACK_FAILED', 'Void rollback could not restore the original PurchaseEvent.', null);
+    }
+    throw canonicalEntryError('WRITE_FAILED', 'Void mutation readback verification failed.', null);
+  }
+  return after;
+}
+
+// Core void operation under lock. Accepts ss, requestKey/eventId, reason, runtime.
+function voidPurchaseEventUnderLock_(identity, reason, ss, runtime) {
+  var headers = PURCHASE_EVENT_POLICY.headers;
+  var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+  if (!sheet || sheet.getLastRow() <= 1) return { status: 'NOT_FOUND', writeCount: 0 };
+
+  var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
+  // Find matching row by EventID or RequestKey
+  var match = null, matchRowNumber = null;
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    if (row.EventID === identity || row.RequestKey === identity) {
+      match = row;
+      matchRowNumber = row.sourceRowIndex + 1; // +1 for header row
+      break;
+    }
+  }
+  if (!match) return { status: 'NOT_FOUND', writeCount: 0 };
+
+  // Snapshot before-values for readback and rollback
+  var before = headers.map(function(h) { return match[h]; });
+
+  // Validate eligibility
+  var eligibility = validatePurchaseEventVoidEligibility_(match);
+  if (eligibility) return eligibility;
+
+  // Check downstream evidence
+  var downstream = checkPurchaseEventDownstreamEvidence_(ss, match);
+  if (downstream) return downstream;
+
+  // Persist void
+  try {
+    var after = persistPurchaseEventVoid_(sheet, matchRowNumber, before, runtime);
+    // Final readback verification (already done in persist, but verify canonical fields)
+    var finalRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
+    var finalRow = null;
+    for (var j = 0; j < finalRows.length; j++) {
+      if (finalRows[j].EventID === match.EventID) { finalRow = finalRows[j]; break; }
+    }
+    if (!finalRow || finalRow.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED ||
+        finalRow.IsActive !== false || typeof finalRow.IsActive !== 'boolean') {
+      throw canonicalEntryError('READBACK_FAILED', 'Post-void readback verification failed.', null);
+    }
+    // Verify immutable fields
+    if (finalRow.RequestKey !== match.RequestKey || finalRow.EventID !== match.EventID ||
+        finalRow.RecoveryKey !== match.RecoveryKey ||
+        finalRow.NormalizedPayload !== match.NormalizedPayload ||
+        finalRow.AcquisitionValue !== match.AcquisitionValue ||
+        finalRow.ExpenseID !== match.ExpenseID) {
+      throw canonicalEntryError('READBACK_FAILED', 'Immutable fields changed during void.', null);
+    }
+    return { status: 'VOIDED', writeCount: 1, eventId: match.EventID, requestKey: match.RequestKey };
+  } catch (error) {
+    return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0, eventId: match.EventID };
+  }
+}
+
+// Public RPC — callable from google.script.run.
+// Accepts { eventOrRequestKey: string, reason: string }.
+function voidPurchaseEvent(payload) {
+  var lock = LockService.getScriptLock(), acquired = false;
+  try {
+    var identity = payload && payload.eventOrRequestKey;
+    if (typeof identity !== 'string' || !identity || !identity.trim()) {
+      return canonicalEntryFailure(canonicalEntryError('INVALID_REQUEST', 'EventID or RequestKey is required.', 'eventOrRequestKey'));
+    }
+    var reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
+    if (reason.length < 3 || reason.length > 500 || !/[A-Za-z0-9]/.test(reason)) {
+      return canonicalEntryFailure(canonicalEntryError('INVALID_VOID_REASON', 'Reason must be meaningful and no more than 500 characters.', 'reason'));
+    }
+    lock.waitLock(30000); acquired = true;
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var timestamp = new Date();
+    var runtime = { flush: function() { SpreadsheetApp.flush(); } };
+    return voidPurchaseEventUnderLock_(identity.trim(), reason, ss, runtime);
+  } catch (error) {
+    return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0 };
+  } finally {
+    if (acquired) lock.releaseLock();
+  }
+}
+
+// === End Void Operations ===
+
+// Validate complete correction relationship integrity.
+// Returns { valid: true, replacementId, correctionRequestKey } when integrity is proven.
+// Returns { valid: false, status, reason } when integrity is broken.
+// Returns { valid: true, replacementId: null } when no correction evidence exists.
+function validatePurchaseEventCorrectionIntegrity_(ss, originalEventId, rows) {
+  // Scan Logs for correction evidence
+  var voidLog = null, createLog = null;
+  try {
+    var logs = ss.getSheetByName('Logs');
+    if (!logs || logs.getLastRow() <= 1) return { valid: true, replacementId: null, correctionRequestKey: null };
+    var logRows = readCanonicalTable(ss, 'Logs', CANONICAL_ENTRY.LOG_HEADERS);
+    for (var i = 0; i < logRows.length; i++) {
+      var entry = logRows[i];
+      if (entry.Module !== 'TransactionLifecycle') continue;
+      try {
+        var meta = JSON.parse(entry.Metadata || '{}');
+        if (entry.Action === 'CORRECT_VOID_PURCHASE' && entry.RecordID === originalEventId) voidLog = meta;
+        if (entry.Action === 'CORRECT_CREATE_PURCHASE' && meta.originalId === originalEventId) createLog = meta;
+      } catch (e) { /* malformed log entry — skip */ }
+    }
+  } catch (e) { /* Logs inaccessible — cannot establish relationship */ }
+
+  if (!voidLog) return { valid: true, replacementId: null, correctionRequestKey: null };
+  if (!voidLog.replacementId || typeof voidLog.replacementId !== 'string') {
+    return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'MALFORMED_VOID_LOG' };
+  }
+  var recordedReplacementId = voidLog.replacementId;
+  var correctionRequestKey = voidLog.correctionRequestKey || null;
+
+  if (createLog) {
+    if (createLog.originalId !== originalEventId) return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'LOG_PAIR_ORIGINAL_MISMATCH' };
+    if (createLog.correctionRequestKey !== correctionRequestKey) return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'LOG_PAIR_KEY_MISMATCH' };
+  }
+
+  var original = null;
+  for (var j = 0; j < rows.length; j++) if (rows[j].EventID === originalEventId) { original = rows[j]; break; }
+  if (!original) return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'ORIGINAL_MISSING' };
+  if (original.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED || original.IsActive !== false) {
+    return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'ORIGINAL_NOT_CORRECTED' };
+  }
+
+  var replacement = null;
+  for (var k = 0; k < rows.length; k++) if (rows[k].EventID === recordedReplacementId) { replacement = rows[k]; break; }
+  if (!replacement) return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'REPLACEMENT_MISSING' };
+  if (replacement.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL || replacement.IsActive !== true) {
+    return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'REPLACEMENT_NOT_ACTIVE' };
+  }
+  if (replacement.EventID !== recordedReplacementId) return { valid: false, status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'REPLACEMENT_ID_MISMATCH' };
+  return { valid: true, replacementId: recordedReplacementId, correctionRequestKey: correctionRequestKey };
+}
+
+function validatePurchaseEventCorrectionEligibility_(row) {
+  if (!row || typeof row !== 'object') return { status: 'INVALID_REQUEST', reason: 'MISSING_EVENT' };
+  if (row.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED) return { status: 'INVALID_EVENT_STATE', reason: 'VOIDED_ORIGINAL' };
+  if (row.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED) return { status: 'INVALID_EVENT_STATE', reason: 'ALREADY_CORRECTED' };
+  if (!isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive)) return { status: 'INVALID_EVENT_STATE', reason: 'CORRUPTED_LIFECYCLE' };
+  if (row.Lifecycle !== PURCHASE_EVENT_ACTIVE_LIFECYCLE || row.IsActive !== true) return { status: 'INVALID_EVENT_STATE', reason: 'NOT_CORRECTABLE' };
+  return null;
+}
+
+function correctPurchaseEventUnderLock_(payload, ss, runtime) {
+  var headers = PURCHASE_EVENT_POLICY.headers;
+  var identity = typeof payload.originalEventOrRequestKey === 'string' ? payload.originalEventOrRequestKey.trim() : '';
+  var correctionKey = typeof payload.correctionRequestKey === 'string' ? payload.correctionRequestKey.trim() : '';
+  if (!identity) return { status: 'INVALID_REQUEST', reason: 'MISSING_IDENTITY', writeCount: 0 };
+  if (!validatePurchaseCorrectionKey_(correctionKey)) return { status: 'INVALID_REQUEST', reason: 'INVALID_CORRECTION_KEY', writeCount: 0 };
+  if (!payload.replacement || typeof payload.replacement !== 'object') return { status: 'INVALID_REQUEST', reason: 'MISSING_REPLACEMENT', writeCount: 0 };
+
+  var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+  if (!sheet || sheet.getLastRow() <= 1) return { status: 'NOT_FOUND', writeCount: 0 };
+  var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers), original = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].EventID === identity || rows[i].RequestKey === identity) { original = rows[i]; break; }
+  }
+  if (!original) return { status: 'NOT_FOUND', writeCount: 0 };
+
+  var replacementRequestKey = 'corr-' + correctionKey;
+  var replacementPayload = { transactionType: 'EXPENSE', requestKey: replacementRequestKey,
+    expenseItemId: payload.replacement.expenseItemId, input: payload.replacement.input };
+  var normalizedReplacement;
+  try { normalizedReplacement = normalizePurchaseEventRequest_(replacementPayload); }
+  catch (error) { return { status: 'INVALID_REQUEST', reason: 'INVALID_REPLACEMENT_PAYLOAD', writeCount: 0 }; }
+  var normalizedText = JSON.stringify(normalizedReplacement);
+
+  // Validate complete correction relationship integrity
+  var integrity = validatePurchaseEventCorrectionIntegrity_(ss, original.EventID, rows);
+  if (!integrity.valid) return { status: integrity.status, reason: integrity.reason, writeCount: 0 };
+  if (integrity.replacementId) {
+    if (integrity.correctionRequestKey !== correctionKey) {
+      return { status: 'INVALID_EVENT_STATE', reason: 'ALREADY_CORRECTED_DIFFERENT_KEY', writeCount: 0 };
+    }
+    var related = rows.filter(function(r) { return r.EventID === integrity.replacementId; })[0];
+    if (!related || related.NormalizedPayload !== normalizedText) {
+      return { status: 'CORRECTION_CONFLICT', reason: 'REPLACEMENT_PAYLOAD_MISMATCH', writeCount: 0 };
+    }
+    return { status: 'ALREADY_CORRECTED', replacementEventId: integrity.replacementId, writeCount: 0 };
+  }
+
+  var eligibility = validatePurchaseEventCorrectionEligibility_(original);
+  if (eligibility) { eligibility.writeCount = 0; return eligibility; }
+  var downstream = checkPurchaseEventDownstreamEvidence_(ss, original);
+  if (downstream) { downstream.writeCount = 0; return downstream; }
+
+  var history;
+  try { history = purchaseEventHistory_(rows); }
+  catch (error) { return { status: 'INVALID_EVENT_STATE', reason: 'CORRUPTED_HISTORY', writeCount: 0 }; }
+  if (history[replacementRequestKey]) {
+    // Replacement exists but no log relationship — corruption
+    return { status: 'CORRECTION_INTEGRITY_CONFLICT', reason: 'REPLACEMENT_WITHOUT_LOG', writeCount: 0 };
+  }
+
+  var expenses;
+  try { expenses = readCanonicalTable(ss, 'ExpenseItems', ['ID_Ops', 'Item', 'Kategori', 'Kind', 'Group', 'AccountCode', 'IsActive']); }
+  catch (error) { return { status: 'INVALID_REQUEST', reason: 'REPLACEMENT_BUILD_FAILED', writeCount: 0 }; }
+  var replacementEvent;
+  try { replacementEvent = buildPurchaseEvent_(normalizedReplacement, expenses,
+    { events: rows, expenses: expenses, items: [], conversions: [] }, runtime.audit()); }
+  catch (error) { return { status: 'INVALID_REQUEST', reason: 'REPLACEMENT_BUILD_FAILED', writeCount: 0 }; }
+
+  var logs = ss.getSheetByName('Logs');
+  try { requireCanonicalHeaders(logs, CANONICAL_ENTRY.LOG_HEADERS); }
+  catch (error) { return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0, originalEventId: original.EventID }; }
+  var replacementRow = sheet.getLastRow() + 1;
+  var originalRow = original.sourceRowIndex + 1;
+  var beforeOriginal = headers.map(function(header) { return original[header]; });
+  var afterOriginal = beforeOriginal.slice();
+  var lifecycleIdx = headers.indexOf('Lifecycle'), isActiveIdx = headers.indexOf('IsActive');
+  afterOriginal[lifecycleIdx] = PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED;
+  afterOriginal[isActiveIdx] = false;
+  var audits = [];
+  try {
+    var target = sheet.getRange(replacementRow, 1, 1, headers.length);
+    target.setNumberFormat('@');
+    target.setValues([headers.map(function(header) { return replacementEvent[header]; })]);
+    if (!writeCanonicalBoolean_(sheet, replacementRow, isActiveIdx + 1)) throw canonicalEntryError('WRITE_FAILED', 'Replacement IsActive persistence failed.', null);
+    runtime.flush();
+    sheet.getRange(originalRow, 1, 1, afterOriginal.length).setValues([afterOriginal]); runtime.flush();
+    var originalReadback = sheet.getRange(originalRow, 1, 1, afterOriginal.length).getValues()[0];
+    if (originalReadback[lifecycleIdx] !== PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED || originalReadback[isActiveIdx] !== false || typeof originalReadback[isActiveIdx] !== 'boolean') {
+      throw canonicalEntryError('WRITE_FAILED', 'Original correction mutation could not be verified.', null);
+    }
+    var timestamp = new Date().toISOString();
+    audits.push(appendLifecycleAudit(logs, timestamp, 'CORRECT_VOID_PURCHASE', original.EventID,
+      { reason: payload.reason, replacementId: replacementEvent.EventID, correctionRequestKey: correctionKey, before: beforeOriginal }, runtime));
+    audits.push(appendLifecycleAudit(logs, timestamp, 'CORRECT_CREATE_PURCHASE', replacementEvent.EventID,
+      { reason: payload.reason, originalId: original.EventID, correctionRequestKey: correctionKey,
+        replacement: headers.map(function(header) { return replacementEvent[header]; }) }, runtime));
+    var finalRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
+    var finalOriginal = finalRows.filter(function(row) { return row.EventID === original.EventID; })[0];
+    var finalReplacement = finalRows.filter(function(row) { return row.EventID === replacementEvent.EventID; });
+    if (!finalOriginal || finalOriginal.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED || finalOriginal.IsActive !== false ||
+        finalReplacement.length !== 1 || finalReplacement[0].NormalizedPayload !== normalizedText) {
+      throw canonicalEntryError('WRITE_FAILED', 'Correction readback verification failed.', null);
+    }
+    return { status: 'CORRECTED', originalEventId: original.EventID, replacementEventId: replacementEvent.EventID,
+      replacementRequestKey: replacementRequestKey, writeCount: 1 };
+  } catch (error) {
+    try {
+      for (var j = audits.length - 1; j >= 0; j--) rollbackLifecycleLog(logs, audits[j]);
+      sheet.getRange(originalRow, 1, 1, beforeOriginal.length).setValues([beforeOriginal]);
+      if (String(sheet.getRange(replacementRow, 1).getValue()) === replacementEvent.EventID) sheet.deleteRow(replacementRow);
+      runtime.flush();
+      var restored = sheet.getRange(originalRow, 1, 1, beforeOriginal.length).getValues()[0];
+      if (restored[lifecycleIdx] !== beforeOriginal[lifecycleIdx] || restored[isActiveIdx] !== beforeOriginal[isActiveIdx] ||
+          String(sheet.getRange(replacementRow, 1).getValue()) === replacementEvent.EventID) throw new Error('ROLLBACK_VERIFICATION_FAILED');
+    } catch (rollbackError) {
+      return { status: 'WRITE_UNCERTAIN', reason: 'ROLLBACK_FAILED: ' + error.message, writeCount: 0, originalEventId: original.EventID };
+    }
+    return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0, originalEventId: original.EventID };
+  }
+}
+
+function correctPurchaseEvent(payload) {
+  var lock = LockService.getScriptLock(), acquired = false;
+  try {
+    if (!payload || typeof payload !== 'object') return { status: 'INVALID_REQUEST', reason: 'MISSING_PAYLOAD', writeCount: 0 };
+    var reason = typeof payload.reason === 'string' ? payload.reason.trim() : '';
+    if (reason.length < 3 || reason.length > 500 || !/[A-Za-z0-9]/.test(reason)) return { status: 'INVALID_REQUEST', reason: 'INVALID_VOID_REASON', writeCount: 0 };
+    if (!payload.originalEventOrRequestKey || !payload.correctionRequestKey || !payload.replacement) return { status: 'INVALID_REQUEST', reason: 'MISSING_REQUIRED_FIELDS', writeCount: 0 };
+    if (!validatePurchaseCorrectionKey_(payload.correctionRequestKey)) return { status: 'INVALID_REQUEST', reason: 'INVALID_CORRECTION_KEY', writeCount: 0 };
+    lock.waitLock(30000); acquired = true;
+    var runtime = { flush: function() { SpreadsheetApp.flush(); },
+      audit: function() { return { actor: CANONICAL_ENTRY.USER, at: new Date().toISOString() }; },
+      uuid: function() { return Utilities.getUuid(); } };
+    return correctPurchaseEventUnderLock_(payload, SpreadsheetApp.getActiveSpreadsheet(), runtime);
+  } catch (error) { return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0 }; }
+  finally { if (acquired) lock.releaseLock(); }
 }
 
 // Bounded remediation: fix IsActive type for rows where the ONLY defect is

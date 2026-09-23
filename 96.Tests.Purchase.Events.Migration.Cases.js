@@ -66,7 +66,7 @@ function testPurchaseEventSchemaMigrationContracts() {
   var history = readPurchaseEventTransactionRows_(writerSS);
   check(history.length === 1 && history[0].item === 'Kopi Bubuk' && history[0].id === 'PE-purchase-test-0001' &&
     history[0].canonicalTransactionType === 'PurchaseEvent' && history[0].financialTotalsIncluded === false &&
-    history[0].accountingStatus === 'NOT_POSTED' && history[0].canEdit === false && history[0].canVoid === false,
+    history[0].accountingStatus === 'NOT_POSTED' && history[0].canEdit === false && history[0].canVoid === true,
     'reader and Transactions projection compatible');
   check(purchase.run().writeCount === 0, 'persisted RequestKey idempotency');
 
