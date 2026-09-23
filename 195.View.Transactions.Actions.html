@@ -685,9 +685,9 @@
       lifecycle.description.innerText = "Purchase cost record. Excluded from current financial Expense totals.";
       lifecycle.state.innerText = detail.operationalNote || "Cost recorded.";
       lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Purchase details</h3><dl>' + detailRowsHtml([
-        ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
+        ["Event ID", detail.id], ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
         ["Receipt date", formatTransactionDate(detail.receiptDate || detail.date)],
-        ["Reported quantity", detail.purchaseQuantity != null ? detail.purchaseQuantity + " " + (detail.purchaseUOM || "") : "—"],
+        ["Reported quantity", detail.purchaseQuantity != null && detail.purchaseQuantity !== "" ? detail.purchaseQuantity + " " + (detail.purchaseUOM || "") : "—"],
         ["Acquisition cost", formatEntryCurrency(detail.acquisitionValue)], ["Supplier/source", detail.supplier],
         ["Purchase evidence/reference", detail.reference], ["Status", detail.operationalStatus || "Cost recorded"],
         ["Evidence status", detail.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "Resolved" : "Unresolved"]]) + '</dl></section>';
