@@ -2402,12 +2402,12 @@ function testPurchaseUIContracts() {
   // === v603 column proportions restored ===
   // U31-U38: Verify v603 column width percentages
   check(_htmlIndex.indexOf('th:nth-child(1)') !== -1, 'U31: col1 selector exists');
-  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U32: col1 (Transaction ID) width 9%');
+  check(_htmlIndex.indexOf('width: 13%') !== -1, 'U32: col1 (Transaction ID) width 13%');
   check(_htmlIndex.indexOf('width: 8%') !== -1, 'U33: col2 (Date) width 8%');
   check(_htmlIndex.indexOf('width: 7%') !== -1, 'U34: col3 (Type) width 7%');
   check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4/5/6 (Item/Qty/Amount) width 10%');
   check(_htmlIndex.indexOf('width: 12%') !== -1, 'U37: col7 (Status) width 12%');
-  check(_htmlIndex.indexOf('width: 34%') !== -1, 'U38: col8 (Actions) width 34%');
+  check(_htmlIndex.indexOf('width: 30%') !== -1, 'U38: col8 (Actions) width 30%');
 
   // U39-U42: Verify v604 distorted widths are removed
   check(_htmlIndex.indexOf('width: 25%') === -1, 'U39: v604 col1 width 25% removed');
@@ -2533,7 +2533,7 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
 
   // U100: Column widths sum to 100%
-  var colWidths = [9, 8, 7, 10, 10, 10, 12, 34];
+  var colWidths = [13, 8, 7, 10, 10, 10, 12, 30];
   check(colWidths.reduce(function(a, b) { return a + b; }, 0) === 100, 'U100: column widths sum to 100%');
 
   // === DEFECT C: Direct action dispatch verification ===
@@ -2555,14 +2555,14 @@ function testPurchaseUIContracts() {
   check(activePurchase.id.length >= 9, 'U109: EventID has meaningful minimum length');
 
   // === Column width adequacy for longest IDs ===
-  // U110-U111: ID column width (9%) at table min-width
+  // U110-U111: ID column width (13%) at table min-width
   var longestId = 'PE-receipt-ae065103bdc45b683bdb35e9d636b69b';
   check(longestId.length === 43, 'U110: longest ID is 43 chars');
-  check(colWidths[0] >= 9, 'U111: ID column width >= 9%');
+  check(colWidths[0] >= 13, 'U111: ID column width >= 13%');
 
   // === Actions column width for 4 buttons ===
   // U112: Actions column provides space for 4 inline buttons
-  check(colWidths[7] >= 34, 'U112: actions column width >= 34% for four buttons');
+  check(colWidths[7] >= 30, 'U112: actions column width >= 30% for four buttons');
 
   // === DEFECT 6: Action row nowrap (v602) ===
   // U113: CSS rule .transactions-row-actions includes flex-wrap: nowrap
@@ -2599,12 +2599,12 @@ function testPurchaseUIContracts() {
   check(_htmlRender.indexOf('whitespace-nowrap font-medium') !== -1, 'U127: ID cell retains nowrap and font-medium');
 
   // === DEFECT B: Actions right clearance ===
-  // U128: Actions column width (34%) with reduced cell padding for four-button clearance
-  check(colWidths[7] >= 34, 'U128: actions column 34% with reduced cell padding for four-button clearance');
-  // U129: Actions column padding reduced for right breathing room
-  check(_htmlIndex.indexOf('padding: 0 4px; text-align: center;') !== -1, 'U129: actions column has 4px side padding for right clearance');
-  // U129b: Actions column provides ~10px right breathing room via wider allocation
-  check(colWidths[7] >= 34 && colWidths[0] <= 9, 'U129b: column allocation provides Recent action right clearance');
+  // U128: Actions column width (30%) provides four-button clearance
+  check(colWidths[7] >= 30, 'U128: actions column 30% for four-button clearance');
+  // U129: Actions column uses default td padding (0 10px) — no reduced padding override
+  check(_htmlIndex.indexOf('padding: 0 4px; text-align: center;') === -1, 'U129: actions column no longer has 4px side padding');
+  // U129b: Actions column provides right breathing room via wider allocation
+  check(colWidths[7] >= 30 && colWidths[0] <= 13, 'U129b: column allocation provides Recent action right clearance');
 
   // === Geometry totals ===
   // U130: Table min-width increased for full ID rendering
