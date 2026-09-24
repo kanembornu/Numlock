@@ -1430,6 +1430,28 @@ function testTransactionsVisualContract()
   ].forEach(function(token) {
     assertSourceContains(source, token, "default table geometry preserved");
   });
+  /* Verify Purchase content-driven min-widths scoped to is-purchase-mode only */
+  [
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll table { table-layout: auto; min-width: 1446px; }",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(1) { width: auto; min-width: 360px; }",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(8) { width: auto; min-width: 372px;"
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "Purchase min-width scoped to is-purchase-mode");
+  });
+  /* Verify default td clips overflow — prevents Purchase ID bleeding into Date in Recent */
+  assertSourceContains(source, "#transactionsTableScroll td {", "default td rule exists");
+  assertSourceContains(source, "overflow: hidden;", "td overflow hidden prevents cross-column bleed");
+  /* Verify default column geometry unchanged */
+  [
+    "#transactionsTableScroll td:nth-child(1) { width: 21%; }",
+    "#transactionsTableScroll td:nth-child(8) { width: 22%;"
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "Recent/Non-purchase column widths preserved");
+  });
+  /* Verify is-purchase-mode is conditionally toggled (not always-on) */
+  assertSourceContains(source, 'tabName === "purchases"', "purchase mode conditional on tab");
+  /* Verify Actions cell row-actions flex geometry unchanged */
+  assertSourceContains(source, ".transactions-row-actions { display: flex; flex-wrap: nowrap; min-height: 40px;", "actions row flex preserved");
   /* Verify ID and Actions CSS rules preserve nowrap and font properties */
   [
     ".transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px;",
