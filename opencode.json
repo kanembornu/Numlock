@@ -47,6 +47,7 @@
       "clasp show-authorized-user": "allow",
       "npm install --package-lock-only --ignore-scripts": "ask",
       "rm -rf tests/tmp/": "allow",
+      "clasp update-deployment AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR*": "allow",
       "*": "deny"
     }
   }

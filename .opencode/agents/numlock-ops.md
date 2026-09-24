@@ -16,7 +16,7 @@ permission:
     "clasp push --force": allow
     "clasp versions": allow
     "clasp version *": allow
-    "clasp deploy *": allow
+    "clasp update-deployment AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR*": allow
     "git status --short": allow
     "git rev-parse HEAD": allow
     "node _test_runner.js": allow
@@ -47,9 +47,9 @@ ALLOWED OPERATIONAL COMMANDS — EXACTLY 11
 8. clasp push --force
 9. clasp versions
 10. clasp version "description"
-11. clasp deploy --version --description
+11. clasp update-deployment <acceptanceId> -V <version> -d <description>
 
-The list above contains exactly ELEVEN commands. clasp deploy --version --description is the eleventh and final allowed command.
+The list above contains exactly ELEVEN commands. clasp update-deployment <acceptanceId> -V <version> -d <description> is the eleventh and final allowed command.
 
 PREFLIGHT COMMANDS — EXACTLY 3
 
