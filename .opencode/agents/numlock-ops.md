@@ -5,6 +5,7 @@ model: 9router/numlock-sol
 permission:
   edit: deny
   bash:
+    "*": deny
     "clasp status*": allow
     "clasp deployments*": allow
     "clasp pull -P /tmp/clasp-pull-verification/.clasp.json": allow
@@ -19,7 +20,6 @@ permission:
     "git status --short": allow
     "git rev-parse HEAD": allow
     "node _test_runner.js": allow
-    "*": deny
   read: allow
   glob: allow
   grep: allow
