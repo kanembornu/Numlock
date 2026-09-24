@@ -2402,18 +2402,18 @@ function testPurchaseUIContracts() {
   // === DEFECT 1-7: Table column width rebalancing ===
   // U31-U38: Verify new column width percentages
   check(_htmlIndex.indexOf('th:nth-child(1)') !== -1, 'U31: col1 selector exists');
-  check(_htmlIndex.indexOf('width: 21%') !== -1, 'U32: col1 (Transaction ID) width 21%');
+  check(_htmlIndex.indexOf('width: 25%') !== -1, 'U32: col1 (Transaction ID) width 25%');
   check(_htmlIndex.indexOf('width: 8%') !== -1, 'U33: col2 (Date) width 8%');
   check(_htmlIndex.indexOf('width: 7%') !== -1, 'U34: col3 (Type) width 7%');
-  check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4 (Item) width 10%');
-  check(_htmlIndex.indexOf('width: 12%') !== -1, 'U37: col7 (Status) width 12%');
-  check(_htmlIndex.indexOf('width: 22%') !== -1, 'U38: col8 (Actions) width 22%');
+  check(_htmlIndex.indexOf('width: 6%') !== -1, 'U35: col4 (Item) width 6%');
+  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U37: col7 (Status) width 9%');
+  check(_htmlIndex.indexOf('width: 32%') !== -1, 'U38: col8 (Actions) width 32%');
 
   // U39-U42: Verify old widths are replaced
-  check(_htmlIndex.indexOf('width: 5%') === -1, 'U39: old col5 width 5% removed');
-  check(_htmlIndex.indexOf('width: 24%') === -1, 'U40: old col4 width 24% removed');
-  check(_htmlIndex.indexOf('width: 19%') === -1, 'U41: old col8 width 19% removed');
-  check(_htmlIndex.indexOf('width: 16%') === -1, 'U42: old col1 width 16% removed');
+  check(_htmlIndex.indexOf('width: 21%') === -1, 'U39: old col1 width 21% removed');
+  check(_htmlIndex.indexOf('width: 12%') === -1, 'U40: old col7 width 12% removed');
+  check(_htmlIndex.indexOf('width: 22%') === -1, 'U41: old col8 width 22% removed');
+  check(_htmlIndex.indexOf('width: 10%') === -1, 'U42: old col4/5/6 width 10% removed');
 
   // U43: table-layout: fixed present
   check(_htmlIndex.indexOf('table-layout: fixed') !== -1, 'U43: table-layout fixed');
@@ -2533,7 +2533,7 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
 
   // U100: Column widths sum to 100%
-  var colWidths = [21, 8, 7, 10, 10, 10, 12, 22];
+  var colWidths = [25, 8, 7, 6, 4, 9, 9, 32];
   check(colWidths.reduce(function(a, b) { return a + b; }, 0) === 100, 'U100: column widths sum to 100%');
 
   // === DEFECT C: Direct action dispatch verification ===
@@ -2555,14 +2555,14 @@ function testPurchaseUIContracts() {
   check(activePurchase.id.length >= 9, 'U109: EventID has meaningful minimum length');
 
   // === Column width adequacy for longest IDs ===
-  // U110-U111: ID column width (21%) accommodates 42-char IDs at typical rendering
+  // U110-U111: ID column width (25%) accommodates 43-char IDs at 11px rendering
   var longestId = 'PE-receipt-ae065103bdc45b683bdb35e9d636b69b';
   check(longestId.length === 43, 'U110: longest ID is 43 chars');
-  check(colWidths[0] >= 20, 'U111: ID column width >= 20% for long IDs');
+  check(colWidths[0] >= 25, 'U111: ID column width >= 25% for long IDs');
 
   // === Actions column width for 4 buttons ===
-  // U112: Actions column (22%) provides space for 4 inline buttons
-  check(colWidths[7] >= 20, 'U112: actions column width >= 20% for 4 buttons');
+  // U112: Actions column (32%) provides space for 4 inline buttons with clearance
+  check(colWidths[7] >= 30, 'U112: actions column width >= 30% for 4 buttons + clearance');
 
   // === DEFECT 6: Action row nowrap (v602) ===
   // U113: CSS rule .transactions-row-actions includes flex-wrap: nowrap
@@ -2589,6 +2589,28 @@ function testPurchaseUIContracts() {
   check(_htmlActions.indexOf('purchase-resolve') !== -1, 'U122: purchase-resolve action exists');
   check(_htmlActions.indexOf('purchase-void') !== -1, 'U123: purchase-void action exists');
   check(_htmlActions.indexOf('purchase-correct') !== -1, 'U124: purchase-correct action exists');
+
+  // === DEFECT A: Transaction ID not truncated ===
+  // U125: ID cell has no max-w constraint
+  check(_htmlRender.indexOf('max-w-[200px]') === -1, 'U125: ID cell has no max-w-[200px] truncation');
+  // U126: ID cell has no overflow-hidden
+  check(_htmlRender.indexOf('overflow-hidden text-ellipsis') === -1, 'U126: ID cell has no overflow-hidden text-ellipsis');
+  // U127: ID cell retains whitespace-nowrap (single line)
+  check(_htmlRender.indexOf('whitespace-nowrap font-medium') !== -1, 'U127: ID cell retains nowrap and font-medium');
+
+  // === DEFECT B: Actions right clearance ===
+  // U128: Actions column width (32%) exceeds 4-button minimum
+  check(colWidths[7] >= 32, 'U128: actions column 32% for four-button clearance');
+  // U129: Actions column padding provides visible right clearance
+  check(_htmlIndex.indexOf('padding: 0 10px; text-align: center;') !== -1, 'U129: actions column has 10px side padding for clearance');
+
+  // === Geometry totals ===
+  // U130: Table min-width increased for full ID rendering
+  check(_htmlIndex.indexOf('min-w-[1100px]') !== -1, 'U130: table min-width 1100px for full ID geometry');
+  // U131: ID column uses 11px font with !important (original design intent)
+  check(_htmlIndex.indexOf('font-size: 11px !important') !== -1, 'U131: ID column font-size 11px with !important');
+  // U132: column widths sum to exactly 100%
+  check(colWidths[7] + colWidths[6] + colWidths[5] + colWidths[4] + colWidths[3] + colWidths[2] + colWidths[1] + colWidths[0] === 100, 'U132: final allocation sums to 100%');
 
   return { status: 'PASS', assertions: count };
 }

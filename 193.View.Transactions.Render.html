@@ -59,7 +59,7 @@
               }
               return `
               <tr class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}">
-                  <td class="px-4 whitespace-nowrap font-medium max-w-[200px] overflow-hidden text-ellipsis" title="${escapeUiHtml(r.id)}">${escapeUiHtml(r.id.toUpperCase())}</td>
+                  <td class="px-4 whitespace-nowrap font-medium" title="${escapeUiHtml(r.id)}">${escapeUiHtml(r.id.toUpperCase())}</td>
                   <td class="px-4 whitespace-nowrap">
                     ${formatTransactionDate(r.date)}
                   </td>

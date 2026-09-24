@@ -362,16 +362,16 @@
       #transactionsTableScroll th + th { border-left: 1px solid var(--border-subtle); }
       #transactionsTableScroll td { height: 40px; padding: 0 10px; font-size: 14px; line-height: 20px; vertical-align: middle; }
       #transactionsTableScroll th { text-align: center; }
-      #transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 21%; }
-      #transactionsTableScroll td:nth-child(1) { font-size: 11px; letter-spacing: -0.01em; }
+      #transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 25%; }
+      #transactionsTableScroll td:nth-child(1) { font-size: 11px !important; letter-spacing: -0.01em; }
       #transactionsTableScroll th:nth-child(2), #transactionsTableScroll td:nth-child(2) { width: 8%; text-align: center; }
       #transactionsTableScroll th:nth-child(3), #transactionsTableScroll td:nth-child(3) { width: 7%; text-align: center; }
-      #transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 10%; }
-      #transactionsTableScroll th:nth-child(5), #transactionsTableScroll td:nth-child(5) { width: 10%; padding-right: 6px; padding-left: 6px; text-align: center; }
-      #transactionsTableScroll th:nth-child(6), #transactionsTableScroll td:nth-child(6) { width: 10%; }
+      #transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 6%; }
+      #transactionsTableScroll th:nth-child(5), #transactionsTableScroll td:nth-child(5) { width: 4%; padding-right: 6px; padding-left: 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(6), #transactionsTableScroll td:nth-child(6) { width: 9%; }
       #transactionsTableScroll td:nth-child(6) { text-align: left; }
-      #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 12%; padding: 0 6px; text-align: center; }
-      #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%; padding: 0 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 9%; padding: 0 6px; text-align: center; }
+      #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 32%; padding: 0 10px; text-align: center; }
       #transactionsTableCard { overflow: hidden; }
       .transactions-row-actions { display: flex; flex-wrap: nowrap; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
       .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
@@ -3343,7 +3343,7 @@
 
             <div id="transactionsTableCard" class="hf-secondary-surface">
             <div id="transactionsTableScroll" class="max-w-full overflow-x-auto">
-              <table class="w-full min-w-[680px]">
+              <table class="w-full min-w-[1100px]">
                 <caption class="sr-only">Visible bounded transactions for the selected Transactions tab</caption>
                 <thead class="border-b">
                   <tr>
