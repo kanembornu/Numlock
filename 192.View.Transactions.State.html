@@ -373,6 +373,7 @@
       }
 
       activeTransactionsTab = tabName;
+      elements.transactionsTableCard.classList.toggle("is-purchase-mode", tabName === "purchases");
       selectedPanel.appendChild(elements.transactionsEvidenceRegion);
       requestTransactionsPage();
     }

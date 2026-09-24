@@ -1409,6 +1409,52 @@ function testTransactionsVisualContract()
     "stale entry-state modal detection"
   );
   assertSourceExcludes(source, 'option value="10"', "legacy Transactions page-size choice");
+
+  /* Purchase content-driven table geometry assertions */
+  [
+    "#transactionsTableCard.is-purchase-mode { overflow-x: auto; overflow-y: visible; }",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll table { table-layout: auto; min-width: 1446px; }",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(1),",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(1) { width: auto; min-width: 360px; }",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(8),",
+    "#transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(8) { width: auto; min-width: 372px; padding: 0 10px; }",
+    'elements.transactionsTableCard.classList.toggle("is-purchase-mode", tabName === "purchases");'
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "Purchase content-driven table geometry");
+  });
+  /* Verify default geometry rules still exist (non-Purchase modes unchanged) */
+  [
+    "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 21%; }",
+    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%;",
+    "#transactionsTableCard { overflow: hidden; }"
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "default table geometry preserved");
+  });
+  /* Verify ID and Actions CSS rules preserve nowrap and font properties */
+  [
+    ".transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px;",
+    ".transactions-row-actions { display: flex; flex-wrap: nowrap; min-height: 40px;"
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "action button and row geometry preserved");
+  });
+  /* Verify Purchase View action routing unchanged */
+  [
+    "purchase-resolve", "purchase-void", "purchase-correct",
+    "runTransactionRowAction('purchase-resolve'",
+    "runTransactionRowAction('purchase-void'",
+    "runTransactionRowAction('purchase-correct'"
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "Purchase action routing preserved");
+  });
+  /* Verify Purchase View operational note */
+  [
+    'purchases: { heading: "Purchase"',
+    "Purchase rows in the active period."
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "Purchase view note preserved");
+  });
+  scenariosPassed++;
+
   Logger.log("PASS: testTransactionsVisualContract | scenarios=2");
   return { passed: true, scenarios: 2, writes: 0 };
   var tabs = ["recent", "sales", "expenses"];
