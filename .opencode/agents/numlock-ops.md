@@ -46,7 +46,7 @@ ALLOWED OPERATIONAL COMMANDS — EXACTLY 11
 7. clasp run runAllBackendTestsDiagnostic
 8. clasp push --force
 9. clasp versions
-10. clasp version --description
+10. clasp version "description"
 11. clasp deploy --version --description
 
 The list above contains exactly ELEVEN commands. clasp deploy --version --description is the eleventh and final allowed command.
