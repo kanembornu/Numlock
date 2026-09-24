@@ -687,8 +687,7 @@
       var lifecycle = initializeStableDashboardElements().lifecycle;
       lifecycle.title.innerText = "Purchase";
       lifecycle.description.innerText = "Cost recorded. Quantity or package is not verified for stock tracking.";
-      lifecycle.state.innerText = detail.operationalNote || "";
-      lifecycle.state.hidden = !detail.operationalNote;
+      lifecycle.state.hidden = true;
       lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Purchase details</h3><dl>' + detailRowsHtml([
         ["Event ID", detail.id], ["Item", detail.item], ["Purchase date", formatTransactionDate(detail.date)],
         ["Receipt date", formatTransactionDate(detail.receiptDate || detail.date)],

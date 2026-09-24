@@ -1959,6 +1959,40 @@ function testPurchaseViewContracts() {
   check(projRecov.canCorrect === true, 'C52b: recovery projection canCorrect');
   check(projRecov.canEdit === false, 'C52c: recovery projection canEdit=false');
 
+  // --- DEFECT 6: Action row nowrap contract ---
+  // C53: active Purchase projection exposes all 4 actions (View + Resolve + Void + Correct)
+  check(activePurchase.canVoid === true, 'C53a: canVoid for action row');
+  check(activePurchase.canCorrect === true, 'C53b: canCorrect for action row');
+  check(typeof activePurchase.canResolveEvidence === 'undefined' || activePurchase.canResolveEvidence === true || activePurchase.canResolveEvidence === false, 'C53c: canResolveEvidence projected');
+
+  // C54: raw projection includes canResolveEvidence for unresolved events
+  var fUnresolved = purchaseEventTestFixture_(_authority, _testItems, check, 'OSR04');
+  fUnresolved.run();
+  var rawUnresolved = clone(fUnresolved.events[0]);
+  rawUnresolved.AllocationStatus = 'QUANTITY_PACKAGE_UNRESOLVED';
+  var projUnresolved = projectPurchaseEventTransaction_(rawUnresolved);
+  check(projUnresolved.canResolveEvidence === true, 'C54a: unresolved → canResolveEvidence=true');
+  check(projUnresolved.canVoid === true, 'C54b: unresolved → canVoid=true');
+  check(projUnresolved.canCorrect === true, 'C54c: unresolved → canCorrect=true');
+
+  // C55: resolved event suppresses Resolve action
+  var rawResolved = clone(fUnresolved.events[0]);
+  rawResolved.AllocationStatus = 'SINGLE_COMPONENT_EVIDENCED';
+  var projResolved = projectPurchaseEventTransaction_(rawResolved);
+  check(projResolved.canResolveEvidence === false, 'C55a: resolved → canResolveEvidence=false');
+  check(projResolved.canVoid === true, 'C55b: resolved → canVoid=true');
+
+  // --- DEFECT 7: Operational note is subtitle-only (no duplicate state block) ---
+  // C56: projection includes operationalStatus (used by description subtitle, NOT state block)
+  check(typeof projActive.operationalStatus === 'string' && projActive.operationalStatus.length > 0, 'C56a: operationalStatus present');
+  check(projActive.operationalStatus !== projActive.transactionType, 'C56b: status separate from type');
+
+  // C57: old financial subtitle contract (no financial text in Purchase detail)
+  // PurchaseEvent projection must NOT contain revenue/margin/cogs fields with values
+  check(projActive.revenue === null || projActive.revenue === undefined, 'C57a: no revenue in Purchase projection');
+  check(projActive.cogs === null || projActive.cogs === undefined, 'C57b: no cogs in Purchase projection');
+  check(projActive.margin === null || projActive.margin === undefined, 'C57c: no margin in Purchase projection');
+
   return { status: 'PASS', assertions: count };
 }
 
@@ -2397,7 +2431,7 @@ function testPurchaseUIContracts() {
 
   // U49-U50: operationalNote minimization
   check(_htmlActions.indexOf('lifecycle.title.innerText = "Purchase"') !== -1, 'U49: title Purchase preserved');
-  check(_htmlActions.indexOf('detail.operationalNote || ""') !== -1, 'U50: operationalNote fallback to empty');
+  check(_htmlActions.indexOf('lifecycle.state.hidden = true') !== -1, 'U50: purchase detail hides state block (no duplicate note)');
 
   // === Qty/Status cells whitespace-nowrap ===
   // U51-U52: Qty cell has whitespace-nowrap
@@ -2529,6 +2563,32 @@ function testPurchaseUIContracts() {
   // === Actions column width for 4 buttons ===
   // U112: Actions column (22%) provides space for 4 inline buttons
   check(colWidths[7] >= 20, 'U112: actions column width >= 20% for 4 buttons');
+
+  // === DEFECT 6: Action row nowrap (v602) ===
+  // U113: CSS rule .transactions-row-actions includes flex-wrap: nowrap
+  check(_htmlIndex.indexOf('flex-wrap: nowrap') !== -1, 'U113: actions container has flex-wrap: nowrap');
+  // U114: template uses flex-nowrap (not flex-wrap)
+  check(_htmlRender.indexOf('flex-nowrap') !== -1, 'U114: template uses flex-nowrap');
+  check(_htmlRender.indexOf('flex-wrap ') === -1, 'U115: template has no flex-wrap (allows wrapping)');
+  // U116: actions cell still has overflow-visible for button overflow
+  check(_htmlRender.indexOf('overflow-visible') !== -1, 'U116: actions cell overflow-visible preserved');
+
+  // === DEFECT 7: Duplicate operational note removed ===
+  // U117: purchase detail hides lifecycle.state (no duplicate note block)
+  check(_htmlActions.indexOf('lifecycle.state.hidden = true') !== -1, 'U117: purchase detail hides state block');
+  // U118: lifecycle.description retains operational note as subtitle
+  check(_htmlActions.indexOf('lifecycle.description.innerText = "Cost recorded. Quantity or package is not verified for stock tracking."') !== -1, 'U118: operational note remains as modal subtitle');
+  // U119: title remains "Purchase"
+  check(_htmlActions.indexOf('lifecycle.title.innerText = "Purchase"') !== -1, 'U119: title Purchase');
+  // U120: old financial subtitle absent (no revenue/cogs/margin in purchase detail)
+  check(_htmlActions.indexOf('lifecycle.description.innerText = "Revenue"') === -1, 'U120: old financial subtitle absent');
+  check(_htmlActions.indexOf('lifecycle.description.innerText = "Margin"') === -1, 'U121: old margin subtitle absent');
+
+  // === Direct action routing preserved ===
+  // U122-U124: Direct bootstrap routing for Resolve/Void/Correct
+  check(_htmlActions.indexOf('purchase-resolve') !== -1, 'U122: purchase-resolve action exists');
+  check(_htmlActions.indexOf('purchase-void') !== -1, 'U123: purchase-void action exists');
+  check(_htmlActions.indexOf('purchase-correct') !== -1, 'U124: purchase-correct action exists');
 
   return { status: 'PASS', assertions: count };
 }

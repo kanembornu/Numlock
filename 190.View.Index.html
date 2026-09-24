@@ -373,7 +373,7 @@
       #transactionsTableScroll th:nth-child(7), #transactionsTableScroll td:nth-child(7) { width: 12%; padding: 0 6px; text-align: center; }
       #transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%; padding: 0 6px; text-align: center; }
       #transactionsTableCard { overflow: hidden; }
-      .transactions-row-actions { display: flex; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
+      .transactions-row-actions { display: flex; flex-wrap: nowrap; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
       .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
       .transactions-row-action::before { position: absolute; z-index: -1; inset: 0; border-radius: 8px; background: var(--transaction-action-bg); content: ""; }
       .transactions-row-action--view { --transaction-action-bg: var(--surface-3); color: var(--text-secondary); }

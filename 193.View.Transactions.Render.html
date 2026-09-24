@@ -76,7 +76,7 @@
                   <td class="px-4 text-center whitespace-nowrap"> ${receipt ? escapeUiHtml(r.purchaseQuantity != null && r.purchaseQuantity !== "" ? r.purchaseQuantity + " " + (r.purchaseUOM || "") : "—") : r.qty || "-"} </td>
                   <td class="whitespace-nowrap px-4 text-left font-semibold ${amount < 0 ? "text-red-600" : ""}"> Rp ${amount.toLocaleString("id-ID")}</td>
                   <td class="px-4 text-center whitespace-nowrap"><span class="transaction-status-badge transaction-status-badge--${statusBadgeClass}">${status}</span></td>
-                  <td class="px-1 text-center overflow-visible"><span class="transactions-row-actions flex flex-wrap justify-center gap-1">${actions}</span></td>
+                  <td class="px-1 text-center overflow-visible"><span class="transactions-row-actions flex flex-nowrap justify-center gap-1">${actions}</span></td>
                 </tr>`;
             }).join("")
           : '<tr><td colspan="8" class="p-8 text-center text-sm ui-theme-muted">No transactions match this view for the selected period.</td></tr>';
