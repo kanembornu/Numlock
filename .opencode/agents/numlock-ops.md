@@ -17,6 +17,7 @@ permission:
     "clasp versions": allow
     "clasp version *": allow
     "clasp update-deployment AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR*": allow
+    "clasp update-deployment AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q*": allow
     "git status --short": allow
     "git rev-parse HEAD": allow
     "node _test_runner.js": allow
