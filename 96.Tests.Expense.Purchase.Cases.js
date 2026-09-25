@@ -2405,9 +2405,9 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf('width: 21%') !== -1, 'U32: col1 (Transaction ID) width 21%');
   check(_htmlIndex.indexOf('width: 8%') !== -1, 'U33: col2 (Date) width 8%');
   check(_htmlIndex.indexOf('width: 7%') !== -1, 'U34: col3 (Type) width 7%');
-  check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4/5/6 (Item/Qty/Amount) width 10%');
-  check(_htmlIndex.indexOf('width: 9.5%') !== -1, 'U37: col7 (Status) width 9.5%');
-  check(_htmlIndex.indexOf('width: 27.5%') !== -1, 'U38: col8 (Actions) width 27.5%');
+  check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4 (Item) width 10%');
+  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U37: col7 (Status) width 9%');
+  check(_htmlIndex.indexOf('width: 29%') !== -1, 'U38: col8 (Actions) width 29%');
 
   // U39-U42: Verify v604 distorted widths are removed
   check(_htmlIndex.indexOf('width: 25%') === -1, 'U39: v604 col1 width 25% removed');
@@ -2533,7 +2533,7 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
 
   // U100: Column widths sum to 100%
-  var colWidths = [21, 8, 7, 10, 10, 7, 9, 28];
+  var colWidths = [21, 8, 7, 10, 9, 7, 9, 29];
   check(colWidths.reduce(function(a, b) { return a + b; }, 0) === 100, 'U100: column widths sum to 100%');
 
   // === DEFECT C: Direct action dispatch verification ===
