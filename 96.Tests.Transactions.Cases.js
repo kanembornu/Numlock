@@ -1430,6 +1430,10 @@ function testTransactionsVisualContract()
   ].forEach(function(token) {
     assertSourceContains(source, token, "default table geometry preserved");
   });
+  /* Verify Recent purchase row right clearance: scoped asymmetric padding on action cell */
+  assertSourceContains(source, "transaction-row--purchase", "purchase row class exists for CSS targeting");
+  assertSourceContains(source, "#transactionsTableCard:not(.is-purchase-mode) #transactionsTableScroll tbody tr.transaction-row--purchase td:nth-child(8)", "purchase row action clearance scoped to non-purchase-mode");
+  assertSourceContains(source, "padding-left: 4px; padding-right: 18px;", "purchase row actions asymmetric padding for right clearance");
   /* Verify Purchase content-driven min-widths scoped to is-purchase-mode only */
   [
     "#transactionsTableCard.is-purchase-mode #transactionsTableScroll table { table-layout: auto; min-width: 1446px; }",

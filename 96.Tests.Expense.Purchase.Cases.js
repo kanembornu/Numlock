@@ -2606,6 +2606,16 @@ function testPurchaseUIContracts() {
   // U129b: Actions column provides right clearance via explicit padding: 0 10px on column 8
   check(colWidths[7] >= 22 && colWidths[0] >= 21, 'U129b: column allocation provides Recent action right clearance');
 
+  // === DEFECT C: Purchase row Recent right clearance ===
+  // U133: transaction-row--purchase class added to purchase row <tr>
+  check(_htmlRender.indexOf('transaction-row--purchase') !== -1, 'U133: purchase row class present in render template');
+  // U134: Scoped CSS rule for purchase row action cell right clearance
+  check(_htmlIndex.indexOf('tr.transaction-row--purchase td:nth-child(8)') !== -1, 'U134: purchase row action cell CSS selector exists');
+  // U135: Rule scoped to non-purchase-mode only
+  check(_htmlIndex.indexOf(':not(.is-purchase-mode)') !== -1, 'U135: purchase row clearance scoped to non-purchase-mode');
+  // U136: Asymmetric padding provides right clearance
+  check(_htmlIndex.indexOf('padding-left: 4px; padding-right: 18px;') !== -1, 'U136: purchase row asymmetric padding for right clearance');
+
   // === Geometry totals ===
   // U130: Table min-width increased for full ID rendering
   check(_htmlIndex.indexOf('min-w-[1100px]') !== -1, 'U130: table min-width 1100px for full ID geometry');

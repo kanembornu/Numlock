@@ -379,6 +379,8 @@
       #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(1) { width: auto; min-width: 360px; }
       #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(8),
       #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(8) { width: auto; min-width: 372px; padding: 0 10px; }
+      /* Purchase rows in Recent: asymmetric padding shifts centered actions left, adding right clearance. */
+      #transactionsTableCard:not(.is-purchase-mode) #transactionsTableScroll tbody tr.transaction-row--purchase td:nth-child(8) { padding-left: 4px; padding-right: 18px; }
       .transactions-row-actions { display: flex; flex-wrap: nowrap; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
       .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
       .transactions-row-action::before { position: absolute; z-index: -1; inset: 0; border-radius: 8px; background: var(--transaction-action-bg); content: ""; }
