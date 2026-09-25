@@ -1354,9 +1354,9 @@ function testTransactionsVisualContract()
     ">Transaction ID</th>", "function scheduleTransactionsSearch(value)", "transactionsResultCache[cacheKey]",
     ">IsActive</th>", 'function setTransactionsLifecycleState(value)', 'lifecycleState: transactionsLifecycleState',
     "transactionsTableCard: required.transactionsTableCard",
-    "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 13%; }",
+    "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 21%; }",
     "#transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 10%; }",
-    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 30%;",
+    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%;",
     "transactionsSearchIndex", "prefetchAdjacentTransactionPages", "preloadTransactionEntryOptions",
     "prefetchVisibleTransactionDetails", ".getTransactionsExport({",
     "function getTransactionDiagnostics()", "transactionDiagnostics.showVoided", "transactionDiagnostics.export",
@@ -1424,8 +1424,8 @@ function testTransactionsVisualContract()
   });
   /* Verify default geometry rules still exist (non-Purchase modes unchanged) */
   [
-    "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 13%; }",
-    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 30%;",
+    "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 21%; }",
+    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%;",
     "#transactionsTableCard { overflow: hidden; }"
   ].forEach(function(token) {
     assertSourceContains(source, token, "default table geometry preserved");
@@ -1443,16 +1443,17 @@ function testTransactionsVisualContract()
   assertSourceContains(source, "overflow: hidden;", "td overflow hidden prevents cross-column bleed");
   /* Verify default column geometry unchanged */
   [
-    "#transactionsTableScroll td:nth-child(1) { width: 13%; }",
-    "#transactionsTableScroll td:nth-child(8) { width: 30%;"
+    "#transactionsTableScroll td:nth-child(1) { width: 21%; }",
+    "#transactionsTableScroll td:nth-child(8) { width: 22%;"
   ].forEach(function(token) {
     assertSourceContains(source, token, "Recent/Non-purchase column widths preserved");
   });
-  /* Verify Recent right clearance via wider actions allocation */
+  /* Verify Recent right clearance via explicit padding on actions cell (same technique as Purchase) */
   assertSourceExcludes(source, "padding: 0 4px; text-align: center;", "actions column no longer uses reduced padding");
-  /* Verify column sum remains 100%: 13+8+7+10+10+10+12+30 = 100 */
-  assertSourceContains(source, "width: 13%;", "col1 width contributes to 100% total");
-  assertSourceContains(source, "width: 30%;", "col8 width contributes to 100% total");
+  assertSourceContains(source, "td:nth-child(8) { width: 22%; padding: 0 10px; }", "actions cell explicit padding clearance");
+  /* Verify column sum remains 100%: 21+8+7+10+10+10+12+22 = 100 */
+  assertSourceContains(source, "width: 21%;", "col1 width contributes to 100% total");
+  assertSourceContains(source, "width: 22%;", "col8 width contributes to 100% total");
   /* Verify nowrap preserved for4-button Purchase actions */
   assertSourceContains(source, ".transactions-row-actions { display: flex; flex-wrap: nowrap;", "4-button actions remain one row nowrap");
   /* Verify is-purchase-mode is conditionally toggled (not always-on) */
