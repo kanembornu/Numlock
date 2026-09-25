@@ -48,6 +48,7 @@
       "npm install --package-lock-only --ignore-scripts": "ask",
       "rm -rf tests/tmp/": "allow",
       "clasp update-deployment AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR*": "allow",
+      "clasp update-deployment AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q*": "allow",
       "*": "deny"
     }
   }
