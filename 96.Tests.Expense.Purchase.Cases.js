@@ -2406,8 +2406,8 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf('width: 8%') !== -1, 'U33: col2 (Date) width 8%');
   check(_htmlIndex.indexOf('width: 7%') !== -1, 'U34: col3 (Type) width 7%');
   check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4/5/6 (Item/Qty/Amount) width 10%');
-  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U37: col7 (Status) width 9%');
-  check(_htmlIndex.indexOf('width: 28%') !== -1, 'U38: col8 (Actions) width 28%');
+  check(_htmlIndex.indexOf('width: 9.5%') !== -1, 'U37: col7 (Status) width 9.5%');
+  check(_htmlIndex.indexOf('width: 27.5%') !== -1, 'U38: col8 (Actions) width 27.5%');
 
   // U39-U42: Verify v604 distorted widths are removed
   check(_htmlIndex.indexOf('width: 25%') === -1, 'U39: v604 col1 width 25% removed');
