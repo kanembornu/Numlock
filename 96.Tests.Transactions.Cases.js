@@ -1356,7 +1356,7 @@ function testTransactionsVisualContract()
     "transactionsTableCard: required.transactionsTableCard",
     "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 21%; }",
     "#transactionsTableScroll th:nth-child(4), #transactionsTableScroll td:nth-child(4) { width: 10%; }",
-    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%;",
+    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 28%;",
     "transactionsSearchIndex", "prefetchAdjacentTransactionPages", "preloadTransactionEntryOptions",
     "prefetchVisibleTransactionDetails", ".getTransactionsExport({",
     "function getTransactionDiagnostics()", "transactionDiagnostics.showVoided", "transactionDiagnostics.export",
@@ -1425,15 +1425,15 @@ function testTransactionsVisualContract()
   /* Verify default geometry rules still exist (non-Purchase modes unchanged) */
   [
     "#transactionsTableScroll th:nth-child(1), #transactionsTableScroll td:nth-child(1) { width: 21%; }",
-    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 22%;",
+    "#transactionsTableScroll th:nth-child(8), #transactionsTableScroll td:nth-child(8) { width: 28%;",
     "#transactionsTableCard { overflow: hidden; }"
   ].forEach(function(token) {
     assertSourceContains(source, token, "default table geometry preserved");
   });
-  /* Verify Recent purchase row right clearance: scoped asymmetric padding on action cell */
-  assertSourceContains(source, "transaction-row--purchase", "purchase row class exists for CSS targeting");
-  assertSourceContains(source, "#transactionsTableCard:not(.is-purchase-mode) #transactionsTableScroll tbody tr.transaction-row--purchase td:nth-child(8)", "purchase row action clearance scoped to non-purchase-mode");
-  assertSourceContains(source, "padding-left: 4px; padding-right: 18px;", "purchase row actions asymmetric padding for right clearance");
+  /* Verify Recent purchase row actions use symmetric padding (v609 workaround removed) */
+  assertSourceExcludes(source, "padding-left: 4px; padding-right: 18px;", "v609 asymmetric padding removed");
+  assertSourceExcludes(source, "padding-right: 18px;", "v609 right-padded action cell removed");
+  assertSourceExcludes(source, "transaction-row--purchase", "transaction-row--purchase class removed (no longer needed for asymmetric targeting)");
   /* Verify Purchase content-driven min-widths scoped to is-purchase-mode only */
   [
     "#transactionsTableCard.is-purchase-mode #transactionsTableScroll table { table-layout: auto; min-width: 1446px; }",
@@ -1448,16 +1448,16 @@ function testTransactionsVisualContract()
   /* Verify default column geometry unchanged */
   [
     "#transactionsTableScroll td:nth-child(1) { width: 21%; }",
-    "#transactionsTableScroll td:nth-child(8) { width: 22%;"
+    "#transactionsTableScroll td:nth-child(8) { width: 28%;"
   ].forEach(function(token) {
     assertSourceContains(source, token, "Recent/Non-purchase column widths preserved");
   });
-  /* Verify Recent right clearance via explicit padding on actions cell (same technique as Purchase) */
+  /* Verify Recent right clearance via explicit padding on actions cell */
   assertSourceExcludes(source, "padding: 0 4px; text-align: center;", "actions column no longer uses reduced padding");
-  assertSourceContains(source, "td:nth-child(8) { width: 22%; padding: 0 10px; }", "actions cell explicit padding clearance");
-  /* Verify column sum remains 100%: 21+8+7+10+10+10+12+22 = 100 */
+  assertSourceContains(source, "td:nth-child(8) { width: 28%; padding: 0 10px; }", "actions cell explicit padding clearance");
+  /* Verify column sum remains 100%: 21+8+7+10+10+7+9+28 = 100 */
   assertSourceContains(source, "width: 21%;", "col1 width contributes to 100% total");
-  assertSourceContains(source, "width: 22%;", "col8 width contributes to 100% total");
+  assertSourceContains(source, "width: 28%;", "col8 width contributes to 100% total");
   /* Verify nowrap preserved for4-button Purchase actions */
   assertSourceContains(source, ".transactions-row-actions { display: flex; flex-wrap: nowrap;", "4-button actions remain one row nowrap");
   /* Verify is-purchase-mode is conditionally toggled (not always-on) */

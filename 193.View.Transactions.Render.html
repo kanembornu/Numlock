@@ -58,7 +58,7 @@
                 actions += '<button type="button" class="transactions-row-action transactions-row-action--correct" onclick="runTransactionRowAction(\'correct\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-pen" aria-hidden="true"></i><span>Correct</span></button><button type="button" class="transactions-row-action transactions-row-action--void" onclick="runTransactionRowAction(\'void\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-ban" aria-hidden="true"></i><span>Void</span></button>';
               }
               return `
-              <tr class="transactions-table-row border-b ${purchase ? "transaction-row--purchase " : ""}${r.isActive === false ? "transaction-row-voided" : ""}">
+              <tr class="transactions-table-row border-b ${r.isActive === false ? "transaction-row-voided" : ""}">
                   <td class="px-4 whitespace-nowrap font-medium" title="${escapeUiHtml(r.id)}">${escapeUiHtml(r.id.toUpperCase())}</td>
                   <td class="px-4 whitespace-nowrap">
                     ${formatTransactionDate(r.date)}

@@ -2406,8 +2406,8 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf('width: 8%') !== -1, 'U33: col2 (Date) width 8%');
   check(_htmlIndex.indexOf('width: 7%') !== -1, 'U34: col3 (Type) width 7%');
   check(_htmlIndex.indexOf('width: 10%') !== -1, 'U35: col4/5/6 (Item/Qty/Amount) width 10%');
-  check(_htmlIndex.indexOf('width: 12%') !== -1, 'U37: col7 (Status) width 12%');
-  check(_htmlIndex.indexOf('width: 22%') !== -1, 'U38: col8 (Actions) width 22%');
+  check(_htmlIndex.indexOf('width: 9%') !== -1, 'U37: col7 (Status) width 9%');
+  check(_htmlIndex.indexOf('width: 28%') !== -1, 'U38: col8 (Actions) width 28%');
 
   // U39-U42: Verify v604 distorted widths are removed
   check(_htmlIndex.indexOf('width: 25%') === -1, 'U39: v604 col1 width 25% removed');
@@ -2533,7 +2533,7 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
 
   // U100: Column widths sum to 100%
-  var colWidths = [21, 8, 7, 10, 10, 10, 12, 22];
+  var colWidths = [21, 8, 7, 10, 10, 7, 9, 28];
   check(colWidths.reduce(function(a, b) { return a + b; }, 0) === 100, 'U100: column widths sum to 100%');
 
   // === DEFECT C: Direct action dispatch verification ===
@@ -2562,7 +2562,7 @@ function testPurchaseUIContracts() {
 
   // === Actions column width for 4 buttons ===
   // U112: Actions column provides space for 4 inline buttons
-  check(colWidths[7] >= 22, 'U112: actions column width >= 22% for four buttons');
+  check(colWidths[7] >= 28, 'U112: actions column width >= 28% for four buttons');
 
   // === DEFECT 6: Action row nowrap (v602) ===
   // U113: CSS rule .transactions-row-actions includes flex-wrap: nowrap
@@ -2599,22 +2599,22 @@ function testPurchaseUIContracts() {
   check(_htmlRender.indexOf('whitespace-nowrap font-medium') !== -1, 'U127: ID cell retains nowrap and font-medium');
 
   // === DEFECT B: Actions right clearance ===
-  // U128: Actions column width (22%) provides four-button clearance via explicit padding
-  check(colWidths[7] >= 22, 'U128: actions column 22% for four-button clearance');
-  // U129: Actions column uses default td padding (0 10px) — no reduced padding override
-  check(_htmlIndex.indexOf('padding: 0 4px; text-align: center;') === -1, 'U129: actions column no longer has 4px side padding');
+  // U128: Actions column width (28%) provides four-button clearance via explicit padding
+  check(colWidths[7] >= 28, 'U128: actions column 28% for four-button clearance');
+  // U129: Actions column (nth-child 8) uses symmetric padding 0 10px
+  check(_htmlIndex.indexOf('nth-child(8)') !== -1 && _htmlIndex.indexOf('padding: 0 10px;') !== -1, 'U129: actions column uses symmetric 0 10px padding');
   // U129b: Actions column provides right clearance via explicit padding: 0 10px on column 8
-  check(colWidths[7] >= 22 && colWidths[0] >= 21, 'U129b: column allocation provides Recent action right clearance');
+  check(colWidths[7] >= 28 && colWidths[0] >= 21, 'U129b: column allocation provides Recent action right clearance');
 
-  // === DEFECT C: Purchase row Recent right clearance ===
-  // U133: transaction-row--purchase class added to purchase row <tr>
-  check(_htmlRender.indexOf('transaction-row--purchase') !== -1, 'U133: purchase row class present in render template');
-  // U134: Scoped CSS rule for purchase row action cell right clearance
-  check(_htmlIndex.indexOf('tr.transaction-row--purchase td:nth-child(8)') !== -1, 'U134: purchase row action cell CSS selector exists');
-  // U135: Rule scoped to non-purchase-mode only
-  check(_htmlIndex.indexOf(':not(.is-purchase-mode)') !== -1, 'U135: purchase row clearance scoped to non-purchase-mode');
-  // U136: Asymmetric padding provides right clearance
-  check(_htmlIndex.indexOf('padding-left: 4px; padding-right: 18px;') !== -1, 'U136: purchase row asymmetric padding for right clearance');
+  // === DEFECT C: Purchase row Recent right clearance (v609 workaround removed) ===
+  // U133: transaction-row--purchase class removed from render template
+  check(_htmlRender.indexOf('transaction-row--purchase') === -1, 'U133: purchase row class removed from render (asymmetric padding removed)');
+  // U134: Scoped CSS rule for purchase row action cell removed
+  check(_htmlIndex.indexOf('tr.transaction-row--purchase td:nth-child(8)') === -1, 'U134: purchase row action cell CSS selector removed');
+  // U135: Rule scoped to non-purchase-mode no longer exists
+  check(_htmlIndex.indexOf(':not(.is-purchase-mode)') === -1 || _htmlIndex.indexOf('tr.transaction-row--purchase') === -1, 'U135: purchase row clearance rule removed');
+  // U136: Asymmetric padding removed — replaced by sufficient column width
+  check(_htmlIndex.indexOf('padding-left: 4px; padding-right: 18px;') === -1, 'U136: v609 asymmetric padding removed');
 
   // === Geometry totals ===
   // U130: Table min-width increased for full ID rendering
