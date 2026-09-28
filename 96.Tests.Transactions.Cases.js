@@ -1828,3 +1828,99 @@ function testCashAccountSelectorContract()
   Logger.log("PASS: testCashAccountSelectorContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }
+
+function testSettlementCallerContract()
+{
+  var scenarios = 0, originalSettle = runCashSettleAndPersist,
+    originalPurchase = orchestratePurchaseEventUnderLock_, attempts = [];
+  function check(value, label) { scenarios++; if (!value) throw new Error("Settlement caller: " + label); }
+  function memorySheet(headers) {
+    var rows = [headers.slice()];
+    return { rows: rows, getLastColumn: function() { return rows[0].length; }, getLastRow: function() { return rows.length; },
+      deleteRow: function(row) { rows.splice(row - 1, 1); },
+      getDataRange: function() { return { getValues: function() { return rows.map(function(r) { return r.slice(); }); } }; },
+      getRange: function(row, col, rowCount, colCount) { return {
+        setValues: function(values) { rows[row - 1] = values[0].slice(); },
+        getValues: function() { return [(rows[row - 1] || []).slice(col - 1, col - 1 + colCount)]; },
+        getValue: function() { return rows[row - 1] ? rows[row - 1][col - 1] : ""; },
+        createTextFinder: function(value) { return { matchEntireCell: function() { return this; }, findNext: function() {
+          return rows.slice(row - 1, row - 1 + rowCount).some(function(r) { return r[col - 1] === value; }) ? {} : null;
+        } }; }
+      }; }
+    };
+  }
+  function fixture(date) {
+    var sheets = {
+      tabsal: memorySheet(CANONICAL_ENTRY.SALES_HEADERS), tabops: memorySheet(CANONICAL_ENTRY.EXPENSE_HEADERS),
+      Logs: memorySheet(CANONICAL_ENTRY.LOG_HEADERS), Accounts: memorySheet(["AccountCode", "IsActive"]),
+      Products: memorySheet(["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]),
+      ProductPricing: memorySheet(["ID_Prod", "Tipe", "EffectiveFrom", "EffectiveTo", "HPP", "Harga", "IsActive"]),
+      ExpenseItems: memorySheet(["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]),
+      Settlements: memorySheet(["SettlementID"]), BalanceLedger: memorySheet(["EntryID"])
+    };
+    sheets.Accounts.rows.push(["1000", true], ["6100", true]);
+    sheets.Products.rows.push(["P1", "Espresso", "Coffee", "Beverage", true]);
+    sheets.ProductPricing.rows.push(["P1", "Hot", new Date(2026, 0, 1), "", 4000, 10000, true]);
+    var ordinary = EXPENSE_PURCHASE_POLICY.rows.filter(function(row) { return row.PurchaseRelationship === "NONE"; })[0];
+    sheets.ExpenseItems.rows.push([ordinary.expenseItemId, "Utility", "Utility", "Operating", "Overhead", "6100", true]);
+    var sequence = 0, runtime = { environment: "LOCAL_FIXTURE", lock: { waitLock: function() {}, releaseLock: function() {} },
+      spreadsheet: function() { return { getSheetByName: function(name) { return sheets[name] || null; } }; },
+      now: function() { return date; }, uuid: function() { return "SETTLEMENTID" + String(++sequence).padStart(12, "0"); }, flush: function() {}, invalidate: function() {} };
+    return { sheets: sheets, runtime: runtime, ordinaryId: ordinary.expenseItemId };
+  }
+  try {
+    runCashSettleAndPersist = function(request) { attempts.push(request.settlement); return originalSettle(request); };
+    check(CASH_PRODUCTION_POLICY.ENABLED === false, "production policy remains disabled");
+
+    var f = fixture(new Date("2026-10-01T01:00:00Z"));
+    var sales = submitCanonicalTransactionWithRuntime_({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 2,
+      cashAccountCode: "1000" }, f.runtime);
+    check(sales.success === true && sales.accountingPending === true && sales.accountingPendingReason === "DISABLED" &&
+      f.sheets.tabsal.rows.length === 2, "Sales commits before disabled settlement: " + JSON.stringify(sales));
+    check(attempts.length === 1 && attempts[0].SourceType === "SALE_SETTLEMENT" && attempts[0].SettlementID.indexOf("CSH-SAL-") === 0 &&
+      attempts[0].AccountCode === "1000", "Sales deterministic ID and account propagation");
+    var salesPending = f.sheets.Logs.rows.filter(function(row) { return row[4] === "SETTLEMENT_PENDING"; })[0];
+    var salesMetadata = salesPending && JSON.parse(salesPending[8]);
+    check(salesMetadata && salesMetadata.sourceType === "SALE_SETTLEMENT" && salesMetadata.cashAccountCode === "1000" &&
+      salesMetadata.reason.indexOf("DISABLED") === 0, "Sales durable recovery metadata");
+
+    f = fixture(new Date("2026-10-01T01:00:00Z")); attempts = [];
+    var expense = submitCanonicalTransactionWithRuntime_({ transactionType: "EXPENSE", expenseItemId: f.ordinaryId, amount: 25000,
+      cashAccountCode: "1000" }, f.runtime);
+    check(expense.success === true && expense.accountingPending === true && f.sheets.tabops.rows.length === 2,
+      "Expense commits before disabled settlement: " + JSON.stringify(expense));
+    check(attempts.length === 1 && attempts[0].SourceType === "EXPENSE_SETTLEMENT" && attempts[0].SettlementID.indexOf("CSH-EXP-") === 0,
+      "Expense settlement attempted once");
+
+    attempts = []; f = fixture(new Date("2026-10-01T01:00:00Z"));
+    var direct = EXPENSE_PURCHASE_POLICY.rows.filter(function(row) { return row.PurchaseRelationship === "DIRECT_HPP_COMPONENT"; })[0];
+    f.sheets.ExpenseItems.rows.push([direct.expenseItemId, "Direct", "Input", "Variable", "HPP", "6100", true]);
+    f.runtime.purchase = { environment: "LOCAL_FIXTURE", read: function() { return { expenses: [] }; } };
+    orchestratePurchaseEventUnderLock_ = function() { return { status: "PURCHASE_CAPTURED", eventId: "EVT-1",
+      data: { id: "EVT-1", purchaseRelationship: "DIRECT_HPP_COMPONENT", acquisitionValue: 30000, dateKey: "2026-10-01" } }; };
+    var purchase = submitCanonicalTransactionWithRuntime_({ transactionType: "EXPENSE", expenseItemId: direct.expenseItemId,
+      requestKey: "purchase-settlement", cashAccountCode: "1000", input: {} }, f.runtime);
+    check(purchase.accountingPending === true && attempts.length === 1 && attempts[0].SourceType === "PURCHASE_SETTLEMENT" &&
+      attempts[0].SettlementID === "CSH-PUR-EVT-1", "Purchase deterministic settlement attempt");
+    check(f.sheets.tabops.rows.length === 1 && attempts.length === 1, "Purchase route expense not double-settled");
+    var dispatcherSource = submitCanonicalTransactionWithRuntime_.toString();
+
+    f = fixture(new Date("2026-09-30T01:00:00Z")); attempts = [];
+    var cutoff = submitCanonicalTransactionWithRuntime_({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 1,
+      cashAccountCode: "1000" }, f.runtime);
+    check(cutoff.success === true && attempts.length === 0, "cutover date excluded");
+    f = fixture(new Date("2026-10-01T01:00:00Z")); attempts = [];
+    submitCanonicalTransactionWithRuntime_({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 1,
+      cashAccountCode: "1000" }, f.runtime);
+    check(attempts.length === 1, "day after cutover included");
+
+    var noAccount = submitCanonicalTransactionWithRuntime_({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 1 }, f.runtime);
+    check(noAccount.status === "REFUSED" && attempts.length === 1, "missing account creates no settlement");
+    check(f.sheets.Settlements.rows.length === 1 && f.sheets.BalanceLedger.rows.length === 1,
+      "disabled policy writes no cash sheets");
+    check(dispatcherSource.indexOf('case "INVENTORY_RECEIPT":\n        return orchestrateInventoryReceiptUnderLock_') !== -1,
+      "inventory receipt path has no settlement caller");
+  } finally { runCashSettleAndPersist = originalSettle; orchestratePurchaseEventUnderLock_ = originalPurchase; }
+  Logger.log("PASS: testSettlementCallerContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}

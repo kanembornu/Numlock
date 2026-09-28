@@ -84,7 +84,7 @@ function purchaseEventTestFixture_(authority, expenses, check, id) {
       read: function() { check(held, 'read under lock'); return { events: clone(f.events), expenses: expenses, items: authority.items, conversions: authority.conversions }; },
       audit: function() { return { actor: 'TEST', at: '2026-10-01T01:00:00Z' }; },
       appendEvent: function(row) { check(held, 'append under lock'); f.events.push(clone(row)); if (f.failure === 'AFTER_EVENT') throw new Error('LOST_RESPONSE'); } };
-    f.request = { transactionType: 'EXPENSE', requestKey: 'purchase-test-0001', expenseItemId: id || 'OSR04',
+    f.request = { transactionType: 'EXPENSE', requestKey: 'purchase-test-0001', cashAccountCode: "1000", expenseItemId: id || 'OSR04',
       input: { ExpenseDate: '2026-10-01', PurchaseQty: '1', PurchaseUOM: 'kg', AcquisitionValue: '20000',
         SupplierSource: 'TEST', ExternalRef: 'TEST-EVIDENCE', ExternalDocumentStatus: 'AVAILABLE', Attested: true, ConversionEvidenceConfirmed: true } };
     f.run = function() { return orchestratePurchaseEvent_(f.request, f.runtime); };
@@ -138,7 +138,7 @@ function testCanonicalPurchaseDispatcherContracts(authority, expenses) {
     var before = JSON.stringify(f.sheets.ExpenseItems.rows), result;
     if (!route.prospectiveEligible) { result = f.run(); check(result.status === 'REFUSED', 'hold refused'); f.checkCounts(0,0,0,0); }
     else if (!expensePolicyIsPurchase_(route)) {
-      result = f.run({transactionType:'EXPENSE',expenseItemId:item.ID_Ops,amount:12345,expenseDate:'2026-10-01'});
+      result = f.run({transactionType:'EXPENSE',expenseItemId:item.ID_Ops,amount:12345,expenseDate:'2026-10-01',cashAccountCode:"1000"});
       check(result.success === true && f.sheets.tabops.rows[1][3] === 12345 && f.writes.Logs === 1, 'ordinary canonical Expense plus audit: ' + JSON.stringify(result));
       f.checkCounts(0,0,0,1);
     } else {
@@ -168,12 +168,12 @@ function testCanonicalPurchaseDispatcherContracts(authority, expenses) {
   check(f.events[0].BusinessLabel !== f.events[1].BusinessLabel && f.events[0].AcquisitionValue === '20000' && f.events[1].AcquisitionValue === '30000', 'two flavors isolated in one store'); f.checkCounts(2,0,0,0);
   ['CostType','PurchaseRelationship','ItemID','label','policyVersion','enabled','runtime'].forEach(function(field) {
     var x = fixture(); x.request[field] = 'CLIENT'; check(x.run().success === false, 'purchase client authority refused'); x.checkCounts(0,0,0,0);
-    x = fixture(); var p = {transactionType:'EXPENSE',expenseItemId:'OSS01',amount:100}; p[field] = 'CLIENT';
+    x = fixture(); var p = {transactionType:'EXPENSE',expenseItemId:'OSS01',amount:100,cashAccountCode:"1000"}; p[field] = 'CLIENT';
     check(x.run(p).status === 'REFUSED', 'ordinary client authority refused'); x.checkCounts(0,0,0,0);
   });
   f = fixture(); f.request.input.ItemID = 'ING-004'; check(f.run().success === false, 'nested component refused'); f.checkCounts(0,0,0,0);
   f = fixture(); f.dispatch.environment = 'PRODUCTION'; var prodResult = f.run(); check(f.events.length === 0 && prodResult.writeCount === 0 && prodResult.reason !== 'PRODUCTION_PURCHASE_DISABLED', 'production dispatch uses production authority, not synthetic'); f.checkCounts(0,0,0,0);
-  f = fixture(); result = f.run({transactionType:'SALES',productId:'P1',type:'Hot',qty:3});
+  f = fixture(); result = f.run({transactionType:'SALES',productId:'P1',type:'Hot',qty:3,cashAccountCode:"1000"});
   check(result.success && result.data.cogs === 12000 && f.writes.tabsal === 1 && f.writes.Logs === 1, 'Sales Qty x HPP'); f.checkCounts(0,0,0,0);
   f = fixture(); var originalRead = f.runtime.read;
   f.runtime.read = function() { return Object.assign({}, originalRead(), { conversions: [] }); };
@@ -182,7 +182,7 @@ function testCanonicalPurchaseDispatcherContracts(authority, expenses) {
     var x = fixture(); x.request.requestKey = key; check(x.run().success === false, 'malformed key refused'); x.checkCounts(0,0,0,0);
   });
   ['', 'UNKNOWN', ' OSS01', null, 123].forEach(function(id) {
-    var x = fixture(); check(x.run({transactionType:'EXPENSE',expenseItemId:id,amount:100}).status === 'REFUSED', 'malformed or unknown Expense ID refused'); x.checkCounts(0,0,0,0);
+    var x = fixture(); check(x.run({transactionType:'EXPENSE',expenseItemId:id,amount:100,cashAccountCode:"1000"}).status === 'REFUSED', 'malformed or unknown Expense ID refused'); x.checkCounts(0,0,0,0);
   });
   check(EXPENSE_PURCHASE_POLICY.enabled === true && PURCHASE_EVENT_POLICY.enabled === true && INVENTORY_RECEIPT_ACTIVATION.enabled === false, 'authorized activation state');
   var optionFixture = fixture(), optionCache = Object.create(null), spreadsheetReads = 0;
@@ -705,7 +705,7 @@ function testPurchaseEventLifecycleReadModel_() {
     r.Lifecycle = lifecycle;
     r.IsActive = isActive;
     r.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-      transactionType: 'EXPENSE', requestKey: key, expenseItemId: r.ExpenseID,
+      transactionType: 'EXPENSE', requestKey: key, cashAccountCode: "1000", expenseItemId: r.ExpenseID,
       input: { ExpenseDate: r.ExpenseDate, ReceiptDate: r.ReceiptDate, PurchaseQty: r.PurchaseQty,
         PurchaseUOM: r.PurchaseUOM, AcquisitionValue: r.AcquisitionValue, SupplierSource: r.SupplierSource,
         ExternalRef: r.ExternalRef, ExternalDocumentStatus: r.ExternalDocumentStatus,
@@ -803,7 +803,7 @@ function testPurchaseEventLifecycleReadModel_() {
   resRow.EventID = 'PE-' + canonicalKey;
   resRow.RecoveryKey = 'pe-receipt-' + canonicalKey;
   resRow.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-    transactionType: 'EXPENSE', requestKey: canonicalKey, expenseItemId: resRow.ExpenseID,
+    transactionType: 'EXPENSE', requestKey: canonicalKey, cashAccountCode: "1000", expenseItemId: resRow.ExpenseID,
     input: { ExpenseDate: resRow.ExpenseDate, ReceiptDate: resRow.ReceiptDate, PurchaseQty: resRow.PurchaseQty,
       PurchaseUOM: resRow.PurchaseUOM, AcquisitionValue: resRow.AcquisitionValue, SupplierSource: resRow.SupplierSource,
       ExternalRef: resRow.ExternalRef, ExternalDocumentStatus: resRow.ExternalDocumentStatus,
@@ -942,7 +942,7 @@ function testPurchaseEventVoidContracts() {
     row.Lifecycle = 'CAPTURED_OPERATIONAL';
     row.IsActive = true;
     row.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-      transactionType: 'EXPENSE', requestKey: key, expenseItemId: row.ExpenseID,
+      transactionType: 'EXPENSE', requestKey: key, cashAccountCode: "1000", expenseItemId: row.ExpenseID,
       input: { ExpenseDate: row.ExpenseDate, ReceiptDate: row.ReceiptDate, PurchaseQty: row.PurchaseQty,
         PurchaseUOM: row.PurchaseUOM, AcquisitionValue: row.AcquisitionValue, SupplierSource: row.SupplierSource,
         ExternalRef: row.ExternalRef, ExternalDocumentStatus: row.ExternalDocumentStatus,
@@ -1503,7 +1503,7 @@ function testPurchaseRecoveryContracts() {
   var src = purchaseEventTestFixture_(_authority, _testItems, function() {}, 'OSR04'); src.run();
   var baseRow = clone(src.events[0]);
   baseRow.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-    transactionType: 'EXPENSE', requestKey: baseRow.RequestKey, expenseItemId: baseRow.ExpenseID,
+    transactionType: 'EXPENSE', requestKey: baseRow.RequestKey, cashAccountCode: "1000", expenseItemId: baseRow.ExpenseID,
     input: { ExpenseDate: baseRow.ExpenseDate, ReceiptDate: baseRow.ReceiptDate, PurchaseQty: baseRow.PurchaseQty,
       PurchaseUOM: baseRow.PurchaseUOM, AcquisitionValue: baseRow.AcquisitionValue, SupplierSource: baseRow.SupplierSource,
       ExternalRef: baseRow.ExternalRef, ExternalDocumentStatus: baseRow.ExternalDocumentStatus,
@@ -1581,7 +1581,7 @@ function testPurchaseRecoveryContracts() {
   corrReplacement.EventID = 'PE-corr-rcvr-repl-001';
   corrReplacement.RecoveryKey = 'pe-receipt-corr-rcvr-repl-001';
   corrReplacement.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-    transactionType: 'EXPENSE', requestKey: 'corr-rcvr-repl-001', expenseItemId: corrReplacement.ExpenseID,
+    transactionType: 'EXPENSE', requestKey: 'corr-rcvr-repl-001', cashAccountCode: "1000", expenseItemId: corrReplacement.ExpenseID,
     input: { ExpenseDate: corrReplacement.ExpenseDate, ReceiptDate: corrReplacement.ReceiptDate,
       PurchaseQty: corrReplacement.PurchaseQty, PurchaseUOM: corrReplacement.PurchaseUOM,
       AcquisitionValue: corrReplacement.AcquisitionValue, SupplierSource: corrReplacement.SupplierSource,

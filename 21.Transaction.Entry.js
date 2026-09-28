@@ -186,6 +186,64 @@ function getProductEntryPricing(productId, type) {
   } catch (error) { return canonicalEntryFailure(error); }
 }
 
+var CASH_SETTLEMENT_CUTOVER = "2026-09-30";
+
+function attemptCashSettlement(ss, sourceType, sourceId, cashAccountCode, amount, tanggal, relatedType, relatedId, transferId) {
+  var settlementPrefix = { SALE_SETTLEMENT: "SAL", EXPENSE_SETTLEMENT: "EXP", PURCHASE_SETTLEMENT: "PUR" }[sourceType];
+  var settlementId = "CSH-" + settlementPrefix + "-" + sourceId;
+  var settlement = {
+    SettlementID: settlementId,
+    Tanggal: tanggal,
+    Direction: sourceType === "SALE_SETTLEMENT" ? "INFLOW" : "OUTFLOW",
+    AccountCode: cashAccountCode,
+    CounterAccountCode: "",
+    Amount: amount,
+    Currency: "IDR",
+    SourceType: sourceType,
+    SourceID: settlementId,
+    RelatedTransactionType: relatedType,
+    RelatedTransactionID: relatedId,
+    TransferID: transferId || "",
+    ExternalRef: "",
+    Status: "POSTED",
+    Keterangan: "",
+    ReversalOf: "",
+    IsActive: true,
+    CreatedAt: "",
+    CreatedBy: "",
+    UpdatedAt: "",
+    UpdatedBy: ""
+  };
+  try {
+    var result = runCashSettleAndPersist({ settlement: settlement });
+    return { settlementId: settlementId, result: result };
+  } catch (e) {
+    return { settlementId: settlementId, result: { status: "FAILED", reason: String(e && e.message || e) } };
+  }
+}
+
+function logSettlementPending(ss, settlementId, sourceType, sourceId, cashAccountCode, amount, tanggal, reason, uuid) {
+  try {
+    var logs = ss.getSheetByName("Logs");
+    if (!logs) return;
+    var headers = CANONICAL_ENTRY.LOG_HEADERS;
+    var logId = "LOG-SETTLE-" + (uuid ? uuid() : new Date().getTime());
+    var metadata = JSON.stringify({
+      settlementId: settlementId,
+      sourceType: sourceType,
+      sourceId: sourceId,
+      cashAccountCode: cashAccountCode,
+      amount: amount,
+      tanggal: tanggal,
+      reason: reason
+    });
+    var logValues = [logId, new Date(), "WARN", "CashSettlement", "SETTLEMENT_PENDING", settlementId,
+      CANONICAL_ENTRY.USER, "Settlement pending: " + reason, metadata];
+    var row = logs.getLastRow() + 1;
+    logs.getRange(row, 1, 1, headers.length).setValues([logValues]);
+  } catch (e) { /* log failure is non-fatal */ }
+}
+
 // The public boundary never accepts a client-supplied runtime or activation capability.
 function submitCanonicalTransaction(payload) {
   return submitCanonicalTransactionWithRuntime_(payload, {
@@ -214,8 +272,10 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
     acquired = true;
     scope = { lock: lock, active: true };
     var ss = runtime.spreadsheet(), timestamp = runtime.now();
+    var settlementCashAccount = payload && typeof payload.cashAccountCode === "string" ? payload.cashAccountCode.trim() : "";
+    var dateKey = canonicalDateKey(timestamp);
     // CashAccountCode validation — required for all non-INVENTORY_RECEIPT submissions
-    var cashAccountCode = payload && typeof payload.cashAccountCode === "string" ? payload.cashAccountCode.trim() : "";
+    var cashAccountCode = settlementCashAccount;
     if (type !== "INVENTORY_RECEIPT") {
       if (!cashAccountCode || ["1000", "1010", "1020"].indexOf(cashAccountCode) === -1) {
         var refused = canonicalEntryFailure(canonicalEntryError("INVALID_CASH_ACCOUNT",
@@ -257,7 +317,24 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
               return Object.assign({}, state, { expenses: context.expenseItems });
             } });
           }
-          return orchestratePurchaseEventUnderLock_(payload, purchaseRuntime, scope);
+          var purchaseResult = orchestratePurchaseEventUnderLock_(payload, purchaseRuntime, scope);
+          // Purchase settlement: only for PURCHASE_CAPTURED + DIRECT_HPP_COMPONENT
+          if (purchaseResult.status === "PURCHASE_CAPTURED" && purchaseResult.data &&
+              route.PurchaseRelationship === "DIRECT_HPP_COMPONENT" && settlementCashAccount &&
+              purchaseResult.data.dateKey > CASH_SETTLEMENT_CUTOVER) {
+            var purAmount = Number(purchaseResult.data.acquisitionValue) || 0;
+            var purSettlement = attemptCashSettlement(ss, "PURCHASE_SETTLEMENT", purchaseResult.eventId || purchaseResult.data.id,
+              settlementCashAccount, purAmount, purchaseResult.data.dateKey || dateKey,
+              "PurchaseEvent", purchaseResult.eventId || purchaseResult.data.id, null);
+            if (purSettlement.result.status !== "POSTED" && purSettlement.result.status !== "ALREADY_POSTED") {
+              logSettlementPending(ss, purSettlement.settlementId, "PURCHASE_SETTLEMENT", purchaseResult.eventId || purchaseResult.data.id,
+                settlementCashAccount, purAmount, purchaseResult.data.dateKey || dateKey,
+                purSettlement.result.status + ": " + (purSettlement.result.reason || ""), runtime.uuid);
+              purchaseResult.accountingPending = true;
+              purchaseResult.accountingPendingReason = purSettlement.result.status;
+            }
+          }
+          return purchaseResult;
         }
         Object.keys(payload).forEach(function(field) {
           if (["transactionType", "expenseItemId", "amount", "expenseDate", "cashAccountCode"].indexOf(field) === -1) inventoryReceiptFail_("EXPENSE_ROUTE_UNKNOWN_FIELD");
@@ -282,6 +359,21 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
     values[0] = id;
     persistCanonicalEntry(ss, { sheetName: sheetName, headers: headers,
       values: values, timestamp: timestamp, id: id, action: action }, { flush: runtime.flush, uuid: runtime.uuid });
+    dateKey = canonicalDateKey(timestamp);
+    if (settlementCashAccount && dateKey > CASH_SETTLEMENT_CUTOVER) {
+      var sourceType = type === "SALES" ? "SALE_SETTLEMENT" : "EXPENSE_SETTLEMENT";
+      var settlementAmount = type === "SALES" ? entry.revenue : entry.amount;
+      var settlement = attemptCashSettlement(ss, sourceType, id, settlementCashAccount,
+        settlementAmount, dateKey, type === "SALES" ? "Sales" : "Expense", id, null);
+      if (settlement.result.status !== "POSTED" && settlement.result.status !== "ALREADY_POSTED") {
+        logSettlementPending(ss, settlement.settlementId, sourceType, id, settlementCashAccount,
+          settlementAmount, dateKey, settlement.result.status + ": " + (settlement.result.reason || ""), runtime.uuid);
+        entry.id = id;
+        entry.timestamp = Utilities.formatDate(timestamp, CANONICAL_ENTRY.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");
+        return { success: true, data: entry, accountingPending: true,
+          accountingPendingReason: settlement.result.status };
+      }
+    }
     runtime.invalidate();
     entry.id = id;
     entry.timestamp = Utilities.formatDate(timestamp, CANONICAL_ENTRY.TIMEZONE, "yyyy-MM-dd'T'HH:mm:ssXXX");

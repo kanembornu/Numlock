@@ -1,7 +1,7 @@
 /**
  * Authoritative backend test registry.
  * Single source of truth for both runAllBackendTests and runAllBackendTestsDiagnostic.
- * 118 registered entries. Membership, order, and function references are frozen.
+ * 119 registered entries. Membership, order, and function references are frozen.
  */
 function getBackendTestRegistry()
 {
@@ -123,13 +123,14 @@ function getBackendTestRegistry()
     { name: "testProductProfitabilityAbsentVariantComparison", run: testProductProfitabilityAbsentVariantComparison },
     { name: "testProductProfitabilityEmptyDataset", run: testProductProfitabilityEmptyDataset },
     { name: "testColdBackendSegmentation", run: testColdBackendSegmentation },
-    { name: "testCashAccountSelectorContract", run: testCashAccountSelectorContract }
+    { name: "testCashAccountSelectorContract", run: testCashAccountSelectorContract },
+    { name: "testSettlementCallerContract", run: testSettlementCallerContract }
   ];
 }
 
 /**
  * Authoritative fail-fast backend test runner.
- * Runs all 118 registered tests. Stops on first failure.
+ * Runs all 119 registered tests. Stops on first failure.
  */
 function runAllBackendTests()
 {
@@ -178,7 +179,7 @@ function runAllBackendTests()
 
 /**
  * Non-fail-fast diagnostic backend test runner.
- * Runs all 118 registered tests. Catches every failure and continues.
+ * Runs all 119 registered tests. Catches every failure and continues.
  * Returns aggregate result with all failures.
  */
 function runAllBackendTestsDiagnostic()
