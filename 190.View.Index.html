@@ -419,6 +419,47 @@
       .transaction-status-badge--pending { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
       .transaction-status-badge--resolved { border-color: #10b981; background: #d1fae5; color: #065f46; }
       .transaction-status-badge--corrected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+      .products-grid-scroll { width: 100%; max-width: 100%; overflow-x: auto; }
+      .products-grid { width: 100%; table-layout: fixed; border-collapse: collapse; }
+      .products-grid thead { background: var(--surface-2); }
+      .products-grid th { height: 38px; padding: 0 12px; border-bottom: 1px solid var(--divider); color: var(--text-secondary); font-size: 14px; font-weight: 700; line-height: 18px; text-align: center; }
+      .products-grid th + th { border-left: 1px solid var(--border-subtle); }
+      .products-grid td { height: 40px; padding: 0 10px; border-bottom: 1px solid var(--divider); color: var(--text-primary); font-size: 14px; line-height: 20px; vertical-align: middle; overflow: hidden; }
+      .products-grid tbody tr:last-child > * { border-bottom: 0; }
+      .products-grid tbody tr:hover { background: var(--surface-2); }
+      .products-grid--catalog { min-width: 640px; }
+      .products-grid--detail th:first-child { width: 42%; text-align: left; }
+      .products-grid--detail td { font-weight: 600; }
+      .products-grid--recipe th:first-child, .products-grid--recipe td:first-child { width: 70%; text-align: left; }
+      .products-grid--recipe th:last-child, .products-grid--recipe td:last-child { width: 30%; text-align: right; }
+      .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: 700; text-align: left; }
+      .products-grid--recipe .product-recipe-group-heading--cold { background: #eff6ff; color: #1d4ed8; }
+      .products-grid--recipe .product-recipe-group-heading--hot { background: #fef2f2; color: #b91c1c; }
+      .product-grid-link { width: 100%; height: 40px; color: var(--brand); font-weight: 600; text-align: left; }
+      .product-grid-badges { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; }
+      .product-variant-badge { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 1px 8px; font-size: 12px; font-weight: 600; line-height: 18px; }
+      .product-variant-badge--cold { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
+      .product-variant-badge--hot { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+      .products-tab[aria-selected="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+      .products-tab-panel[hidden] { display: none; }
+      .inventory-items-layout { display: grid; min-height: 0; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 16px; }
+      .inventory-items-panel { min-height: 0; overflow-y: auto; }
+      .inventory-item-row[aria-selected="true"] { background: var(--selected); }
+      .cogs-recipe-layout { display: grid; height: 100%; min-height: 0; grid-template-rows: max-content minmax(0, 1fr); gap: 16px; }
+      .cogs-recipe-controls { display: flex; gap: 16px; }
+      .cogs-recipe-controls label { display: grid; min-width: 240px; gap: 6px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
+      .cogs-recipe-controls select { min-height: 40px; border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 10px; background: var(--surface-1); color: var(--text-primary); }
+      .cogs-recipe-content { min-height: 0; overflow-y: auto; }
+      .products-grid--cogs { min-width: 720px; }
+      .products-grid--cogs th:first-child, .products-grid--cogs td:first-child { text-align: left; }
+      .products-grid--cogs td:not(:first-child) { text-align: right; }
+      .cogs-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--divider); border-radius: 8px; background: var(--divider); }
+      .cogs-summary div { padding: 12px; background: var(--surface-1); }
+      .cogs-summary dt { color: var(--text-secondary); font-size: 12px; font-weight: 700; }
+      .cogs-summary dd { margin-top: 4px; color: var(--text-primary); font-size: 16px; font-weight: 700; }
+      .standard-cost-section { border-top: 1px solid var(--divider); }
+      .standard-cost-input { width: 100%; min-width: 120px; height: 36px; border: 1px solid var(--card-border); border-radius: 7px; padding: 4px 8px; background: var(--surface-1); color: var(--text-primary); }
+      .standard-cost-apply:disabled { cursor: not-allowed; opacity: .5; }
       .hf-settings-grid { width: 100%; max-width: 960px; }
       .hf-setting-choice { min-height: 88px; }
       .hf-about-row { min-height: 36px; }
@@ -1863,6 +1904,12 @@
         #transactionsEvidenceRegion { display: block; min-height: 0; }
         #transactionsTableScroll { min-height: 0; height: auto; flex: none; overflow-x: auto; overflow-y: visible; }
         #transactionsTableScroll thead { position: sticky; top: 0; z-index: 1; }
+        #products.active { display: grid; height: 100%; min-height: 0; grid-template-rows: max-content minmax(0, 1fr); overflow: hidden; }
+        #products.active > div { min-height: 0; }
+        #productDetail { min-height: 0; max-height: 100%; overflow-y: auto; }
+        #productsTableRegion { max-height: 100%; overflow-y: auto; padding-bottom: 24px; }
+        #productsPanelInventory:not([hidden]) { display: grid; height: 100%; }
+        #inventoryItemsTableRegion, #inventoryItemDetail { max-height: 100%; }
         #settings.active { height: 100%; overflow: hidden; }
         #settingsSections { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; }
         #logs.active { height: 100%; overflow: hidden; }
@@ -2595,6 +2642,16 @@
           <i class="fas fa-arrow-right-arrow-left w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Transactions</span>
         </button>
 
+        <button
+          type="button"
+          data-page="products"
+          data-navigation-destination="products"
+          aria-label="Products"
+          title="Products"
+          class="ui-sidebar-item flex w-full items-center text-left transition">
+          <i class="fas fa-boxes-stacked w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Products</span>
+        </button>
+
         </div>
 
         <div class="sidebar-finance-group mt-1">
@@ -2633,12 +2690,14 @@
                 <span class="sidebar-expanded-content min-w-0">Capital &amp; Equity</span>
               </button>
             </div>
-            <div data-navigation-destination="assets" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Assets, unavailable until module migration is approved" title="Assets — unavailable until module migration is approved">
-              <i class="fas fa-building-columns w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0">Assets</span>
+            <div role="listitem">
+              <button type="button" data-page="finance" data-navigation-destination="assets" aria-label="Assets" title="Assets" class="ui-sidebar-item flex w-full items-center text-left transition">
+                <i class="fas fa-building-columns w-6 text-center" aria-hidden="true"></i>
+                <span class="sidebar-expanded-content min-w-0">Assets</span>
+              </button>
             </div>
             <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="depreciation" aria-label="Depreciation" title="Depreciation" class="ui-sidebar-item flex w-full items-center text-left transition">
+              <button type="button" data-page="finance" data-navigation-destination="depreciation" aria-label="Depreciation" title="Depreciation" class="ui-sidebar-item flex w-full items-center text-left transition" style="display:none;">
                 <i class="fas fa-arrow-trend-down w-6 text-center" aria-hidden="true"></i>
                 <span class="sidebar-expanded-content min-w-0">Depreciation</span>
               </button>
@@ -2649,9 +2708,11 @@
                 <span class="sidebar-expanded-content min-w-0">Balance Position</span>
               </button>
             </div>
-            <div data-navigation-destination="cash-flow" class="ui-future-module flex items-center rounded-lg text-sm" role="listitem" aria-disabled="true" aria-label="Cash Flow, unavailable until module migration is approved" title="Cash Flow — unavailable until module migration is approved">
-              <i class="fas fa-money-bill-transfer w-6 text-center" aria-hidden="true"></i>
-              <span class="sidebar-expanded-content min-w-0">Cash Flow</span>
+            <div role="listitem">
+              <button type="button" data-page="finance" data-navigation-destination="cash-flow" aria-label="Cash Flow" title="Cash Flow" class="ui-sidebar-item flex w-full items-center text-left transition">
+                <i class="fas fa-money-bill-trend-up w-6 text-center" aria-hidden="true"></i>
+                <span class="sidebar-expanded-content min-w-0">Cash Flow</span>
+              </button>
             </div>
           </div>
         </div>
@@ -3215,6 +3276,23 @@
             <p id="financePPDetail" class="ui-body-text ui-theme-secondary mt-2">Full product table and analytics coming in a future update.</p>
           </div>
         </div>
+        <div id="financeCashFlowContent" class="finance-layout" data-finance-panel="cash-flow" hidden>
+          <h2 class="hf-section-heading">Cash Flow</h2>
+          <p class="mt-1 text-sm ui-theme-secondary">Cash movements classified by activity type.</p>
+          <dl class="finance-kpis finance-equity-kpis mt-3" aria-label="Cash Flow summary">
+            <div class="finance-kpi finance-surface"><dt>Operating</dt><dd id="financeCfOperating">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Investing</dt><dd id="financeCfInvesting">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Financing</dt><dd id="financeCfFinancing">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Net Change</dt><dd id="financeCfNetChange">—</dd></div>
+          </dl>
+          <h3 class="mt-4 text-sm font-semibold ui-theme-primary">Cash Flow Statement</h3>
+          <dl class="cogs-summary mt-2">
+            <div><dt>Operating Activities</dt><dd id="financeCfOpValue">—</dd></div>
+            <div><dt>Investing Activities</dt><dd id="financeCfInvValue">—</dd></div>
+            <div><dt>Financing Activities</dt><dd id="financeCfFinValue">—</dd></div>
+            <div><dt>Net Change in Cash</dt><dd id="financeCfNetValue">—</dd></div>
+          </dl>
+        </div>
         <div id="financeBalanceSheetContent" class="finance-layout" data-finance-panel="balance-sheet" hidden>
           <dl class="finance-kpis finance-equity-kpis" aria-label="Balance Position summary">
             <div class="finance-kpi finance-surface"><dt>Known Assets</dt><dd id="financeBSKnownAssets">—</dd></div>
@@ -3260,42 +3338,72 @@
             </section>
           </div>
         </div>
-        <div id="financeDepreciationContent" class="finance-layout" data-finance-panel="depreciation" hidden>
-          <dl class="finance-kpis finance-equity-kpis" aria-label="Depreciation summary">
-            <div class="finance-kpi finance-surface"><dt>Depreciation Expense</dt><dd id="financeDepExpense">—</dd></div>
-            <div class="finance-kpi finance-surface"><dt>Accumulated Depreciation</dt><dd id="financeDepAccumulated">—</dd></div>
-            <div class="finance-kpi finance-surface"><dt>Net Book Value</dt><dd id="financeDepNBV">—</dd></div>
-            <div class="finance-kpi finance-surface"><dt>Active Assets</dt><dd id="financeDepActiveAssets">—</dd></div>
-            <div class="finance-kpi finance-surface"><dt>Fully Depreciated</dt><dd id="financeDepFullyDepreciated">—</dd></div>
-          </dl>
-          <div class="finance-equity-grid">
-            <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepAssetsHeading">
-              <h2 id="financeDepAssetsHeading" class="hf-section-heading">Asset Register</h2>
-              <div class="finance-table-scroll">
-                <table class="finance-equity-table"><caption class="sr-only">Fixed asset depreciation schedule</caption><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Acquired</th><th scope="col" class="finance-number">Cost</th><th scope="col" class="finance-number">Accum. Dep.</th><th scope="col" class="finance-number">Period Dep.</th><th scope="col" class="finance-number">Net Book Value</th><th scope="col">Status</th></tr></thead><tbody id="financeDepAssetBody"></tbody></table>
+        <div id="financeAssetsContent" class="finance-layout" data-finance-panel="assets" hidden>
+          <h2 class="hf-section-heading">Assets</h2>
+          <p class="mt-1 text-sm ui-theme-secondary">Fixed-asset register, acquisition summary, and depreciation schedule.</p>
+          <div class="products-tab-list mt-3" role="tablist" aria-label="Assets sections">
+            <button type="button" id="assetsTabRegister" role="tab" aria-selected="true" aria-controls="assetsPanelRegister" class="products-tab rounded-md px-4 py-2">Asset Register</button>
+            <button type="button" id="assetsTabDepreciation" role="tab" aria-selected="false" aria-controls="assetsPanelDepreciation" class="products-tab rounded-md px-4 py-2">Depreciation</button>
+          </div>
+          <div id="assetsPanelRegister" class="products-tab-panel" role="tabpanel" aria-labelledby="assetsTabRegister">
+            <dl class="finance-kpis finance-equity-kpis mt-3" aria-label="Asset summary">
+              <div class="finance-kpi finance-surface"><dt>Total Assets</dt><dd id="financeAssetsTotal">—</dd></div>
+              <div class="finance-kpi finance-surface"><dt>Active Assets</dt><dd id="financeAssetsActive">—</dd></div>
+              <div class="finance-kpi finance-surface"><dt>Acquisition Cost</dt><dd id="financeAssetsCost">—</dd></div>
+            </dl>
+            <section class="finance-equity-surface finance-surface mt-3" aria-labelledby="financeAssetsRegisterHeading">
+              <h2 id="financeAssetsRegisterHeading" class="hf-section-heading">Asset Register</h2>
+              <div class="products-grid-scroll mt-3">
+                <table class="products-grid products-grid--cogs">
+                  <caption class="sr-only">Fixed asset register</caption>
+                  <thead><tr><th scope="col">Asset</th><th scope="col">Category</th><th scope="col">Qty</th><th scope="col">Acquired</th><th scope="col">Cost</th><th scope="col">Status</th></tr></thead>
+                  <tbody id="financeAssetsRegisterBody"></tbody>
+                </table>
               </div>
             </section>
-            <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepReconHeading">
-              <h2 id="financeDepReconHeading" class="hf-section-heading">Reconciliation</h2>
+            <section id="financeAssetDetail" class="finance-equity-surface finance-surface mt-3" hidden aria-labelledby="financeAssetDetailHeading">
+              <h2 id="financeAssetDetailHeading" class="hf-section-heading">Asset Detail</h2>
+              <div id="financeAssetDetailContent" class="mt-2"></div>
+            </section>
+          </div>
+          <div id="assetsPanelDepreciation" class="products-tab-panel" role="tabpanel" aria-labelledby="assetsTabDepreciation" hidden>
+            <dl class="finance-kpis finance-equity-kpis mt-3" aria-label="Depreciation summary">
+              <div class="finance-kpi finance-surface"><dt>Depreciation Expense</dt><dd id="financeDepExpense">—</dd></div>
+              <div class="finance-kpi finance-surface"><dt>Accumulated Depreciation</dt><dd id="financeDepAccumulated">—</dd></div>
+              <div class="finance-kpi finance-surface"><dt>Net Book Value</dt><dd id="financeDepNBV">—</dd></div>
+              <div class="finance-kpi finance-surface"><dt>Active Assets</dt><dd id="financeDepActiveAssets">—</dd></div>
+              <div class="finance-kpi finance-surface"><dt>Fully Depreciated</dt><dd id="financeDepFullyDepreciated">—</dd></div>
+            </dl>
+            <div>
+              <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepAssetsHeading">
+                <h2 id="financeDepAssetsHeading" class="hf-section-heading">Asset Register</h2>
+                <div class="finance-table-scroll">
+                  <table class="finance-equity-table"><caption class="sr-only">Fixed asset depreciation schedule</caption><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Acquired</th><th scope="col" class="finance-number">Cost</th><th scope="col" class="finance-number">Accum. Dep.</th><th scope="col" class="finance-number">Period Dep.</th><th scope="col" class="finance-number">Net Book Value</th><th scope="col">Status</th></tr></thead><tbody id="financeDepAssetBody"></tbody></table>
+                </div>
+              </section>
+              <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepReconHeading">
+                <h2 id="financeDepReconHeading" class="hf-section-heading">Reconciliation</h2>
+                <dl class="finance-statement-list">
+                  <div class="finance-statement-row"><dt>Period Depreciation</dt><dd id="financeDepReconPeriod">—</dd></div>
+                  <div class="finance-statement-row"><dt>Accumulated Depreciation</dt><dd id="financeDepReconAccum">—</dd></div>
+                  <div class="finance-statement-row finance-total finance-final-total"><dt>Net Book Value</dt><dd id="financeDepReconNBV">—</dd></div>
+                </dl>
+              </section>
+            </div>
+            <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepPolicyHeading">
+              <h2 id="financeDepPolicyHeading" class="hf-section-heading">Accounting Policy</h2>
               <dl class="finance-statement-list">
-                <div class="finance-statement-row"><dt>Period Depreciation</dt><dd id="financeDepReconPeriod">—</dd></div>
-                <div class="finance-statement-row"><dt>Accumulated Depreciation</dt><dd id="financeDepReconAccum">—</dd></div>
-                <div class="finance-statement-row finance-total finance-final-total"><dt>Net Book Value</dt><dd id="financeDepReconNBV">—</dd></div>
+                <div class="finance-statement-row"><dt>Method</dt><dd id="financeDepPolicyMethod">—</dd></div>
+                <div class="finance-statement-row"><dt>Granularity</dt><dd id="financeDepPolicyGranularity">—</dd></div>
+                <div class="finance-statement-row"><dt>Rounding</dt><dd id="financeDepPolicyRounding">—</dd></div>
+                <div class="finance-statement-row"><dt>Start Rule</dt><dd id="financeDepPolicyStartRule">—</dd></div>
+                <div class="finance-statement-row"><dt>Residual Treatment</dt><dd id="financeDepPolicyResidualTreatment">—</dd></div>
+                <div class="finance-statement-row finance-total"><dt>Source</dt><dd id="financeDepPolicySource">—</dd></div>
               </dl>
             </section>
           </div>
-          <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepPolicyHeading">
-            <h2 id="financeDepPolicyHeading" class="hf-section-heading">Accounting Policy</h2>
-            <dl class="finance-statement-list">
-              <div class="finance-statement-row"><dt>Method</dt><dd id="financeDepPolicyMethod">—</dd></div>
-              <div class="finance-statement-row"><dt>Granularity</dt><dd id="financeDepPolicyGranularity">—</dd></div>
-              <div class="finance-statement-row"><dt>Rounding</dt><dd id="financeDepPolicyRounding">—</dd></div>
-              <div class="finance-statement-row"><dt>Start Rule</dt><dd id="financeDepPolicyStartRule">—</dd></div>
-              <div class="finance-statement-row"><dt>Residual Treatment</dt><dd id="financeDepPolicyResidualTreatment">—</dd></div>
-              <div class="finance-statement-row finance-total"><dt>Source</dt><dd id="financeDepPolicySource">—</dd></div>
-            </dl>
-          </section>
         </div>
+        <div id="financeDepreciationContent" class="finance-layout" data-finance-panel="depreciation" hidden></div>
       </div>
     </section>
 
@@ -3446,6 +3554,16 @@
                     </div>
                     <p id="salesEntryQtyError" class="transaction-entry-error" role="alert"></p>
                   </div>
+
+                  <fieldset class="transaction-entry-fieldset transaction-entry-cash-account">
+                    <legend>Received via</legend>
+                    <div class="transaction-entry-segments">
+                      <button id="salesCashAccount1000" type="button" role="radio" aria-checked="false" data-cash-account="1000" onclick="setCashAccountCode('sales', '1000')">Cash on Hand</button>
+                      <button id="salesCashAccount1010" type="button" role="radio" aria-checked="false" data-cash-account="1010" onclick="setCashAccountCode('sales', '1010')">DANA</button>
+                      <button id="salesCashAccount1020" type="button" role="radio" aria-checked="false" data-cash-account="1020" onclick="setCashAccountCode('sales', '1020')">BluBCA</button>
+                    </div>
+                    <p id="salesCashAccountError" class="transaction-entry-error" role="alert"></p>
+                  </fieldset>
                 </div>
 
                 <section id="salesPricingPreview" class="transaction-entry-preview" aria-labelledby="salesPricingHeading" aria-busy="false">
@@ -3485,6 +3603,16 @@
                   <div class="transaction-entry-money"><span aria-hidden="true">Rp</span><input id="expenseEntryAmount" type="text" inputmode="numeric" autocomplete="off" aria-describedby="expenseEntryAmountError" placeholder="0" oninput="updateExpenseEntryAmount()"></div>
                   <p id="expenseEntryAmountError" class="transaction-entry-error" role="alert"></p>
                 </div>
+
+                <fieldset class="transaction-entry-fieldset transaction-entry-cash-account">
+                  <legend>Paid via</legend>
+                  <div class="transaction-entry-segments">
+                    <button id="expenseCashAccount1000" type="button" role="radio" aria-checked="false" data-cash-account="1000" onclick="setCashAccountCode('expense', '1000')">Cash on Hand</button>
+                    <button id="expenseCashAccount1010" type="button" role="radio" aria-checked="false" data-cash-account="1010" onclick="setCashAccountCode('expense', '1010')">DANA</button>
+                    <button id="expenseCashAccount1020" type="button" role="radio" aria-checked="false" data-cash-account="1020" onclick="setCashAccountCode('expense', '1020')">BluBCA</button>
+                  </div>
+                  <p id="expenseCashAccountError" class="transaction-entry-error" role="alert"></p>
+                </fieldset>
               </section>
 
               <section id="receiptEntryFields" class="transaction-entry-fields" aria-labelledby="receiptEntryHeading" hidden>
@@ -3499,6 +3627,16 @@
                 <div class="transaction-entry-control"><label for="receiptReference">Purchase evidence/reference</label><input id="receiptReference" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptReferenceError"><p id="receiptReferenceError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptUnavailable">Document unavailable</label><input id="receiptUnavailable" type="checkbox" onchange="updateReceiptEntryEvidence()" aria-describedby="receiptUnavailableError"><p id="receiptUnavailableError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptAttested">I confirm this purchase information reflects what was actually received.</label><input id="receiptAttested" type="checkbox" onchange="validateReceiptEntry(true)" aria-describedby="receiptAttestedError"><p id="receiptAttestedError" class="transaction-entry-error" role="alert"></p></div>
+                <div class="transaction-entry-control transaction-entry-cash-account">
+                  <label for="receiptCashAccount">Paid via</label>
+                  <select id="receiptCashAccount" aria-describedby="receiptCashAccountError">
+                    <option value="">Select payment account…</option>
+                    <option value="1000">Cash on Hand</option>
+                    <option value="1010">DANA Business</option>
+                    <option value="1020">BluBCA</option>
+                  </select>
+                  <p id="receiptCashAccountError" class="transaction-entry-error" role="alert"></p>
+                </div>
                 </fieldset>
                 <p id="receiptChoicesState" role="status" aria-live="polite"></p>
                 <button id="receiptRecovery" type="button" class="transaction-entry-secondary" onclick="recoverReceiptEntry()" hidden>Check purchase status</button>
@@ -3557,6 +3695,120 @@
           <footer id="transactionLifecycleFooter" class="transaction-lifecycle-footer"></footer>
         </section>
       </div>
+
+    <!-- PRODUCTS -->
+    <section id="products" class="page" hidden aria-labelledby="productsHeading" aria-busy="false">
+      <header class="sr-only">
+        <h1 id="productsHeading" tabindex="-1">Products</h1>
+        <p>Read-only authoritative product catalog.</p>
+      </header>
+      <nav id="productsTabList" class="mb-4 flex w-max gap-2 rounded-lg border p-1" role="tablist" aria-label="Products sections">
+        <button id="productsTabCatalog" type="button" role="tab" aria-selected="true" aria-controls="productsPanelCatalog" class="products-tab rounded-md px-4 py-2">Product Catalog</button>
+        <button id="productsTabRecipe" type="button" role="tab" aria-selected="false" aria-controls="productsPanelRecipe" class="products-tab rounded-md px-4 py-2">COGS &amp; Recipe</button>
+        <button id="productsTabInventory" type="button" role="tab" aria-selected="false" aria-controls="productsPanelInventory" class="products-tab rounded-md px-4 py-2">Inventory Items</button>
+      </nav>
+      <div id="productsPanelCatalog" class="products-tab-panel flex flex-col gap-4 lg:flex-row" role="tabpanel" aria-labelledby="productsTabCatalog">
+        <aside id="productDetail" class="hf-secondary-surface order-1 p-4 lg:order-2 lg:w-1/3 lg:sticky lg:top-4 lg:self-start" aria-labelledby="productDetailHeading">
+          <h2 id="productDetailHeading" class="hf-section-heading">Product detail</h2>
+          <p id="productDetailEmpty" class="mt-3 text-sm ui-theme-secondary">Select a product to view details.</p>
+          <div id="productDetailContent" class="mt-3" hidden></div>
+        </aside>
+        <section class="hf-secondary-surface order-2 min-w-0 p-4 lg:order-1 lg:flex-1" aria-labelledby="productsListHeading">
+          <h2 id="productsListHeading" class="hf-section-heading">Product Catalog</h2>
+          <p id="productsLoading" class="mt-3 text-sm ui-theme-secondary" role="status">Loading products…</p>
+          <p id="productsEmpty" class="mt-3 text-sm ui-theme-secondary" role="status" hidden>No products are available.</p>
+          <p id="productsError" class="mt-3 text-sm text-red-700" role="alert" hidden>Products could not be loaded.</p>
+          <div id="productsTableRegion" class="products-grid-scroll mt-3" hidden>
+            <table class="products-grid products-grid--catalog">
+              <caption class="sr-only">Authoritative Products records</caption>
+              <thead><tr><th scope="col" class="text-left">Product name</th><th scope="col" class="text-left">Category</th><th scope="col" class="text-left">Kind</th><th scope="col" class="text-left">Status</th></tr></thead>
+              <tbody id="productsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      <div id="productsPanelRecipe" class="products-tab-panel cogs-recipe-layout" role="tabpanel" aria-labelledby="productsTabRecipe" hidden>
+        <section class="hf-secondary-surface p-4" aria-labelledby="cogsRecipeHeading">
+          <h2 id="cogsRecipeHeading" class="hf-section-heading">COGS &amp; Recipe simulation</h2>
+          <p id="cogsRecipePeriod" class="mt-1 text-sm ui-theme-secondary"></p>
+          <div class="cogs-recipe-controls mt-3">
+            <label>Kind<select id="cogsRecipeKind" aria-label="Kind"></select></label>
+            <label>Product<select id="cogsRecipeProduct" aria-label="Product"></select></label>
+            <label>Variant<select id="cogsRecipeVariant" aria-label="Variant"></select></label>
+          </div>
+        </section>
+        <section class="cogs-recipe-content hf-secondary-surface p-4" aria-live="polite">
+          <p id="cogsRecipeLoading" class="text-sm ui-theme-secondary" role="status" hidden>Loading COGS and recipe data…</p>
+          <p id="cogsRecipeEmpty" class="text-sm ui-theme-secondary" role="status" hidden>No recipes are available.</p>
+          <p id="cogsRecipeError" class="text-sm text-red-700" role="alert" hidden>COGS and recipe data could not be loaded.</p>
+          <div id="cogsRecipeResult" hidden>
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-start;">
+              <div style="flex:1 1 320px;min-width:0;">
+                <h3 class="hf-section-heading">Recipe Components</h3>
+                <p class="mt-1 text-sm ui-theme-secondary">Current recipe usage and authoritative Standard Cost by component.</p>
+                <div class="products-grid-scroll mt-3">
+                  <table class="products-grid products-grid--cogs">
+                    <caption class="sr-only">Recipe components and unavailable standard costs</caption>
+                    <thead><tr><th scope="col" style="text-align:left">Component</th><th scope="col" style="text-align:center">Usage</th><th scope="col" style="text-align:center">Standard Cost</th><th scope="col" style="text-align:center">Component Cost</th></tr></thead>
+                    <tbody id="cogsRecipeTableBody"></tbody>
+                  </table>
+                </div>
+              </div>
+              <div style="flex:1 1 400px;min-width:0;">
+                <h3 id="standardCostConfigurationHeading" class="hf-section-heading">Simulation Configuration</h3>
+                <p class="mt-1 text-sm ui-theme-secondary">Proposed Usage and Standard Cost simulation only — does not persist.</p>
+                <div class="products-grid-scroll mt-3">
+                  <table class="products-grid products-grid--cogs">
+                    <caption class="sr-only">Simulation configuration for recipe inventory items</caption>
+                    <thead><tr><th scope="col" style="text-align:center">Item</th><th scope="col" style="text-align:center">UOM</th><th scope="col" style="text-align:center">Current Usage</th><th scope="col" style="text-align:center">Proposed Usage</th><th scope="col" style="text-align:center">Std Cost / UOM</th></tr></thead>
+                    <tbody id="standardCostConfigurationBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1rem;align-items:flex-start;">
+              <div style="flex:1 1 320px;min-width:0;">
+                <h4 class="text-sm font-semibold ui-theme-primary">Current</h4>
+                <dl class="cogs-summary mt-2" style="text-align:center;"><div><dt>Computed COGS</dt><dd id="cogsRecipeComputedCogs">Unavailable</dd></div><div><dt>Selling Price</dt><dd id="cogsRecipeSellingPrice">—</dd></div><div><dt>Margin</dt><dd id="cogsRecipeMargin">Unavailable</dd></div><div><dt>Margin %</dt><dd id="cogsRecipeMarginPercent">Unavailable</dd></div></dl>
+              </div>
+              <div style="flex:1 1 400px;min-width:0;">
+                <h4 class="text-sm font-semibold ui-theme-primary">Preview</h4>
+                <dl class="cogs-summary mt-2" style="text-align:center;"><div><dt>Preview COGS</dt><dd id="standardCostPreviewCogs">Unavailable</dd></div><div><dt>Selling Price</dt><dd id="standardCostPreviewSellingPrice">—</dd></div><div><dt>Preview Margin</dt><dd id="standardCostPreviewMargin">Unavailable</dd></div><div><dt>Preview Margin %</dt><dd id="standardCostPreviewMarginPercent">—</dd></div></dl>
+                <div class="mt-3" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+                  <div>
+                    <label for="proposedSellingPrice" class="text-sm font-semibold ui-theme-primary">Proposed Selling Price</label>
+                    <input id="proposedSellingPrice" type="text" class="standard-cost-input mt-1" placeholder="e.g. 18.000" aria-label="Proposed Selling Price">
+                  </div>
+                  <div>
+                    <button id="standardCostApplyButton" type="button" disabled class="standard-cost-apply rounded-lg border px-4 py-2 text-sm font-semibold">Update Simulation</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+      <div id="productsPanelInventory" class="products-tab-panel inventory-items-layout" role="tabpanel" aria-labelledby="productsTabInventory" hidden>
+        <section class="inventory-items-panel hf-secondary-surface min-w-0 p-4" aria-labelledby="inventoryItemsHeading">
+          <h2 id="inventoryItemsHeading" class="hf-section-heading">Inventory Items</h2>
+          <p id="inventoryItemsLoading" class="mt-3 text-sm ui-theme-secondary" role="status" hidden>Loading inventory items…</p>
+          <p id="inventoryItemsEmpty" class="mt-3 text-sm ui-theme-secondary" role="status" hidden>No inventory items are available.</p>
+          <p id="inventoryItemsError" class="mt-3 text-sm text-red-700" role="alert" hidden>Inventory items could not be loaded.</p>
+          <div id="inventoryItemsTableRegion" class="products-grid-scroll mt-3" hidden>
+            <table class="products-grid products-grid--catalog">
+              <caption class="sr-only">Authoritative InventoryItems records</caption>
+              <thead><tr><th scope="col" class="text-left">Item Name</th><th scope="col" class="text-left">Classification</th><th scope="col" class="text-left">UOM</th><th scope="col" class="text-left">Status</th></tr></thead>
+              <tbody id="inventoryItemsTableBody"></tbody>
+            </table>
+          </div>
+        </section>
+        <aside id="inventoryItemDetail" class="inventory-items-panel hf-secondary-surface p-4" aria-labelledby="inventoryItemDetailHeading">
+          <h2 id="inventoryItemDetailHeading" class="hf-section-heading">Item detail</h2>
+          <p id="inventoryItemDetailEmpty" class="mt-3 text-sm ui-theme-secondary">Select an item to view details.</p>
+          <div id="inventoryItemDetailContent" class="mt-3" hidden></div>
+        </aside>
+      </div>
+    </section>
 
     <!-- SETTINGS -->
     <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
@@ -4005,7 +4257,16 @@
         "transactionDrilldownSummary", "transactionDrilldownText",
         "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSize", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
         "mainContent", "topUtilityBar", "utilityPageTitle",
-        "utilityPageContext", "sidebarDataStatus", "settings", "logs",
+        "utilityPageContext", "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
+        "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
+        "productsTableBody", "productDetailEmpty", "productDetailContent", "cogsRecipePeriod", "cogsRecipeKind", "cogsRecipeProduct", "cogsRecipeVariant",
+        "cogsRecipeLoading", "cogsRecipeEmpty", "cogsRecipeError",
+        "cogsRecipeResult", "cogsRecipeTableBody",
+        "cogsRecipeComputedCogs", "cogsRecipeSellingPrice", "cogsRecipeMargin", "cogsRecipeMarginPercent", "standardCostConfigurationBody",
+        "standardCostPreviewCogs", "standardCostPreviewSellingPrice", "standardCostPreviewMargin", "standardCostPreviewMarginPercent",
+        "proposedSellingPrice", "standardCostApplyButton", "inventoryItemsLoading", "inventoryItemsEmpty",
+        "inventoryItemsError", "inventoryItemsTableRegion", "inventoryItemsTableBody", "inventoryItemDetailEmpty",
+        "inventoryItemDetailContent", "settings", "logs",
         "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
         "sessionLogsInfoCount", "sessionLogsWarningCount",
         "sessionLogsErrorCount", "sessionLogsToolbar",
@@ -4027,10 +4288,15 @@
         "financeRetainedCurrent", "financeRetainedAsOfDate", "financeEquityAsOfStatus", "financeEquityOpeningStatus", "financeEquityCapitalPolicy",
         "financeProductProfitabilityContent", "financePPWarning", "financePPRevenue", "financePPCogs", "financePPGrossProfit",
         "financePPVariantCount", "financePPRowCount", "financePPQualityStatus", "financePPPeriod", "financePPComparisonPeriod", "financePPDetail",
+        "financeCashFlowContent", "financeCfOperating", "financeCfInvesting", "financeCfFinancing", "financeCfNetChange",
+        "financeCfOpValue", "financeCfInvValue", "financeCfFinValue", "financeCfNetValue",
         "financeBalanceSheetContent", "financeBSKnownAssets", "financeBSLiabilities", "financeBSEquity", "financeBSPositionStatus",
         "financeBSCash", "financeBSInventory", "financeBSFixedAssets", "financeBSLiabilitiesTotal", "financeBSLiabilitiesDisclosure",
         "financeBSEquityCapital", "financeBSEquityRetained", "financeBSEquityTotal",
         "financeBSReconAssets", "financeBSReconLiabilities", "financeBSReconEquity", "financeBSReconKnownPosition", "financeBSReconEquation",
+        "financeAssetsContent", "assetsTabRegister", "assetsTabDepreciation", "assetsPanelRegister", "assetsPanelDepreciation",
+        "financeAssetsTotal", "financeAssetsActive", "financeAssetsCost", "financeAssetsRegisterHeading",
+        "financeAssetsRegisterBody", "financeAssetDetail", "financeAssetDetailHeading", "financeAssetDetailContent",
         "financeDepreciationContent", "financeDepExpense", "financeDepAccumulated", "financeDepNBV", "financeDepActiveAssets", "financeDepFullyDepreciated",
         "financeDepAssetsHeading", "financeDepAssetBody", "financeDepReconHeading", "financeDepReconPeriod", "financeDepReconAccum", "financeDepReconNBV",
         "financeDepPolicyHeading", "financeDepPolicyMethod", "financeDepPolicyGranularity", "financeDepPolicyRounding", "financeDepPolicyStartRule",
@@ -4059,7 +4325,7 @@
       var receiptIds = { fields: "receiptEntryFields", controls: "receiptEntryControls",
         costType: "expenseCostType", expenseDate: "expenseDate", expenseDateError: "expenseDateError", policyFields: "expensePolicyFields", status: "receiptChoicesState",
         recovery: "receiptRecovery", retry: "receiptRetry" };
-      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested"].forEach(function(key) {
+      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount"].forEach(function(key) {
         receiptIds[key] = "receipt" + key; receiptIds[key + "Error"] = "receipt" + key + "Error";
       });
       Object.keys(receiptIds).forEach(function(key) { requiredIds.push(receiptIds[key]); });
@@ -4141,6 +4407,47 @@
         utilityPageTitle: required.utilityPageTitle,
         utilityPageContext: required.utilityPageContext,
         sidebarDataStatus: required.sidebarDataStatus,
+        products: required.products,
+        productsTabCatalog: required.productsTabCatalog,
+        productsTabRecipe: required.productsTabRecipe,
+        productsTabInventory: required.productsTabInventory,
+        productsPanelCatalog: required.productsPanelCatalog,
+        productsPanelRecipe: required.productsPanelRecipe,
+        productsPanelInventory: required.productsPanelInventory,
+        cogsRecipePeriod: required.cogsRecipePeriod,
+        cogsRecipeKind: required.cogsRecipeKind,
+        cogsRecipeProduct: required.cogsRecipeProduct,
+        cogsRecipeVariant: required.cogsRecipeVariant,
+        cogsRecipeLoading: required.cogsRecipeLoading,
+        cogsRecipeEmpty: required.cogsRecipeEmpty,
+        cogsRecipeError: required.cogsRecipeError,
+        cogsRecipeResult: required.cogsRecipeResult,
+        cogsRecipeTableBody: required.cogsRecipeTableBody,
+        cogsRecipeComputedCogs: required.cogsRecipeComputedCogs,
+        cogsRecipeSellingPrice: required.cogsRecipeSellingPrice,
+        cogsRecipeMargin: required.cogsRecipeMargin,
+        cogsRecipeMarginPercent: required.cogsRecipeMarginPercent,
+        standardCostConfigurationBody: required.standardCostConfigurationBody,
+        standardCostPreviewCogs: required.standardCostPreviewCogs,
+        standardCostPreviewSellingPrice: required.standardCostPreviewSellingPrice,
+        standardCostPreviewMargin: required.standardCostPreviewMargin,
+        standardCostPreviewMarginPercent: required.standardCostPreviewMarginPercent,
+        proposedSellingPrice: required.proposedSellingPrice,
+        standardCostApplyButton: required.standardCostApplyButton,
+        productsLoading: required.productsLoading,
+        productsEmpty: required.productsEmpty,
+        productsError: required.productsError,
+        productsTableRegion: required.productsTableRegion,
+        productsTableBody: required.productsTableBody,
+        productDetailEmpty: required.productDetailEmpty,
+        productDetailContent: required.productDetailContent,
+        inventoryItemsLoading: required.inventoryItemsLoading,
+        inventoryItemsEmpty: required.inventoryItemsEmpty,
+        inventoryItemsError: required.inventoryItemsError,
+        inventoryItemsTableRegion: required.inventoryItemsTableRegion,
+        inventoryItemsTableBody: required.inventoryItemsTableBody,
+        inventoryItemDetailEmpty: required.inventoryItemDetailEmpty,
+        inventoryItemDetailContent: required.inventoryItemDetailContent,
         settingsPage: required.settings,
         logsPage: required.logs,
         themeStatus: required.themeStatus,
@@ -4219,6 +4526,12 @@
         elements.transactionsTabList.querySelectorAll('[role="tab"]');
       elements.transactionsPanels =
         elements.transactionsPanelGroup.querySelectorAll('[role="tabpanel"]');
+      elements.productsTabs = [elements.productsTabCatalog, elements.productsTabRecipe, elements.productsTabInventory];
+      elements.productsPanels = [elements.productsPanelCatalog, elements.productsPanelRecipe, elements.productsPanelInventory];
+      elements.assetsTabRegister = required.assetsTabRegister;
+      elements.assetsTabDepreciation = required.assetsTabDepreciation;
+      elements.assetsPanelRegister = required.assetsPanelRegister;
+      elements.assetsPanelDepreciation = required.assetsPanelDepreciation;
       elements.dashboardTabs =
         elements.dashboardTabList.querySelectorAll('[role="tab"]');
       elements.dashboardPanels =
@@ -4393,6 +4706,25 @@
         if (event.target === event.currentTarget) closeTransactionLifecycleDialog();
       });
 
+      elements.productsTabs.forEach(function(tab)
+      {
+        tab.addEventListener("click", function() {
+          setProductsTab(tab.id === "productsTabInventory" ? "inventory" : tab.id === "productsTabRecipe" ? "recipe" : "catalog");
+        });
+      });
+      elements.assetsTabRegister.addEventListener("click", function() {
+        setFinanceDestination("assets");
+        ensureFinanceData();
+      });
+      elements.assetsTabDepreciation.addEventListener("click", function() {
+        setFinanceDestination("depreciation");
+        ensureFinanceData();
+      });
+      elements.cogsRecipeKind.addEventListener("change", renderCogsRecipeProducts);
+      elements.cogsRecipeProduct.addEventListener("change", renderCogsRecipeVariants);
+      elements.cogsRecipeVariant.addEventListener("change", renderCogsRecipeSelection);
+      if (elements.standardCostApplyButton) elements.standardCostApplyButton.addEventListener("click", submitStandardCostConfiguration);
+
       elements.pageButtons
         .forEach(function(button)
         {
@@ -4468,6 +4800,10 @@
           title: "Transactions",
           context: "Bounded recent transaction evidence"
         },
+        products: {
+          title: "Products",
+          context: "Read-only authoritative product catalog"
+        },
         finance: {
           title: "Profit & Loss",
           context: "Transaction-date operating statement"
@@ -4525,6 +4861,616 @@
         setFinanceDestination(destination || "profit-loss");
         ensureFinanceData();
       }
+      else if (pageId === "products")
+      {
+        ensureProductsData();
+      }
+    }
+
+    var productsDataLoaded = false;
+    var productsReadModel = [];
+    var inventoryItemsDataLoaded = false;
+    var inventoryItemsReadModel = [];
+    var cogsRecipeDataLoaded = false;
+    var cogsRecipeReadModel = null;
+    var cogsRecipeCurrentVariant = null;
+    var standardCostApplyInFlight = false;
+
+    function setProductsTab(tabName)
+    {
+      var elements = initializeStableDashboardElements();
+      elements.productsTabs.forEach(function(tab) { tab.setAttribute("aria-selected", String(tab.id === "productsTab" + (tabName === "recipe" ? "Recipe" : tabName === "inventory" ? "Inventory" : "Catalog"))); });
+      elements.productsPanelCatalog.hidden = tabName !== "catalog";
+      elements.productsPanelRecipe.hidden = tabName !== "recipe";
+      elements.productsPanelInventory.hidden = tabName !== "inventory";
+      if (tabName === "inventory") ensureInventoryItemsData();
+      else if (tabName === "recipe") ensureCogsRecipeData();
+      else ensureProductsData();
+    }
+
+    function ensureCogsRecipeData()
+    {
+      if (cogsRecipeDataLoaded) return;
+      var elements = initializeStableDashboardElements();
+      elements.products.setAttribute("aria-busy", "true");
+      elements.cogsRecipeLoading.hidden = false;
+      elements.cogsRecipeEmpty.hidden = true;
+      elements.cogsRecipeError.hidden = true;
+      google.script.run.withSuccessHandler(function(model)
+      {
+        var checkpoint = "CHECKPOINT: MODEL_RECEIVED";
+        console.log(checkpoint);
+        var _traceModelType = typeof model;
+        var _traceModelIsArray = Array.isArray(model);
+        var _traceModelKeys = model && typeof model === "object" ? Object.keys(model).join(",") : "N/A";
+        var _traceProductsPresent = model && model.products !== undefined;
+        var _traceProductsType = typeof (model && model.products);
+        var _traceProductsIsArray = Array.isArray(model && model.products);
+        var _traceProductsLength = Array.isArray(model && model.products) ? model.products.length : "N/A";
+        var _traceEffPeriodPresent = model && model.effectivePeriod !== undefined;
+        var _traceModelShape = JSON.stringify({
+          type: _traceModelType,
+          isArray: _traceModelIsArray,
+          keys: _traceModelKeys,
+          productsPresent: _traceProductsPresent,
+          productsType: _traceProductsType,
+          productsIsArray: _traceProductsIsArray,
+          productsLength: _traceProductsLength,
+          effectivePeriodPresent: _traceEffPeriodPresent
+        });
+        console.log("COGS_TRACE:", _traceModelShape);
+        try
+        {
+          elements.products.setAttribute("aria-busy", "false");
+          elements.cogsRecipeLoading.hidden = true;
+          if (!model || !Array.isArray(model.products) || !model.effectivePeriod || !model.effectivePeriod.asOf)
+          {
+            throw new Error("Invalid COGS recipe model shape");
+          }
+          checkpoint = "CHECKPOINT: MODEL_SHAPE_VALID";
+          console.log(checkpoint);
+          cogsRecipeDataLoaded = true;
+          cogsRecipeReadModel = model;
+          elements.cogsRecipePeriod.innerText = "Effective as of " + model.effectivePeriod.asOf + ". Standard Cost: " +
+            (model.effectivePeriod.standardCostStatus === "CONFIGURED" ? "Configured" : "Not configured") + ".";
+          elements.cogsRecipeKind.innerHTML = "";
+          var kinds = Object.create(null);
+          model.products.forEach(function(product) {
+            if (product.Kind) kinds[product.Kind] = true;
+          });
+          Object.keys(kinds).forEach(function(kind) {
+            var option = document.createElement("option"); option.value = kind; option.innerText = kind;
+            elements.cogsRecipeKind.appendChild(option);
+          });
+          elements.cogsRecipeEmpty.hidden = model.products.length !== 0;
+          elements.cogsRecipeResult.hidden = model.products.length === 0;
+          if (elements.cogsRecipeKind.options.length)
+          {
+            elements.cogsRecipeKind.selectedIndex = 0;
+            checkpoint = "CHECKPOINT: KIND_SELECTED";
+            console.log(checkpoint);
+            renderCogsRecipeProducts();
+          }
+          else
+          {
+            renderCogsRecipeProducts();
+          }
+        }
+        catch (error)
+        {
+          elements.cogsRecipeError.hidden = false;
+          elements.cogsRecipeError.innerText = checkpoint + "\nCOGS_TRACE: " + _traceModelShape + "\n" +
+            (error && error.message ? error.message : String(error));
+        }
+      }).withFailureHandler(function(error)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        elements.cogsRecipeLoading.hidden = true;
+        elements.cogsRecipeError.hidden = false;
+        elements.cogsRecipeError.innerText = "CALLBACK_PATH=FAILURE\n" +
+          (error && error.message ? error.message : String(error));
+        console.error("COGS recipe read failed", error);
+      }).getCogsRecipeReadModel();
+    }
+
+    function showCogsRecipeDiagnostic()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.cogsRecipeError.hidden = false;
+      elements.cogsRecipeError.innerText = "COGS and recipe data could not be loaded. Running diagnostic…";
+      google.script.run.withSuccessHandler(function(result) {
+        elements.cogsRecipeError.innerText = "COGS and recipe data could not be loaded.\n" + JSON.stringify(result, null, 2);
+      }).withFailureHandler(function(error) {
+        elements.cogsRecipeError.innerText = "COGS and recipe data could not be loaded. Diagnostic failed: " +
+          (error && error.message ? error.message : String(error));
+      }).diagnoseCogsRecipeRuntime();
+    }
+
+    function renderCogsRecipeProducts()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.cogsRecipeProduct.innerHTML = "";
+      elements.cogsRecipeVariant.innerHTML = "";
+      (cogsRecipeReadModel ? cogsRecipeReadModel.products : []).filter(function(product) {
+        return product.Kind === elements.cogsRecipeKind.value;
+      }).forEach(function(product) {
+        var option = document.createElement("option"); option.value = product.ID_Prod; option.innerText = product.Produk;
+        elements.cogsRecipeProduct.appendChild(option);
+      });
+      if (elements.cogsRecipeProduct.options.length) elements.cogsRecipeProduct.selectedIndex = 0;
+      renderCogsRecipeVariants();
+    }
+
+    function renderCogsRecipeVariants()
+    {
+      var elements = initializeStableDashboardElements();
+      var product = cogsRecipeReadModel && cogsRecipeReadModel.products.find(function(candidate) {
+        return candidate.ID_Prod === elements.cogsRecipeProduct.value;
+      });
+      elements.cogsRecipeVariant.innerHTML = "";
+      elements.cogsRecipeVariant.value = "";
+      (product ? product.variants : []).forEach(function(variant) {
+        var option = document.createElement("option"); option.value = variant.type; option.innerText = variant.type;
+        elements.cogsRecipeVariant.appendChild(option);
+      });
+      if (elements.cogsRecipeVariant.options.length) elements.cogsRecipeVariant.selectedIndex = 0;
+      // ZERO-VARIANT FAIL-CLOSED: clear all stale variant-dependent state immediately
+      if (!elements.cogsRecipeVariant.options.length)
+      {
+        elements.cogsRecipeTableBody.innerHTML = "";
+        var emptyRow = elements.cogsRecipeTableBody.insertRow();
+        var emptyCell = emptyRow.insertCell();
+        emptyCell.colSpan = 4;
+        emptyCell.className = "ui-empty-state";
+        emptyCell.innerText = "No recipe/pricing variant configured.";
+        elements.standardCostConfigurationBody.innerHTML = "";
+        elements.cogsRecipeResult.hidden = false;
+        elements.cogsRecipeComputedCogs.innerText = "Unavailable";
+        elements.cogsRecipeSellingPrice.innerText = "—";
+        elements.cogsRecipeMargin.innerText = "Unavailable";
+        elements.cogsRecipeMarginPercent.innerText = "—";
+        return;
+      }
+      try { renderCogsRecipeSelection(); }
+      catch (e)
+      {
+        // EXCEPTION GUARD: guarantee stale state cannot persist on render error
+        elements.cogsRecipeTableBody.innerHTML = "";
+        var emptyRow = elements.cogsRecipeTableBody.insertRow();
+        var emptyCell = emptyRow.insertCell();
+        emptyCell.colSpan = 4;
+        emptyCell.className = "ui-empty-state";
+        emptyCell.innerText = "No recipe/pricing variant configured.";
+        elements.standardCostConfigurationBody.innerHTML = "";
+        elements.cogsRecipeResult.hidden = false;
+        elements.cogsRecipeComputedCogs.innerText = "Unavailable";
+        elements.cogsRecipeSellingPrice.innerText = "—";
+        elements.cogsRecipeMargin.innerText = "Unavailable";
+        elements.cogsRecipeMarginPercent.innerText = "—";
+      }
+    }
+
+    function renderCogsRecipeSelection()
+    {
+      var elements = initializeStableDashboardElements();
+      var product = cogsRecipeReadModel && cogsRecipeReadModel.products.find(function(candidate) {
+        return candidate.ID_Prod === elements.cogsRecipeProduct.value;
+      });
+      var variantValue = elements.cogsRecipeVariant.value;
+      var variant = product && variantValue && product.variants.find(function(candidate) { return candidate.type === variantValue; });
+      elements.cogsRecipeTableBody.innerHTML = "";
+      elements.standardCostConfigurationBody.innerHTML = "";
+      if (!variant) { elements.cogsRecipeResult.hidden = true; return; }
+      elements.cogsRecipeResult.hidden = false;
+      cogsRecipeCurrentVariant = variant;
+      (variant.components.length ? variant.components : [null]).forEach(function(component) {
+        var row = elements.cogsRecipeTableBody.insertRow();
+        var nameCell = row.insertCell(); nameCell.innerText = component ? component.ingredientName : "No recipe components";
+        var usageCell = row.insertCell(); usageCell.style.textAlign = "center"; usageCell.innerText = component ? String(component.UsageQty) + " " + component.BaseUOM : "—";
+        var costCell = row.insertCell(); costCell.style.textAlign = "center"; costCell.innerText = component && component.standardCost != null ? formatProductPrice(component.standardCost) : "Not configured";
+        var compCostCell = row.insertCell(); compCostCell.style.textAlign = "center"; compCostCell.innerText = component && component.componentCost != null ? formatProductPrice(component.componentCost) : "—";
+      });
+      elements.cogsRecipeComputedCogs.innerText = variant.computedCOGS == null ? "Unavailable" : formatCOGSValue(variant.computedCOGS);
+      elements.cogsRecipeSellingPrice.innerText = variant.sellingPrice == null ? "—" : formatProductPrice(variant.sellingPrice);
+      elements.cogsRecipeMargin.innerText = variant.margin == null ? "Unavailable" : formatCOGSValue(variant.margin);
+      elements.cogsRecipeMarginPercent.innerText = variant.marginPercent == null ? "Unavailable" : String(Math.round(variant.marginPercent * 100) / 100) + "%";
+      renderStandardCostConfiguration(variant);
+    }
+
+    function renderStandardCostConfiguration(variant)
+    {
+      var elements = initializeStableDashboardElements();
+      elements.standardCostConfigurationBody.innerHTML = "";
+      var configuration = variant.standardCostConfiguration || [];
+      if (!configuration.length)
+      {
+        var emptyRow = elements.standardCostConfigurationBody.insertRow();
+        var emptyCell = emptyRow.insertCell();
+        emptyCell.colSpan = 5;
+        emptyCell.className = "ui-empty-state";
+        emptyCell.innerText = "No recipe components";
+      }
+      configuration.forEach(function(item)
+      {
+        var row = elements.standardCostConfigurationBody.insertRow();
+        row.dataset.itemId = item.ItemID || "";
+        row.dataset.resolved = String(item.resolved !== false);
+        var nameCell = row.insertCell(); nameCell.style.textAlign = "left"; nameCell.innerText = item.ItemName;
+        var uomCell = row.insertCell(); uomCell.style.textAlign = "center"; uomCell.innerText = item.BaseUOM;
+        var currUsageCell = row.insertCell(); currUsageCell.style.textAlign = "center";
+        currUsageCell.innerText = String(item.UsageQty || 0);
+        if (item.resolved === false) {
+          var propUsageCell = row.insertCell(); propUsageCell.style.textAlign = "center";
+          var propUsage = document.createElement("input");
+          propUsage.type = "number"; propUsage.disabled = true; propUsage.className = "standard-cost-input opacity-50";
+          propUsageCell.appendChild(propUsage);
+          var stdCostCell = row.insertCell(); stdCostCell.style.textAlign = "center";
+          stdCostCell.innerText = "Not configured";
+          return;
+        }
+        var propUsageCell = row.insertCell(); propUsageCell.style.textAlign = "center";
+        var propUsage = document.createElement("input");
+        propUsage.type = "number"; propUsage.min = "0"; propUsage.step = "any"; propUsage.className = "standard-cost-input";
+        propUsage.style.textAlign = "center";
+        propUsage.value = String(item.UsageQty || 0);
+        propUsage.setAttribute("aria-label", "Proposed Usage for " + item.ItemName);
+        propUsage.addEventListener("input", function() { renderStandardCostPreview(variant); updateApplyButtonState(variant); });
+        propUsageCell.appendChild(propUsage);
+        var stdCostCell = row.insertCell(); stdCostCell.style.textAlign = "center";
+        stdCostCell.innerText = item.currentStandardCost != null ? formatProductPrice(item.currentStandardCost) + " / " + item.BaseUOM : "Not configured";
+      });
+      if (elements.proposedSellingPrice) {
+        elements.proposedSellingPrice.value = "";
+        var sp = variant.sellingPrice;
+        if (sp != null) elements.proposedSellingPrice.value = formatIndonesianPrice(Number(sp));
+        elements.proposedSellingPrice.oninput = function() { renderStandardCostPreview(variant); updateApplyButtonState(variant); };
+        elements.proposedSellingPrice.onblur = function() {
+          var raw = elements.proposedSellingPrice.value;
+          if (raw !== "") {
+            var num = parseIndonesianPrice(raw);
+            if (isFinite(num) && num >= 0) elements.proposedSellingPrice.value = formatIndonesianPrice(num);
+          }
+        };
+      }
+      renderStandardCostPreview(variant);
+      updateApplyButtonState(variant);
+    }
+
+    function formatIndonesianPrice(num)
+    {
+      if (num == null || !isFinite(num)) return "";
+      var parts = String(Math.round(num)).split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return parts[0];
+    }
+
+    function parseIndonesianPrice(str)
+    {
+      if (str == null) return NaN;
+      return Number(String(str).replace(/\./g, "").replace(/,/g, "."));
+    }
+
+    function buildStandardCostApplyDraft(rows)
+    {
+      var proposals = [], errors = [];
+      Array.prototype.forEach.call(rows, function(row, index) {
+        if (row.dataset.resolved === "false") return;
+        var propUsageInput = row.cells[3] && row.cells[3].querySelector("input");
+        var rawUsage = propUsageInput ? propUsageInput.value : "";
+        if (rawUsage == null || String(rawUsage).trim() === "") return;
+        var proposedUsage = Number(rawUsage);
+        if (!row.dataset.itemId) errors.push("Row " + (index + 1) + ": missing ItemID");
+        if (!isFinite(proposedUsage) || proposedUsage <= 0) errors.push("Row " + (index + 1) + ": invalid Proposed Usage");
+        proposals.push({ ItemID: row.dataset.itemId, ProposedUsage: proposedUsage });
+      });
+      if (!proposals.length) errors.push("Enter Proposed Usage for at least one component");
+      return { proposals: proposals, errors: errors };
+    }
+
+    function submitStandardCostConfiguration()
+    {
+      var elements = initializeStableDashboardElements();
+      var draft = buildStandardCostApplyDraft(elements.standardCostConfigurationBody.rows);
+      elements.cogsRecipeError.hidden = draft.errors.length === 0;
+      elements.cogsRecipeError.innerText = draft.errors.join("\n");
+      if (draft.errors.length) return;
+      renderStandardCostPreview(cogsRecipeCurrentVariant);
+      elements.cogsRecipeError.hidden = false;
+      elements.cogsRecipeError.innerText = "Simulation updated. No data has been persisted.";
+    }
+
+    function updateApplyButtonState(variant)
+    {
+      var elements = initializeStableDashboardElements();
+      var btn = elements.standardCostApplyButton;
+      if (!btn) return;
+      if (!cogsRecipeReadModel || !cogsRecipeReadModel.standardCostApplyActivation) { btn.disabled = true; return; }
+      var hasUnresolved = false, allValid = true, hasUsage = false;
+      Array.prototype.forEach.call(elements.standardCostConfigurationBody.rows, function(row) {
+        if (row.dataset.resolved === "false") { hasUnresolved = true; return; }
+        var propUsageInput = row.cells[3] && row.cells[3].querySelector("input");
+        var propUsageVal = propUsageInput ? propUsageInput.value : "";
+        if (propUsageVal !== "" && propUsageVal != null) {
+          var usage = Number(propUsageVal);
+          if (!isFinite(usage) || usage <= 0) allValid = false;
+          hasUsage = true;
+        }
+      });
+      btn.disabled = hasUnresolved || !hasUsage || !allValid;
+    }
+
+    function renderStandardCostPreview(variant)
+    {
+      var elements = initializeStableDashboardElements();
+      var complete = true, cogs = 0;
+      Array.prototype.forEach.call(elements.standardCostConfigurationBody.rows, function(row) {
+        if (row.dataset.resolved === "false") return;
+        var propUsageInput = row.cells[3] && row.cells[3].querySelector("input");
+        var propUsageVal = propUsageInput ? propUsageInput.value : "";
+        var usageQty = Number(row.cells[2] && row.cells[2].innerText) || 0;
+        var proposedUsage = propUsageVal !== "" && isFinite(Number(propUsageVal)) && Number(propUsageVal) > 0 ? Number(propUsageVal) : usageQty;
+        var comp = variant.components.find(function(c) { return c.itemID === row.dataset.itemId; });
+        var costPerUom = comp && comp.standardCost != null ? comp.standardCost : null;
+        if (costPerUom == null || proposedUsage <= 0) { complete = false; return; }
+        cogs += proposedUsage * costPerUom;
+      });
+      var proposedPriceRaw = elements.proposedSellingPrice ? elements.proposedSellingPrice.value : "";
+      var proposedPrice = proposedPriceRaw !== "" ? parseIndonesianPrice(proposedPriceRaw) : NaN;
+      var proposedPriceValid = isFinite(proposedPrice) && proposedPrice >= 0;
+      var price = proposedPriceValid ? proposedPrice : (variant.sellingPrice == null ? null : Number(variant.sellingPrice));
+      var margin = complete && price != null ? price - cogs : null;
+      elements.standardCostPreviewCogs.innerText = complete ? formatCOGSValue(cogs) : "Unavailable";
+      elements.standardCostPreviewSellingPrice.innerText = price == null ? "—" : formatProductPrice(price);
+      elements.standardCostPreviewMargin.innerText = margin == null ? "Unavailable" : formatCOGSValue(margin);
+      elements.standardCostPreviewMarginPercent.innerText = margin == null || price === 0 ? "Unavailable" : String(Math.round(margin / price * 10000) / 100) + "%";
+    }
+
+    function ensureInventoryItemsData()
+    {
+      if (inventoryItemsDataLoaded) return;
+      var elements = initializeStableDashboardElements();
+      elements.products.setAttribute("aria-busy", "true");
+      elements.inventoryItemsLoading.hidden = false;
+      elements.inventoryItemsEmpty.hidden = true;
+      elements.inventoryItemsError.hidden = true;
+      google.script.run.withSuccessHandler(function(items)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        elements.inventoryItemsLoading.hidden = true;
+        if (!Array.isArray(items))
+        {
+          elements.inventoryItemsError.hidden = false;
+          return;
+        }
+        inventoryItemsDataLoaded = true;
+        inventoryItemsReadModel = items;
+        renderInventoryItemsList();
+      }).withFailureHandler(function(error)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        elements.inventoryItemsLoading.hidden = true;
+        elements.inventoryItemsError.hidden = false;
+        console.error("Inventory items read failed", error);
+      }).getInventoryItemsReadModel();
+    }
+
+    function renderInventoryItemsList()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.inventoryItemsTableBody.innerHTML = "";
+      elements.inventoryItemsEmpty.hidden = inventoryItemsReadModel.length !== 0;
+      elements.inventoryItemsTableRegion.hidden = inventoryItemsReadModel.length === 0;
+      inventoryItemsReadModel.forEach(function(item)
+      {
+        var row = document.createElement("tr");
+        row.className = "inventory-item-row";
+        row.setAttribute("aria-selected", "false");
+        row.innerHTML = '<td><button type="button" class="product-grid-link"></button></td><td></td><td></td><td></td>';
+        var button = row.cells[0].querySelector("button");
+        button.dataset.itemId = item.ItemID;
+        button.innerText = item.ItemName;
+        button.setAttribute("aria-label", "View details for " + item.ItemName);
+        button.addEventListener("click", function() { renderInventoryItemDetail(this.dataset.itemId); });
+        row.cells[1].innerText = item.Classification;
+        row.cells[2].innerText = item.BaseUOM;
+        row.cells[3].innerText = item.IsActive ? "Active" : "Inactive";
+        elements.inventoryItemsTableBody.appendChild(row);
+      });
+    }
+
+    function renderInventoryItemDetail(itemId)
+    {
+      var item = inventoryItemsReadModel.find(function(candidate) { return candidate.ItemID === itemId; });
+      if (!item) return;
+      var elements = initializeStableDashboardElements();
+      Array.prototype.forEach.call(elements.inventoryItemsTableBody.rows, function(row)
+      {
+        row.setAttribute("aria-selected", String(row.cells[0].querySelector("button").dataset.itemId === itemId));
+      });
+      var fields = [["Item ID", item.ItemID], ["Item Name", item.ItemName], ["Classification", item.Classification],
+        ["Base UOM", item.BaseUOM], ["Status", item.IsActive ? "Active" : "Inactive"],
+        ["Recipe Usage Count", item.recipeUsageCount], ["Standard Cost", item.standardCost == null ? "Not configured" : item.standardCost]];
+      var table = document.createElement("table");
+      table.className = "products-grid products-grid--detail";
+      table.innerHTML = '<thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead><tbody></tbody>';
+      fields.forEach(function(field)
+      {
+        var row = table.tBodies[0].insertRow();
+        var label = document.createElement("th");
+        label.scope = "row";
+        label.className = "py-2 text-left font-normal ui-theme-muted";
+        label.innerText = field[0];
+        row.appendChild(label);
+        row.insertCell().innerText = field[1];
+      });
+      elements.inventoryItemDetailContent.innerHTML = "";
+      elements.inventoryItemDetailContent.appendChild(table);
+      elements.inventoryItemDetailEmpty.hidden = true;
+      elements.inventoryItemDetailContent.hidden = false;
+    }
+
+    function ensureProductsData()
+    {
+      if (productsDataLoaded) return;
+      var elements = initializeStableDashboardElements();
+      elements.products.setAttribute("aria-busy", "true");
+      elements.productsLoading.hidden = false;
+      elements.productsEmpty.hidden = true;
+      elements.productsError.hidden = true;
+      google.script.run.withSuccessHandler(function(products)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        elements.productsLoading.hidden = true;
+        if (!Array.isArray(products))
+        {
+          elements.productsError.hidden = false;
+          return;
+        }
+        productsDataLoaded = true;
+        productsReadModel = products;
+        renderProductsList();
+      }).withFailureHandler(function(error)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        elements.productsLoading.hidden = true;
+        elements.productsError.hidden = false;
+        console.error("Products read failed", error);
+      }).getProductCatalogReadModel();
+    }
+
+    function renderProductsList()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.productsTableBody.innerHTML = "";
+      elements.productsEmpty.hidden = productsReadModel.length !== 0;
+      elements.productsTableRegion.hidden = productsReadModel.length === 0;
+      productsReadModel.forEach(function(product)
+      {
+        var row = document.createElement("tr");
+        row.innerHTML = '<td><button type="button" class="product-grid-link"></button></td><td></td><td></td><td></td>';
+        var button = row.cells[0].querySelector("button");
+        button.dataset.productId = product.ID_Prod;
+        button.innerText = product.Produk;
+        button.setAttribute("aria-label", "View details for " + product.Produk);
+        button.addEventListener("click", function() { renderProductDetail(this.dataset.productId); });
+        row.cells[1].innerText = product.Kategori;
+        row.cells[2].innerText = product.Kind;
+        row.cells[3].innerText = product.IsActive ? "Active" : "Inactive";
+        elements.productsTableBody.appendChild(row);
+      });
+    }
+
+    function formatProductPrice(value)
+    {
+      if (value === "" || value == null || !isFinite(Number(value))) return "—";
+      return new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 1 }).format(Number(value));
+    }
+
+    function formatCOGSValue(value)
+    {
+      if (value === "" || value == null || !isFinite(Number(value))) return "—";
+      var n = Number(value);
+      var normalized = n >= 0 ? Math.ceil(n / 10) * 10 : Math.floor(n / 10) * 10;
+      return new Intl.NumberFormat("id-ID", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(normalized);
+    }
+
+    function appendProductPriceCell(row, pricing)
+    {
+      var value = row.insertCell();
+      value.className = "product-grid-badges";
+      ["Cold", "Hot"].forEach(function(type)
+      {
+        var badge = document.createElement("span");
+        badge.className = "product-variant-badge product-variant-badge--" + type.toLowerCase();
+        badge.setAttribute("aria-label", type + " price");
+        badge.title = type + " price";
+        badge.innerText = formatProductPrice(pricing && pricing[type]);
+        value.appendChild(badge);
+      });
+    }
+
+    function appendProductRecipeComposition(container, components)
+    {
+      var section = document.createElement("section");
+      section.className = "mt-4";
+      var heading = document.createElement("h3");
+      heading.className = "font-semibold ui-theme-primary";
+      heading.innerText = "Recipe Composition";
+      section.appendChild(heading);
+      var scroll = document.createElement("div");
+      scroll.className = "products-grid-scroll mt-3";
+      var table = document.createElement("table");
+      table.className = "products-grid products-grid--recipe";
+      table.innerHTML = '<tbody></tbody>';
+      var body = table.tBodies[0];
+      ["Cold", "Hot"].forEach(function(type)
+      {
+        var groupHeading = body.insertRow();
+        var groupHeadingCell = groupHeading.insertCell();
+        groupHeadingCell.colSpan = 2;
+        groupHeadingCell.className = "product-recipe-group-heading product-recipe-group-heading--" + type.toLowerCase();
+        groupHeadingCell.innerText = type;
+        var columnHeading = body.insertRow();
+        var componentHeading = document.createElement("th");
+        componentHeading.scope = "col";
+        componentHeading.innerText = "Component";
+        columnHeading.appendChild(componentHeading);
+        var usageHeading = document.createElement("th");
+        usageHeading.scope = "col";
+        usageHeading.innerText = "Usage";
+        columnHeading.appendChild(usageHeading);
+        var variantComponents = components && components[type] || [];
+        if (!variantComponents.length) variantComponents = [null];
+        variantComponents.forEach(function(component)
+        {
+          var row = body.insertRow();
+          row.insertCell().innerText = component ? component.ingredientName : "—";
+          row.insertCell().innerText = component ? String(component.UsageQty) + " " + component.BaseUOM : "—";
+        });
+      });
+      scroll.appendChild(table);
+      section.appendChild(scroll);
+      container.appendChild(section);
+    }
+
+    function renderProductDetail(productId)
+    {
+      var product = productsReadModel.find(function(candidate) { return candidate.ID_Prod === productId; });
+      if (!product) return;
+      var elements = initializeStableDashboardElements();
+      var fields = [["Product ID", product.ID_Prod], ["Product Name", product.Produk], ["Category", product.Kategori],
+        ["Kind", product.Kind], ["Status", product.IsActive ? "Active" : "Inactive"],
+        ["Has Pricing", product.hasPricing ? "Yes" : "No"]];
+      elements.productDetailContent.innerHTML = "";
+      var table = document.createElement("table");
+      table.className = "products-grid products-grid--detail";
+      table.innerHTML = '<thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead><tbody></tbody>';
+      fields.forEach(function(field)
+      {
+        var row = table.tBodies[0].insertRow();
+        var label = document.createElement("th");
+        label.scope = "row";
+        label.className = "py-2 text-left font-normal ui-theme-muted";
+        label.innerText = field[0];
+        row.appendChild(label);
+        var value = row.insertCell();
+        value.className = "py-2 font-semibold ui-theme-primary";
+        value.innerText = field[1];
+      });
+      [["Current HPP", product.currentHPP], ["Current Harga", product.currentHarga]].forEach(function(field)
+      {
+        var row = table.tBodies[0].insertRow();
+        var label = document.createElement("th");
+        label.scope = "row";
+        label.className = "py-2 text-left font-normal ui-theme-muted";
+        label.innerText = field[0];
+        row.appendChild(label);
+        appendProductPriceCell(row, field[1]);
+      });
+      elements.productDetailContent.appendChild(table);
+      appendProductRecipeComposition(elements.productDetailContent, product.recipeComponents);
+      elements.productDetailEmpty.hidden = true;
+      elements.productDetailContent.hidden = false;
     }
 
     function getResolvedTheme(preference)

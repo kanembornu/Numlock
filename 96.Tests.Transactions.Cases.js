@@ -900,8 +900,8 @@ function testTransactionEntryUiContract()
   });
   scenarios++;
 
-  ['{ transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty }',
-    '{ transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount }',
+  ['{ transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty, cashAccountCode: state.cashAccountCode }',
+    '{ transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount, cashAccountCode: state.cashAccountCode }',
     '.submitCanonicalTransaction(payload);', 'if (state.submitting || entry.submit.disabled) return;',
     'state.submitting = true;', 'state.submissionComplete = true;',
     'state.submitting || state.submissionComplete || state.loadingOptions',
@@ -1704,4 +1704,127 @@ function testTransactionsVisualContract()
   );
 
   return summary;
+}
+
+function testCashAccountSelectorContract()
+{
+  var timestamp = new Date(2026, 7, 15, 10, 0, 0, 0);
+  var scenarios = 0;
+
+  function memorySheet(headers) {
+    var rows = [headers.slice()];
+    return {
+      rows: rows,
+      getLastColumn: function() { return rows[0].length; },
+      getLastRow: function() { return rows.length; },
+      deleteRow: function(row) { rows.splice(row - 1, 1); },
+      getDataRange: function() { return { getValues: function() { return rows.map(function(r) { return r.slice(); }); } }; },
+      getRange: function(row, col, numRows, numCols) {
+        return {
+          setValues: function(values) { rows[row - 1] = values[0].slice(); },
+          getValues: function() { return [rows[row - 1].slice(col - 1, col - 1 + numCols)]; },
+          getValue: function() { return rows[row - 1] ? rows[row - 1][col - 1] : ""; }
+        };
+      },
+      createTextFinder: function(value) {
+        var col = 1;
+        return { matchEntireCell: function() { return this; }, findNext: function() {
+          for (var i = 1; i < rows.length; i++) if (String(rows[i][col - 1]) === String(value)) return { getRange: function() { return { getRow: function() { return i + 1; } }; } };
+          return null;
+        } };
+      }
+    };
+  }
+
+  var salesLedger = memorySheet(CANONICAL_ENTRY.SALES_HEADERS);
+  var expenseLedger = memorySheet(CANONICAL_ENTRY.EXPENSE_HEADERS);
+  var logsLedger = memorySheet(CANONICAL_ENTRY.LOG_HEADERS);
+  var accountsSheet = memorySheet(["AccountCode", "AccountName", "AccountType", "IsActive", "Description"]);
+  accountsSheet.rows.push(["1000", "Cash on Hand", "ASSET", true, "Cash on hand"]);
+  accountsSheet.rows.push(["1010", "DANA", "ASSET", true, "DANA Business"]);
+  accountsSheet.rows.push(["1020", "BluBCA", "ASSET", true, "BluBCA"]);
+  accountsSheet.rows.push(["6100", "Utilities", "EXPENSE", true, "Utilities"]);
+  var productsSheet = memorySheet(["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"]);
+  productsSheet.rows.push(["P1", "Espresso", "Coffee", "Beverage", "", "4100", true]);
+  var expenseItemsSheet = memorySheet(["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]);
+  expenseItemsSheet.rows.push(["O1", "Electricity", "Utility", "Operating", "Overhead", "6100", true]);
+  var pricingSheet = memorySheet(["ID_Prod", "Tipe", "EffectiveFrom", "EffectiveTo", "HPP", "Harga", "IsActive"]);
+  pricingSheet.rows.push(["P1", "Hot", new Date(2026, 0, 1), "", 4000, 10000, true]);
+
+  var sheets = {
+    tabsal: salesLedger, tabops: expenseLedger, Logs: logsLedger,
+    Accounts: accountsSheet, Products: productsSheet, ExpenseItems: expenseItemsSheet, ProductPricing: pricingSheet
+  };
+  var mockSpreadsheet = { getSheetByName: function(name) { return sheets[name] || null; } };
+  var uuidIndex = 0;
+  var mockRuntime = {
+    environment: "LOCAL_FIXTURE",
+    lock: { waitLock: function() {}, releaseLock: function() {} },
+    spreadsheet: function() { return mockSpreadsheet; },
+    now: function() { return timestamp; },
+    uuid: function() { uuidIndex++; return "CA-UUID-" + uuidIndex; },
+    flush: function() {},
+    invalidate: function() {}
+  };
+
+  function expectRefused(payload, message) {
+    var result = submitCanonicalTransactionWithRuntime_(payload, mockRuntime);
+    if (result.status !== "REFUSED") throw new Error("Expected REFUSED for " + message + "; got " + result.status + " success=" + result.success);
+    scenarios++;
+  }
+
+  // 1. Missing cashAccountCode sales
+  expectRefused({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 1 }, "missing cashAccountCode sales");
+  // 2. Empty string
+  expectRefused({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 1, cashAccountCode: "" }, "empty cashAccountCode");
+  // 3. Invalid code
+  expectRefused({ transactionType: "SALES", productId: "P1", type: "Hot", qty: 1, cashAccountCode: "9999" }, "invalid code 9999");
+  // 4. Missing cashAccountCode expense
+  expectRefused({ transactionType: "EXPENSE", expenseItemId: "O1", amount: 50000 }, "missing cashAccountCode expense");
+  // 5. Expense with invalid code
+  expectRefused({ transactionType: "EXPENSE", expenseItemId: "O1", amount: 50000, cashAccountCode: "9999" }, "invalid cash account for expense");
+
+  // 6. Valid Sales with 1000
+  var validSales = submitCanonicalTransactionWithRuntime_(
+    { transactionType: "SALES", productId: "P1", type: "Hot", qty: 1, cashAccountCode: "1000" }, mockRuntime);
+  if (validSales.success !== true || !validSales.data) throw new Error("Valid Sales 1000 should succeed");
+  scenarios++;
+
+  // 7. Expense REFUSED when cashAccountCode passes but item lacks policy coverage
+  var expenseResult = submitCanonicalTransactionWithRuntime_(
+    { transactionType: "EXPENSE", expenseItemId: "O1", amount: 50000, cashAccountCode: "1010" }, mockRuntime);
+  // cashAccountCode validation passes, but O1 has no purchase policy coverage → REFUSED by routing
+  if (expenseResult.status !== "REFUSED") throw new Error("Expense routing should REFUSE uncovered item");
+  scenarios++;
+
+  // 8. Valid Sales with 1020
+  var validSales2 = submitCanonicalTransactionWithRuntime_(
+    { transactionType: "SALES", productId: "P1", type: "Hot", qty: 1, cashAccountCode: "1020" }, mockRuntime);
+  if (validSales2.success !== true || !validSales2.data) throw new Error("Valid Sales 1020 should succeed");
+  scenarios++;
+
+  // 9. Client-side UI source checks
+  var source = getAssembledFrontendSource();
+  [
+    'function setCashAccountCode(context, code)',
+    'state.cashAccountCode = code',
+    'setAttribute("aria-checked"',
+    'state.cashAccountCode',
+    'CashAccount',
+    'cashAccountCode: state.cashAccountCode',
+    'INVALID_CASH_ACCOUNT',
+    'INACTIVE_CASH_ACCOUNT',
+    'receiptCashAccount',
+    'id="salesCashAccount1000"',
+    'id="expenseCashAccount1010"',
+    'id="receiptCashAccount"',
+    'onclick="setCashAccountCode(\'sales\', \'1000\')"',
+    'onclick="setCashAccountCode(\'expense\', \'1020\')"'
+  ].forEach(function(token) {
+    assertSourceContains(source, token, "cash account selector contract");
+  });
+  scenarios++;
+
+  Logger.log("PASS: testCashAccountSelectorContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
 }

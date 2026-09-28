@@ -6,8 +6,8 @@
       if (state.submitting || entry.submit.disabled) return;
       if (isPurchaseExpenseEntry() || state.transactionType === "INVENTORY_RECEIPT") { submitReceiptEntry(); return; }
       var payload = state.transactionType === "SALES"
-        ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty }
-        : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount };
+        ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty, cashAccountCode: state.cashAccountCode }
+        : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount, cashAccountCode: state.cashAccountCode };
       if (state.mode === "correction") {
         payload.transactionId = state.originalDetail.id;
         payload.reason = state.correctionReason.trim();
@@ -520,8 +520,11 @@
       if (!state.receiptPayload) {
         var input = validateReceiptEntry(true);
         if (!input) return;
+        var cashAccountSelect = document.getElementById("receiptCashAccount");
+        var cashAccountCode = cashAccountSelect ? cashAccountSelect.value : "";
+        state.cashAccountCode = cashAccountCode;
         if (!state.receiptKey) state.receiptKey = "receipt-" + Array.from(crypto.getRandomValues(new Uint8Array(16)), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
-        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input };
+        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input, cashAccountCode: cashAccountCode };
       }
       try {
         window.sessionStorage.setItem("numlock.receipt.pending", JSON.stringify({ payload: state.receiptPayload,

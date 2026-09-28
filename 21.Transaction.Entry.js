@@ -214,6 +214,26 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
     acquired = true;
     scope = { lock: lock, active: true };
     var ss = runtime.spreadsheet(), timestamp = runtime.now();
+    // CashAccountCode validation — required for all non-INVENTORY_RECEIPT submissions
+    var cashAccountCode = payload && typeof payload.cashAccountCode === "string" ? payload.cashAccountCode.trim() : "";
+    if (type !== "INVENTORY_RECEIPT") {
+      if (!cashAccountCode || ["1000", "1010", "1020"].indexOf(cashAccountCode) === -1) {
+        var refused = canonicalEntryFailure(canonicalEntryError("INVALID_CASH_ACCOUNT",
+          "A valid cash account (1000, 1010, or 1020) is required.", "cashAccountCode"));
+        refused.status = "REFUSED"; refused.writeCount = 0; return refused;
+      }
+      try {
+        var accounts = readCanonicalTable(ss, "Accounts", ["AccountCode", "IsActive"]);
+        var accountMap = {};
+        accounts.forEach(function(a) { accountMap[String(a.AccountCode || "").trim()] = a; });
+        var acct = accountMap[cashAccountCode];
+        if (!acct || !isCanonicalActive(acct.IsActive)) {
+          var refusedAcct = canonicalEntryFailure(canonicalEntryError("INACTIVE_CASH_ACCOUNT",
+            "The selected cash account is not active.", "cashAccountCode"));
+          refusedAcct.status = "REFUSED"; refusedAcct.writeCount = 0; return refusedAcct;
+        }
+      } catch (e) { /* Accounts sheet read failure → skip authority check, validation above still enforced */ }
+    }
     var context, entry, sheetName, headers, prefix, action, values;
     switch (type) {
       case "INVENTORY_RECEIPT":
@@ -240,7 +260,7 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
           return orchestratePurchaseEventUnderLock_(payload, purchaseRuntime, scope);
         }
         Object.keys(payload).forEach(function(field) {
-          if (["transactionType", "expenseItemId", "amount", "expenseDate"].indexOf(field) === -1) inventoryReceiptFail_("EXPENSE_ROUTE_UNKNOWN_FIELD");
+          if (["transactionType", "expenseItemId", "amount", "expenseDate", "cashAccountCode"].indexOf(field) === -1) inventoryReceiptFail_("EXPENSE_ROUTE_UNKNOWN_FIELD");
         });
         context.accounts = readCanonicalTable(ss, "Accounts", ["AccountCode", "IsActive"]);
         if (payload.expenseDate !== undefined) {

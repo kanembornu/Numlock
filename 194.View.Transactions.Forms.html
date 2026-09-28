@@ -4,6 +4,7 @@
         receiptKey: null, receiptPayload: null, receiptUnresolved: false, receiptChoices: [], receiptChoicesVersion: 0,
         costType: "FIXED_COST", transactionType: null, entryOptions: null, selectedProduct: null,
         selectedExpense: null, selectedType: null, qty: 1, amount: null,
+        cashAccountCode: null,
         pricing: null, pricingSource: "unknown", lastPriceReadyLatencyMs: null,
         loadingOptions: false, loadingPricing: false,
         submitting: false, optionsLoaded: false, optionsRevision: "", pricingRequestVersion: 0,
@@ -36,9 +37,11 @@
       var entry = initializeStableDashboardElements().transactionEntry;
       var state = transactionEntryState;
       var validSales = state.transactionType === "SALES" && state.selectedProduct &&
-        state.selectedType && Number.isInteger(state.qty) && state.qty >= 1 && state.pricing;
+        state.selectedType && Number.isInteger(state.qty) && state.qty >= 1 && state.pricing &&
+        state.cashAccountCode;
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
-        (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0);
+        (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0) &&
+        state.cashAccountCode;
       var correctionReasonValid = state.mode !== "correction" || state.correctionReason.trim().length >= 3;
       entry.submit.disabled = state.receiptUnresolved || state.submitting || state.submissionComplete || state.loadingOptions ||
         !(validSales || validExpense || state.transactionType === "INVENTORY_RECEIPT" && !state.receiptUnresolved) || !correctionReasonValid;
@@ -48,6 +51,19 @@
         : state.mode === "correction"
           ? (state.correctionStage === "review" ? "Confirm Correction" : "Review Correction")
           : "Save Transaction";
+    }
+
+    function setCashAccountCode(context, code) {
+      var state = transactionEntryState;
+      state.cashAccountCode = code;
+      var prefix = context === "sales" ? "sales" : "expense";
+      ["1000", "1010", "1020"].forEach(function(c) {
+        var btn = document.getElementById(prefix + "CashAccount" + c);
+        if (btn) btn.setAttribute("aria-checked", String(c === code));
+      });
+      var errorEl = document.getElementById(prefix + "CashAccountError");
+      if (errorEl) errorEl.innerText = "";
+      updateTransactionEntrySubmitState();
     }
 
     function openTransactionEntry()
@@ -149,10 +165,19 @@
         transactionEntryState.selectedExpense = null; transactionEntryState.amount = null;
         transactionEntryState.selectedProduct = null; transactionEntryState.selectedType = null;
         transactionEntryState.pricing = null; transactionEntryState.loadingPricing = false;
+        transactionEntryState.cashAccountCode = null;
         transactionEntryState.pricingRequestVersion++;
         entry.expenseSearch.value = ""; entry.amount.value = ""; entry.productSearch.value = "";
         entry.expenseMeta.innerText = ""; entry.productMeta.innerText = "";
         entry.typeHot.setAttribute("aria-checked", "false"); entry.typeCold.setAttribute("aria-checked", "false");
+        ["1000", "1010", "1020"].forEach(function(c) {
+          var salesBtn = document.getElementById("salesCashAccount" + c);
+          if (salesBtn) salesBtn.setAttribute("aria-checked", "false");
+          var expenseBtn = document.getElementById("expenseCashAccount" + c);
+          if (expenseBtn) expenseBtn.setAttribute("aria-checked", "false");
+        });
+        var receiptCashSelect = document.getElementById("receiptCashAccount");
+        if (receiptCashSelect) receiptCashSelect.value = "";
         clearReceiptEntry();
         renderTransactionEntryPricing();
       }
@@ -448,6 +473,8 @@
         TRANSACTION_READ_ONLY: "Historical transactions cannot be changed.",
         TRANSACTION_ALREADY_VOIDED: "This transaction has already been voided.",
         INVALID_VOID_REASON: "Enter a meaningful reason.",
+        INVALID_CASH_ACCOUNT: "Select a valid cash account.",
+        INACTIVE_CASH_ACCOUNT: "The selected cash account is not active.",
         WRITE_FAILED: "Transaction could not be saved. Please try again."
       }[code] || "Transaction could not be saved. Please try again.";
     }
@@ -460,6 +487,10 @@
       if (code === "INVALID_QTY") entry.qtyError.innerText = message;
       else if (code === "INVALID_AMOUNT") entry.amountError.innerText = message;
       else if (code === "INVALID_VOID_REASON" && transactionEntryState.mode === "correction") entry.correctionReasonError.innerText = message;
+      else if (code === "INVALID_CASH_ACCOUNT" || code === "INACTIVE_CASH_ACCOUNT") {
+        var cashErrorEl = document.getElementById(transactionEntryState.transactionType === "SALES" ? "salesCashAccountError" : "expenseCashAccountError");
+        if (cashErrorEl) cashErrorEl.innerText = message; else entry.generalError.innerText = message;
+      }
       else if (code.indexOf("PRODUCT_") === 0) entry.productError.innerText = message;
       else if (code.indexOf("EXPENSE_ITEM_") === 0) entry.expenseError.innerText = message;
       else if (context === "pricing") entry.pricingState.innerText = message;
@@ -504,6 +535,14 @@
       entry.typeExpense.setAttribute("aria-checked", "false");
       entry.typeHot.setAttribute("aria-checked", "false");
       entry.typeCold.setAttribute("aria-checked", "false");
+      ["1000", "1010", "1020"].forEach(function(c) {
+        var salesBtn = document.getElementById("salesCashAccount" + c);
+        if (salesBtn) salesBtn.setAttribute("aria-checked", "false");
+        var expenseBtn = document.getElementById("expenseCashAccount" + c);
+        if (expenseBtn) expenseBtn.setAttribute("aria-checked", "false");
+      });
+      var receiptCashSelect = document.getElementById("receiptCashAccount");
+      if (receiptCashSelect) receiptCashSelect.value = "";
       entry.productMeta.innerText = ""; entry.expenseMeta.innerText = "";
       entry.productError.innerText = ""; entry.expenseError.innerText = "";
       entry.salesTypeError.innerText = ""; entry.qtyError.innerText = "";
@@ -557,7 +596,7 @@
     {
       var e = receiptEntryElements(), state = transactionEntryState;
       state.receiptKey = null; state.receiptPayload = null;
-      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested"].forEach(function(key) {
+      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount"].forEach(function(key) {
         e[key].value = ""; e[key].checked = false; e[key].setAttribute("aria-invalid", "false");
         e[key + "Error"].innerText = "";
       });
@@ -586,7 +625,9 @@
       if (!e.Supplier.value.trim()) errors.Supplier = "Enter the supplier or purchase source.";
       if (!e.Unavailable.checked && !e.Reference.value.trim()) errors.Reference = "Enter an evidence reference or declare the document unavailable.";
       if (!e.Attested.checked) errors.Attested = "Confirm that these details reflect what was actually received.";
-      if (showErrors) ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "expenseDate"].forEach(function(key) {
+      var cashAccount = e.CashAccount ? e.CashAccount.value : "";
+      if (!cashAccount || ["1000", "1010", "1020"].indexOf(cashAccount) === -1) errors.CashAccount = "Select a payment account.";
+      if (showErrors) ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount", "expenseDate"].forEach(function(key) {
         e[key + "Error"].innerText = errors[key] || ""; e[key].setAttribute("aria-invalid", String(Boolean(errors[key])));
       });
       if (Object.keys(errors).length || !isPurchaseExpenseEntry()) return null;
