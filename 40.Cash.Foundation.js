@@ -897,6 +897,123 @@ function runCashFoundationSchemaRecovery(migrationRecord) {
   } finally { if (acquired) lock.releaseLock(); }
 }
 
+function cashBridgeCanonicalTransactions(ss, cutoffDate) {
+  var transactions = [];
+
+  // Bridge Sales
+  try {
+    var sales = readCanonicalTable(ss, "tabsal",
+      ["ID_Trx", "Tanggal", "ID_Prod", "Qty", "HJ", "IsActive"]);
+    var products = readCanonicalTable(ss, "Products",
+      ["ID_Prod", "RevenueAccountCode", "IsActive"]);
+    var productMap = {};
+    (products || []).forEach(function(p) {
+      if (isCanonicalActive(p.IsActive)) {
+        productMap[String(p.ID_Prod || "").trim()] = p;
+      }
+    });
+    (sales || []).forEach(function(row) {
+      if (!isCanonicalActive(row.IsActive)) return;
+      var date = canonicalDate(row.Tanggal);
+      if (!date) return;
+      var dateKey = canonicalDateKey(date);
+      if (!(dateKey > cutoffDate)) return;
+      var id = String(row.ID_Trx || "").trim();
+      if (!id) return;
+      var qty = Number(row.Qty), price = Number(row.HJ);
+      if (!isFinite(qty) || !isFinite(price) || qty <= 0 || price <= 0) return;
+      var amount = qty * price;
+      var productId = String(row.ID_Prod || "").trim();
+      var product = productMap[productId];
+      if (!product) return;
+      var revenueAccountCode = String(product.RevenueAccountCode || "").trim();
+      if (!revenueAccountCode) return;
+      transactions.push({
+        id: id,
+        canonicalTransactionType: "Sales",
+        dateKey: dateKey,
+        amount: amount,
+        approvedPaidAmount: amount,
+        paymentTiming: "AT_RECOGNITION",
+        revenueAccountCode: revenueAccountCode,
+        isActive: true
+      });
+    });
+  } catch (e) { /* tabsal or Products sheet absent → no Sales transactions */ }
+
+  // Bridge Expenses
+  try {
+    var expenses = readCanonicalTable(ss, "tabops",
+      ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "IsActive"]);
+    var expenseItems = readCanonicalTable(ss, "ExpenseItems",
+      ["ID_Ops", "AccountCode", "IsActive"]);
+    var expenseItemMap = {};
+    (expenseItems || []).forEach(function(item) {
+      if (isCanonicalActive(item.IsActive)) {
+        expenseItemMap[String(item.ID_Ops || "").trim()] = item;
+      }
+    });
+    (expenses || []).forEach(function(row) {
+      if (!isCanonicalActive(row.IsActive)) return;
+      var date = canonicalDate(row.Tanggal);
+      if (!date) return;
+      var dateKey = canonicalDateKey(date);
+      if (!(dateKey > cutoffDate)) return;
+      var id = String(row.ID_Trx || "").trim();
+      if (!id) return;
+      var amount = Number(row.Nilai);
+      if (!isFinite(amount) || amount <= 0) return;
+      var expenseId = String(row.ID_Ops || "").trim();
+      var item = expenseItemMap[expenseId];
+      if (!item) return;
+      var expenseAccountCode = String(item.AccountCode || "").trim();
+      if (!expenseAccountCode) return;
+      transactions.push({
+        id: id,
+        canonicalTransactionType: "Expense",
+        dateKey: dateKey,
+        amount: amount,
+        approvedPaidAmount: amount,
+        paymentTiming: "AT_RECOGNITION",
+        expenseAccountCode: expenseAccountCode,
+        isActive: true
+      });
+    });
+  } catch (e) { /* tabops or ExpenseItems sheet absent → no Expense transactions */ }
+
+  return transactions;
+}
+
+function cashBridgeCanonicalPurchaseEvents(ss, cutoffDate) {
+  var events = [];
+  var sheet = ss.getSheetByName("PurchaseEvents");
+  if (!sheet || sheet.getLastRow() <= 1) return events;
+  try {
+    var rows = readCanonicalTable(ss, "PurchaseEvents",
+      ["EventID", "AcquisitionValue", "PurchaseRelationship", "IsActive", "ExpenseDate"]);
+    (rows || []).forEach(function(row) {
+      if (!isCanonicalActive(row.IsActive)) return;
+      var expenseDate = String(row.ExpenseDate || "").trim();
+      if (!expenseDate || !(expenseDate > cutoffDate)) return;
+      var eventId = String(row.EventID || "").trim();
+      if (!eventId) return;
+      var acquisitionValue = Number(row.AcquisitionValue);
+      if (!isFinite(acquisitionValue) || acquisitionValue <= 0) return;
+      var purchaseRelationship = String(row.PurchaseRelationship || "").trim();
+      if (!purchaseRelationship) return;
+      events.push({
+        id: eventId,
+        EventID: eventId,
+        canonicalTransactionType: "PurchaseEvent",
+        acquisitionValue: acquisitionValue,
+        purchaseRelationship: purchaseRelationship,
+        isActive: true
+      });
+    });
+  } catch (e) { /* PurchaseEvents sheet absent or malformed → empty */ }
+  return events;
+}
+
 function createCashProductionRuntimeWithSpreadsheet(spreadsheet, options) {
   options = options || {};
   var lockFactory = options.lockFactory || function() { return LockService.getScriptLock(); };
@@ -944,8 +1061,8 @@ function createCashProductionRuntimeWithSpreadsheet(spreadsheet, options) {
         accounts: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(aSheet)),
         settlements: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(sSheet)),
         balanceLedger: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(lSheet)),
-        transactions: [],
-        purchaseEvents: []
+        transactions: cashBridgeCanonicalTransactions(spreadsheet, CASH_FOUNDATION_POLICY.CUTOVER_DATE),
+        purchaseEvents: cashBridgeCanonicalPurchaseEvents(spreadsheet, CASH_FOUNDATION_POLICY.CUTOVER_DATE)
       };
     },
     writeSettlement: function(row) {

@@ -1,7 +1,7 @@
 /**
  * Authoritative backend test registry.
  * Single source of truth for both runAllBackendTests and runAllBackendTestsDiagnostic.
- * 114 registered entries. Membership, order, and function references are frozen.
+ * 117 registered entries. Membership, order, and function references are frozen.
  */
 function getBackendTestRegistry()
 {
@@ -12,6 +12,7 @@ function getBackendTestRegistry()
     { name: "testCanonicalTransactionAdapter", run: testCanonicalTransactionAdapter },
     { name: "testBoundedCanonicalRead", run: testBoundedCanonicalRead },
     { name: "testProductPricingResolution", run: testProductPricingResolution },
+    { name: "testProductsDomainContract", run: testProductsDomainContract },
     { name: "testCanonicalTransactionEntryService", run: testCanonicalTransactionEntryService },
     { name: "testCanonicalTransactionLifecycleService", run: testCanonicalTransactionLifecycleService },
     { name: "testCanonicalLifecycleTransportSerialization", run: testCanonicalLifecycleTransportSerialization },
@@ -52,6 +53,7 @@ function getBackendTestRegistry()
     { name: "testDepreciationReportContract", run: testDepreciationReportContract },
     { name: "testCapitalEquityMigrationContract", run: testCapitalEquityMigrationContract },
     { name: "testCashFoundationContracts", run: testCashFoundationContracts },
+    { name: "testCashProductionRuntimeAuthorityBridge", run: testCashProductionRuntimeAuthorityBridge },
     { name: "testInventorySchemaMigrationContract", run: testInventorySchemaMigrationContract },
     { name: "testInventoryConversionAuthorityContracts", run: testInventoryConversionAuthorityContracts },
     { name: "testInventoryOpeningStagingContracts", run: testInventoryOpeningStagingContracts },
@@ -95,6 +97,7 @@ function getBackendTestRegistry()
     { name: "testUiUx2ClosureContract", run: testUiUx2ClosureContract },
     { name: "testUiFinalStabilizationContract", run: testUiFinalStabilizationContract },
     { name: "testChartPresentationContract", run: testChartPresentationContract },
+    { name: "testProductsReadSurfaceContract", run: testProductsReadSurfaceContract },
     { name: "testFrontendDependencyContract", run: testFrontendDependencyContract },
     { name: "testReportingMetadata", run: testReportingMetadata },
     { name: "testDataQualityDiagnostics", run: testDataQualityDiagnostics },
@@ -125,7 +128,7 @@ function getBackendTestRegistry()
 
 /**
  * Authoritative fail-fast backend test runner.
- * Runs all 114 registered tests. Stops on first failure.
+ * Runs all 117 registered tests. Stops on first failure.
  */
 function runAllBackendTests()
 {
@@ -174,7 +177,7 @@ function runAllBackendTests()
 
 /**
  * Non-fail-fast diagnostic backend test runner.
- * Runs all 114 registered tests. Catches every failure and continues.
+ * Runs all 117 registered tests. Catches every failure and continues.
  * Returns aggregate result with all failures.
  */
 function runAllBackendTestsDiagnostic()

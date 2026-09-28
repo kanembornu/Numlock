@@ -1248,6 +1248,263 @@ function testCashProductionRuntimeAdapter() {
   return { passed: true, scenarios: scenarios };
 }
 
+function testCashProductionRuntimeAuthorityBridge() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+
+  var CUTOVER = "2026-09-30";
+
+  // --- Helper: build mock spreadsheet with given sheets ---
+  function buildMockSpreadsheet(sheetConfigs) {
+    var sheets = [];
+    sheetConfigs.forEach(function(cfg) {
+      sheets.push(capitalEquitySchemaTestSheet(cfg.name, cfg.rows, null, { maxColumns: cfg.maxColumns || 10 }));
+    });
+    return capitalEquitySchemaTestSpreadsheet(sheets);
+  }
+
+  function tabOpsHeaders() { return ["ID_Trx", "Tanggal", "ID_Ops", "Nilai", "Source", "IsActive"]; }
+  function tabSalHeaders() { return ["ID_Trx", "Tanggal", "ID_Prod", "Tipe", "Qty", "HPP", "HJ", "Source", "IsActive"]; }
+  function productsHeaders() { return ["ID_Prod", "Produk", "Kategori", "Kind", "RevenueAccountCode", "COGSAccountCode", "IsActive"]; }
+  function expenseItemsHeaders() { return ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]; }
+  function purchaseEventsHeaders() { return ["EventID", "ExpenseID", "AcquisitionValue", "PurchaseRelationship", "IsActive", "ExpenseDate"]; }
+
+  function accountsHeaders() { return ["AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive", "CreatedAt", "UpdatedAt", "NormalBalance"]; }
+  function settlementsHeaders() { return ["SettlementID", "Tanggal", "Direction", "AccountCode", "CounterAccountCode", "Amount", "Currency", "SourceType", "SourceID", "RelatedTransactionType", "RelatedTransactionID", "TransferID", "ExternalRef", "Status", "Keterangan", "ReversalOf", "IsActive", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]; }
+  function ledgerHeaders() { return BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS.slice(); }
+
+  // --- 1. Sales bridge: post-cutover active with valid product → included ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-1", "2026-10-01", "P1", "REG", 2, 5000, 10000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 1, "Sales bridge should return 1 transaction");
+    check(txns[0].id === "SALE-1", "Sales bridge id mismatch");
+    check(txns[0].canonicalTransactionType === "Sales", "Sales bridge type");
+    check(txns[0].amount === 20000, "Sales bridge amount=2*10000");
+    check(txns[0].approvedPaidAmount === 20000, "Sales bridge approvedPaidAmount");
+    check(txns[0].paymentTiming === "AT_RECOGNITION", "Sales bridge paymentTiming");
+    check(txns[0].revenueAccountCode === "4000", "Sales bridge revenueAccountCode");
+    check(txns[0].dateKey === "2026-10-01", "Sales bridge dateKey");
+    check(txns[0].isActive === true, "Sales bridge isActive");
+  })();
+
+  // --- 2. Sales bridge pre-cutover: 2026-09-30 → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-PRE", "2026-09-30", "P1", "REG", 1, 5000, 10000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Pre-cutover sale excluded");
+  })();
+
+  // --- 3. Sales bridge 2026-10-01 boundary → included ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-BDY", "2026-10-01", "P1", "REG", 1, 1000, 2000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 1, "2026-10-01 included");
+    check(txns[0].dateKey === "2026-10-01", "2026-10-01 dateKey correct");
+  })();
+
+  // --- 4. Sales bridge inactive → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-INACT", "2026-10-02", "P1", "REG", 1, 5000, 10000, "", false]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Inactive sale excluded");
+  })();
+
+  // --- 5. Sales bridge missing product → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-NOPROD", "2026-10-02", "P-MISSING", "REG", 1, 5000, 10000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Missing product excluded");
+  })();
+
+  // --- 6. Sales bridge empty RevenueAccountCode → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-NOREV", "2026-10-02", "P2", "REG", 1, 5000, 10000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P2", "Product B", "Food", "GOODS", "", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Empty revenueAccountCode excluded");
+  })();
+
+  // --- 7. Sales bridge malformed amount (non-numeric) → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-BAD", "2026-10-02", "P1", "REG", "abc", 5000, 10000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Malformed Qty excluded");
+  })();
+
+  // --- 8. Expense bridge: post-cutover active with valid ExpenseItem → included ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabops", rows: [tabOpsHeaders(), ["EXP-1", "2026-10-02", "OPS-1", 5000, "", true]], maxColumns: 6 },
+      { name: "ExpenseItems", rows: [expenseItemsHeaders(), ["OPS-1", "Salary", "Personnel", "FIXED", "Staff", "6100", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 1, "Expense bridge returns 1");
+    check(txns[0].id === "EXP-1", "Expense bridge id");
+    check(txns[0].canonicalTransactionType === "Expense", "Expense bridge type");
+    check(txns[0].amount === 5000, "Expense bridge amount");
+    check(txns[0].approvedPaidAmount === 5000, "Expense bridge approvedPaidAmount");
+    check(txns[0].paymentTiming === "AT_RECOGNITION", "Expense bridge paymentTiming");
+    check(txns[0].expenseAccountCode === "6100", "Expense bridge expenseAccountCode");
+    check(txns[0].dateKey === "2026-10-02", "Expense bridge dateKey");
+  })();
+
+  // --- 9. Expense bridge pre-cutover: 2026-09-30 → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabops", rows: [tabOpsHeaders(), ["EXP-PRE", "2026-09-30", "OPS-1", 5000, "", true]], maxColumns: 6 },
+      { name: "ExpenseItems", rows: [expenseItemsHeaders(), ["OPS-1", "Salary", "Personnel", "FIXED", "Staff", "6100", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Pre-cutover expense excluded");
+  })();
+
+  // --- 10. Expense bridge inactive → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabops", rows: [tabOpsHeaders(), ["EXP-INACT", "2026-10-02", "OPS-1", 5000, "", false]], maxColumns: 6 },
+      { name: "ExpenseItems", rows: [expenseItemsHeaders(), ["OPS-1", "Salary", "Personnel", "FIXED", "Staff", "6100", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Inactive expense excluded");
+  })();
+
+  // --- 11. Expense bridge missing expenseItem → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabops", rows: [tabOpsHeaders(), ["EXP-NOITEM", "2026-10-02", "OPS-MISSING", 5000, "", true]], maxColumns: 6 },
+      { name: "ExpenseItems", rows: [expenseItemsHeaders(), ["OPS-1", "Salary", "Personnel", "FIXED", "Staff", "6100", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Missing expenseItem excluded");
+  })();
+
+  // --- 12. Expense bridge missing account → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "tabops", rows: [tabOpsHeaders(), ["EXP-NOACCT", "2026-10-02", "OPS-2", 5000, "", true]], maxColumns: 6 },
+      { name: "ExpenseItems", rows: [expenseItemsHeaders(), ["OPS-2", "Salary", "Personnel", "FIXED", "Staff", "", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Empty accountCode excluded");
+  })();
+
+  // --- 13. PurchaseEvent bridge: post-cutover active → included ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "PurchaseEvents", rows: [
+        purchaseEventsHeaders(),
+        ["PE-001", "EXP-001", 500000, "DIRECT_HPP_COMPONENT", true, "2026-10-02"]
+      ], maxColumns: 6 }
+    ]);
+    var events = cashBridgeCanonicalPurchaseEvents(ss, CUTOVER);
+    check(events.length === 1, "PurchaseEvent bridge returns 1");
+    check(events[0].id === "PE-001", "PurchaseEvent id");
+    check(events[0].EventID === "PE-001", "PurchaseEvent EventID");
+    check(events[0].canonicalTransactionType === "PurchaseEvent", "PurchaseEvent type");
+    check(events[0].acquisitionValue === 500000, "PurchaseEvent acquisitionValue");
+    check(events[0].purchaseRelationship === "DIRECT_HPP_COMPONENT", "PurchaseEvent relationship");
+    check(events[0].isActive === true, "PurchaseEvent isActive");
+  })();
+
+  // --- 14. PurchaseEvent bridge pre-cutover → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "PurchaseEvents", rows: [
+        purchaseEventsHeaders(),
+        ["PE-PRE", "EXP-PRE", 500000, "DIRECT_HPP_COMPONENT", true, "2026-09-30"]
+      ], maxColumns: 6 }
+    ]);
+    var events = cashBridgeCanonicalPurchaseEvents(ss, CUTOVER);
+    check(events.length === 0, "Pre-cutover PurchaseEvent excluded");
+  })();
+
+  // --- 15. PurchaseEvent bridge inactive → excluded ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "PurchaseEvents", rows: [
+        purchaseEventsHeaders(),
+        ["PE-INACT", "EXP-INACT", 500000, "DIRECT_HPP_COMPONENT", false, "2026-10-02"]
+      ], maxColumns: 6 }
+    ]);
+    var events = cashBridgeCanonicalPurchaseEvents(ss, CUTOVER);
+    check(events.length === 0, "Inactive PurchaseEvent excluded");
+  })();
+
+  // --- 16. Missing tabsal sheet → transactions = [] (no crash) ---
+  (function() {
+    var ss = buildMockSpreadsheet([
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 }
+    ]);
+    var txns = cashBridgeCanonicalTransactions(ss, CUTOVER);
+    check(txns.length === 0, "Missing tabsal returns empty");
+  })();
+
+  // --- 17. Missing PurchaseEvents sheet → purchaseEvents = [] (no crash) ---
+  (function() {
+    var ss = buildMockSpreadsheet([]);
+    var events = cashBridgeCanonicalPurchaseEvents(ss, CUTOVER);
+    check(events.length === 0, "Missing PurchaseEvents returns empty");
+  })();
+
+  // --- 18. readSheets integration: full mock → DISABLED response ---
+  (function() {
+    var accountsRows = [accountsHeaders()];
+    ["1000", "1010", "1020"].forEach(function(code) {
+      var meta = CASH_FOUNDATION_POLICY.ACCOUNT_METADATA[code];
+      accountsRows.push([code, meta.AccountName, meta.AccountType, meta.StatementGroup,
+        meta.CashFlowGroup, true, "", "", meta.NormalBalance]);
+    });
+    var ss = buildMockSpreadsheet([
+      { name: "Accounts", rows: accountsRows, maxColumns: 9 },
+      { name: "Settlements", rows: [settlementsHeaders()], maxColumns: settlementsHeaders().length },
+      { name: "BalanceLedger", rows: [ledgerHeaders()], maxColumns: ledgerHeaders().length },
+      { name: "tabsal", rows: [tabSalHeaders(), ["SALE-FULL", "2026-10-02", "P1", "REG", 3, 5000, 10000, "", true]], maxColumns: 9 },
+      { name: "Products", rows: [productsHeaders(), ["P1", "Product A", "Food", "GOODS", "4000", "5000", true]], maxColumns: 7 },
+      { name: "tabops", rows: [tabOpsHeaders(), ["EXP-FULL", "2026-10-03", "OPS-1", 2000, "", true]], maxColumns: 6 },
+      { name: "ExpenseItems", rows: [expenseItemsHeaders(), ["OPS-1", "Salary", "Personnel", "FIXED", "Staff", "6100", true]], maxColumns: 7 },
+      { name: "PurchaseEvents", rows: [
+        purchaseEventsHeaders(),
+        ["PE-FULL", "EXP-FULL", 300000, "DIRECT_HPP_COMPONENT", true, "2026-10-04"]
+      ], maxColumns: 6 }
+    ]);
+    var runtime = createCashProductionRuntimeWithSpreadsheet(ss);
+    var sheetsData = runtime.readSheets();
+    check(sheetsData.transactions.length === 2, "readSheets bridge transactions count (1 sales + 1 expense)");
+    check(sheetsData.transactions[0].canonicalTransactionType === "Sales", "readSheets first txn is Sales");
+    check(sheetsData.transactions[1].canonicalTransactionType === "Expense", "readSheets second txn is Expense");
+    check(sheetsData.purchaseEvents.length === 1, "readSheets bridge purchaseEvents count");
+    check(sheetsData.purchaseEvents[0].EventID === "PE-FULL", "readSheets purchaseEvent EventID");
+
+    // Policy gate: ENABLED remains false → runCashSettleAndPersist returns DISABLED (not called here,
+    // as it creates its own runtime). readSheets returning bridge data proves the wiring is in place.
+    check(CASH_PRODUCTION_POLICY.ENABLED === false, "CASH_PRODUCTION_POLICY.ENABLED remains false");
+  })();
+
+  Logger.log("PASS: testCashProductionRuntimeAuthorityBridge | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function cashFoundationTestAccounts() {
   return [
     { AccountCode: "1000", AccountName: "Cash on Hand", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
