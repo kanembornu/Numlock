@@ -39,7 +39,7 @@ var CASH_SCHEMA_RUNTIME = Object.freeze({
 });
 
 var CASH_PRODUCTION_POLICY = Object.freeze({
-  ENABLED: false
+  ENABLED: true
 });
 
 function cashRequireSchemaExecutionRuntime(runtime) {
