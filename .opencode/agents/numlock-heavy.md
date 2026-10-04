@@ -6,6 +6,12 @@ permission:
   edit: allow
   bash:
     "*": deny
+    "clasp run runInventoryPolicyEvidenceDiagnostic": allow
+    "clasp run runCashProductionDiagnostic": allow
+    "clasp run validateFinanceProductionRuntime": allow
+    "clasp run runMonetaryOpeningBoundedReadDiagnostic": allow
+    "clasp run runTabopsDictionaryBoundedReadDiagnostic": allow
+    "clasp run runMonetaryOpeningEvidenceCompletionDiagnostic": allow
     "node *": ask
     "node --check *": allow
     "npm run *": ask
@@ -45,7 +51,17 @@ worktree changes.
 
 Financial semantics may change only when user scope explicitly includes them
 and risk remains R1-R3. No production operations, live migrations, credentials,
-deployment, Git mutations, or `clasp` execution. `clasp push` remains
-R4/Critical and outside Heavy authority. If task crosses boundary, return
-`ESCALATION_REQUIRED` with reason, R4 target, modifications, and checks run.
-Package-runner or interpreter approval never authorizes prohibited side effects.
+deployment, Git mutations, or general `clasp` execution. Exception: when active
+task explicitly authorizes production read evidence, Heavy may execute only
+`clasp run runInventoryPolicyEvidenceDiagnostic`,
+`clasp run runCashProductionDiagnostic`,
+`clasp run validateFinanceProductionRuntime`,
+`clasp run runMonetaryOpeningBoundedReadDiagnostic`,
+`clasp run runTabopsDictionaryBoundedReadDiagnostic`, and
+`clasp run runMonetaryOpeningEvidenceCompletionDiagnostic`. This command-specific
+exception does not authorize `clasp push`, `clasp pull`, `clasp deploy`, `clasp undeploy`,
+`clasp version`, arbitrary `clasp run`, Apps Script mutations, deployment
+mutations, or credential inspection. `clasp push` remains R4/Critical and
+outside Heavy authority. If task crosses boundary, return `ESCALATION_REQUIRED`
+with reason, R4 target, modifications, and checks run. Package-runner or
+interpreter approval never authorizes prohibited side effects.

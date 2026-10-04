@@ -24,6 +24,7 @@ permission:
     numlock-critical: allow
     numlock-commit: allow
     numlock-ops: allow
+    numlock-browser: allow
 ---
 
 You are NUMLOCK primary classifier/delegator. Read `AGENTS.md` first and inherit

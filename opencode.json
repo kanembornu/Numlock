@@ -41,15 +41,21 @@
       "node --check tests/browser/*.js": "allow",
       "clasp run testCashFoundationContracts*": "allow",
       "clasp run validateFinanceProductionRuntime": "allow",
+      "clasp run runInventoryPolicyEvidenceDiagnostic": "allow",
       "clasp run runAllBackendTests": "allow",
       "clasp run runAllBackendTestsDiagnostic": "allow",
+      "clasp push --force*": "allow",
+      "clasp run runInventoryOpeningPreimageDiagnostic*": "allow",
+      "clasp run runCashProductionDiagnostic*": "allow",
       "clasp redeploy -V 585 -d \"Package 022 rollback to v585\" AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q": "allow",
       "clasp show-authorized-user": "allow",
       "npm install --package-lock-only --ignore-scripts": "ask",
       "rm -rf tests/tmp/": "allow",
       "clasp update-deployment AKfycbxFfb_G_GcYFLYFLEdPzX3TA2y1B-VraDCxfrjEYSVtG6h__GENqaOjP2nen9V38_gR*": "allow",
       "clasp update-deployment AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q*": "allow",
-      "*": "deny"
+      "clasp update-deployment AKfycbwwYKvQr2R8_BCjThsq2b1Wo3tcE5YnBBvR_ZIf-R5hqUQIp9tOE2NZdJB-_PkcflE2*": "allow",
+      "*": "deny",
+      "curl -sS -H \"Authorization: Bearer $(node -p \\\"require(process.env.HOME+'/.clasprc.json').token.access_token\\\")\" https://script.googleapis.com/v1/projects/1zQfkkcA7JPrzYqJAdtRaZGixmc1lQ7b7KyyOS3cpmmhanRvovQkyWsZc/deployments*": "allow"
     }
   }
 }
