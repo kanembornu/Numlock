@@ -15,6 +15,7 @@
   let transactionsCacheRevision = "";
   let transactionsPerformanceEvidence = null;
   let transactionsPendingKey = "";
+  let transactionsReadinessState = "UNINITIALIZED";
   let transactionDetailCache = {};
   let transactionDetailPending = {};
   let transactionDetailSources = {};
@@ -150,9 +151,36 @@
       });
     }
 
+    function getTransactionsInitialContext(context)
+    {
+      var source = context || lastDashboardRequest || {};
+      return {
+        filter: source.filter || "currentYear",
+        customStart: source.customStart || "",
+        customEnd: source.customEnd || ""
+      };
+    }
+
+    function ensureTransactionsReady(context)
+    {
+      var intendedContext = getTransactionsInitialContext(context);
+      var contextChanged = transactionsDateFilter && (
+        transactionsDateFilter.filter !== intendedContext.filter ||
+        transactionsDateFilter.customStart !== intendedContext.customStart ||
+        transactionsDateFilter.customEnd !== intendedContext.customEnd
+      );
+      if (transactionsReadinessState !== "UNINITIALIZED" && !contextChanged) return false;
+      transactionsDateFilter = intendedContext;
+      transactionsPages = { recent: 1, sales: 1, expenses: 1, purchases: 1 };
+      invalidateTransactionsClientCaches();
+      requestTransactionsPage();
+      return true;
+    }
+
     function requestTransactionsPage()
     {
       if (!transactionsDateFilter) return;
+      transactionsReadinessState = "LOADING";
       var requestStartedAt = performance.now();
       var cacheKey = transactionsCacheKey(activeTransactionsTab, transactionsPages[activeTransactionsTab]);
       if (transactionsResultCache[cacheKey]) {
@@ -224,6 +252,7 @@
       }).withFailureHandler(function(error) {
         if (requestToken !== transactionsRequestSequence) return;
         transactionsPendingKey = "";
+        transactionsReadinessState = "ERROR";
         console.error("Transactions page failed", error);
         transactionsPageResult = { rows: [], totalRows: 0, page: 1, pageSize: transactionsPageSize, totalPages: 0 };
         renderTransactionRows([]);
@@ -246,6 +275,7 @@
 
     function applyTransactionsPageResult(result)
     {
+      transactionsReadinessState = result.totalRows ? "LOADED_NONEMPTY" : "LOADED_EMPTY";
       transactionsPageResult = result;
       transactionsPages[activeTransactionsTab] = result.page;
       latestLifecycleTransactions = result.rows.slice();
@@ -324,14 +354,7 @@
 
     function renderTransactions(res)
     {
-      transactionsDateFilter = {
-        filter: lastDashboardRequest && lastDashboardRequest.filter || "currentYear",
-        customStart: lastDashboardRequest && lastDashboardRequest.customStart || "",
-        customEnd: lastDashboardRequest && lastDashboardRequest.customEnd || ""
-      };
-      transactionsPages = { recent: 1, sales: 1, expenses: 1, purchases: 1 };
-      invalidateTransactionsClientCaches();
-      requestTransactionsPage();
+      ensureTransactionsReady(lastDashboardRequest);
     }
 
     function setActiveTransactionsTab(tabName)

@@ -6,11 +6,11 @@
 
     function formatFinanceCurrency(value)
     {
-      return new Intl.NumberFormat("id-ID", {
-        style: "currency",
-        currency: "IDR",
+      var number = financeFiniteNumber(value);
+      var formatted = new Intl.NumberFormat("id-ID", {
         maximumFractionDigits: 0
-      }).format(financeFiniteNumber(value));
+      }).format(Math.abs(number));
+      return (number < 0 ? "−" : "") + "Rp " + formatted;
     }
 
     function formatFinancePercentage(value)
@@ -82,7 +82,13 @@
         ["financeStatementDepreciation", summary.depreciationExpense],
         ["financeStatementOperatingNetProfit", summary.operatingNetProfit]
       ].forEach(function(metric) {
-        renderFinanceMetricValue(getFinanceElement(metric[0]), metric[1], formatFinanceCurrency);
+        var element = getFinanceElement(metric[0]);
+        if (metric[1] === null || metric[1] === undefined) {
+          element.textContent = "Not available under purchase-expense accounting";
+          element.classList.remove("finance-negative");
+          return;
+        }
+        renderFinanceMetricValue(element, metric[1], formatFinanceCurrency);
       });
       renderFinanceMetricValue(
         getFinanceElement("financeOperatingProfitMargin"),

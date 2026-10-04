@@ -2608,6 +2608,7 @@
           data-page="transactions"
           data-navigation-destination="transactions"
           aria-label="Transactions"
+          onclick="showPage('transactions')"
           title="Transactions"
           class="ui-sidebar-item flex w-full items-center text-left transition">
           <i class="fas fa-arrow-right-arrow-left w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Transactions</span>
@@ -4859,7 +4860,11 @@
         heading.focus();
       }
 
-      if (pageId === "finance")
+      if (pageId === "transactions")
+      {
+        ensureTransactionsReady(lastDashboardRequest);
+      }
+      else if (pageId === "finance")
       {
         setFinanceDestination(destination || "profit-loss");
         ensureFinanceData();
