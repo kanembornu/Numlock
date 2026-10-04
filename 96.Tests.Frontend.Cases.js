@@ -121,7 +121,7 @@ function testResponsiveShellContract()
   });
   [
     "@media (min-width: 1024px)",
-    "#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 23px !important;",
+    "#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: clamp(18px, 1.6vw, 23px) !important;",
     "#dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 8px 16px !important; }"
   ].forEach(function(token)
   {
@@ -1234,6 +1234,7 @@ function testNineDestinationNavigationContract()
   var activeDestinations = [
     { page: "dashboard", destination: "dashboard" },
     { page: "transactions", destination: "transactions" },
+    { page: "products", destination: "products" },
     { page: "finance", destination: "profit-loss" },
     { page: "finance", destination: "product-profitability" },
     { page: "finance", destination: "capital-equity" },
@@ -1272,13 +1273,13 @@ function testNineDestinationNavigationContract()
   assertSourceOccurrenceCount(
     navigationSource,
     'data-navigation-destination="',
-    11,
+    12,
     "represented destination count"
   );
   assertSourceOccurrenceCount(
     navigationSource,
     'data-page="',
-    9,
+    10,
     "active route count"
   );
   scenariosPassed++;
@@ -3797,20 +3798,20 @@ function testUiUx2ClosureContract()
     throw new Error("UI/UX 2.0 predecessor package markers mismatch");
   }
   var registryEntries = getBackendTestRegistry();
-  if (registryEntries.length !== 114)
+  if (registryEntries.length !== 126)
   {
-    throw new Error("Authoritative registry must contain 114 entries, actual=" + registryEntries.length);
+    throw new Error("Authoritative registry must contain 126 entries, actual=" + registryEntries.length);
   }
   assertSourceOccurrenceCount(
     predecessorRunnerSource,
     "{ name:",
-    114,
+    126,
     "closure runner membership"
   );
   assertSourceContains(
     predecessorRunnerSource,
     '{ name: "testBoundedUiRefactorContract"',
-    "114-entry current gate"
+    "126-entry current gate"
   );
   [
     "testLegacyTransactionSyncService",
@@ -4213,6 +4214,85 @@ function testChartPresentationContract()
   );
 
   return summary;
+}
+
+function testProductsReadSurfaceContract()
+{
+  var source = getAssembledFrontendSource();
+  var serverSource = getProductCatalogReadModel.toString();
+  var scenarios = 0;
+  function contains(token, label) { scenarios++; assertSourceContains(source, token, label); }
+  function excludes(token, label) { scenarios++; assertSourceExcludes(source, token, label); }
+  [
+    'id="productsTabList"',
+    'id="productsTabCatalog" type="button" role="tab" aria-selected="true"',
+    'id="productsTabRecipe" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled',
+    'id="productsTabInventory" type="button" role="tab" aria-selected="false" aria-disabled="true" disabled',
+    'Product Catalog',
+    'COGS &amp; Recipe',
+    'Inventory Items'
+  ].forEach(function(token) { contains(token, "Products three-tab shell"); });
+  [
+    'getProductCatalogReadModel()',
+    'button.dataset.productId = product.ID_Prod',
+    'productsReadModel.find(function(candidate) { return candidate.ID_Prod === productId; })',
+    '["Product ID", product.ID_Prod]',
+    '["Product Name", product.Produk]',
+    '["Category", product.Kategori]',
+    '["Kind", product.Kind]',
+    '["Status", product.IsActive ? "Active" : "Inactive"]',
+    '["Has pricing", product.hasPricing ? "Yes" : "No"]',
+    '["Current HPP", formatProductPricingSummary(product.currentHPP)]',
+    '["Current Harga", formatProductPricingSummary(product.currentHarga)]',
+    '["Recipe count", String(product.recipeCount)]',
+    'showPage("transactions")',
+    'dashboard: {'
+  ].forEach(function(token) { contains(token, "Product Catalog read surface"); });
+  [
+    'readCanonicalTable(ss, "Products", PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS)',
+    'readCanonicalTable(ss, "ProductPricing", PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS)',
+    'readCanonicalTable(ss, "COGSRecipes", PRODUCTS_DOMAIN_CONTRACT.RECIPE_HEADERS)'
+  ].forEach(function(token) { scenarios++; assertSourceContains(serverSource, token, "Product Catalog authoritative read"); });
+  ["appendRow(", "setValue(", "setValues(", "insertSheet(", "deleteSheet("].forEach(function(token) {
+    scenarios++;
+    assertSourceExcludes(serverSource, token, "Product Catalog mutation API");
+  });
+  ["product.itemId", "candidate.itemId", "getProductsReadModel()", "InventoryItems records", "ProductPricing mutation", "Recipe mutation"].forEach(function(token) {
+    excludes(token, "Product Catalog excludes legacy or mutation controls");
+  });
+  var draftSource = getSourceRegion(source, "function buildStandardCostApplyDraft(rows)",
+    "function submitStandardCostConfiguration()", "Standard Cost Apply draft builder");
+  var buildDraft = new Function(draftSource + "\nreturn buildStandardCostApplyDraft;")();
+  function draftRow(itemId, cost, effectiveFrom) {
+    return { dataset: { itemId: itemId }, cells: [null, null, null, null,
+      { querySelector: function() { return { value: cost }; } },
+      { querySelector: function() { return { value: effectiveFrom }; } }] };
+  }
+  var draft = buildDraft([
+    draftRow("ING-001", "0", "2026-10-01"),
+    draftRow("ING-002", "", "2026-10-01"),
+    draftRow("ING-003", "125.5", "2026-11-02")
+  ]);
+  scenarios++;
+  if (JSON.stringify(draft) !== JSON.stringify({ proposals: [
+    { ItemID: "ING-001", StandardCost: 0, EffectiveFrom: "2026-10-01" },
+    { ItemID: "ING-003", StandardCost: 125.5, EffectiveFrom: "2026-11-02" }
+  ], errors: [] })) throw new Error("Standard Cost Apply payload must preserve ItemID, zero, date, and omit blank cost");
+  var applySource = getSourceRegion(source, "function submitStandardCostConfiguration()",
+    "function renderStandardCostPreview(variant)", "Standard Cost Apply submit handler");
+  [
+    "standardCostApplyInFlight || !cogsRecipeReadModel || !cogsRecipeReadModel.standardCostApplyActivation",
+    "standardCostApplyInFlight = true;",
+    ".runApplyRecipeStandardCost(draft.proposals)",
+    'elements.cogsRecipeError.innerText = "Standard Cost Apply failed: "',
+    "cogsRecipeDataLoaded = false;",
+    "ensureCogsRecipeData();"
+  ].forEach(function(token) { scenarios++; assertSourceContains(applySource, token, "Standard Cost Apply transport contract"); });
+  scenarios++;
+  assertSourceContains(source, 'apply.disabled = !cogsRecipeReadModel.standardCostApplyActivation;',
+    "activation false keeps Apply disabled");
+  Logger.log("PASS: testProductsReadSurfaceContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
 }
 
 function testFrontendDependencyContract()

@@ -11,7 +11,21 @@ function createResponsiveShellContractFixtures()
     { name: "active navigation", tokens: ['button.setAttribute("aria-current", "page");'] },
     { name: "table scroll wrapper", tokens: ['id="transactionsTableScroll"', 'overflow-x-auto'] },
     { name: "narrow content width", tokens: ['<main id="mainContent" class="ml-0 min-w-0 w-full flex-1'] },
-    { name: "desktop sidebar", tokens: ['#dashboardSidebar { width: 248px;', '#dashboardSidebar { width: 224px;', '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px;', 'lg:translate-x-0', 'grid-template-rows: 76px minmax(0, 1fr); margin-left: 248px;'] },
+    {
+      name: "desktop sidebar",
+      tokens: [
+        "--sidebar-width-expanded: 264px;",
+        "--sidebar-width-collapsed: 64px;",
+        "@media (min-width: 1024px) and (max-width: 1279px)",
+        ":root { --sidebar-width-expanded: 224px; }",
+        "@media (min-width: 1024px)",
+        "#dashboardSidebar { width: var(--sidebar-width-expanded); transform: translateX(0); }",
+        "#mainContent { display: grid; grid-template-rows: 76px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); min-height: 0; }",
+        '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: var(--sidebar-width-collapsed); }',
+        '#appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: var(--sidebar-width-collapsed); }',
+        "lg:translate-x-0"
+      ]
+    },
     { name: "single initialization guard", tokens: ['let responsiveShellInitialized = false;', 'if (responsiveShellInitialized)', 'responsiveShellInitialized = true;'], uniqueToken: 'function initializeResponsiveShell()' }
   ];
 }

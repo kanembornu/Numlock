@@ -131,29 +131,29 @@
       }
 
       renderAvailablePeriodOptions(res.dateFilter);
+      var elements = initializeStableDashboardElements();
 
-      document.getElementById("dateFilterLabel").innerText =
+      elements.dateFilterLabel.innerText =
         formatDashboardMonthRange(
           res.dateFilter.startDate,
           res.dateFilter.endDate
         );
-      document.getElementById("transactionCountLabel").innerText =
+      elements.transactionCountLabel.innerText =
         scope.transactionCount + " transactions";
 
       var latestDate =
         formatDashboardDay(scope.lastTransactionDate);
 
-      document.getElementById("latestDataLabel").innerText =
+      elements.latestDataLabel.innerText =
         latestDate
           ? "Updated " + latestDate
           : "No transaction data";
-      initializeStableDashboardElements().sidebarDataStatus.innerText =
+      elements.sidebarDataStatus.innerText =
         latestDate
           ? freshness.status + " · " + latestDate
           : freshness.status;
 
-      var badge =
-        document.getElementById("freshnessStatusBadge");
+      var badge = elements.freshnessStatusBadge;
 
       var statusClasses = {
         "Current": "bg-emerald-100 text-emerald-700",
@@ -195,9 +195,10 @@
     {
       var comparison =
         periodComparison || null;
+      var elements = initializeStableDashboardElements();
       var label = document.getElementById("periodComparisonLabel");
-      var lead = document.getElementById("periodComparisonLead");
-      var period = document.getElementById("periodComparisonPeriod");
+      var lead = elements.periodComparisonLead;
+      var period = elements.periodComparisonPeriod;
 
       if (
         !comparison ||
@@ -258,9 +259,10 @@
       catch (comparisonError)
       {
         console.error("Dashboard comparison render failed", comparisonError);
-        document.getElementById("periodComparisonLead").innerText =
+        var elements = initializeStableDashboardElements();
+        elements.periodComparisonLead.innerText =
           context.comparison.message || "Comparison unavailable";
-        document.getElementById("periodComparisonPeriod").innerText = "";
+        elements.periodComparisonPeriod.innerText = "";
       }
 
       try
@@ -317,7 +319,8 @@
         );
       }
 
-      document.getElementById("kpiTargetProvenance").innerText =
+      var elements = initializeStableDashboardElements();
+      elements.kpiTargetProvenance.innerText =
         "System-defined targets from current decision rules.";
 
       var approvedTargetPresentation = [
@@ -326,7 +329,7 @@
         { label: "Revenue Growth Target", value: "≥ 20%", description: "Target annual revenue growth.", icon: "fa-bullseye" }
       ];
 
-      document.getElementById("kpiTargetDetails").innerHTML =
+      elements.kpiTargetDetails.innerHTML =
         approvedTargetPresentation.map(function(target)
         {
           return `
@@ -348,6 +351,12 @@
     {
       var quality =
         res && res.dataQuality;
+      var elements = initializeStableDashboardElements();
+      var badge = elements.dataQualityStatusBadge;
+      var issueCount = elements.dataQualityIssueCount;
+      var scopeSummary = elements.dataQualityScopeSummary;
+      var button = elements.dataQualityDetailsButton;
+      var details = elements.dataQualityDetails;
 
       if (
         !quality ||
@@ -355,30 +364,15 @@
         !quality.scope
       )
       {
-        document.getElementById("dataQualityStatusBadge").className =
+        badge.className =
           "inline-flex items-center rounded-full px-3 py-1 font-semibold bg-slate-100 text-slate-600";
-        document.getElementById("dataQualityStatusBadge").innerText = "Unavailable";
-        document.getElementById("dataQualityScopeSummary").innerText = "· quality metadata unavailable";
-        document.getElementById("dataQualityDetailsButton").classList.add("hidden");
-        document.getElementById("dataQualityDetailsButton").setAttribute("aria-expanded", "false");
-        document.getElementById("dataQualityDetails").classList.add("hidden");
+        badge.innerText = "Unavailable";
+        scopeSummary.innerText = "· quality metadata unavailable";
+        button.classList.add("hidden");
+        button.setAttribute("aria-expanded", "false");
+        details.classList.add("hidden");
         return;
       }
-
-      var badge =
-        document.getElementById("dataQualityStatusBadge");
-
-      var issueCount =
-        document.getElementById("dataQualityIssueCount");
-
-      var scopeSummary =
-        document.getElementById("dataQualityScopeSummary");
-
-      var button =
-        document.getElementById("dataQualityDetailsButton");
-
-      var details =
-        document.getElementById("dataQualityDetails");
 
       var inactiveCanonicalRows =
         Number(
@@ -464,7 +458,7 @@
       return `
         <div class="hf-kpi-card w-full px-4 py-3 text-left">
           <span class="flex items-center gap-2"><span class="hf-kpi-icon"><i class="fas ${iconByLabel[label]}" aria-hidden="true"></i></span><span class="hf-section-label">${label}</span></span>
-          <strong class="overview-kpi-value mt-2 block truncate text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
+          <strong class="overview-kpi-value mt-2 block text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
           <span class="hf-kpi-comparison"><span>vs Last Period</span><strong class="${comparisonClass}">${supportingText}</strong></span>
         </div>`;
     }
@@ -505,7 +499,7 @@
 
     function renderTopProductsTable()
     {
-      var container = document.getElementById("topProductsContainer");
+      var container = initializeStableDashboardElements().topProductsContainer;
       var sorted = latestTopProducts.map(function(product, index)
       {
         return { product: product, stableIndex: index };
@@ -779,9 +773,21 @@
 
     function setChartPresentation(canvasId, emptyId, summaryId, isEmpty, message, summary)
     {
-      var canvas = document.getElementById(canvasId);
-      var empty = document.getElementById(emptyId);
-      var summaryElement = document.getElementById(summaryId);
+      var chartPresentation = initializeStableDashboardElements().chartPresentation;
+      var presentation = {
+        mainChart: chartPresentation.main,
+        productProfitabilityChart: chartPresentation.productProfitability,
+        categoryPerformanceChart: chartPresentation.categoryPerformance,
+        expenseChart: chartPresentation.expense
+      }[canvasId];
+      var canvas = presentation && presentation.canvas;
+      var empty = presentation && presentation.empty;
+      var summaryElement = presentation && presentation.summary;
+
+      if (!canvas || !empty || !summaryElement)
+      {
+        return;
+      }
       var context = canvas.getContext("2d");
 
       context.clearRect(0, 0, canvas.width, canvas.height);
@@ -991,7 +997,7 @@
       }
 
       revenueChart = new Chart(
-        document.getElementById("mainChart").getContext("2d"),
+        initializeStableDashboardElements().chartPresentation.main.canvas.getContext("2d"),
         {
           type: "line",
           data: {
@@ -1294,7 +1300,7 @@
         }
       };
 
-      productProfitabilityChart = new Chart(document.getElementById("productProfitabilityChart").getContext("2d"), {
+      productProfitabilityChart = new Chart(initializeStableDashboardElements().chartPresentation.productProfitability.canvas.getContext("2d"), {
         type: "bar",
         data: {
           labels: displayedProducts.map(function(item) { return item.label; }),
@@ -1576,7 +1582,7 @@
         }
       };
 
-      categoryPerformanceChart = new Chart(document.getElementById("categoryPerformanceChart").getContext("2d"), {
+      categoryPerformanceChart = new Chart(initializeStableDashboardElements().chartPresentation.categoryPerformance.canvas.getContext("2d"), {
         type: "doughnut",
         data: {
           labels: groups.map(function(item) { return item.label; }),
@@ -1716,7 +1722,7 @@
         summary
       );
 
-      var expenseSummaryBox = document.getElementById("expenseSummaryBox");
+      var expenseSummaryBox = initializeStableDashboardElements().expenseSummaryBox;
       expenseSummaryBox.innerHTML = isEmpty
         ? '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Summary</p><p class="expense-summary-label">No expense data for the selected period.</p></div>'
         : '<div class="expense-summary-block"><p class="expense-summary-heading">Expense Summary</p>' +
@@ -1787,7 +1793,7 @@
       };
 
       expenseChart = new Chart(
-        document.getElementById("expenseChart").getContext("2d"),
+        initializeStableDashboardElements().chartPresentation.expense.canvas.getContext("2d"),
         {
           type: "bar",
           data: {
@@ -1892,7 +1898,7 @@
       if (res.revenueIntelligence && res.profitIntelligence)
       {
         var diagnosisContainer =
-          document.getElementById("diagnosisContainer");
+          initializeStableDashboardElements().diagnosisContainer;
         var revenueMovementClass =
           Number(res.revenueIntelligence.growthRate) < 0
             ? "text-red-600"
@@ -1927,7 +1933,7 @@
 
       if (res.forecast)
       {
-        var forecastContainer = document.getElementById("forecastContainer");
+        var forecastContainer = initializeStableDashboardElements().forecastContainer;
 
         if (!forecastContainer)
         {

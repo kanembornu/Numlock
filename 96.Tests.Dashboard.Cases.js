@@ -2103,6 +2103,80 @@ function testDashboardTabFrameworkContract()
   return summary;
 }
 
+function testDashboardStableElementCacheLifecycleContract()
+{
+  var source = getAssembledFrontendSource();
+  var initializer = getSourceRegion(
+    source,
+    "function initializeStableDashboardElements()",
+    "function toggleFinancialModulesDisclosure(button)",
+    "stable Dashboard element cache initializer"
+  );
+  var renderSource = include("196.View.Dashboard.Render");
+  var firstConsumer = getSourceRegion(
+    source,
+    "function initializeThemeFoundation()",
+    "function sanitizeClientLogMessage(value)",
+    "stable Dashboard cache first consumer"
+  );
+  var startupSource = getSourceRegion(
+    source,
+    "window.onload = function()",
+    "</script>",
+    "post-markup startup lifecycle"
+  );
+  var tabSource = getSourceRegion(
+    source,
+    "function resizeVisibleDashboardCharts(tabName)",
+    "function setDesktopSidebarCollapsed",
+    "Dashboard tab and sidebar chart lifecycle"
+  );
+  var cachedIds = [
+    "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
+    "periodComparisonLead", "periodComparisonPeriod", "kpiTargetProvenance", "kpiTargetDetails",
+    "topProductsContainer", "expenseSummaryBox", "diagnosisContainer", "forecastContainer",
+    "mainChart", "productProfitabilityChart", "categoryPerformanceChart", "expenseChart"
+  ];
+
+  assertSourceContains(firstConsumer, "var elements = initializeStableDashboardElements();", "lazy cache initialization by first consumer");
+  assertSourceContains(startupSource, "initializeThemeFoundation();", "first consumer invocation after static markup");
+  assertSourceContains(source, "</div>\n  </main>\n</div>\n\n<script>", "static shell markup before startup script");
+  assertSourceContains(initializer, "if (stableDashboardElements)", "repeat cache initialization guard");
+  assertSourceContains(initializer, "return stableDashboardElements;", "stable cache identity return");
+  assertSourceContains(initializer, "stableDashboardElements = elements;", "single cache assignment");
+  cachedIds.forEach(function(id)
+  {
+    assertSourceContains(initializer, '"' + id + '"', "lifecycle-approved cached node " + id);
+  });
+  ["businessOverview", "mainChart", "productProfitabilityChart", "categoryPerformanceChart", "expenseChart"]
+    .forEach(function(id)
+    {
+      assertSourceExcludes(renderSource, 'document.getElementById("' + id + '")', "uncached repeat render lookup " + id);
+    });
+  assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.main.canvas.getContext(\"2d\")", "main chart cached canvas identity");
+  assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.productProfitability.canvas.getContext(\"2d\")", "profitability chart cached canvas identity");
+  assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.categoryPerformance.canvas.getContext(\"2d\")", "category chart cached canvas identity");
+  assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.expense.canvas.getContext(\"2d\")", "expense chart cached canvas identity");
+  assertSourceContains(tabSource, "chart.resize();", "tab switch chart resize without canvas replacement");
+  assertSourceContains(source, "resizeVisibleDashboardCharts(activeDashboardTab);", "sidebar delayed chart resize without canvas replacement");
+  ["outerHTML =", "replaceWith(", "replaceChildren("].forEach(function(token)
+  {
+    assertSourceExcludes(renderSource, token, "cached node replacement API");
+  });
+
+  Logger.log("PASS: testDashboardStableElementCacheLifecycleContract | properties=6");
+  return {
+    passed: true,
+    properties: 6,
+    initialization: true,
+    repeatedRenderIdentity: true,
+    chartCanvasIdentity: true,
+    tabSwitchIdentity: true,
+    sidebarResizeIdentity: true,
+    connectedIdentity: true
+  };
+}
+
 function testDashboardOverviewContract()
 {
   var diagnosticsSource =
@@ -2277,7 +2351,7 @@ function testDashboardOverviewContract()
     '"Profit Margin": "fa-percent"',
     '"Units Sold": "fa-mug-hot"',
     ".hf-kpi-card { min-height: 130px; padding: 17px 18px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--card-bg); box-shadow: var(--card-shadow); }",
-    ".hf-kpi-strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; background: transparent; }",
+    ".hf-kpi-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: 18px; background: transparent; }",
     'status === "No Comparison"',
     "hf-kpi-comparison",
     'text-[28px] font-extrabold leading-8 tracking-tight'
@@ -2312,8 +2386,8 @@ function testDashboardOverviewContract()
     'id="overviewEvidenceRow"',
     'id="revenueChartSection"',
     'staging.querySelector("#overviewEvidenceRow")',
-    "grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr)",
-    "#dashboardPanelOverview #mainChartWrapper { height: 210px; min-height: 210px; max-height: 210px; overflow: visible; }",
+    "grid-template-columns: minmax(320px, 3fr) minmax(320px, 1fr)",
+    "#dashboardPanelOverview #mainChartWrapper { height: clamp(240px, 22vw, 320px) !important; min-height: 0 !important; max-height: none !important; }",
     'id="overviewContextRow" class="hf-overview-context"',
     "#dashboardPanelOverview #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; }",
     'id="periodComparisonSection"',
@@ -2359,8 +2433,8 @@ function testDashboardOverviewContract()
 
   [
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item > i,',
-    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; padding-left: 0 !important; padding-right: 0 !important; margin-left: 0 !important; margin-right: 0 !important; }',
-    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 64px !important; max-width: 64px !important; margin-left: 0 !important; margin-right: 0 !important; justify-content: center !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: var(--sidebar-width-collapsed) !important; padding-left: 0 !important; padding-right: 0 !important; margin-left: 0 !important; margin-right: 0 !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; margin-left: 0 !important; margin-right: 0 !important; justify-content: center !important; }',
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .numlock-mark { width: 46px !important; height: 46px !important; flex-basis: 46px !important; margin-left: auto !important; margin-right: auto !important; }',
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }',
     '#financialModulesDisclosureButton { margin-top: 0; font-size: 14px; font-weight: 400;',
@@ -2413,9 +2487,9 @@ function testDashboardOverviewContract()
   assertSourceExcludes(source, 'scope="col" class="text-right">Units', "right-aligned Top Products Units header");
   assertSourceExcludes(source, 'scope="col" class="text-right">Revenue', "right-aligned Top Products Revenue header");
   [
-    '#dashboardSidebar { width: 264px !important; }',
-    '#mainContent { margin-left: 264px !important; }',
-    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: 64px !important; }',
+    '#dashboardSidebar { width: var(--sidebar-width-expanded) !important; }',
+    '#mainContent { margin-left: var(--sidebar-width-expanded) !important; }',
+    '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: var(--sidebar-width-collapsed) !important; }',
     '#dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap !important; }',
     '#dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important;',
     '#dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important;',
@@ -2444,7 +2518,7 @@ function testDashboardOverviewContract()
     'id="topProductsTitle" class="ui-section-title"',
     '--section-icon-size: 48px;',
     'heading("name", "Product") + heading("qty", "Units") + heading("revenue", "Revenue")',
-    '.hf-top-products-table { width: 100%; table-layout: fixed; }',
+    '.hf-top-products-table { width: 100%; min-width: 320px; table-layout: fixed; }',
     'white-space: nowrap;',
     '<col class="hf-col-rank"><col class="hf-col-product"><col class="hf-col-units"><col class="hf-col-revenue">',
     '.hf-top-products-table .hf-col-rank { width: 8%; }',
@@ -2531,7 +2605,7 @@ function testDashboardOverviewContract()
     '#utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important;',
     '#dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading, #dashboardPanelPerformance h2, #dashboardPanelInsights h2, #transactions h2 { font-size: var(--text-section-size) !important; font-weight: 600 !important;',
     '#dashboardPanelOverview .hf-analytics-title-icon, #dashboardPanelOverview .hf-summary-title-icon { width: var(--section-icon-size) !important; height: var(--section-icon-size) !important; flex-basis: var(--section-icon-size) !important;',
-    '#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 23px !important; font-weight: 700 !important;',
+    '#dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: clamp(18px, 1.6vw, 23px) !important; font-weight: 700 !important;',
     '#dashboardContent { gap: var(--overview-section-gap) !important; }',
     '#dashboardTabList { display: inline-flex !important; width: max-content !important; max-width: 100% !important; margin-left: 0 !important; grid-template-columns: none !important;',
     '#dashboardTabList [role="tab"], #dashboardTabInsights { width: auto !important; min-width: 0 !important; flex: 0 0 auto !important;',
@@ -2559,7 +2633,7 @@ function testDashboardOverviewContract()
     '#dashboardPanelOverview .hf-analytics-title-icon-products > i { font-size: 17px !important; }',
     '#dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 8px 16px !important; }',
     '#dashboardPanelOverview #revenueChartSection { padding-left: 4px !important; }',
-    '#dashboardPanelOverview #executiveSummarySection > * { padding: 16px !important; }',
+    '#dashboardPanelOverview #executiveSummarySection > .overview-surface, #dashboardPanelOverview #executiveSummarySection > section { padding: 14px !important; }',
     '#dashboardPanelOverview #keyMetricsSection { margin: 0 !important; }'
   ].forEach(function(token)
   {
@@ -2683,14 +2757,14 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
-    '#dashboardPanelOverview:not([hidden]) { gap: 0 !important; }',
-    'grid-template-rows: 126px 0 minmax(320px, 1fr) 8px 42px 8px 190px !important;',
-    '#dashboardPanelOverview #overviewEvidenceRow { grid-row: 3 !important; }',
-    '#dashboardPanelOverview #overviewContextRow { grid-row: 5 !important; }',
-    '#dashboardPanelOverview #executiveSummarySection { grid-row: 7 !important; }',
+    '#dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: auto auto auto auto; gap: 12px; }',
+    '#dashboardPanelOverview #overviewEvidenceRow { grid-row: 2 !important; }',
+    '#dashboardPanelOverview #overviewContextRow { grid-row: 3 !important; }',
+    '#dashboardPanelOverview #executiveSummarySection { grid-row: 4 !important; }',
     '#dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 12px !important; padding-left: 12px !important; }',
-    '#dashboardPanelOverview .hf-summary-metrics { margin-top: 18px !important; }',
-    '#dashboardPanelOverview .hf-quick-actions button { min-height: 44px !important;'
+    '.hf-summary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }',
+    '.hf-quick-actions button { display: grid; width: 100%; min-width: 0; min-height: 50px;',
+    '#dashboardPanelOverview .hf-quick-actions button { min-height: 68px !important;'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "one-page Overview vertical budget");
@@ -2699,8 +2773,8 @@ function testDashboardOverviewContract()
   scenariosPassed++;
 
   [
-    "#contentViewport { height: auto; min-height: 0; overflow: hidden; padding: 20px 24px 12px; }",
-    "#dashboardPanelOverview { height: 100%; overflow: visible; }",
+    "#contentViewport { height: auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 24px 24px; }",
+    "#dashboardPanelOverview { min-height: 0; overflow: visible; container-type: inline-size; }",
     "@media (max-width: 1023px)",
     "#contentViewport { overflow: visible; padding: var(--space-5); }",
     "overview-surface",
