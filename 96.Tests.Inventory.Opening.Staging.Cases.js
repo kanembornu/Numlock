@@ -233,7 +233,7 @@ function testInventoryOpeningStagingContracts() {
     typeof runInventoryOpeningReviewDisposableRuntimeProof === "function" &&
     executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime.toString().indexOf("production fingerprint preserved") !== -1 &&
     executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime.toString().indexOf("disposable cleanup verification") !== -1 &&
-    executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime.toString().indexOf("FROZEN_REVIEWED_ARTIFACT_NOT_CONFIGURED") !== -1,
+    runInventoryOpeningPopulation.toString().indexOf("FINAL_OPENING_EVIDENCE_NOT_CONFIGURED") !== -1,
     "disposable proof preserves production and verifies cleanup");
   var replacement = Object.assign({}, rows[0], { OpeningID: "OPEN-ING-004-V02",
     SupersedesOpeningID: rows[0].OpeningID, QuantityEvidenceRef: "COUNT:ING-004:V02" });
@@ -307,11 +307,293 @@ function testInventoryOpeningStagingContracts() {
     dependencyPopulation.migrationRecord).reason === "DOWNSTREAM_ACCOUNTING_DEPENDENCY_EXISTS",
     "recovery refuses after downstream accounting dependency");
   check(runInventoryOpeningPopulation.toString().indexOf("lock.waitLock(30000)") !== -1 &&
-    runInventoryOpeningPopulation.toString().indexOf("FROZEN_REVIEWED_ARTIFACT_NOT_CONFIGURED") !== -1,
-    "production wrapper remains disabled until a real frozen reviewed artifact is configured");
+    runInventoryOpeningPopulation.toString().indexOf("readInventoryOpeningStagingMigrationState") !== -1 &&
+    runInventoryOpeningPopulation.toString().indexOf("inventoryOpeningReviewSyntheticPackage") === -1 &&
+    runInventoryOpeningPopulation.toString().indexOf("FINAL_OPENING_EVIDENCE_NOT_CONFIGURED") !== -1,
+    "production wrapper reads state then refuses blank-template population without synthetic review");
   check(INVENTORY_OPENING_STAGING_POLICY.PRODUCTION_MUTATION === false &&
     validateInventoryOpeningStagingRows([], items, conversions).productionMutation === false,
     "productionMutation remains false");
+  check(typeof runInventoryOpeningPreimageDiagnostic === "function" &&
+    runInventoryOpeningPreimageDiagnostic.length === 0 &&
+    runInventoryOpeningPreimageDiagnostic.toString().indexOf("readInventoryOpeningStagingMigrationState") !== -1 &&
+    runInventoryOpeningPreimageDiagnostic.toString().indexOf("buildPopulationPreimageDiagnostics") !== -1 &&
+    runInventoryOpeningPreimageDiagnostic.toString().indexOf("productionMutation") !== -1,
+    "preimage diagnostic wrapper is zero-argument read-only with bounded return");
+  var parser = testFrozenOpeningXlsxParser();
+  check(parser.passed && parser.productionMutation === false,
+    "frozen opening XLSX parser contract passes without production mutation");
+  var driveIntegrity = testFrozenArtifactDriveIntegrity();
+  check(driveIntegrity.passed && driveIntegrity.productionMutation === false,
+    "frozen Drive artifact integrity contract passes without production mutation");
+  var publication = testFrozenOpeningArtifactPublication();
+  check(publication.passed && publication.productionMutation === false,
+    "frozen opening artifact publication contract passes without production mutation");
   Logger.log("PASS: testInventoryOpeningStagingContracts | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios, productionMutation: false };
+}
+
+function testFrozenOpeningXlsxParser() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+  var verification = verifyFrozenArtifactDriveBytes();
+  check(verification.verified === true, "real frozen template bytes verify");
+  var bytes = DriveApp.getFileById(INVENTORY_OPENING_REVIEW_POLICY.FROZEN_ARTIFACT_DRIVE_FILE_ID).getBlob().getBytes();
+  var workbook = parseFrozenOpeningWorkbook(bytes);
+  check(workbook.sheets.length === 5 && workbook.intakeWorksheetPath === "xl/worksheets/sheet2.xml" &&
+    workbook.sheets.some(function(sheet) { return sheet.name === "Intake" && !!sheet.relationshipId; }) &&
+    parseFrozenOpeningWorkbook.toString().indexOf("sheet2.xml") === -1,
+    "Intake worksheet resolves through workbook relationship");
+  var rows = decodeFrozenOpeningIntakeRows(workbook.worksheetXml, workbook.sharedStrings);
+  check(FROZEN_OPENING_INTAKE_HEADER.length === 35 && rows.length === 21, "header row 4 validates and exact 21 rows decode");
+  var oracle = { 5: ["ING-004", "Bean Ar 100%", "gr", "bag", "1000", "1"],
+    12: ["ING-011", "Air", "ml", "gallon", "19000", "1"],
+    21: ["ING-021", "Es", "gr", "pack", "10000", "1"],
+    25: ["ING-034", "Spt Plastik", "pcs", "bag", "50", "1"] };
+  Object.keys(oracle).forEach(function(rowNumber) {
+    var row = rows.filter(function(candidate) { return candidate.sourceRowNumber === Number(rowNumber); })[0];
+    var expected = oracle[rowNumber], context = String(row.ConversionPackageContext || "");
+    check(row.ItemID === expected[0] && row.ItemName === expected[1] && row.BaseUOM === expected[2] &&
+      context.toLowerCase().indexOf(expected[3]) !== -1 && context.indexOf(expected[4]) !== -1 &&
+      context.indexOf(expected[5]) !== -1, "strategic row " + rowNumber + " matches oracle");
+  });
+  check(rows.every(function(row) { return row.ObservedQty === null && row.UnitCost === null && row.TotalValue === null; }),
+    "operator numeric fields remain null");
+  check(rows.every(function(row) { return row.ApprovalStatus === "DRAFT"; }), "all template rows remain DRAFT");
+  check(parseExcelSerialDate("46295") === "2026-09-30", "Excel serial date converts without timezone drift");
+  var fingerprint = computeTemplateSourceRowsFingerprint(rows);
+  check(/^[a-f0-9]{64}$/.test(fingerprint) && fingerprint === computeTemplateSourceRowsFingerprint(rows.slice().reverse()),
+    "template fingerprint is deterministic");
+  var review = mapFrozenOpeningSourceToReview(rows[0]);
+  check(Object.prototype.hasOwnProperty.call(review, "ObservedQty") && review.ObservedQty === null &&
+    review.ApprovalStatus === undefined, "review mapping has required shape and does not synthesize operator fields");
+  check(rows.every(function(row) { return row.ObservedQty === null && row.QuantityEvidenceRef === null; }),
+    "blank template rows remain incomplete");
+  var namespace = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+  var synthetic = '<?xml version="1.0"?><worksheet xmlns="' + namespace + '"><sheetData><row r="4">' +
+    FROZEN_OPENING_INTAKE_HEADER.map(function(header, index) {
+      var column = "", number = index + 1;
+      while (number) { number--; column = String.fromCharCode(65 + number % 26) + column; number = Math.floor(number / 26); }
+      return '<c r="' + column + '4" t="inlineStr"><is><t>' + header + '</t></is></c>';
+    }).join("") + '</row><row r="5"><c r="I5"><f>1+1</f><v>0</v></c></row></sheetData></worksheet>';
+  var formulaRow = decodeFrozenOpeningIntakeRows(synthetic, [])[0];
+  check(formulaRow.hasFormula === true && formulaRow.formulaFields.ObservedQty === true && formulaRow.ObservedQty === "0",
+    "operator formula uses cached value, flags formula, and preserves zero text");
+  check(formulaRow.UnitCost === null && formulaRow.ObservedQty !== formulaRow.UnitCost,
+    "empty and zero remain distinct");
+  var wrongHeader = synthetic.replace("OpeningID", "WrongOpeningID");
+  var rejected = false;
+  try { decodeFrozenOpeningIntakeRows(wrongHeader, []); } catch (error) { rejected = error.message === "FROZEN_OPENING_HEADER_MISMATCH"; }
+  check(rejected, "wrong header fails closed");
+  var populationSource = runInventoryOpeningPopulation.toString();
+  check(populationSource.indexOf("FINAL_OPENING_EVIDENCE_NOT_CONFIGURED") !== -1 &&
+    populationSource.indexOf("inventoryOpeningReviewSyntheticPackage") === -1 &&
+    INVENTORY_OPENING_STAGING_POLICY.PRODUCTION_MUTATION === false, "production population remains fail closed");
+  Logger.log("PASS: testFrozenOpeningXlsxParser | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios, productionMutation: false };
+}
+
+function testFrozenArtifactDriveIntegrity() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+  var originalPolicy = INVENTORY_OPENING_REVIEW_POLICY;
+  var originalUtilities = Utilities;
+  var originalDriveApp = typeof DriveApp === "undefined" ? undefined : DriveApp;
+  var expectedHash = originalPolicy.FROZEN_ARTIFACT_SHA256.toLowerCase();
+  var expectedDigest = expectedHash.match(/../g).map(function(pair) {
+    var value = parseInt(pair, 16); return value > 127 ? value - 256 : value;
+  });
+  function xlsxBytes() {
+    var result = [], i;
+    for (i = 0; i < 28029; i++) result.push(0);
+    result[0] = 0x50; result[1] = 0x4B; result[2] = 0x03; result[3] = 0x04;
+    return result;
+  }
+  function zeroDigest() {
+    var result = [], i;
+    for (i = 0; i < 32; i++) result.push(0);
+    return result;
+  }
+  var bytes = xlsxBytes();
+  var digestInput = null, driveMutations = 0;
+  var fileName = originalPolicy.ARTIFACT_FILE, mime = originalPolicy.ARTIFACT_MIME;
+  function setPolicy(fileId) {
+    var copy = {};
+    Object.keys(originalPolicy).forEach(function(key) { copy[key] = originalPolicy[key]; });
+    copy.FROZEN_ARTIFACT_DRIVE_FILE_ID = fileId;
+    INVENTORY_OPENING_REVIEW_POLICY = Object.freeze(copy);
+  }
+  function file() { return {
+    getBlob: function() { return {
+      getBytes: function() { return bytes; },
+      getContentType: function() { return mime; }
+    }; },
+    getName: function() { return fileName; },
+    setName: function() { driveMutations++; }
+  }; }
+  try {
+    Utilities = { DigestAlgorithm: { SHA_256: "SHA_256" }, computeDigest: function(algorithm, input) {
+      digestInput = input; return expectedDigest.slice();
+    } };
+    DriveApp = { getFileById: function(id) {
+      check(id === INVENTORY_OPENING_REVIEW_POLICY.FROZEN_ARTIFACT_DRIVE_FILE_ID,
+        "verifier reads configured Drive file ID");
+      return file();
+    } };
+
+    setPolicy("");
+    check(verifyFrozenArtifactDriveBytes().status === "FROZEN_ARTIFACT_FILE_NOT_CONFIGURED",
+      "missing Drive file ID is refused");
+    setPolicy(originalPolicy.FROZEN_ARTIFACT_DRIVE_FILE_ID);
+    DriveApp.getFileById = function() { throw new Error("UNREADABLE"); };
+    check(verifyFrozenArtifactDriveBytes().status === "FROZEN_ARTIFACT_UNREADABLE", "unreadable Drive file is refused");
+    DriveApp.getFileById = function() { return file(); };
+    bytes = [];
+    check(verifyFrozenArtifactDriveBytes().status === "FROZEN_ARTIFACT_EMPTY", "empty Drive bytes are refused");
+    bytes = [0x50, 0x4B, 0x03, 0x05];
+    check(verifyFrozenArtifactDriveBytes().status === "FROZEN_ARTIFACT_INVALID_SIGNATURE",
+      "invalid XLSX signature is refused");
+    bytes = xlsxBytes();
+    Utilities.computeDigest = function(algorithm, input) { digestInput = input; return zeroDigest(); };
+    check(verifyFrozenArtifactDriveBytes().status === "FROZEN_ARTIFACT_HASH_MISMATCH", "SHA mismatch is refused");
+    Utilities.computeDigest = function(algorithm, input) { digestInput = input; return expectedDigest.slice(); };
+    fileName = "wrong.xlsx";
+    check(verifyFrozenArtifactDriveBytes().status === "FROZEN_ARTIFACT_METADATA_MISMATCH", "metadata mismatch is refused");
+    fileName = originalPolicy.ARTIFACT_FILE;
+    var verified = verifyFrozenArtifactDriveBytes();
+    check(verified.status === "FROZEN_ARTIFACT_VERIFIED" && verified.verified === true &&
+      verified.byteIdentityMatch === true, "exact Drive bytes are verified");
+    check(digestInput === bytes, "verifier hashes bytes read from Drive blob");
+    check(runInventoryOpeningArtifactIntegrityDiagnostic().status === "FROZEN_ARTIFACT_VERIFIED" && driveMutations === 0,
+      "diagnostic is read-only");
+    var productionSource = runInventoryOpeningPopulation.toString();
+    check(productionSource.indexOf("verifyFrozenArtifactDriveBytes()") !== -1 &&
+      productionSource.indexOf("verifyFrozenArtifactDriveBytes()") < productionSource.indexOf("LockService.getScriptLock") &&
+      productionSource.indexOf("verifyFrozenArtifactDriveBytes()") < productionSource.indexOf("readInventoryOpeningStagingMigrationState"),
+      "production entry point verifies Drive bytes before state access");
+    check(verifyFrozenArtifactDriveBytes.toString().indexOf("inventoryOpeningReviewArtifactIntegrity") === -1 &&
+      verifyFrozenArtifactDriveBytes.toString().indexOf("trustedIdentity") === -1,
+      "Drive verifier has no synthetic identity fallback");
+    check(verified.productionMutation === false && INVENTORY_OPENING_STAGING_POLICY.PRODUCTION_MUTATION === false &&
+      INVENTORY_OPENING_REVIEW_POLICY.PRODUCTION_MUTATION === false, "productionMutation remains false");
+    check(typeof authorizeFrozenOpeningArtifactPublication === "function" &&
+      verifyFrozenArtifactDriveBytes.toString().indexOf("FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY") === -1,
+      "publication authorization remains independent");
+  } finally {
+    INVENTORY_OPENING_REVIEW_POLICY = originalPolicy;
+    Utilities = originalUtilities;
+    if (originalDriveApp === undefined) delete DriveApp; else DriveApp = originalDriveApp;
+  }
+  Logger.log("PASS: testFrozenArtifactDriveIntegrity | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios, productionMutation: false };
+}
+
+function testFrozenOpeningArtifactPublication() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+  var originalUtilities = Utilities, originalDriveApp = typeof DriveApp === "undefined" ? undefined : DriveApp;
+  var originalPropertiesService = typeof PropertiesService === "undefined" ? undefined : PropertiesService;
+  var originalLockService = typeof LockService === "undefined" ? undefined : LockService;
+  var policy = INVENTORY_OPENING_REVIEW_POLICY;
+  var payload = "UEsDBA==", bytes = [0x50, 0x4B, 0x03, 0x04];
+  var frozenHash = policy.FROZEN_ARTIFACT_SHA256.toLowerCase(), driveHash = frozenHash;
+  var properties = {}, collision = false, writes = 0, postRead = false, createFailure = false;
+  var lockDepth = 0;
+  function authExists() { return !!properties[FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY]; }
+  function digestBytes(hash) {
+    return hash.match(/../g).map(function(pair) {
+      var byte = parseInt(pair, 16); return byte > 127 ? byte - 256 : byte;
+    });
+  }
+  try {
+    PropertiesService = { getScriptProperties: function() { return {
+      getProperty: function(key) { return properties[key] || null; },
+      setProperty: function(key, value) { properties[key] = value; },
+      deleteProperty: function(key) { delete properties[key]; }
+    }; } };
+    LockService = { getScriptLock: function() { return {
+      waitLock: function(timeout) { check(timeout === 30000, "authorization boundary uses 30-second ScriptLock"); lockDepth++; },
+      releaseLock: function() { lockDepth--; }
+    }; } };
+    Utilities = {
+      DigestAlgorithm: { SHA_256: "SHA_256" },
+      base64Decode: function(value) {
+        if (value === "bm90LXhsc3g=") return [0x6E, 0x6F, 0x74];
+        return bytes.slice();
+      },
+      computeDigest: function(algorithm, input) { return digestBytes(postRead ? driveHash : frozenHash); },
+      newBlob: function(value, mime, name) { return { bytes: value, mime: mime, name: name }; }
+    };
+    DriveApp = { getFolderById: function(folderId) {
+      check(folderId === policy.DRIVE_FOLDER_ID, "publication uses frozen Drive folder");
+      return {
+        getFilesByName: function(fileName) {
+          check(fileName === policy.ARTIFACT_FILE, "collision check uses frozen artifact name");
+          return { hasNext: function() { return collision; }, next: function() {
+            return { getId: function() { return "EXISTING_FILE"; } };
+          } };
+        },
+        createFile: function(blob) {
+          if (createFailure) throw new Error("CREATE_FAILED");
+          writes++;
+          return { getId: function() { return "CREATED_FILE"; }, getBlob: function() {
+            postRead = true; return { getBytes: function() { return bytes.slice(); } };
+          } };
+        }
+      };
+    } };
+
+    var absent = publishFrozenOpeningArtifact(payload);
+    check(absent.reason === "FROZEN_ARTIFACT_PUBLICATION_NOT_AUTHORIZED" && writes === 0,
+      "absent authorization refuses publication");
+    var authorized = authorizeFrozenOpeningArtifactPublication();
+    check(authorized.status === "AUTHORIZED" && authExists() && authorized.productionMutation === false,
+      "absent authorization becomes active");
+    check(authorizeFrozenOpeningArtifactPublication().reason === "AUTHORIZATION_ALREADY_ACTIVE" && authExists(),
+      "second authorization is refused");
+    check(publishFrozenOpeningArtifact("!!!!").reason === "MALFORMED_BASE64" && authExists(),
+      "invalid payload preserves authorization");
+    frozenHash = new Array(65).join("0");
+    check(publishFrozenOpeningArtifact(payload).reason === "SHA256_MISMATCH" && authExists(),
+      "wrong SHA preserves authorization");
+    frozenHash = policy.FROZEN_ARTIFACT_SHA256.toLowerCase();
+    collision = true;
+    var collided = publishFrozenOpeningArtifact(payload);
+    check(collided.reason === "FROZEN_ARTIFACT_ALREADY_EXISTS" && collided.authorizationConsumed === true &&
+      collided.writeCount === 0 && !authExists() && writes === 0, "collision consumes authorization without Drive write");
+
+    collision = false;
+    authorizeFrozenOpeningArtifactPublication();
+    var published = publishFrozenOpeningArtifact(payload);
+    check(published.status === "PUBLISHED_AND_VERIFIED" && published.canonicalDesignation === "ELIGIBLE" &&
+      published.authorizationConsumed === true && published.writeCount === 1 && writes === 1 && !authExists(),
+      "valid publication consumes authorization and writes exactly once");
+    check(postRead && published.postUploadSha256 === driveHash,
+      "post-upload hash uses bytes read from Drive object");
+    check(publishFrozenOpeningArtifact(payload).reason === "FROZEN_ARTIFACT_PUBLICATION_NOT_AUTHORIZED" && writes === 1,
+      "consumed authorization prevents double publication");
+
+    authorizeFrozenOpeningArtifactPublication();
+    driveHash = new Array(65).join("f"); postRead = false;
+    var mismatch = publishFrozenOpeningArtifact(payload);
+    check(mismatch.status === "PUBLISHED_BUT_HASH_MISMATCH" && mismatch.canonicalDesignation === "REJECTED" &&
+      mismatch.authorizationConsumed === true && !authExists() && writes === 2,
+      "post-write mismatch consumes authorization and rejects artifact");
+
+    authorizeFrozenOpeningArtifactPublication();
+    driveHash = frozenHash; postRead = false; createFailure = true;
+    var failed = publishFrozenOpeningArtifact(payload);
+    check(failed.status === "FAILED" && failed.reason === "CREATE_FAILED" && failed.authorizationConsumed === true &&
+      failed.writeCount === 0 && !authExists() && writes === 2, "create failure consumes authorization");
+    check(lockDepth === 0 && INVENTORY_OPENING_STAGING_POLICY.PRODUCTION_MUTATION === false &&
+      policy.PRODUCTION_MUTATION === false && absent.productionMutation === false && failed.productionMutation === false,
+      "locks release and productionMutation remains false");
+  } finally {
+    Utilities = originalUtilities;
+    if (originalDriveApp === undefined) delete DriveApp; else DriveApp = originalDriveApp;
+    if (originalPropertiesService === undefined) delete PropertiesService; else PropertiesService = originalPropertiesService;
+    if (originalLockService === undefined) delete LockService; else LockService = originalLockService;
+  }
+  Logger.log("PASS: testFrozenOpeningArtifactPublication | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios, productionMutation: false };
 }

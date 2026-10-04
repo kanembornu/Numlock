@@ -28,10 +28,400 @@ var INVENTORY_OPENING_REVIEW_POLICY = Object.freeze({
   EXPECTED_COUNT: 21,
   ARTIFACT_FILE: "inventory-opening-evidence-intake.xlsx",
   ARTIFACT_VERSION: "V01",
-  FROZEN_ARTIFACT_SHA256: "",
+  FROZEN_ARTIFACT_SHA256: "c7335b1d155cb8ee7cce10983b0fa2986efd950d502514038d13bfe124296dd9",
+  FROZEN_ARTIFACT_DRIVE_FILE_ID: "1898Qe_MaTR6JMVOLnQN9z9Us1cwxOgX2",
+  DRIVE_FOLDER_ID: "1Un69xogJ5s64xO6iRM7PBXLTJ-GMlynu",
+  ARTIFACT_MIME: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   MIGRATION_ID: "INVENTORY-OPENINGS-POPULATION-20260905",
   PRODUCTION_MUTATION: false
 });
+
+var FROZEN_OPENING_INTAKE_HEADER = Object.freeze([
+  "OpeningID", "OpeningBatchID", "CutoverDate", "Location", "ItemID",
+  "ItemName", "BaseUOM", "ConversionPackageContext", "ObservedQty",
+  "ObservationTimestamp", "QuantityEvidenceRef", "UnitCost", "TotalValue",
+  "ValuationBasis", "ValuationEvidenceRef", "AcquisitionEvidenceRef",
+  "AccountingSourceRef", "EconomicOrigin", "PreparedBy", "PreparedAt",
+  "ReviewedBy", "ReviewedAt", "ApprovalStatus", "OperatorNotes",
+  "BaseUOMValidation", "MissingCountEvidence", "MissingValuationEvidence",
+  "UnresolvedSourceProvenance", "ConflictingSourceEvidence", "InvalidUOM",
+  "InvalidDecimalPrecision", "InvalidTotalValue", "ReadinessState",
+  "ConflictState", "ConversionStatus"
+]);
+
+function frozenOpeningXmlChildren(element, name, namespace) {
+  return element ? element.getChildren(name, namespace) : [];
+}
+
+function frozenOpeningXmlChildText(element, name, namespace) {
+  var child = element && element.getChild(name, namespace);
+  return child ? child.getText() : null;
+}
+
+function frozenOpeningColumnIndex(reference) {
+  var match = /^([A-Z]+)\d+$/.exec(String(reference || ""));
+  if (!match) throw new Error("INVALID_XLSX_CELL_REFERENCE");
+  var result = 0;
+  for (var i = 0; i < match[1].length; i++) result = result * 26 + match[1].charCodeAt(i) - 64;
+  return result - 1;
+}
+
+function frozenOpeningCellValue(cell, namespace, sharedStrings) {
+  var type = cell.getAttribute("t");
+  type = type ? type.getValue() : "";
+  var value = frozenOpeningXmlChildText(cell, "v", namespace);
+  if (type === "inlineStr") {
+    var inline = cell.getChild("is", namespace);
+    if (!inline) return null;
+    return inline.getValue() || null;
+  }
+  if (value == null || value === "") return null;
+  if (type === "s") {
+    var index = Number(value);
+    if (Math.floor(index) !== index || index < 0 || index >= (sharedStrings || []).length) {
+      throw new Error("INVALID_XLSX_SHARED_STRING_REFERENCE");
+    }
+    return sharedStrings[index];
+  }
+  return value;
+}
+
+function parseFrozenOpeningSharedStrings(xml) {
+  if (!xml) return [];
+  var root = XmlService.parse(xml).getRootElement(), namespace = root.getNamespace();
+  return frozenOpeningXmlChildren(root, "si", namespace).map(function(item) { return item.getValue(); });
+}
+
+function parseFrozenOpeningWorkbook(workbookBytes) {
+  if (!workbookBytes || !workbookBytes.length) throw new Error("MISSING_XLSX_WORKBOOK_BYTES");
+  var blobs;
+  try { blobs = Utilities.unzip(Utilities.newBlob(workbookBytes, "application/zip")); }
+  catch (error) { throw new Error("INVALID_XLSX_WORKBOOK"); }
+  var files = {};
+  (blobs || []).forEach(function(blob) { files[String(blob.getName()).replace(/^\//, "")] = blob.getDataAsString(); });
+  if (!files["xl/workbook.xml"]) throw new Error("MISSING_XLSX_WORKBOOK_XML");
+  if (!files["xl/_rels/workbook.xml.rels"]) throw new Error("MISSING_XLSX_WORKBOOK_RELATIONSHIPS");
+  var workbookRoot = XmlService.parse(files["xl/workbook.xml"]).getRootElement();
+  var workbookNamespace = workbookRoot.getNamespace();
+  var relationshipsNamespace = XmlService.getNamespace("http://schemas.openxmlformats.org/officeDocument/2006/relationships");
+  var sheetsElement = workbookRoot.getChild("sheets", workbookNamespace);
+  if (!sheetsElement) throw new Error("MISSING_XLSX_SHEETS");
+  var sheets = frozenOpeningXmlChildren(sheetsElement, "sheet", workbookNamespace).map(function(sheet) {
+    var name = sheet.getAttribute("name"), relationship = sheet.getAttribute("id", relationshipsNamespace);
+    if (!name || !relationship) throw new Error("INVALID_XLSX_SHEET_DECLARATION");
+    return { name: name.getValue(), relationshipId: relationship.getValue() };
+  });
+  var intake = null;
+  sheets.forEach(function(sheet) { if (sheet.name === "Intake") intake = sheet; });
+  if (!intake) throw new Error("MISSING_XLSX_INTAKE_SHEET");
+  var relsRoot = XmlService.parse(files["xl/_rels/workbook.xml.rels"]).getRootElement();
+  var relsNamespace = relsRoot.getNamespace(), target = null;
+  frozenOpeningXmlChildren(relsRoot, "Relationship", relsNamespace).forEach(function(relationship) {
+    var id = relationship.getAttribute("Id"), relationTarget = relationship.getAttribute("Target");
+    if (id && relationTarget && id.getValue() === intake.relationshipId) target = relationTarget.getValue();
+  });
+  if (!target || /(^|\/)\.\.(\/|$)/.test(target)) throw new Error("MISSING_XLSX_INTAKE_RELATIONSHIP");
+  var worksheetPath = target.charAt(0) === "/" ? target.slice(1) : "xl/" + target.replace(/^\.\//, "");
+  if (!files[worksheetPath]) throw new Error("MISSING_XLSX_INTAKE_WORKSHEET");
+  var sharedStrings = parseFrozenOpeningSharedStrings(files["xl/sharedStrings.xml"] || null);
+  return { sheets: sheets, intakeWorksheetPath: worksheetPath,
+    worksheetXml: files[worksheetPath], sharedStrings: sharedStrings };
+}
+
+function normalizeOpeningSourceRow(xlsxRow, headerMap) {
+  var result = { sourceRowNumber: xlsxRow.sourceRowNumber, hasFormula: false, formulaFields: {} };
+  FROZEN_OPENING_INTAKE_HEADER.forEach(function(header) { result[header] = null; });
+  Object.keys(xlsxRow.cells || {}).forEach(function(reference) {
+    var header = headerMap[frozenOpeningColumnIndex(reference)];
+    if (!header) return;
+    result[header] = xlsxRow.cells[reference].value == null || xlsxRow.cells[reference].value === "" ? null : xlsxRow.cells[reference].value;
+    if (xlsxRow.cells[reference].hasFormula) {
+      result.hasFormula = true;
+      result.formulaFields[header] = true;
+    }
+  });
+  return result;
+}
+
+function decodeFrozenOpeningIntakeRows(worksheetXml, sharedStrings) {
+  if (!worksheetXml) throw new Error("MISSING_XLSX_INTAKE_XML");
+  var root = XmlService.parse(worksheetXml).getRootElement(), namespace = root.getNamespace();
+  var sheetData = root.getChild("sheetData", namespace);
+  if (!sheetData) throw new Error("MISSING_XLSX_SHEET_DATA");
+  var parsedRows = frozenOpeningXmlChildren(sheetData, "row", namespace).map(function(row) {
+    var rowAttribute = row.getAttribute("r"), rowNumber = rowAttribute ? Number(rowAttribute.getValue()) : NaN;
+    if (Math.floor(rowNumber) !== rowNumber || rowNumber < 1) throw new Error("INVALID_XLSX_ROW_NUMBER");
+    var cells = {};
+    frozenOpeningXmlChildren(row, "c", namespace).forEach(function(cell) {
+      var reference = cell.getAttribute("r");
+      if (!reference) throw new Error("MISSING_XLSX_CELL_REFERENCE");
+      cells[reference.getValue()] = { value: frozenOpeningCellValue(cell, namespace, sharedStrings || []),
+        hasFormula: !!cell.getChild("f", namespace) };
+    });
+    return { sourceRowNumber: rowNumber, cells: cells };
+  });
+  var headerRow = null;
+  parsedRows.forEach(function(row) { if (row.sourceRowNumber === 4) headerRow = row; });
+  if (!headerRow) throw new Error("MISSING_FROZEN_OPENING_HEADER_ROW");
+  var headerMap = {}, actualHeader = [];
+  Object.keys(headerRow.cells).forEach(function(reference) {
+    var index = frozenOpeningColumnIndex(reference);
+    headerMap[index] = headerRow.cells[reference].value;
+    actualHeader[index] = headerRow.cells[reference].value;
+  });
+  if (JSON.stringify(actualHeader) !== JSON.stringify(FROZEN_OPENING_INTAKE_HEADER)) {
+    throw new Error("FROZEN_OPENING_HEADER_MISMATCH");
+  }
+  return parsedRows.filter(function(row) { return row.sourceRowNumber > 4; }).map(function(row) {
+    return normalizeOpeningSourceRow(row, headerMap);
+  });
+}
+
+function mapFrozenOpeningSourceToReview(sourceRow) {
+  var result = {};
+  ["OpeningID", "OpeningBatchID", "CutoverDate", "Location", "ItemID", "BaseUOM", "ObservedQty",
+    "ObservationTimestamp", "QuantityEvidenceRef", "UnitCost", "TotalValue", "ValuationBasis",
+    "ValuationEvidenceRef", "AcquisitionEvidenceRef", "AccountingSourceRef", "EconomicOrigin",
+    "PreparedBy", "PreparedAt", "ReviewedBy", "ReviewedAt"].forEach(function(field) {
+      result[field] = sourceRow && sourceRow[field] == null ? null : sourceRow[field];
+    });
+  return result;
+}
+
+function computeTemplateSourceRowsFingerprint(sourceRows) {
+  var rows = (sourceRows || []).slice().sort(function(left, right) { return left.sourceRowNumber - right.sourceRowNumber; });
+  var canonical = rows.map(function(row) {
+    var ordered = { sourceRowNumber: row.sourceRowNumber };
+    FROZEN_OPENING_INTAKE_HEADER.forEach(function(field) { ordered[field] = row[field] == null ? null : row[field]; });
+    return ordered;
+  });
+  return computeSha256Hex(Utilities.newBlob(JSON.stringify(canonical)).getBytes());
+}
+
+function parseExcelSerialDate(serial) {
+  var text = String(serial == null ? "" : serial);
+  if (!/^\d+(?:\.0+)?$/.test(text)) throw new Error("INVALID_EXCEL_SERIAL_DATE");
+  var value = Number(text);
+  if (!isFinite(value) || value < 0 || value > 2958465 || Math.floor(value) !== value) throw new Error("INVALID_EXCEL_SERIAL_DATE");
+  var date = new Date(Date.UTC(1899, 11, 30) + value * 86400000);
+  if (isNaN(date.getTime())) throw new Error("INVALID_EXCEL_SERIAL_DATE");
+  return date.getUTCFullYear() + "-" + ("0" + (date.getUTCMonth() + 1)).slice(-2) + "-" +
+    ("0" + date.getUTCDate()).slice(-2);
+}
+
+function runInventoryOpeningTemplateParserDiagnostic() {
+  var verification = verifyFrozenArtifactDriveBytes();
+  if (!verification.verified) return verification;
+  var bytes = DriveApp.getFileById(INVENTORY_OPENING_REVIEW_POLICY.FROZEN_ARTIFACT_DRIVE_FILE_ID).getBlob().getBytes();
+  var workbook = parseFrozenOpeningWorkbook(bytes);
+  var rows = decodeFrozenOpeningIntakeRows(workbook.worksheetXml, workbook.sharedStrings);
+  return { status: "PASS", intakeWorksheetPath: workbook.intakeWorksheetPath, sheetCount: workbook.sheets.length,
+    rowCount: rows.length, headerCount: FROZEN_OPENING_INTAKE_HEADER.length,
+    fingerprint: computeTemplateSourceRowsFingerprint(rows), productionMutation: false };
+}
+
+function validateFrozenArtifactBase64Payload(payload) {
+  if (payload == null || typeof payload !== "string" || payload.length === 0) {
+    return { valid: false, reason: "MISSING_OR_NON_STRING_PAYLOAD" };
+  }
+  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(payload)) {
+    return { valid: false, reason: "MALFORMED_BASE64" };
+  }
+  try {
+    var decoded = Utilities.base64Decode(payload);
+    if (!decoded || decoded.length === 0) {
+      return { valid: false, reason: "EMPTY_DECODED_BYTES" };
+    }
+    return { valid: true, decoded: decoded };
+  } catch (e) {
+    return { valid: false, reason: "BASE64_DECODE_FAILED" };
+  }
+}
+
+function validateXlsxSignature(bytes) {
+  if (!bytes || bytes.length < 4) return false;
+  return bytes[0] === 0x50 && bytes[1] === 0x4B && bytes[2] === 0x03 && bytes[3] === 0x04;
+}
+
+function computeSha256Hex(bytes) {
+  var hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes);
+  var hex = "";
+  for (var i = 0; i < hash.length; i++) {
+    var byte = hash[i] & 0xFF;
+    hex += ("0" + byte.toString(16)).slice(-2);
+  }
+  return hex;
+}
+
+var FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY = "INVENTORY_OPENING_ARTIFACT_PUBLICATION_AUTH";
+
+function authorizeFrozenOpeningArtifactPublication() {
+  var policy = INVENTORY_OPENING_REVIEW_POLICY;
+  var lock = LockService.getScriptLock();
+  var acquired = false;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var props = PropertiesService.getScriptProperties();
+    var existing = props.getProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
+    if (existing) {
+      try {
+        var parsed = JSON.parse(existing);
+        if (parsed && parsed.state === "AUTHORIZED" && parsed.artifactSha256 === policy.FROZEN_ARTIFACT_SHA256) {
+          return { status: "REFUSED", reason: "AUTHORIZATION_ALREADY_ACTIVE", productionMutation: false };
+        }
+      } catch (e) { /* fall through to fail-closed */ }
+      return { status: "REFUSED", reason: "MALFORMED_EXISTING_AUTHORIZATION", productionMutation: false };
+    }
+    var record = {
+      state: "AUTHORIZED",
+      artifactSha256: policy.FROZEN_ARTIFACT_SHA256,
+      driveFolderId: policy.DRIVE_FOLDER_ID,
+      filename: policy.ARTIFACT_FILE,
+      mime: policy.ARTIFACT_MIME,
+      authorizedAt: new Date().toISOString()
+    };
+    props.setProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY, JSON.stringify(record));
+    return { status: "AUTHORIZED", productionMutation: false };
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function publishFrozenOpeningArtifact(base64Payload) {
+  var policy = INVENTORY_OPENING_REVIEW_POLICY;
+  var writes = 0;
+  if (!policy.FROZEN_ARTIFACT_SHA256 || !policy.DRIVE_FOLDER_ID ||
+      !policy.ARTIFACT_FILE || !policy.ARTIFACT_MIME) {
+    return { status: "REFUSED", reason: "FROZEN_ARTIFACT_POLICY_INCOMPLETE",
+      writeCount: 0, productionMutation: false };
+  }
+  var payloadResult = validateFrozenArtifactBase64Payload(base64Payload);
+  if (!payloadResult.valid) {
+    return { status: "REFUSED", reason: payloadResult.reason,
+      writeCount: 0, productionMutation: false };
+  }
+  var bytes = payloadResult.decoded;
+  if (!validateXlsxSignature(bytes)) {
+    return { status: "REFUSED", reason: "INVALID_XLSX_SIGNATURE",
+      writeCount: 0, productionMutation: false };
+  }
+  var preUploadSha = computeSha256Hex(bytes);
+  if (preUploadSha !== policy.FROZEN_ARTIFACT_SHA256.toLowerCase()) {
+    return { status: "REFUSED", reason: "SHA256_MISMATCH",
+      preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
+  }
+  // Pure validation passed. Now acquire lock for authorization + mutation boundary.
+  var lock = LockService.getScriptLock();
+  var acquired = false;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var props = PropertiesService.getScriptProperties();
+    var authRaw = props.getProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
+    if (!authRaw) {
+      return { status: "REFUSED", reason: "FROZEN_ARTIFACT_PUBLICATION_NOT_AUTHORIZED",
+        preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
+    }
+    var auth;
+    try { auth = JSON.parse(authRaw); } catch (e) {
+      return { status: "REFUSED", reason: "MALFORMED_AUTHORIZATION_RECORD",
+        preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
+    }
+    if (!auth || auth.state !== "AUTHORIZED" ||
+        auth.artifactSha256 !== policy.FROZEN_ARTIFACT_SHA256 ||
+        auth.driveFolderId !== policy.DRIVE_FOLDER_ID ||
+        auth.filename !== policy.ARTIFACT_FILE ||
+        auth.mime !== policy.ARTIFACT_MIME) {
+      return { status: "REFUSED", reason: "AUTHORIZATION_IDENTITY_MISMATCH",
+        preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
+    }
+    // Authorization valid. Check collision.
+    var folder = DriveApp.getFolderById(policy.DRIVE_FOLDER_ID);
+    var existing = folder.getFilesByName(policy.ARTIFACT_FILE);
+    if (existing.hasNext()) {
+      var collision = existing.next();
+      // Consume authorization on collision.
+      props.deleteProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
+      return { status: "REFUSED", reason: "FROZEN_ARTIFACT_ALREADY_EXISTS",
+        existingFileId: collision.getId(), preUploadSha256: preUploadSha,
+        writeCount: 0, authorizationConsumed: true, productionMutation: false };
+    }
+    // No collision. Consume authorization BEFORE createFile.
+    props.deleteProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
+    var blob = Utilities.newBlob(bytes, policy.ARTIFACT_MIME, policy.ARTIFACT_FILE);
+    var created = folder.createFile(blob);
+    writes = 1;
+    var postBytes = created.getBlob().getBytes();
+    var postUploadSha = computeSha256Hex(postBytes);
+    var byteIdentityMatch = postUploadSha === preUploadSha &&
+      postUploadSha === policy.FROZEN_ARTIFACT_SHA256.toLowerCase();
+    return {
+      status: byteIdentityMatch ? "PUBLISHED_AND_VERIFIED" : "PUBLISHED_BUT_HASH_MISMATCH",
+      fileId: created.getId(),
+      fileName: policy.ARTIFACT_FILE,
+      mimeType: policy.ARTIFACT_MIME,
+      size: bytes.length,
+      preUploadSha256: preUploadSha,
+      postUploadSha256: postUploadSha,
+      byteIdentityMatch: byteIdentityMatch,
+      canonicalDesignation: byteIdentityMatch ? "ELIGIBLE" : "REJECTED",
+      writeCount: writes,
+      authorizationConsumed: true,
+      productionMutation: false
+    };
+  } catch (error) {
+    return { status: "FAILED", reason: error.message,
+      preUploadSha256: preUploadSha, writeCount: writes,
+      authorizationConsumed: true, productionMutation: false };
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function verifyFrozenArtifactDriveBytes() {
+  var policy = INVENTORY_OPENING_REVIEW_POLICY;
+  if (!policy.FROZEN_ARTIFACT_DRIVE_FILE_ID) {
+    return { status: "FROZEN_ARTIFACT_FILE_NOT_CONFIGURED", verified: false, productionMutation: false };
+  }
+  var file;
+  try {
+    file = DriveApp.getFileById(policy.FROZEN_ARTIFACT_DRIVE_FILE_ID);
+  } catch (e) {
+    return { status: "FROZEN_ARTIFACT_UNREADABLE", verified: false, productionMutation: false };
+  }
+  var blob = file.getBlob();
+  var bytes = blob.getBytes();
+  if (!bytes || bytes.length === 0) {
+    return { status: "FROZEN_ARTIFACT_EMPTY", verified: false, productionMutation: false };
+  }
+  if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4B || bytes[2] !== 0x03 || bytes[3] !== 0x04) {
+    return { status: "FROZEN_ARTIFACT_INVALID_SIGNATURE", verified: false, productionMutation: false };
+  }
+  var hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes);
+  var hex = "";
+  for (var i = 0; i < hash.length; i++) {
+    var b = hash[i] & 0xFF;
+    hex += ("0" + b.toString(16)).slice(-2);
+  }
+  var actualSha = hex.toLowerCase();
+  var expectedSha = policy.FROZEN_ARTIFACT_SHA256.toLowerCase();
+  if (actualSha !== expectedSha) {
+    return { status: "FROZEN_ARTIFACT_HASH_MISMATCH", verified: false,
+      fileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID, actualSha256: actualSha,
+      expectedSha256: expectedSha, productionMutation: false };
+  }
+  var fileName = file.getName();
+  var mimeType = blob.getContentType();
+  var size = bytes.length;
+  if (fileName !== policy.ARTIFACT_FILE || mimeType !== policy.ARTIFACT_MIME || size !== 28029) {
+    return { status: "FROZEN_ARTIFACT_METADATA_MISMATCH", verified: false,
+      fileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID, actualSha256: actualSha,
+      expectedSha256: expectedSha, actualFileName: fileName, actualMime: mimeType,
+      actualSize: size, productionMutation: false };
+  }
+  return { status: "FROZEN_ARTIFACT_VERIFIED", verified: true,
+    fileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID, actualSha256: actualSha,
+    expectedSha256: expectedSha, byteIdentityMatch: true, productionMutation: false };
+}
+
+function runInventoryOpeningArtifactIntegrityDiagnostic() {
+  return verifyFrozenArtifactDriveBytes();
+}
 
 function inventoryOpeningStagingText(value) {
   return String(value == null ? "" : value).trim();
@@ -291,20 +681,48 @@ function inventoryOpeningPopulationRowsMatch(actual, expected) {
   });
 }
 
+function buildPopulationPreimageDiagnostics(state) {
+  if (!state) return [{ id: "STATE_EXISTS", pass: false, expected: "non-null state", actual: "null" }];
+  function headerCount(snapshot) {
+    return snapshot && snapshot.exists && snapshot.values && snapshot.values.length ? snapshot.values[0].length : "missing";
+  }
+  var accountState = state.accounts ? inventoryMigrationAccountState({ accounts: state.accounts }) : "missing";
+  var ledgerRows = inventoryMigrationRows(state.ledger).length;
+  var balanceRows = inventoryMigrationRows(state.balance).length;
+  return [
+    { id: "STATE_EXISTS", pass: true, expected: "non-null state", actual: "object" },
+    { id: "OPENINGS_HEADERS_EXACT", pass: inventoryMigrationExactHeaders(state.openings, INVENTORY_OPENING_STAGING_POLICY.HEADERS),
+      expected: "27 exact headers", actual: headerCount(state.openings) },
+    { id: "OPENINGS_NO_FORMULAS", pass: !(state.openings && state.openings.hasFormulas), expected: "no formulas",
+      actual: state.openings && state.openings.hasFormulas ? "has formulas" : "none" },
+    { id: "OPENINGS_NO_NOTES", pass: !(state.openings && state.openings.hasNotes), expected: "no notes",
+      actual: state.openings && state.openings.hasNotes ? "has notes" : "none" },
+    { id: "ITEMS_HEADERS_EXACT", pass: inventoryMigrationExactHeaders(state.items, BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS),
+      expected: "exact headers match", actual: headerCount(state.items) },
+    { id: "CONVERSIONS_HEADERS_EXACT", pass: inventoryMigrationExactHeaders(state.conversions, BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS),
+      expected: "exact headers match", actual: headerCount(state.conversions) },
+    { id: "LEDGER_HEADERS_EXACT", pass: inventoryMigrationExactHeaders(state.ledger, BALANCE_FOUNDATION_POLICY.INVENTORY_LEDGER_HEADERS),
+      expected: "exact headers match", actual: headerCount(state.ledger) },
+    { id: "LEDGER_EMPTY", pass: ledgerRows === 0, expected: "0 rows", actual: ledgerRows },
+    { id: "ACCOUNTS_STATE_READY", pass: accountState === "READY", expected: "READY", actual: accountState },
+    { id: "ACCOUNT_3210_ABSENT", pass: !inventoryOpeningStagingHasAccountCode(state.accounts, "3210"), expected: "absent",
+      actual: inventoryOpeningStagingHasAccountCode(state.accounts, "3210") ? "present" : "absent" },
+    { id: "BALANCE_EXISTS", pass: !!(state.balance && state.balance.exists), expected: "sheet exists",
+      actual: state.balance && state.balance.exists ? "exists" : "missing" },
+    { id: "BALANCE_HEADERS_EXACT", pass: inventoryMigrationExactHeaders(state.balance, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS),
+      expected: "exact headers match", actual: headerCount(state.balance) },
+    { id: "BALANCE_EMPTY", pass: balanceRows === 0, expected: "0 rows", actual: balanceRows }
+  ];
+}
+
 function buildInventoryOpeningPopulationPlan(state, review) {
   if (!review || review.status !== "PASS" || review.artifactIntegrity.status !== "PASS") {
     return { status: "REFUSED", reason: "REVIEWED_FROZEN_ARTIFACT_REQUIRED", writeCount: 0, productionMutation: false };
   }
-  if (!state || !inventoryMigrationExactHeaders(state.openings, INVENTORY_OPENING_STAGING_POLICY.HEADERS) ||
-      state.openings.hasFormulas || state.openings.hasNotes ||
-      !inventoryMigrationExactHeaders(state.items, BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS) ||
-      !inventoryMigrationExactHeaders(state.conversions, BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS) ||
-      !inventoryMigrationExactHeaders(state.ledger, BALANCE_FOUNDATION_POLICY.INVENTORY_LEDGER_HEADERS) ||
-      inventoryMigrationRows(state.ledger).length !== 0 || inventoryMigrationAccountState({ accounts: state.accounts }) !== "READY" ||
-      inventoryOpeningStagingHasAccountCode(state.accounts, "3210") ||
-      !state.balance.exists || !inventoryMigrationExactHeaders(state.balance, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS) ||
-      inventoryMigrationRows(state.balance).length !== 0) {
-    return { status: "REFUSED", reason: "PRODUCTION_PREIMAGE_DRIFT", writeCount: 0, productionMutation: false };
+  var diagnostics = buildPopulationPreimageDiagnostics(state);
+  if (!diagnostics.every(function(diagnostic) { return diagnostic.pass; })) {
+    return { status: "REFUSED", reason: "PRODUCTION_PREIMAGE_DRIFT", writeCount: 0, productionMutation: false,
+      preimageDiagnostics: diagnostics };
   }
   var productionItems = inventoryMigrationRows(state.items), productionConversions = inventoryMigrationRows(state.conversions);
   if (!INVENTORY_OPENING_STAGING_POLICY.ELIGIBLE_ITEM_IDS.every(function(itemId) {
@@ -388,11 +806,22 @@ function executeInventoryOpeningPopulationRecoveryWithRuntime(runtime, record) {
 }
 
 function runInventoryOpeningPopulation() {
+  var artifact = verifyFrozenArtifactDriveBytes();
+  if (!artifact.verified) return artifact;
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
-    return { status: "REFUSED", reason: "FROZEN_REVIEWED_ARTIFACT_NOT_CONFIGURED", writeCount: 0,
-      postingAllowed: false, balancingAuthority: "NONE", productionMutation: false };
+    var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime({
+      openById: function(id) { return SpreadsheetApp.openById(id); }
+    });
+    if (!spreadsheet) return { status: "REFUSED", reason: "CANONICAL_STORAGE_UNAVAILABLE",
+      writeCount: 0, postingAllowed: false, balancingAuthority: "NONE", productionMutation: false };
+    var state = readInventoryOpeningStagingMigrationState(spreadsheet);
+    // Final reviewed opening evidence not yet configured.
+    // The blank intake template exists but operator fields are empty.
+    // Population requires completed cutoff evidence.
+    return { status: "REFUSED", reason: "FINAL_OPENING_EVIDENCE_NOT_CONFIGURED",
+      writeCount: 0, productionMutation: false };
   } finally { if (acquired) lock.releaseLock(); }
 }
 
@@ -517,9 +946,10 @@ function executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime(runtime)
       dependencyPopulation.migrationRecord).reason === "DOWNSTREAM_ACCOUNTING_DEPENDENCY_EXISTS",
       "downstream dependency recovery refusal");
     var disabled = runInventoryOpeningPopulation();
-    inventoryDisposableRuntimeProofRequire(!INVENTORY_OPENING_REVIEW_POLICY.FROZEN_ARTIFACT_SHA256 &&
-      disabled.reason === "FROZEN_REVIEWED_ARTIFACT_NOT_CONFIGURED" && disabled.writeCount === 0,
-      "real production executor disabled");
+    inventoryDisposableRuntimeProofRequire(disabled.status === "REFUSED" &&
+      disabled.reason === "FINAL_OPENING_EVIDENCE_NOT_CONFIGURED" && disabled.writeCount === 0 &&
+      disabled.productionMutation === false,
+      "real production executor requires completed cutoff evidence");
     inventoryDisposableRuntimeProofRequire(inventoryOpeningStagingFingerprint(readInventoryOpeningStagingMigrationState(
       runtime.openCanonical())) === productionBefore, "production fingerprint preserved");
     result = { status: "PASS", reviewedRows: 21, exactColumns: 27, readinessStates: 6,
@@ -680,6 +1110,26 @@ function runInventoryOpeningStagingRecovery(record) {
       spreadsheet: spreadsheet, freshSpreadsheet: function() {
         return resolveNumlockProductionSpreadsheetWithRuntime({ openById: function(id) { return SpreadsheetApp.openById(id); } });
       }, flush: function() { SpreadsheetApp.flush(); } }, record);
+    Logger.log(JSON.stringify(result)); return result;
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function runInventoryOpeningPreimageDiagnostic() {
+  var lock = LockService.getScriptLock(), acquired = false;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime({
+      openById: function(id) { return SpreadsheetApp.openById(id); }
+    });
+    if (!spreadsheet) return { status: "REFUSED", reason: "CANONICAL_STORAGE_UNAVAILABLE",
+      productionMutation: false };
+    var state = readInventoryOpeningStagingMigrationState(spreadsheet);
+    var diagnostics = buildPopulationPreimageDiagnostics(state);
+    var passed = diagnostics.filter(function(d) { return d.pass; }).length;
+    var failed = diagnostics.filter(function(d) { return !d.pass; }).map(function(d) { return d.id; });
+    var result = { status: failed.length === 0 ? "READY" : "DRIFT",
+      invariantCount: diagnostics.length, passed: passed, failed: failed,
+      diagnostics: diagnostics, productionMutation: false };
     Logger.log(JSON.stringify(result)); return result;
   } finally { if (acquired) lock.releaseLock(); }
 }

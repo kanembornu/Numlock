@@ -3,7 +3,11 @@ var PURCHASE_EVENT_POLICY = Object.freeze({ version: 'PURCHASE-EVENTS-V1', enabl
   headers: Object.freeze(['EventID', 'ExpenseID', 'BusinessLabel', 'PolicyVersion', 'PolicyRevision', 'CostType',
     'PurchaseRelationship', 'ExpenseDate', 'ReceiptDate', 'PurchaseQty', 'PurchaseUOM', 'AcquisitionValue',
     'SupplierSource', 'ExternalRef', 'ExternalDocumentStatus', 'Attestation', 'AllocationStatus', 'RequestKey',
-    'NormalizedPayload', 'ReceiptPlan', 'Lifecycle', 'RecoveryKey', 'CreatedAt', 'CreatedBy', 'IsActive']) });
+    'NormalizedPayload', 'ReceiptPlan', 'Lifecycle', 'RecoveryKey', 'CreatedAt', 'CreatedBy', 'IsActive',
+    'PaymentStatus', 'CashAccountCode', 'SupplierID', 'AccountingStatus']) });
+
+var PURCHASE_PAYMENT_STATUSES = Object.freeze(['PAID', 'UNPAID']);
+var PURCHASE_LEGACY_ACCOUNTING_STATUS = 'LEGACY_UNCLASSIFIED_NON_POSTABLE';
 
 // Accepted lifecycle states for PurchaseEvent rows. Append-only — new states
 // require policy revision and migration.
@@ -62,6 +66,33 @@ function purchaseEventProductionRuntime_(ss, lock, expenses, timestamp, policies
           inventoryReceiptFail_('ISACTIVE_BOOLEAN_PERSISTENCE_FAILED');
         }
       }
+    },
+    readLedger: function() {
+      return readCanonicalTable(ss, 'BalanceLedger', BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+    },
+    writeLedger: function(rows) {
+      var sheet = ss.getSheetByName('BalanceLedger');
+      requireCanonicalHeaders(sheet, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+      sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS.length)
+        .setValues(rows.map(function(row) {
+          return BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS.map(function(header) { return row[header]; });
+        }));
+    },
+    flush: function() { SpreadsheetApp.flush(); },
+    readPurchaseEvent: function(eventId) {
+      var matches = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers).filter(function(row) {
+        return String(row.EventID || '') === String(eventId || '');
+      });
+      return matches.length === 1 ? matches[0] : null;
+    },
+    updatePurchaseAccounting: function(eventId, status) {
+      var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
+      var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
+      var matches = rows.filter(function(row) { return String(row.EventID || '') === String(eventId || ''); });
+      if (matches.length !== 1) inventoryReceiptFail_('PURCHASE_ACCOUNTING_EVENT_NOT_UNIQUE');
+      var rowNumber = Number(matches[0].sourceRowIndex) + 1;
+      sheet.getRange(rowNumber, PURCHASE_EVENT_POLICY.headers.indexOf('AccountingStatus') + 1).setValue(status);
+      SpreadsheetApp.flush();
     }
   };
 }
@@ -77,13 +108,26 @@ function writeCanonicalBoolean_(sheet, row, col) {
   return readback === true && typeof readback === 'boolean';
 }
 
-function normalizePurchaseEventRequest_(payload) {
+function normalizePurchaseEventRequestWithCompatibility_(payload, allowLegacyPaymentStatus) {
   if (!payload || payload.transactionType !== 'EXPENSE' || typeof payload.requestKey !== 'string' ||
       !/^[A-Za-z0-9][A-Za-z0-9_.:-]{7,100}$/.test(payload.requestKey || '') ||
       typeof payload.expenseItemId !== 'string' || !payload.input || typeof payload.input !== 'object') inventoryReceiptFail_('INVALID_PURCHASE_REQUEST');
   Object.keys(payload).forEach(function(key) {
-    if (['transactionType', 'requestKey', 'expenseItemId', 'input'].indexOf(key) === -1) inventoryReceiptFail_('UNKNOWN_PURCHASE_FIELD');
+    if (['transactionType', 'requestKey', 'expenseItemId', 'input', 'cashAccountCode', 'paymentStatus', 'supplierId'].indexOf(key) === -1) inventoryReceiptFail_('UNKNOWN_PURCHASE_FIELD');
   });
+  var hasPaymentStatus = Object.prototype.hasOwnProperty.call(payload, 'paymentStatus');
+  var hasPaymentAuthority = hasPaymentStatus || Object.prototype.hasOwnProperty.call(payload, 'cashAccountCode') ||
+    Object.prototype.hasOwnProperty.call(payload, 'supplierId');
+  if (!hasPaymentAuthority && !allowLegacyPaymentStatus) inventoryReceiptFail_('INVALID_PAYMENT_STATUS');
+  var paymentStatus = inventoryReceiptText_(payload.paymentStatus);
+  var cashAccountCode = inventoryReceiptText_(payload.cashAccountCode);
+  var supplierId = inventoryReceiptText_(payload.supplierId);
+  if (hasPaymentAuthority) {
+    if (PURCHASE_PAYMENT_STATUSES.indexOf(paymentStatus) === -1) inventoryReceiptFail_('INVALID_PAYMENT_STATUS');
+    if (paymentStatus === 'PAID' && !cashAccountCode) inventoryReceiptFail_('CASH_ACCOUNT_REQUIRED');
+    if (paymentStatus === 'UNPAID' && !supplierId) inventoryReceiptFail_('SUPPLIER_REQUIRED');
+    if (paymentStatus === 'PAID' && supplierId || paymentStatus === 'UNPAID' && cashAccountCode) inventoryReceiptFail_('CONFLICTING_PAYMENT_AUTHORITY');
+  }
   var fields = ['ExpenseDate', 'ReceiptDate', 'PurchaseQty', 'PurchaseUOM', 'AcquisitionValue', 'SupplierSource',
     'ExternalRef', 'ExternalDocumentStatus', 'PackageIdentity', 'SupplierRef'];
   var input = payload.input, p = {};
@@ -109,7 +153,20 @@ function normalizePurchaseEventRequest_(payload) {
       !p.ExternalRef && p.ExternalDocumentStatus !== 'EXTERNAL_DOCUMENT_UNAVAILABLE') inventoryReceiptFail_('PURCHASE_EVIDENCE_REQUIRED');
   if (input.ConversionEvidenceConfirmed !== undefined && typeof input.ConversionEvidenceConfirmed !== 'boolean') inventoryReceiptFail_('INVALID_BOOLEAN');
   p.Attested = true; p.ConversionEvidenceConfirmed = input.ConversionEvidenceConfirmed === true;
-  return { transactionType: 'EXPENSE', requestKey: payload.requestKey, expenseItemId: payload.expenseItemId, input: p };
+  var normalized = { transactionType: 'EXPENSE', requestKey: payload.requestKey, expenseItemId: payload.expenseItemId };
+  if (hasPaymentAuthority) {
+    normalized.paymentStatus = paymentStatus; normalized.cashAccountCode = cashAccountCode; normalized.supplierId = supplierId;
+  }
+  normalized.input = p;
+  return normalized;
+}
+
+function normalizePurchaseEventRequest_(payload) {
+  return normalizePurchaseEventRequestWithCompatibility_(payload, false);
+}
+
+function normalizePurchaseEventHistoryRequest_(payload) {
+  return normalizePurchaseEventRequestWithCompatibility_(payload, true);
 }
 
 function buildPurchaseEvent_(request, expenses, authority, audit) {
@@ -149,7 +206,8 @@ function buildPurchaseEvent_(request, expenses, authority, audit) {
     Attestation: JSON.stringify({ attested: true, conversionEvidenceConfirmed: p.ConversionEvidenceConfirmed }),
     AllocationStatus: allocation, RequestKey: request.requestKey, NormalizedPayload: JSON.stringify(request),
     ReceiptPlan: JSON.stringify(plan), Lifecycle: 'CAPTURED_OPERATIONAL', RecoveryKey: 'pe-receipt-' + request.requestKey,
-    CreatedAt: audit.at, CreatedBy: audit.actor, IsActive: true };
+    CreatedAt: audit.at, CreatedBy: audit.actor, IsActive: true, PaymentStatus: request.paymentStatus,
+    CashAccountCode: request.cashAccountCode, SupplierID: request.supplierId, AccountingStatus: 'PENDING' };
 }
 
 // Strict lifecycle+IsActive validation. Unknown lifecycles and invalid
@@ -169,7 +227,7 @@ function purchaseEventHistory_(rows) {
         !row.RequestKey || keys[row.RequestKey] || ids[row.EventID] || row.EventID !== 'PE-' + row.RequestKey ||
         row.RecoveryKey !== 'pe-receipt-' + row.RequestKey ||
         !isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive)) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-    var request = normalizePurchaseEventRequest_(JSON.parse(row.NormalizedPayload));
+    var request = normalizePurchaseEventHistoryRequest_(JSON.parse(row.NormalizedPayload));
     if (JSON.stringify(request) !== row.NormalizedPayload || request.requestKey !== row.RequestKey || request.expenseItemId !== row.ExpenseID ||
         ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].some(function(k) { return request.input[k] !== row[k]; })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === row.ExpenseID; })[0];
@@ -230,8 +288,22 @@ function orchestratePurchaseEventUnderLock_(payload, runtime, scope, policies) {
       row = stored; writes = 1;
       writePhase = 'CONFIRMED';
     }
+    if (runtime.readLedger && runtime.writeLedger && runtime.updatePurchaseAccounting && runtime.readPurchaseEvent) {
+      var accounting = postPolicyCPurchaseEvent_(row, runtime);
+      if (accounting.status !== 'POSTED' && accounting.status !== 'ALREADY_POSTED') {
+        var pending = purchaseEventResult_('PURCHASE_PENDING', accounting.reason || accounting.status, row, key, writes);
+        pending.accountingStatus = accounting.accountingStatus || 'ACCOUNTING_EXCEPTION';
+        pending.accounting = accounting;
+        return pending;
+      }
+      row = runtime.readPurchaseEvent(row.EventID) || row;
+    }
     var plan = JSON.parse(row.ReceiptPlan);
-    if (!plan) return purchaseEventResult_('PURCHASE_CAPTURED', null, row, key, writes);
+    if (!plan) {
+      var captured = purchaseEventResult_('PURCHASE_CAPTURED', null, row, key, writes);
+      captured.accountingStatus = row.AccountingStatus;
+      return captured;
+    }
     // Reuse the receipt's own durable identity and movement recovery under the same lock.
     var current = runtime.receipt.read();
     if (runtime.receipt.environment !== 'LOCAL_FIXTURE' || !current.activation || current.activation.enabled !== true) {
@@ -524,7 +596,7 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
     try {
       parsedPayload = JSON.parse(row.NormalizedPayload);
       payloadParseable = true;
-      var normalized = normalizePurchaseEventRequest_(parsedPayload);
+      var normalized = normalizePurchaseEventHistoryRequest_(parsedPayload);
       payloadMatchesRow = JSON.stringify(normalized) === row.NormalizedPayload;
     } catch (e) { /* parse failed */ }
     predicates.normalizedPayloadParseable = payloadParseable;
@@ -873,7 +945,8 @@ function correctPurchaseEventUnderLock_(payload, ss, runtime) {
 
   var replacementRequestKey = 'corr-' + correctionKey;
   var replacementPayload = { transactionType: 'EXPENSE', requestKey: replacementRequestKey,
-    expenseItemId: payload.replacement.expenseItemId, input: payload.replacement.input };
+    expenseItemId: payload.replacement.expenseItemId, paymentStatus: original.PaymentStatus,
+    cashAccountCode: original.CashAccountCode, supplierId: original.SupplierID, input: payload.replacement.input };
   var normalizedReplacement;
   try { normalizedReplacement = normalizePurchaseEventRequest_(replacementPayload); }
   catch (error) { return { status: 'INVALID_REQUEST', reason: 'INVALID_REPLACEMENT_PAYLOAD', writeCount: 0 }; }

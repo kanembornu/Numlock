@@ -2,10 +2,9 @@
 // Uses the existing canonical-storage Sheets transport, not the receipt migration executor.
 function purchaseEventMigrationHeaders_() {
   var headers = PURCHASE_EVENT_POLICY.headers;
-  if (PURCHASE_EVENT_POLICY.sheet !== 'PurchaseEvents' || headers.length !== 25 ||
-      headers.some(function(h, i) { return !h || headers.indexOf(h) !== i; }) ||
-      PURCHASE_EVENT_POLICY.enabled !== false || EXPENSE_PURCHASE_POLICY.enabled !== false) {
-    throw new Error('PURCHASE_SCHEMA_OR_ACTIVATION_DRIFT');
+  if (PURCHASE_EVENT_POLICY.sheet !== 'PurchaseEvents' || headers.length !== 29 ||
+      headers.some(function(h, i) { return !h || headers.indexOf(h) !== i; })) {
+    throw new Error('PURCHASE_SCHEMA_DRIFT');
   }
   return headers.slice();
 }
@@ -20,28 +19,59 @@ function purchaseEventMigrationClassify_(snapshot) {
   if (!matches.length) return result;
   if (matches.length !== 1) return blocked('AMBIGUOUS_SHEET');
   var sheet = matches[0], grid = sheet.properties.gridProperties;
-  if (sheet.properties.sheetType !== 'GRID' || !grid || grid.columnCount < headers.length) return blocked('MALFORMED_GRID');
-  var cells = inventoryReceiptMigrationSheet_(sheet).cells, invalid = false, rows = {};
-  headers.forEach(function(h, i) {
+  if (sheet.properties.sheetType !== 'GRID' || !grid || grid.columnCount < 25) return blocked('MALFORMED_GRID');
+  var cells = inventoryReceiptMigrationSheet_(sheet).cells, invalid = false, targetAreaPopulated = false, rows = {};
+  var legacy = headers.slice(0, 25).every(function(h, i) {
     var cell = cells['1,' + (i + 1)] || {}, value = cell.userEnteredValue || {};
-    if (value.stringValue !== h || Object.keys(value).length !== 1 || cell.note) invalid = true;
+    return value.stringValue === h && Object.keys(value).length === 1 && !cell.note;
   });
+  var upgraded = headers.every(function(h, i) {
+    var cell = cells['1,' + (i + 1)] || {}, value = cell.userEnteredValue || {};
+    return value.stringValue === h && Object.keys(value).length === 1 && !cell.note;
+  });
+  if (!legacy) invalid = true;
   Object.keys(cells).forEach(function(key) {
     var rc = key.split(',').map(Number), cell = cells[key];
     var populated = Object.keys(cell.userEnteredValue || {}).length || Object.keys(cell.effectiveValue || {}).length;
     if (rc[1] > headers.length && (populated || cell.note)) invalid = true;
+    if (rc[0] === 1 && rc[1] > 25 && rc[1] <= headers.length && (populated || cell.note)) targetAreaPopulated = true;
     if (rc[0] > 1 && populated) rows[rc[0]] = true;
   });
-  if (invalid) return blocked('INCOMPATIBLE_PURCHASE_SCHEMA');
-  result.status = 'ALREADY_MIGRATED'; result.businessRows = Object.keys(rows).length;
+  if (invalid || !upgraded && targetAreaPopulated) return blocked('INCOMPATIBLE_PURCHASE_SCHEMA');
+  result.status = upgraded ? 'ALREADY_MIGRATED' : 'READY_UPGRADE';
+  result.businessRows = Object.keys(rows).length;
+  result.legacyRowsRemainNonPostable = !upgraded;
   return result;
 }
 
 // Caller owns the lock. Tests inject only local snapshots/batches; no Google services.
 function executePurchaseEventSchemaMigration_(runtime) {
   var before = runtime.read(), state = purchaseEventMigrationClassify_(before);
+  var headers = purchaseEventMigrationHeaders_();
+  if (state.status === 'READY_UPGRADE') {
+    var existing = before.sheets.filter(function(s) { return s.properties.title === PURCHASE_EVENT_POLICY.sheet; })[0];
+    var grid = existing.properties.gridProperties, requests = [];
+    if (grid.columnCount < headers.length) requests.push({ updateSheetProperties: {
+      properties: { sheetId: existing.properties.sheetId, gridProperties: {
+        rowCount: grid.rowCount, columnCount: headers.length } }, fields: 'gridProperties.columnCount' } });
+    requests.push({ updateCells: { start: { sheetId: existing.properties.sheetId, rowIndex: 0, columnIndex: 25 },
+      rows: [{ values: headers.slice(25).map(function(h) { return { userEnteredValue: { stringValue: h } }; }) }],
+      fields: 'userEnteredValue' } });
+    var upgrade = { requests: requests };
+    try {
+      runtime.batch(upgrade);
+      var upgraded = purchaseEventMigrationClassify_(runtime.read());
+      if (upgraded.status !== 'ALREADY_MIGRATED' || upgraded.businessRows !== state.businessRows) throw new Error('PURCHASE_SCHEMA_READBACK_FAILED');
+      return { status: 'MIGRATED', writeCount: 1, mutationUnit: 'ATOMIC_BATCH_UPDATE', subrequests: requests.length,
+        headerCount: headers.length, businessRows: upgraded.businessRows, postingAllowed: false,
+        legacyAccountingStatus: PURCHASE_LEGACY_ACCOUNTING_STATUS, preservation: 'PASS' };
+    } catch (upgradeError) {
+      return { status: 'MIGRATION_UNCERTAIN', writeCount: 'UNKNOWN', attemptedBatchCount: 1,
+        postingAllowed: false, reason: upgradeError.message, next: 'STOP_NO_RETRY_OR_RECOVERY' };
+    }
+  }
   if (state.status !== 'READY_CREATE') return state;
-  var headers = purchaseEventMigrationHeaders_(), id = 0;
+  var id = 0;
   var ids = before.sheets.map(function(s) { return s.properties.sheetId; });
   while (ids.indexOf(id) !== -1) id++;
   var body = { requests: [

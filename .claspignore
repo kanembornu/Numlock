@@ -11,6 +11,7 @@
 !35.Analytics.Financial.js
 !36.Finance.Service.js
 !37.Depreciation.Service.js
+!37.Inventory.Policy.Evidence.js
 !38.CapitalEquity.Service.js
 !39.Balance.Foundation.js
 !40.Cash.Foundation.js
@@ -64,6 +65,7 @@
 !96.Tests.Inventory.Receipt.Migration.Cases.js
 !96.Tests.Inventory.Receipt.Operational.Cases.js
 !96.Tests.Inventory.Receipt.Orchestration.Cases.js
+!96.Tests.Inventory.Policy.Evidence.Cases.js
 !97.Inventory.Receipt.Runtime.Proof.js
 !97.Inventory.Receipt.Operational.Runtime.Proof.js
 !96.Tests.Bounded.Read.Cases.js

@@ -84,7 +84,8 @@ function purchaseEventTestFixture_(authority, expenses, check, id) {
       read: function() { check(held, 'read under lock'); return { events: clone(f.events), expenses: expenses, items: authority.items, conversions: authority.conversions }; },
       audit: function() { return { actor: 'TEST', at: '2026-10-01T01:00:00Z' }; },
       appendEvent: function(row) { check(held, 'append under lock'); f.events.push(clone(row)); if (f.failure === 'AFTER_EVENT') throw new Error('LOST_RESPONSE'); } };
-    f.request = { transactionType: 'EXPENSE', requestKey: 'purchase-test-0001', cashAccountCode: "1000", expenseItemId: id || 'OSR04',
+    f.request = { transactionType: 'EXPENSE', requestKey: 'purchase-test-0001', paymentStatus: 'PAID',
+      cashAccountCode: "1000", expenseItemId: id || 'OSR04',
       input: { ExpenseDate: '2026-10-01', PurchaseQty: '1', PurchaseUOM: 'kg', AcquisitionValue: '20000',
         SupplierSource: 'TEST', ExternalRef: 'TEST-EVIDENCE', ExternalDocumentStatus: 'AVAILABLE', Attested: true, ConversionEvidenceConfirmed: true } };
     f.run = function() { return orchestratePurchaseEvent_(f.request, f.runtime); };
@@ -115,7 +116,7 @@ function testCanonicalPurchaseDispatcherContracts(authority, expenses) {
     var expenseHeaders = ['ID_Ops','Item','Kategori','Kind','Group','AccountCode','IsActive'];
     var grids = { tabops: [CANONICAL_ENTRY.EXPENSE_HEADERS], tabsal: [CANONICAL_ENTRY.SALES_HEADERS], Logs: [CANONICAL_ENTRY.LOG_HEADERS],
       ExpenseItems: [expenseHeaders].concat(expenses.map(function(e) { return expenseHeaders.map(function(h) { return e[h]; }); })),
-      Accounts: [['AccountCode','IsActive']].concat(Array.from(new Set(expenses.map(function(e) { return e.AccountCode; })),function(a) { return [a,true]; })),
+      Accounts: [['AccountCode','IsActive']].concat(Array.from(new Set(expenses.map(function(e) { return e.AccountCode; }).concat(['1000'])),function(a) { return [a,true]; })),
       Products: [['ID_Prod','Produk','Kategori','Kind','IsActive'],['P1','Test coffee','Coffee','Beverage',true]],
       ProductPricing: [['ID_Prod','Tipe','EffectiveFrom','EffectiveTo','HPP','Harga','IsActive'],['P1','Hot',new Date('2020-01-01T00:00:00Z'),'',4000,10000,true]] };
     Object.keys(grids).forEach(function(name) { sheets[name] = sheet(name, grids[name]); });
@@ -123,7 +124,7 @@ function testCanonicalPurchaseDispatcherContracts(authority, expenses) {
     f.dispatch = { environment: 'LOCAL_FIXTURE', lock: f.runtime.lock, purchase: f.runtime,
       spreadsheet: function() { return { getSheetByName: function(name) { return sheets[name] || null; } }; },
       now: function() { return new Date('2026-10-01T01:00:00Z'); }, uuid: function() { return 'FIXTURE' + String(++sequence).padStart(12,'0'); },
-      flush: function() {}, invalidate: function() {} };
+      settle: function() { return { status: 'POSTED' }; }, flush: function() {}, invalidate: function() {} };
     f.sheets = sheets; f.writes = writes;
     f.run = function(payload) { return submitCanonicalTransactionWithRuntime_(payload || f.request, f.dispatch); };
     f.checkCounts = function(events, receipts, movements, tabops) {
@@ -328,6 +329,7 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
   var count = 0;
   function check(value, label) { count++; if (!value) throw new Error('Purchase runtime wiring: ' + label); }
   function fixture(id) {
+    if (typeof SpreadsheetApp.flush !== 'function') SpreadsheetApp.flush = function() {};
     var base = purchaseEventTestFixture_(authority, expenses, check, id);
     var f = { writes: 0, reads: 0, failure: '', rows: [] };
     var headers = PURCHASE_EVENT_POLICY.headers;
@@ -335,13 +337,24 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
       return [columns.slice()].concat(rows.map(function(row) { return columns.map(function(h) { return row[h]; }); }));
     } }; } }; }
     var sheet = table(headers, f.rows);
+    f.ledger = [];
+    var ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
+    var ledgerSheet = table(ledgerHeaders, f.ledger);
+    ledgerSheet.getLastRow = function() { return f.ledger.length + 1; };
+    ledgerSheet.getLastColumn = function() { return ledgerHeaders.length; };
+    ledgerSheet.getRange = function(row, column, height, width) { return {
+      getValues: function() { return [ledgerHeaders.slice()]; },
+      setValues: function(values) { values.forEach(function(value) {
+        f.ledger.push(Object.fromEntries(ledgerHeaders.map(function(header, index) { return [header, value[index]]; })));
+      }); }
+    }; };
     sheet.getLastRow = function() { return f.rows.length + 1; };
     sheet.getLastColumn = function() { return headers.length; };
     sheet.getRange = function(row, column, height, width) { return {
       getValues: function() { return [headers.slice()]; },
       setNumberFormat: function(format) { check(format === '@' || format === 'General', 'canonical storage format'); },
       setValues: function(values) {
-        check(base.runtime.lock.hasLock() && column === 1 && height === 1 && width === 25 && row === f.rows.length + 2, 'locked exact append');
+        check(base.runtime.lock.hasLock() && column === 1 && height === 1 && width === headers.length && row === f.rows.length + 2, 'locked exact append');
         f.writes++;
         if (f.failure === 'BEFORE') throw new Error('TEST_TRANSPORT');
         f.rows.push(Object.fromEntries(headers.map(function(h, i) { return [h, values[0][i]]; })));
@@ -353,8 +366,9 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
     var ss = { getSheetByName: function(name) {
       f.reads++; check(base.runtime.lock.hasLock(), 'storage read under lock');
       if (f.failure === 'READBACK' && f.writes) throw new Error('TEST_READBACK');
-      if (name === 'PurchaseEvents') return sheet;
-      if (name === 'InventoryItems') return table(BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS, authority.items);
+       if (name === 'PurchaseEvents') return sheet;
+       if (name === 'BalanceLedger') return ledgerSheet;
+       if (name === 'InventoryItems') return table(BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS, authority.items);
       if (name === 'InventoryUOMConversions') return table(BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS, authority.conversions);
       throw new Error('FORBIDDEN_SURFACE:' + name);
     } };
@@ -373,10 +387,11 @@ function testPurchaseEventRuntimeWiringContracts(authority, expenses) {
     ['read','appendEvent','audit'].every(function(name) { return typeof f.runtime[name] === 'function'; }) &&
     f.runtime.receipt.lock === f.runtime.lock && typeof f.runtime.receipt.read === 'function', 'complete production-shaped capability contract');
   var result = f.run();
-  check(f.writes === 1 && result.tabopsWrites === 0 && result.BalanceLedgerWrites === 0 &&
-    result.accountingPostingAllowed === false && result.financialTotalsIncluded === false &&
-    f.rows[0].CreatedBy === CANONICAL_ENTRY.USER && f.rows[0].CreatedAt === '2026-10-01T01:00:00.000Z',
-    'first append from empty event store: one event with embedded audit; no other store accessible');
+  check(f.writes === 1 && f.ledger.length === 2 &&
+    f.ledger[0].AccountCode === '6210' && f.ledger[1].AccountCode === '1000' &&
+    f.rows[0].AccountingStatus === 'POSTED',
+    'first append durably posts paid purchase and updates accounting status: ' + JSON.stringify({ writes: f.writes,
+      ledger: f.ledger, accountingStatus: f.rows[0] && f.rows[0].AccountingStatus, result: result }));
   check(result.status === 'PURCHASE_PENDING' && result.reason === 'PRODUCTION_OPERATIONAL_POSTING_DISABLED' &&
     result.writeCount === 1 && f.rows.length === 1 && f.rows[0].AllocationStatus === 'SINGLE_COMPONENT_EVIDENCED' &&
     JSON.parse(f.rows[0].ReceiptPlan).input.ItemID === 'ING-018', 'direct event stops at receipt gate');
@@ -695,6 +710,76 @@ function testPurchaseEventLifecycleReadModel_() {
   f.run();
   var baseRow = clone(f.events[0]);
 
+  // Legacy rows predate payment authority fields. Read compatibility must preserve that absence,
+  // while current writes and explicit invalid values remain fail-closed.
+  var legacyRow = clone(baseRow);
+  var legacyPayload = JSON.parse(legacyRow.NormalizedPayload);
+  delete legacyPayload.paymentStatus; delete legacyPayload.cashAccountCode; delete legacyPayload.supplierId;
+  legacyRow.NormalizedPayload = JSON.stringify(legacyPayload);
+  legacyRow.PaymentStatus = ''; legacyRow.CashAccountCode = ''; legacyRow.SupplierID = '';
+  var legacySnapshot = JSON.stringify(legacyRow);
+  check(!!purchaseEventHistory_([legacyRow])[legacyRow.RequestKey], 'legacy missing PaymentStatus reads safely');
+  check(JSON.stringify(legacyRow) === legacySnapshot, 'legacy read compatibility performs zero mutation');
+  check(projectPurchaseEventTransaction_(legacyRow).id === legacyRow.EventID, 'legacy row projects to Transactions');
+  check(normalizePurchaseEventHistoryRequest_(legacyPayload).paymentStatus === undefined,
+    'legacy payment status remains unclassified');
+  var invalidPayload = clone(legacyPayload); invalidPayload.paymentStatus = 'UNKNOWN';
+  var invalidRejected = false;
+  try { normalizePurchaseEventHistoryRequest_(invalidPayload); } catch (error) { invalidRejected = error.message === 'INVALID_PAYMENT_STATUS'; }
+  check(invalidRejected, 'explicit invalid legacy-read PaymentStatus rejected');
+  var missingWriteRejected = false;
+  try { normalizePurchaseEventRequest_(legacyPayload); } catch (error) { missingWriteRejected = error.message === 'INVALID_PAYMENT_STATUS'; }
+  check(missingWriteRejected, 'current write still requires PaymentStatus');
+  check(normalizePurchaseEventRequest_(JSON.parse(baseRow.NormalizedPayload)).paymentStatus === 'PAID',
+    'valid current PaymentStatus remains readable');
+  check(purchaseEventHistory_([baseRow])[baseRow.RequestKey].EventID === baseRow.EventID,
+    'current identity and idempotency keys remain unchanged');
+
+  // Exercise the actual Transactions service chain over memory-only spreadsheet/cache fixtures.
+  var currentServiceRow = clone(baseRow);
+  var currentServicePayload = JSON.parse(currentServiceRow.NormalizedPayload);
+  currentServicePayload.requestKey = 'purchase-current-0002';
+  currentServiceRow.RequestKey = currentServicePayload.requestKey;
+  currentServiceRow.EventID = 'PE-' + currentServicePayload.requestKey;
+  currentServiceRow.RecoveryKey = 'pe-receipt-' + currentServicePayload.requestKey;
+  currentServiceRow.NormalizedPayload = JSON.stringify(currentServicePayload);
+  var serviceRows = [legacyRow, currentServiceRow], serviceWrites = 0, cacheWrites = 0;
+  var serviceGlobals = ['SpreadsheetApp', 'CacheService', 'getDashboardCacheRevision', 'getCanonicalTransactionData',
+    'buildLifecycleTransactionRows', 'readInventoryReceiptTransactionRows_', 'resolveDashboardDateRange'];
+  var serviceOriginals = serviceGlobals.map(function(name) { return Object.getOwnPropertyDescriptor(globalThis, name); });
+  function serviceTable(headers, rows) {
+    return { getDataRange: function() { return { getValues: function() {
+      return [headers.slice()].concat(rows.map(function(row) { return headers.map(function(header) { return row[header]; }); }));
+    } }; }, getRange: function() { return { setValue: function() { serviceWrites++; }, setValues: function() { serviceWrites++; } }; } };
+  }
+  try {
+    globalThis.SpreadsheetApp = { getActiveSpreadsheet: function() { return { getSheetByName: function(name) {
+      return name === PURCHASE_EVENT_POLICY.sheet ? serviceTable(PURCHASE_EVENT_POLICY.headers, serviceRows) : null;
+    } }; } };
+    globalThis.CacheService = { getScriptCache: function() { return { get: function() { return null; }, getAll: function() { return {}; },
+      put: function() { cacheWrites++; }, putAll: function() { cacheWrites++; } }; } };
+    globalThis.getDashboardCacheRevision = function() { return 'LOCAL-PAYMENT-COMPATIBILITY'; };
+    globalThis.getCanonicalTransactionData = function() { return { lifecycleRecords: [] }; };
+    globalThis.buildLifecycleTransactionRows = function() { return []; };
+    globalThis.readInventoryReceiptTransactionRows_ = function() { return []; };
+    globalThis.resolveDashboardDateRange = function() { return { startDate: '2026-01-01', endDate: '2026-12-31' }; };
+    var periodResult = getTransactionsPeriodRows({ startDate: '2026-01-01', endDate: '2026-12-31' });
+    var pageResult = getTransactionsPage({ tab: 'purchases', page: 1, pageSize: 15, filter: 'currentYear' });
+    check(periodResult.rows.length === 2 && pageResult.rows.length === 2,
+      'Transactions period and page services read legacy plus current PurchaseEvents');
+    check(periodResult.rows[0].id === legacyRow.EventID && periodResult.rows[1].id === currentServiceRow.EventID,
+      'Transactions service preserves equal-date source identity order');
+    check(pageResult.rows[0].paymentStatus === undefined && pageResult.rows[1].id === currentServiceRow.EventID,
+      'Transactions projection invents no legacy PaymentStatus and preserves current event');
+    check(serviceWrites === 0, 'Transactions service performs zero spreadsheet row writes');
+    check(serviceWrites === 0, 'Transactions service performs no business-row mutation');
+  } finally {
+    serviceGlobals.forEach(function(name, index) {
+      if (serviceOriginals[index]) Object.defineProperty(globalThis, name, serviceOriginals[index]);
+      else delete globalThis[name];
+    });
+  }
+
   // Helper: build a row with specified lifecycle/isActive that passes all other history predicates
   function buildRow(lifecycle, isActive, key) {
     var r = clone(baseRow);
@@ -705,7 +790,7 @@ function testPurchaseEventLifecycleReadModel_() {
     r.Lifecycle = lifecycle;
     r.IsActive = isActive;
     r.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-      transactionType: 'EXPENSE', requestKey: key, cashAccountCode: "1000", expenseItemId: r.ExpenseID,
+      transactionType: 'EXPENSE', requestKey: key, paymentStatus: 'PAID', cashAccountCode: "1000", expenseItemId: r.ExpenseID,
       input: { ExpenseDate: r.ExpenseDate, ReceiptDate: r.ReceiptDate, PurchaseQty: r.PurchaseQty,
         PurchaseUOM: r.PurchaseUOM, AcquisitionValue: r.AcquisitionValue, SupplierSource: r.SupplierSource,
         ExternalRef: r.ExternalRef, ExternalDocumentStatus: r.ExternalDocumentStatus,
@@ -803,7 +888,7 @@ function testPurchaseEventLifecycleReadModel_() {
   resRow.EventID = 'PE-' + canonicalKey;
   resRow.RecoveryKey = 'pe-receipt-' + canonicalKey;
   resRow.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-    transactionType: 'EXPENSE', requestKey: canonicalKey, cashAccountCode: "1000", expenseItemId: resRow.ExpenseID,
+    transactionType: 'EXPENSE', requestKey: canonicalKey, paymentStatus: 'PAID', cashAccountCode: "1000", expenseItemId: resRow.ExpenseID,
     input: { ExpenseDate: resRow.ExpenseDate, ReceiptDate: resRow.ReceiptDate, PurchaseQty: resRow.PurchaseQty,
       PurchaseUOM: resRow.PurchaseUOM, AcquisitionValue: resRow.AcquisitionValue, SupplierSource: resRow.SupplierSource,
       ExternalRef: resRow.ExternalRef, ExternalDocumentStatus: resRow.ExternalDocumentStatus,
@@ -942,7 +1027,7 @@ function testPurchaseEventVoidContracts() {
     row.Lifecycle = 'CAPTURED_OPERATIONAL';
     row.IsActive = true;
     row.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-      transactionType: 'EXPENSE', requestKey: key, cashAccountCode: "1000", expenseItemId: row.ExpenseID,
+      transactionType: 'EXPENSE', requestKey: key, paymentStatus: 'PAID', cashAccountCode: "1000", expenseItemId: row.ExpenseID,
       input: { ExpenseDate: row.ExpenseDate, ReceiptDate: row.ReceiptDate, PurchaseQty: row.PurchaseQty,
         PurchaseUOM: row.PurchaseUOM, AcquisitionValue: row.AcquisitionValue, SupplierSource: row.SupplierSource,
         ExternalRef: row.ExternalRef, ExternalDocumentStatus: row.ExternalDocumentStatus,
@@ -1503,7 +1588,7 @@ function testPurchaseRecoveryContracts() {
   var src = purchaseEventTestFixture_(_authority, _testItems, function() {}, 'OSR04'); src.run();
   var baseRow = clone(src.events[0]);
   baseRow.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-    transactionType: 'EXPENSE', requestKey: baseRow.RequestKey, cashAccountCode: "1000", expenseItemId: baseRow.ExpenseID,
+    transactionType: 'EXPENSE', requestKey: baseRow.RequestKey, paymentStatus: 'PAID', cashAccountCode: "1000", expenseItemId: baseRow.ExpenseID,
     input: { ExpenseDate: baseRow.ExpenseDate, ReceiptDate: baseRow.ReceiptDate, PurchaseQty: baseRow.PurchaseQty,
       PurchaseUOM: baseRow.PurchaseUOM, AcquisitionValue: baseRow.AcquisitionValue, SupplierSource: baseRow.SupplierSource,
       ExternalRef: baseRow.ExternalRef, ExternalDocumentStatus: baseRow.ExternalDocumentStatus,
@@ -1581,7 +1666,7 @@ function testPurchaseRecoveryContracts() {
   corrReplacement.EventID = 'PE-corr-rcvr-repl-001';
   corrReplacement.RecoveryKey = 'pe-receipt-corr-rcvr-repl-001';
   corrReplacement.NormalizedPayload = JSON.stringify(normalizePurchaseEventRequest_({
-    transactionType: 'EXPENSE', requestKey: 'corr-rcvr-repl-001', cashAccountCode: "1000", expenseItemId: corrReplacement.ExpenseID,
+    transactionType: 'EXPENSE', paymentStatus: 'PAID', requestKey: 'corr-rcvr-repl-001', cashAccountCode: "1000", expenseItemId: corrReplacement.ExpenseID,
     input: { ExpenseDate: corrReplacement.ExpenseDate, ReceiptDate: corrReplacement.ReceiptDate,
       PurchaseQty: corrReplacement.PurchaseQty, PurchaseUOM: corrReplacement.PurchaseUOM,
       AcquisitionValue: corrReplacement.AcquisitionValue, SupplierSource: corrReplacement.SupplierSource,
