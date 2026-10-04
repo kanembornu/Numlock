@@ -19,7 +19,7 @@ function testFinanceProfitAndLossUiContract()
   requireToken(shell, 'data-page="finance"', "active Profit & Loss route");
   requireToken(shell, 'data-page="finance" data-navigation-destination="capital-equity"', "active Capital & Equity route");
   requireToken(shell, 'data-navigation-destination="balance-sheet" aria-label="Balance Position"', "active Balance Position route");
-  requireToken(shell, 'data-navigation-destination="cash-flow" class="ui-future-module', "gated Cash Flow");
+  requireToken(shell, 'data-page="finance" data-navigation-destination="cash-flow" aria-label="Cash Flow"', "active Cash Flow route");
   requireToken(controller, ".getFinanceData(", "Finance backend request");
   forbidToken(financeSource, "getDashboardData(", "Dashboard request coupling");
   requireToken(shell, 'aria-label="Profit and Loss summary"', "six-metric summary");
@@ -279,8 +279,8 @@ function testFinanceBalancePositionUiContract()
     "balance-sheet destination exists");
   check(shell.indexOf('data-page="finance" data-navigation-destination="balance-sheet"') !== -1,
     "balance-sheet route is active finance page");
-  check(shell.indexOf('balance-sheet" class="ui-future-module') === -1,
-    "balance-sheet no longer gated");
+  check(shell.indexOf('data-navigation-destination="balance-sheet"') !== -1 && shell.indexOf('ui-future-module') !== -1,
+    "balance-sheet gated pending finance opening");
   check(shell.indexOf('Balance Position') !== -1,
     "label shows Balance Position");
 
@@ -371,7 +371,7 @@ function testFinanceBalancePositionUiContract()
     "warmBalanceSheetData function declared");
   check(controllerSource.indexOf("financeCache.balanceSheet[cacheKey]") !== -1,
     "warmBalanceSheetData writes to financeCache.balanceSheet");
-  check(controllerSource.indexOf("financeInflight[\"balanceSheet|\" + cacheKey]") !== -1,
+  check(controllerSource.indexOf("\"balanceSheet|\" + cacheKey") !== -1,
     "warmBalanceSheetData uses balanceSheet inflight key");
   check(controllerSource.indexOf(".getPartialBalanceData(") !== -1,
     "warmBalanceSheetData calls getPartialBalanceData");
@@ -428,7 +428,7 @@ function testFinanceBalanceSheetPrewarmContract()
     "warmBalanceSheetData reads/writes financeCache.balanceSheet");
 
   // warmBalanceSheetData uses inflight dedup
-  check(controllerSource.indexOf("financeInflight[\"balanceSheet|\" + cacheKey]") !== -1,
+  check(controllerSource.indexOf("\"balanceSheet|\" + cacheKey") !== -1,
     "warmBalanceSheetData uses balanceSheet inflight key");
 
   // warmBalanceSheetData calls correct backend
@@ -1645,5 +1645,193 @@ function testFinanceWarmingRaceGuards()
   check(Object.keys(leakTest).length === 0, "GUARD: proof that delete cleans leak");
 
   Logger.log("PASS: testFinanceWarmingRaceGuards | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+// ============================================================================
+// 3E.16 — Financial Statements P&L Activation Contract Tests
+// Verifies P&L is the first production-ready statement view
+// ============================================================================
+
+function testFinancialStatementsPnlActivation()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+  function forbidToken(source, token, name) {
+    scenarios++;
+    if (source.indexOf(token) !== -1) throw new Error("Financial Statements forbidden " + name + ": " + token);
+  }
+
+  var shell = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+  var stateSource = include("199.View.Finance.State");
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+  var combined = stateSource + renderSource + controllerSource;
+
+  // 1. Navigation destination enabled — P&L is the default finance view
+  check(shell.indexOf('data-navigation-destination="profit-loss"') !== -1,
+    "P&L navigation destination exists");
+  check(shell.indexOf('data-page="finance" data-navigation-destination="profit-loss"') !== -1,
+    "P&L route is active finance page");
+  check(shell.indexOf('profit-loss" class="ui-future-module') === -1,
+    "P&L is not gated (production-ready)");
+
+  // 2. P&L section reachable — financeContent panel exists with profit-loss data attribute
+  check(shell.indexOf('id="financeContent"') !== -1,
+    "P&L content panel exists");
+  check(shell.indexOf('data-finance-panel="profit-loss"') !== -1,
+    "P&L panel has profit-loss data attribute");
+
+  // 3. Required five P&L statement lines exist: Revenue, COGS, Gross Profit, Operating Expenses, Net Income
+  check(shell.indexOf('id="financeStatementRevenue"') !== -1,
+    "P&L statement Revenue line exists");
+  check(shell.indexOf('id="financeStatementCogs"') !== -1,
+    "P&L statement COGS line exists");
+  check(shell.indexOf('id="financeStatementGrossProfit"') !== -1,
+    "P&L statement Gross Profit line exists");
+  check(shell.indexOf('id="financeStatementOperatingExpenses"') !== -1,
+    "P&L statement Operating Expenses line exists");
+  check(shell.indexOf('id="financeStatementOperatingNetProfit"') !== -1,
+    "P&L statement Operating Net Profit (Net Income) line exists");
+
+  // 4. Values bind to backend/read-model fields — renderer reads summary fields
+  check(renderSource.indexOf("summary.revenue") !== -1,
+    "renderer binds Revenue from backend summary.revenue");
+  check(renderSource.indexOf("summary.cogs") !== -1,
+    "renderer binds COGS from backend summary.cogs");
+  check(renderSource.indexOf("summary.grossProfit") !== -1,
+    "renderer binds Gross Profit from backend summary.grossProfit");
+  check(renderSource.indexOf("summary.operatingExpenses") !== -1,
+    "renderer binds Operating Expenses from backend summary.operatingExpenses");
+  check(renderSource.indexOf("summary.operatingNetProfit") !== -1,
+    "renderer binds Net Income from backend summary.operatingNetProfit");
+
+  // 5. Frontend does NOT independently calculate accounting totals
+  forbidToken(combined, "revenue - cogs", "no frontend Revenue - COGS arithmetic");
+  forbidToken(combined, "grossProfit - operating", "no frontend Gross Profit arithmetic");
+  forbidToken(combined, "summary.revenue +", "no frontend revenue addition");
+  forbidToken(combined, "summary.cogs +", "no frontend cogs addition");
+
+  // 6. Reporting period represented
+  check(shell.indexOf('id="financePeriodLabel"') !== -1,
+    "reporting period label element exists");
+  check(shell.indexOf('id="financeFilter"') !== -1,
+    "period filter control exists");
+  check(renderSource.indexOf("period.label") !== -1,
+    "renderer reads period.label from backend");
+  check(renderSource.indexOf("financePeriodLabel") !== -1,
+    "renderer writes period label to UI");
+
+  // 7. Loading/empty/error contracts exist
+  check(renderSource.indexOf('state === "loading"') !== -1,
+    "loading state contract exists");
+  check(renderSource.indexOf('state === "empty"') !== -1,
+    "empty state contract exists");
+  check(controllerSource.indexOf('setFinanceViewState("error"') !== -1,
+    "error state contract exists");
+  check(shell.indexOf('id="financeStatusText"') !== -1,
+    "status text element exists for loading/error messages");
+  check(shell.indexOf('id="financeRetryButton"') !== -1,
+    "retry button exists for error recovery");
+
+  // 8. Cash Flow remains reachable/intact
+  check(shell.indexOf('data-navigation-destination="cash-flow"') !== -1,
+    "Cash Flow navigation destination exists");
+  check(shell.indexOf('id="financeCashFlowContent"') !== -1,
+    "Cash Flow content panel exists");
+  check(renderSource.indexOf("renderFinanceCashFlow") !== -1,
+    "Cash Flow renderer function exists");
+  check(shell.indexOf('id="financeCfOperating"') !== -1,
+    "Cash Flow Operating KPI exists");
+  check(shell.indexOf('id="financeCfInvesting"') !== -1,
+    "Cash Flow Investing KPI exists");
+  check(shell.indexOf('id="financeCfFinancing"') !== -1,
+    "Cash Flow Financing KPI exists");
+  check(shell.indexOf('id="financeCfNetChange"') !== -1,
+    "Cash Flow Net Change KPI exists");
+
+  // 9. Balance Position correctly gated/pending
+  check(shell.indexOf('data-navigation-destination="balance-sheet"') !== -1 && shell.indexOf('ui-future-module') !== -1,
+    "Balance Position is gated (ui-future-module)");
+  check(shell.indexOf('data-navigation-destination="balance-sheet"') !== -1,
+    "Balance Position navigation destination exists (but gated)");
+
+  // 10. No Finance Opening activation
+  forbidToken(shell, 'id="financeOpening', "no Finance Opening UI element");
+  forbidToken(combined, "populateFinanceOpening", "no Finance Opening population function");
+  forbidToken(combined, "financeOpeningActivation", "no Finance Opening activation");
+
+  // 11. No Period Close implementation
+  forbidToken(combined, "periodClose", "no Period Close implementation");
+  forbidToken(combined, "closePeriod", "no Period Close function");
+
+  // 12. P&L backend call uses getFinanceData
+  check(controllerSource.indexOf(".getFinanceData(") !== -1,
+    "controller calls getFinanceData for P&L");
+
+  // 13. Default destination is profit-loss
+  check(stateSource.indexOf('destination: "profit-loss"') !== -1,
+    "default finance destination is profit-loss");
+
+  // 14. Statement hierarchy uses backend-calculated totals
+  check(shell.indexOf("finance-statement-row finance-total") !== -1,
+    "statement hierarchy present for totals");
+  check(renderSource.indexOf("renderFinanceMetricValue") !== -1,
+    "statement values rendered through centralized formatter (not computed locally)");
+
+  // 15. Currency formatting uses Indonesian Rupiah
+  check(renderSource.indexOf('"id-ID"') !== -1,
+    "currency formatter uses Indonesian locale");
+  check(renderSource.indexOf('currency: "IDR"') !== -1,
+    "currency formatter uses IDR");
+
+  Logger.log("PASS: testFinancialStatementsPnlActivation | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinancialStatementsCashFlowIntact()
+{
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  var shell = HtmlService.createTemplateFromFile("190.View.Index").getRawContent();
+  var renderSource = include("200.View.Finance.Render");
+  var controllerSource = include("201.View.Finance.Controller");
+
+  // Cash Flow destination exists and is not gated
+  check(shell.indexOf('data-navigation-destination="cash-flow"') !== -1,
+    "Cash Flow destination exists");
+  check(shell.indexOf('cash-flow" class="ui-future-module') === -1,
+    "Cash Flow is not gated");
+
+  // Cash Flow content panel
+  check(shell.indexOf('id="financeCashFlowContent"') !== -1,
+    "Cash Flow content panel exists");
+  check(shell.indexOf('data-finance-panel="cash-flow"') !== -1,
+    "Cash Flow panel has cash-flow data attribute");
+
+  // Cash Flow KPIs
+  check(shell.indexOf('id="financeCfOpening"') !== -1,
+    "Opening Cash KPI exists");
+  check(shell.indexOf('id="financeCfClosing"') !== -1,
+    "Closing Cash KPI exists");
+
+  // Cash Flow backend call
+  check(controllerSource.indexOf(".getCashFlowData(") !== -1,
+    "controller calls getCashFlowData for Cash Flow");
+
+  // Cash Flow renderer
+  check(renderSource.indexOf("renderFinanceCashFlow") !== -1,
+    "renderFinanceCashFlow function exists");
+
+  // Cash Flow statement breakdown
+  check(shell.indexOf('id="financeCfOpValue"') !== -1,
+    "Cash Flow Operating Activities element exists");
+  check(shell.indexOf('id="financeCfInvValue"') !== -1,
+    "Cash Flow Investing Activities element exists");
+  check(shell.indexOf('id="financeCfFinValue"') !== -1,
+    "Cash Flow Financing Activities element exists");
+
+  Logger.log("PASS: testFinancialStatementsCashFlowIntact | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }

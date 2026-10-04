@@ -1,7 +1,7 @@
 /**
  * Authoritative backend test registry.
  * Single source of truth for both runAllBackendTests and runAllBackendTestsDiagnostic.
- * 119 registered entries. Membership, order, and function references are frozen.
+ * 126 registered entries. Membership, order, and function references are frozen.
  */
 function getBackendTestRegistry()
 {
@@ -17,6 +17,7 @@ function getBackendTestRegistry()
     { name: "testCanonicalTransactionLifecycleService", run: testCanonicalTransactionLifecycleService },
     { name: "testCanonicalLifecycleTransportSerialization", run: testCanonicalLifecycleTransportSerialization },
     { name: "testCanonicalHistoricalAndOverlapControls", run: testCanonicalHistoricalAndOverlapControls },
+    { name: "testPolicyCIntegratedAccountingContract", run: testPolicyCIntegratedAccountingContract },
     { name: "testFinanceCoreBackendContract", run: testFinanceCoreBackendContract },
     { name: "testFinancePAndLIsolation", run: testFinancePAndLIsolation },
     { name: "testFinanceCapitalEquityGracefulDegradation", run: testFinanceCapitalEquityGracefulDegradation },
@@ -54,6 +55,7 @@ function getBackendTestRegistry()
     { name: "testCapitalEquityMigrationContract", run: testCapitalEquityMigrationContract },
     { name: "testCashFoundationContracts", run: testCashFoundationContracts },
     { name: "testCashProductionRuntimeAuthorityBridge", run: testCashProductionRuntimeAuthorityBridge },
+    { name: "testCashDiagnosticStorageProbe", run: testCashDiagnosticStorageProbe },
     { name: "testInventorySchemaMigrationContract", run: testInventorySchemaMigrationContract },
     { name: "testInventoryConversionAuthorityContracts", run: testInventoryConversionAuthorityContracts },
     { name: "testInventoryOpeningStagingContracts", run: testInventoryOpeningStagingContracts },
@@ -124,13 +126,18 @@ function getBackendTestRegistry()
     { name: "testProductProfitabilityEmptyDataset", run: testProductProfitabilityEmptyDataset },
     { name: "testColdBackendSegmentation", run: testColdBackendSegmentation },
     { name: "testCashAccountSelectorContract", run: testCashAccountSelectorContract },
-    { name: "testSettlementCallerContract", run: testSettlementCallerContract }
+    { name: "testSettlementCallerContract", run: testSettlementCallerContract },
+    { name: "testCashFlowOpeningClosing", run: testCashFlowOpeningClosing },
+    { name: "testFinancialStatementsPnlActivation", run: testFinancialStatementsPnlActivation },
+    { name: "testFinancialStatementsCashFlowIntact", run: testFinancialStatementsCashFlowIntact },
+    { name: "testAccountsPayableAccountMigrationContracts", run: testAccountsPayableAccountMigrationContracts },
+    { name: "testFinanceCrossBoundaryExpenseBreakdownReconciliation", run: testFinanceCrossBoundaryExpenseBreakdownReconciliation }
   ];
 }
 
 /**
  * Authoritative fail-fast backend test runner.
- * Runs all 119 registered tests. Stops on first failure.
+ * Runs all 126 registered tests. Stops on first failure.
  */
 function runAllBackendTests()
 {
@@ -179,7 +186,7 @@ function runAllBackendTests()
 
 /**
  * Non-fail-fast diagnostic backend test runner.
- * Runs all 119 registered tests. Catches every failure and continues.
+ * Runs all 126 registered tests. Catches every failure and continues.
  * Returns aggregate result with all failures.
  */
 function runAllBackendTestsDiagnostic()

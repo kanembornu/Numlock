@@ -6,7 +6,7 @@ var FINANCE_ACCOUNTING_POLICY = Object.freeze({
   cashBalanceAvailable: false,
   inventoryBalanceAvailable: false,
   balanceSheetAvailable: false,
-  cashFlowAvailable: false
+  cashFlowAvailable: true
 });
 
 var NUMLOCK_PRODUCTION_STORAGE_POLICY = Object.freeze({
@@ -30,7 +30,6 @@ function requireNumlockProductionSpreadsheet() {
   return spreadsheet;
 }
 
-var FINANCE_DEPRECIATION_EXPECTED_ROWS = 2679;
 
 function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
   var ss = runtime.spreadsheet;
@@ -40,7 +39,12 @@ function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
   ]);
   var depreciationSource = getFinanceDepreciationSource(ss);
   var period = resolveDashboardDateRange(filter, customStart, customEnd);
-  var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+  var balanceLedger = [];
+  try { balanceLedger = readCanonicalTable(ss, "BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); }
+  catch (ledgerError) {
+    if (period.endDate >= BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE) throw ledgerError;
+  }
+  var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, balanceLedger);
   try {
     var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
     var openingRows = readFinanceOpeningBalancesCompat(ss);
@@ -59,6 +63,105 @@ function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
     finance.capitalEquity = { status: "UNAVAILABLE", error: String(equityError && equityError.message || equityError) };
   }
   return finance;
+}
+
+function buildCashFlowStatement(ledgerRows, accounts, period, openingContext) {
+  var cashAccountCodes = ["1000", "1010", "1020"];
+  var accountMap = {};
+  (accounts || []).forEach(function(account) {
+    var code = String(account.AccountCode || "").trim();
+    if (code) accountMap[code] = account;
+  });
+  var journalLines = {};
+  (ledgerRows || []).forEach(function(row) {
+    if (!isCanonicalActive(row.IsActive)) return;
+    var jid = String(row.JournalID || "").trim();
+    if (!jid) return;
+    journalLines[jid] = journalLines[jid] || [];
+    journalLines[jid].push(row);
+  });
+  var operating = 0, investing = 0, financing = 0, ambiguous = [];
+  Object.keys(journalLines).forEach(function(jid) {
+    var lines = journalLines[jid];
+    var cashLines = lines.filter(function(r) {
+      return cashAccountCodes.indexOf(String(r.AccountCode || "").trim()) !== -1;
+    });
+    if (!cashLines.length) return;
+    var counterpartLines = lines.filter(function(r) {
+      return cashAccountCodes.indexOf(String(r.AccountCode || "").trim()) === -1;
+    });
+    if (!counterpartLines.length) { ambiguous.push({ JournalID: jid, reason: "NO_COUNTERPART" }); return; }
+    cashLines.forEach(function(cashLine) {
+      var debit = Number(cashLine.Debit) || 0;
+      var credit = Number(cashLine.Credit) || 0;
+      var cashMovement = debit - credit;
+      if (cashMovement === 0) return;
+      var group = null;
+      counterpartLines.forEach(function(cp) {
+        var cpCode = String(cp.AccountCode || "").trim();
+        var cpAccount = accountMap[cpCode];
+        if (cpAccount && isCanonicalActive(cpAccount.IsActive)) {
+          var g = String(cpAccount.CashFlowGroup || "").trim();
+          if (g && !group) group = g;
+        }
+      });
+      if (!group) { ambiguous.push({ JournalID: jid, amount: cashMovement, reason: "UNCLASSIFIED_COUNTERPART" }); return; }
+      if (group === "Operating") operating += cashMovement;
+      else if (group === "Investing") investing += cashMovement;
+      else if (group === "Financing") financing += cashMovement;
+      else ambiguous.push({ JournalID: jid, amount: cashMovement, group: group, reason: "UNKNOWN_GROUP" });
+    });
+  });
+  var netChange = operating + investing + financing;
+  var openingCashAvailable = false;
+  var openingCash = null;
+  if (openingContext && openingContext.openingCash !== null && openingContext.openingCash !== undefined &&
+      Number.isFinite(Number(openingContext.openingCash))) {
+    openingCash = Number(openingContext.openingCash);
+    openingCashAvailable = true;
+  }
+  var closingCash = openingCashAvailable ? openingCash + netChange : null;
+  return {
+    openingCash: openingCash,
+    operating: operating,
+    investing: investing,
+    financing: financing,
+    netChange: netChange,
+    closingCash: closingCash,
+    openingCashAvailable: openingCashAvailable,
+    ambiguous: ambiguous,
+    period: period
+  };
+}
+
+function getCashFlowData(filter, customStart, customEnd) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var period = resolveDashboardDateRange(filter, customStart, customEnd);
+  var accounts = readCanonicalTable(ss, "Accounts", ["AccountCode", "AccountName", "AccountType",
+    "StatementGroup", "CashFlowGroup", "IsActive"]);
+  var ledger = readCanonicalTable(ss, "BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+  var filteredLedger = ledger.filter(function(row) {
+    if (!isCanonicalActive(row.IsActive)) return false;
+    var tanggal = canonicalDate(row.Tanggal);
+    return tanggal && tanggal >= canonicalDate(period.startDate) && tanggal <= canonicalDate(period.endDate);
+  });
+  var openingContext = null;
+  try {
+    var openingRows = readFinanceOpeningBalancesCompat(ss);
+    var cashAccountCodes = ["1000", "1010", "1020"];
+    var sum = 0;
+    (openingRows || []).forEach(function(row) {
+      var code = String(row.AccountCode || "").trim();
+      if (cashAccountCodes.indexOf(code) !== -1 && isCanonicalActive(row.IsActive)) {
+        sum += Number(row.Amount) || 0;
+      }
+    });
+    openingContext = { openingCash: sum };
+  } catch (e) {
+    // openingContext stays null → openingCash unavailable
+  }
+  var statement = buildCashFlowStatement(filteredLedger, accounts, period, openingContext);
+  return { statement: statement, period: period, status: "PASS" };
 }
 
 function getFinanceData(filter, customStart, customEnd) {
@@ -120,6 +223,101 @@ function scopeFinanceDepreciation(source, period) {
     unresolvedAssetReferences: quality.unresolvedAssetReferences || [] } };
 }
 
+function buildFinanceFinalReadinessEvidence_(runtime) {
+  var ss = runtime.spreadsheet;
+  var canonicalData = getCanonicalTransactionData(ss);
+  var accountHeaders = ["AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"];
+  var accounts = readCanonicalTable(ss, "Accounts", accountHeaders);
+  var ledger = readCanonicalTable(ss, "BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+  var settlements = readCanonicalTable(ss, "Settlements", CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS);
+  var depreciation = getFinanceDepreciationSource(ss);
+  var wanted = ["6210", "2000", "1000", "1010", "1020"], accountMap = {};
+  accounts.forEach(function(row) { accountMap[String(row.AccountCode || "").trim()] = row; });
+  var accountEvidence = {};
+  wanted.forEach(function(code) {
+    var row = accountMap[code];
+    accountEvidence[code] = row ? { found: true, AccountCode: code, AccountName: String(row.AccountName || ""),
+      Type: String(row.AccountType || ""), StatementGroup: String(row.StatementGroup || ""),
+      CashFlowGroup: String(row.CashFlowGroup || ""), IsActive: isCanonicalActive(row.IsActive) } :
+      { found: false, AccountCode: code, AccountName: null, Type: null, StatementGroup: null,
+        CashFlowGroup: null, IsActive: null };
+  });
+  var cases = {};
+  buildFinanceRuntimeValidationPeriods(canonicalData).forEach(function(period) {
+    if (period.validationName === "emptyPeriod") return;
+    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation, ledger);
+    var summary = finance.summary;
+    var breakdown = finance.expenseBreakdown.reduce(function(total, item) { return total + Number(item.amount || 0); }, 0);
+    var predicateAExpected = Number(summary.operatingExpenses || 0), predicateADifference = breakdown - predicateAExpected;
+    var formulaExpected = summary.grossProfit === null ? null : Number(summary.grossProfit) -
+      Number(summary.operatingExpenses || 0) - Number(summary.depreciationExpense || 0);
+    var predicateBDifference = formulaExpected === null ? null : Number(summary.operatingNetProfit) - formulaExpected;
+    var failed = [];
+    if (!financeAmountsMatch(breakdown, predicateAExpected)) failed.push("EXPENSE_BREAKDOWN_EQUALS_OPERATING_EXPENSES");
+    if (formulaExpected !== null && !financeAmountsMatch(summary.operatingNetProfit, formulaExpected)) failed.push("NET_PROFIT_FORMULA");
+    cases[period.validationName] = { requestedPeriod: finance.period, sourceRevenue: Number(summary.revenue || 0),
+      relevantSourceExpenses: breakdown, materialPurchasesExpensed: summary.materialPurchasesExpensed === undefined ? null : summary.materialPurchasesExpensed,
+      statementNetProfit: summary.operatingNetProfit, reconciliationPredicateA: { actual: breakdown, expected: predicateAExpected,
+        difference: predicateADifference }, reconciliationPredicateB: { actual: summary.operatingNetProfit, expected: formulaExpected,
+        difference: predicateBDifference }, failedPredicate: failed, difference: failed.length === 1 ?
+        (failed[0] === "EXPENSE_BREAKDOWN_EQUALS_OPERATING_EXPENSES" ? predicateADifference : predicateBDifference) : null,
+      status: failed.length ? "FAIL" : "PASS", reason: failed.length ? failed.join(",") : null };
+  });
+  var dates = (canonicalData.records || []).map(function(row) { return row.dateKey; }).filter(Boolean).sort();
+  var lastDate = dates.length ? dates[dates.length - 1] : BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE;
+  var prospectiveEnd = lastDate < BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE ?
+    BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE : lastDate;
+  var prospectivePeriod = { filter: "custom", startDate: BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE,
+    endDate: prospectiveEnd, label: BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE + " to " + prospectiveEnd };
+  var prospective = buildFinanceProfitAndLoss(canonicalData, accounts, prospectivePeriod, depreciation, ledger);
+  var balance = buildPolicyCStatementReconciliation(ledger, { accountingRegime: "PROSPECTIVE_PURCHASE_EXPENSE" });
+  var cashFlow = buildCashFlowStatement(ledger, accounts, prospectivePeriod, null);
+  var firstDate = dates.length ? dates[0] : "2026-09-30";
+  var split = buildFinanceProfitAndLoss(canonicalData, accounts, { filter: "custom", startDate: firstDate,
+    endDate: prospectiveEnd, label: firstDate + " to " + prospectiveEnd }, depreciation, ledger);
+  var purchaseSheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet), purchaseValues = purchaseSheet ?
+    purchaseSheet.getDataRange().getValues() : [];
+  var purchaseHeaders = (purchaseValues[0] || []).map(function(value) { return String(value || "").trim(); });
+  var expenseDateIndex = purchaseHeaders.indexOf("ExpenseDate"), purchaseRows = purchaseValues.slice(1).filter(function(row) {
+    return row.some(function(value) { return value !== "" && value != null; });
+  });
+  var postBoundary = purchaseRows.filter(function(row) {
+    var date = expenseDateIndex < 0 ? null : capitalEquityDateKey(row[expenseDateIndex]);
+    return date && date >= BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE;
+  }).length;
+  return { READ_ONLY: true, WRITE_COUNT: 0, accounts: accountEvidence, financeCases: cases,
+    prospectiveFinance: { accountingRegime: prospective.accountingRegime,
+      materialPurchasesExpensed: prospective.summary.materialPurchasesExpensed, cogs: prospective.summary.cogs,
+      grossProfit: prospective.summary.grossProfit, grossProfitAvailable: prospective.grossProfitAvailable,
+      inventoryPresentation: balance.finalValues ? { status: balance.finalValues.inventoryStatus,
+        amount: balance.finalValues.inventoryBookValue } : null, cashFlowAvailable: true,
+      openingCashAvailable: cashFlow.openingCashAvailable, openingCash: cashFlow.openingCash,
+      regimeSections: split.regimeSections ? { legacy: true, prospective: true } : null,
+      policyDisclosurePresent: (prospective.policyDisclosures || []).length > 0 &&
+        (balance.policyDisclosures || []).length > 0 }, balanceLedgerRowCount: ledger.length,
+    settlementRowCount: settlements.length, purchaseEventRowCount: purchaseRows.length,
+    postBoundaryPurchaseEventCount: postBoundary };
+}
+
+function runFinanceFinalReadinessEvidenceDiagnostic() {
+  var report = buildFinanceFinalReadinessEvidence_({ spreadsheet: requireNumlockProductionSpreadsheet() });
+  Logger.log(JSON.stringify(report));
+  return report;
+}
+
+function buildFinanceRuntimeReconciliation_(finance) {
+  var summary = finance.summary;
+  var expenseTotal = finance.expenseBreakdown.reduce(function(total, item) {
+    return total + Number(item.amount || 0);
+  }, 0);
+  var formulaReconciles = summary.grossProfit === null ||
+    (financeAmountsMatch(summary.grossProfit, summary.revenue - summary.cogs) &&
+      financeAmountsMatch(summary.operatingNetProfit,
+        summary.grossProfit - summary.operatingExpenses - summary.depreciationExpense));
+  return { expenseTotal: expenseTotal, expenseReconciles: financeAmountsMatch(expenseTotal, summary.operatingExpenses),
+    formulaReconciles: formulaReconciles };
+}
+
 function validateFinanceProductionRuntime() {
   var totalStartedAt = Date.now();
   var acquisitionStartedAt = Date.now();
@@ -136,14 +334,11 @@ function validateFinanceProductionRuntime() {
   var results = periods.map(function(period) {
     var buildStartedAt = Date.now();
     var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
-    var expenseTotal = finance.expenseBreakdown.reduce(function(total, item) {
-      return total + Number(item.amount || 0);
-    }, 0);
+    var reconciliation = buildFinanceRuntimeReconciliation_(finance);
+    var expenseTotal = reconciliation.expenseTotal;
     var summary = finance.summary;
-    var formulaReconciles = financeAmountsMatch(summary.grossProfit, summary.revenue - summary.cogs) &&
-      financeAmountsMatch(summary.operatingNetProfit,
-        summary.grossProfit - summary.operatingExpenses - summary.depreciationExpense);
-    var expenseReconciles = financeAmountsMatch(expenseTotal, summary.operatingExpenses);
+    var formulaReconciles = reconciliation.formulaReconciles;
+    var expenseReconciles = reconciliation.expenseReconciles;
     var quality = finance.dataQuality;
     var unresolvedCount = quality.unresolvedProducts.length + quality.unresolvedExpenseItems.length +
       quality.inactiveAccountMappings.length + quality.duplicateDepreciationLogicalKeys.length +
@@ -174,11 +369,6 @@ function validateFinanceProductionRuntime() {
     };
   });
   var failures = [];
-  if (depreciationSource.physicalRowCount !== FINANCE_DEPRECIATION_EXPECTED_ROWS) {
-    failures.push("LEDGER_ROWS:expected=" + FINANCE_DEPRECIATION_EXPECTED_ROWS +
-      ",actual=" + depreciationSource.physicalRowCount);
-  }
-
   results.forEach(function(result) {
     if (result.expenseReconciliation !== "PASS" || result.formulaReconciliation !== "PASS") {
       failures.push(result.name + ":RECONCILIATION");
@@ -352,13 +542,11 @@ function getPartialBalanceDataWithRuntime(runtime, filter, customStart, customEn
   var ss = runtime.spreadsheet;
   var period = resolveDashboardDateRange(filter, customStart, customEnd);
   var asOfDate = period.endDate;
-
-  var ledgerRows = readCanonicalTable(ss, "DepreciationLedger", [
+  var depreciationRows = readCanonicalTable(ss, "DepreciationLedger", [
     "ID_Dep", "Period", "ID_Asset", "OpeningBookValue", "Depreciation",
     "AccumulatedDepreciation", "ClosingBookValue", "GeneratedAt"
   ]);
-  var fixedAssets = buildPartialBalanceFixedAssetPosition(ledgerRows, asOfDate);
-
+  var fixedAssets = buildPartialBalanceFixedAssetPosition(depreciationRows, asOfDate);
   var capitalEquity = { status: "UNAVAILABLE" };
   try {
     var canonicalData = getCanonicalTransactionData(ss);
@@ -371,89 +559,53 @@ function getPartialBalanceDataWithRuntime(runtime, filter, customStart, customEn
     var postCutoffProfit = 0;
     if (asOfDate >= FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START) {
       postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
-        filter: "custom",
-        startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
-        endDate: asOfDate,
-        label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + asOfDate
+        filter: "custom", startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
+        endDate: asOfDate, label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + asOfDate
       }, depreciationSource).summary.operatingNetProfit;
     }
-    capitalEquity = buildCapitalEquityReadModel(
-      capitalRows, openingRows, accounts, asOfDate, postCutoffProfit);
+    capitalEquity = buildCapitalEquityReadModel(capitalRows, openingRows, accounts, asOfDate, postCutoffProfit);
   } catch (equityError) {
     capitalEquity = { status: "UNAVAILABLE", error: String(equityError && equityError.message || equityError) };
   }
 
-  var assets = {
-    cash: { status: "UNAVAILABLE", amount: null },
-    inventory: { status: "UNAVAILABLE", amount: null },
-    fixedAssets: {
-      status: "AVAILABLE",
-      acquisitionCost: fixedAssets.totalGrossCost,
-      accumulatedDepreciation: fixedAssets.totalAccumulatedDepreciation,
-      netBookValue: fixedAssets.totalNBV
-    }
-  };
-
-  var liabilities = { status: "ZERO_AUTHORITATIVE", total: 0 };
-
-  var equity;
-  if (capitalEquity.status !== "UNAVAILABLE") {
-    equity = {
-      ownerContributions: capitalEquity.ownerContributions,
-      returnOfCapital: capitalEquity.returnOfCapital,
-      netContributedCapital: capitalEquity.contributedCapital,
-      ownerDraws: capitalEquity.ownerDraws,
-      retainedEarningsOpening: capitalEquity.retainedEarningsOpening,
-      postCutoffProfit: capitalEquity.retainedEarningsPostCutoffProfit,
-      totalEquity: capitalEquity.totalEquity
-    };
-  } else {
-    equity = { status: "UNAVAILABLE", error: capitalEquity.error };
+  var policyState = Object.assign({}, runtime.policyCFinalizationState || {});
+  var balanceRows = [];
+  try {
+    balanceRows = readCanonicalTable(ss, "BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+  } catch (balanceError) {
+    policyState.apInconsistencies = Number(policyState.apInconsistencies || 0) + 1;
+    policyState.balanceLedgerError = String(balanceError && balanceError.message || balanceError);
   }
-
-  var totalKnownAssets = fixedAssets.totalNBV;
-  var knownPosition = null;
-  if (typeof equity.totalEquity === "number") {
-    knownPosition = totalKnownAssets - liabilities.total - equity.totalEquity;
-  }
-
-  var reconciliation = {
-    fullEquation: {
-      status: "UNRECONCILABLE",
-      reason: "INCOMPLETE_ASSET_AUTHORITY"
-    },
-    knownPosition: knownPosition !== null
-      ? { status: "COMPUTABLE", difference: knownPosition }
-      : { status: "UNAVAILABLE", reason: "EQUITY_UNAVAILABLE" }
-  };
-
-  var availability = {
-    cash: "UNAVAILABLE",
-    inventory: "UNAVAILABLE",
-    fixedAssets: "AVAILABLE",
-    liabilities: "ZERO_AUTHORITATIVE",
-    equity: capitalEquity.status !== "UNAVAILABLE" ? "AVAILABLE" : "UNAVAILABLE"
-  };
-
-  var qualityIssues = [];
-  qualityIssues.push("CASH_MIGRATION_NOT_READY");
-  qualityIssues.push("INVENTORY_AUTHORITY_NOT_ACTIVE");
-  if (capitalEquity.status === "UNAVAILABLE") {
-    qualityIssues.push("CAPITAL_EQUITY_UNAVAILABLE");
-  }
-
+  if (capitalEquity.status === "UNAVAILABLE") policyState.apInconsistencies = Number(policyState.apInconsistencies || 0) + 1;
+  var reconciliation = buildPolicyCStatementReconciliation(balanceRows, policyState);
+  var values = reconciliation.finalValues;
+  var assets = values ? {
+    cash: { status: "FINAL", amount: values.cashChange },
+    inventory: { status: "FINAL", amount: values.inventoryBookValue },
+    fixedAssets: { status: "FINAL", acquisitionCost: fixedAssets.totalGrossCost,
+      accumulatedDepreciation: fixedAssets.totalAccumulatedDepreciation, netBookValue: fixedAssets.totalNBV }
+  } : null;
+  var liabilities = values ? { status: "FINAL", accountsPayable: values.accountsPayable,
+    total: values.accountsPayable } : null;
+  var equity = values && capitalEquity.status !== "UNAVAILABLE" ? {
+    ownerContributions: capitalEquity.ownerContributions, returnOfCapital: capitalEquity.returnOfCapital,
+    netContributedCapital: capitalEquity.contributedCapital, ownerDraws: capitalEquity.ownerDraws,
+    retainedEarningsOpening: capitalEquity.retainedEarningsOpening,
+    postCutoffProfit: capitalEquity.retainedEarningsPostCutoffProfit, totalEquity: capitalEquity.totalEquity
+  } : null;
   return Object.freeze({
-    status: "PARTIAL",
+    status: reconciliation.status,
+    finalValues: values,
     period: { filter: period.filter, startDate: period.startDate, endDate: period.endDate, label: period.label },
     asOfDate: asOfDate,
     assets: assets,
     liabilities: liabilities,
     equity: equity,
     reconciliation: reconciliation,
-    totalKnownAssets: totalKnownAssets,
-    totalAssets: null,
-    availability: availability,
-    qualityIssues: qualityIssues,
+    availability: { fixedAssets: "AVAILABLE", capitalEquity: capitalEquity.status,
+      balanceLedger: policyState.balanceLedgerError ? "ERROR" : "AVAILABLE" },
+    qualityIssues: reconciliation.issues.slice(),
+    supplemental: { fixedAssets: fixedAssets, capitalEquity: capitalEquity },
     accountingPolicy: FINANCE_ACCOUNTING_POLICY
   });
 }
@@ -476,7 +628,7 @@ function buildFinanceAccountMap(accounts) {
   return buildCanonicalMasterMap(accounts || [], "AccountCode", "Accounts");
 }
 
-function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource) {
+function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depreciationSource) {
   if (!depreciationSource) throw new Error("Finance requires the authoritative DepreciationLedger read model");
   var accountMap = buildFinanceAccountMap(accounts);
   var scopedRecords = filterTransactionsByDateRange(canonicalData.records || [], period);
@@ -578,4 +730,61 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation
       status: issueCount === 0 ? "GOOD" : "ATTENTION" },
     accountingPolicy: FINANCE_ACCOUNTING_POLICY
   };
+}
+
+function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, ledgerRows) {
+  var start = resolvePolicyCAccountingRegime_(period && period.startDate);
+  var end = resolvePolicyCAccountingRegime_(period && period.endDate);
+  if (start.status !== "RESOLVED" || end.status !== "RESOLVED") throw new Error("Finance economic period required");
+  if (start.regime === "LEGACY_PRE_TRANSITION" && end.regime === "LEGACY_PRE_TRANSITION") {
+    var legacy = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depreciationSource);
+    legacy.contractVersion = "POLICY_C_PE_V1"; legacy.accountingRegime = "LEGACY_PRE_TRANSITION";
+    legacy.grossProfitAvailable = true; legacy.regimeSections = null; legacy.policyDisclosures = [];
+    return legacy;
+  }
+  function buildProspective(prospectivePeriod) {
+    var result = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, prospectivePeriod, depreciationSource);
+    var material = (ledgerRows || []).reduce(function(total, row) {
+      var date = capitalEquityDateKey(row.Tanggal);
+      return isCanonicalActive(row.IsActive) && String(row.AccountCode || "") === "6210" &&
+        date >= prospectivePeriod.startDate && date <= prospectivePeriod.endDate ?
+        total + Number(row.Debit || 0) - Number(row.Credit || 0) : total;
+    }, 0);
+    result.summary.materialPurchasesExpensed = material;
+    result.summary.cogs = null; result.summary.grossProfit = null; result.grossProfit = null;
+    result.summary.operatingNetProfit = result.summary.revenue - material - result.summary.operatingExpenses -
+      result.summary.depreciationExpense;
+    result.summary.operatingProfitMargin = result.summary.revenue === 0 ? 0 :
+      result.summary.operatingNetProfit / result.summary.revenue;
+    result.contractVersion = "POLICY_C_PE_V1"; result.accountingRegime = "PROSPECTIVE_PURCHASE_EXPENSE";
+    result.grossProfitAvailable = false; result.regimeSections = null;
+    result.policyDisclosures = ["Ordinary materials are expensed on purchase; tabsal.HPP remains non-ledger analytics."];
+    return result;
+  }
+  if (start.regime === "PROSPECTIVE_PURCHASE_EXPENSE") return buildProspective(period);
+  var legacyPeriod = Object.assign({}, period, { endDate: "2026-09-30", label: period.startDate + " to 2026-09-30" });
+  var prospectivePeriod = Object.assign({}, period, { startDate: "2026-10-01", label: "2026-10-01 to " + period.endDate });
+  var legacySection = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, legacyPeriod, depreciationSource);
+  var prospectiveSection = buildProspective(prospectivePeriod);
+  var combinedExpenses = {};
+  legacySection.expenseBreakdown.concat(prospectiveSection.expenseBreakdown).forEach(function(item) {
+    var code = String(item.AccountCode || "").trim();
+    if (!combinedExpenses[code]) combinedExpenses[code] = { AccountCode: code,
+      AccountName: String(item.AccountName || "").trim(), StatementGroup: String(item.StatementGroup || "").trim(), amount: 0 };
+    combinedExpenses[code].amount += Number(item.amount || 0);
+  });
+  return { contractVersion: "POLICY_C_PE_V1", accountingRegime: "SPLIT_PRESENTATION_BY_ACCOUNTING_REGIME",
+    period: { filter: period.filter, startDate: period.startDate, endDate: period.endDate, label: period.label },
+    grossProfit: null, grossProfitAvailable: false,
+    summary: { revenue: legacySection.summary.revenue + prospectiveSection.summary.revenue, cogs: null,
+      grossProfit: null, materialPurchasesExpensed: null,
+      operatingExpenses: legacySection.summary.operatingExpenses + prospectiveSection.summary.operatingExpenses,
+      depreciationExpense: legacySection.summary.depreciationExpense + prospectiveSection.summary.depreciationExpense,
+      operatingNetProfit: legacySection.summary.operatingNetProfit + prospectiveSection.summary.operatingNetProfit,
+      operatingProfitMargin: null },
+    expenseBreakdown: Object.keys(combinedExpenses).sort().map(function(code) { return combinedExpenses[code]; }),
+    dataQuality: prospectiveSection.dataQuality, accountingPolicy: FINANCE_ACCOUNTING_POLICY,
+    regimeSections: { legacy: legacySection, prospective: prospectiveSection },
+    policyDisclosures: ["Accounting regime changes on 2026-10-01.",
+      "Legacy HPP and prospective purchase-expense timing are not like-for-like and are not combined."] };
 }

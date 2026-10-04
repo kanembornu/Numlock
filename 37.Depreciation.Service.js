@@ -26,6 +26,47 @@ var DEPRECIATION_BACKFILL_ACCEPTANCE = Object.freeze({
 
 var DEPRECIATION_BACKFILL_BATCH_SIZE = 500;
 
+function getAssetsReadModel() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var assets = readCanonicalTable(ss, "Assets", DEPRECIATION_POLICY.ASSET_HEADERS);
+  var activeAssets = (assets || []).filter(function(row) { return isCanonicalActive(row.IsActive); });
+  var totalCost = 0, activeCount = 0;
+  activeAssets.forEach(function(row) {
+    var cost = Number(row.BiayaPerolehan);
+    if (isFinite(cost) && cost > 0) totalCost += cost;
+    activeCount++;
+  });
+  function toISODate(value) {
+    if (!value) return "";
+    var d = value instanceof Date ? value : new Date(value);
+    if (!d || isNaN(d.getTime())) return "";
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  return {
+    assets: activeAssets.map(function(row) {
+      return {
+        ID_Asset: String(row.ID_Asset || "").trim(),
+        Nama: String(row.Nama || "").trim(),
+        Kategori: String(row.Kategori || "").trim(),
+        Jumlah: Number(row.Jumlah) || 0,
+        TanggalPerolehan: toISODate(row.TanggalPerolehan),
+        BiayaPerolehan: Number(row.BiayaPerolehan) || 0,
+        UmurEkonomisBulan: Number(row.UmurEkonomisBulan) || 0,
+        NilaiResidu: Number(row.NilaiResidu) || 0,
+        DepreciationMethod: String(row.DepreciationMethod || "").trim(),
+        IsActive: isCanonicalActive(row.IsActive),
+        DisposedAt: toISODate(row.DisposedAt),
+        Notes: String(row.Notes || "").trim()
+      };
+    }),
+    summary: {
+      totalAssets: activeAssets.length,
+      activeAssets: activeCount,
+      totalAcquisitionCost: totalCost
+    }
+  };
+}
+
 function depreciationPeriodKey(value) {
   if (value instanceof Date && !isNaN(value.getTime())) {
     return canonicalDateKey(value).slice(0, 7) + "-01";
@@ -177,16 +218,27 @@ function requireDepreciationAcceptanceValue(name, actual, expected) {
 }
 
 function assertDepreciationBackfillCandidate(report) {
-  var expected = DEPRECIATION_BACKFILL_ACCEPTANCE;
-  Object.keys(expected).forEach(function(name) {
-    var actual = name === "remainingDepreciableAmount"
-      ? report.closingNetBookValue - report.totalResidualValue : report[name];
-    requireDepreciationAcceptanceValue(name, actual, expected[name]);
+  if (!report || depreciationPeriodKey(report.targetPeriod) !== DEPRECIATION_POLICY.TARGET_PERIOD ||
+      report.rows.length !== report.generatedRowCount || report.invalidAssets.length ||
+      report.duplicateLogicalKeys.length || report.reconciliationFailures.length ||
+      report.totalAcquisitionCost !== report.accumulatedDepreciationThroughTarget + report.closingNetBookValue ||
+      report.totalDepreciableBase !== report.accumulatedDepreciationThroughTarget +
+        report.closingNetBookValue - report.totalResidualValue) {
+    throw new Error("Depreciation backfill logical validation failed");
+  }
+  var assets = {}, keys = {};
+  report.rows.forEach(function(row) {
+    var period = depreciationPeriodKey(row.Period), key = String(row.ID_Asset || "").trim() + "|" + period;
+    if (!period || period > DEPRECIATION_POLICY.TARGET_PERIOD || keys[key] ||
+        String(row.ID_Dep || "") !== depreciationLedgerId(row.ID_Asset, period) ||
+        !isFinite(Number(row.Depreciation)) || Number(row.Depreciation) < 0) {
+      throw new Error("Depreciation backfill row validation failed: " + key);
+    }
+    keys[key] = true; assets[String(row.ID_Asset)] = true;
   });
-  requireDepreciationAcceptanceValue("candidateRows", report.rows.length, expected.generatedRowCount);
-  requireDepreciationAcceptanceValue("invalidAssets", report.invalidAssets.length, 0);
-  requireDepreciationAcceptanceValue("duplicateLogicalKeys", report.duplicateLogicalKeys.length, 0);
-  requireDepreciationAcceptanceValue("reconciliationFailures", report.reconciliationFailures.length, 0);
+  if (Object.keys(assets).length !== report.assetCount || report.rows.some(function(row) {
+      return row.Period === DEPRECIATION_POLICY.TARGET_PERIOD && !keys[row.ID_Asset + "|" + DEPRECIATION_POLICY.TARGET_PERIOD];
+    })) throw new Error("Depreciation target-period completeness failed");
   return report;
 }
 
@@ -356,4 +408,112 @@ function backfillDepreciationLedgerThrough202608() {
   } finally {
     if (acquired) lock.releaseLock();
   }
+}
+
+function depreciationContinuationLatestPeriod(ss) {
+  var ledger = readCanonicalTable(ss, "DepreciationLedger", DEPRECIATION_POLICY.LEDGER_HEADERS);
+  if (!ledger.length) return null;
+  var latest = null;
+  ledger.forEach(function(row) {
+    var period = depreciationPeriodKey(row.Period);
+    if (period && (!latest || period > latest)) latest = period;
+  });
+  return latest;
+}
+
+function buildDepreciationContinuationCandidates(assets, existingLedger, targetPeriod) {
+  var target = depreciationPeriodKey(targetPeriod);
+  if (!target) throw new Error("Invalid target period");
+  var existingKeys = Object.create(null);
+  (existingLedger || []).forEach(function(row) {
+    var assetId = String(row.ID_Asset || "").trim(), period = depreciationPeriodKey(row.Period);
+    if (assetId && period) existingKeys[assetId + "|" + period] = true;
+  });
+  var lastPeriodMap = Object.create(null);
+  (existingLedger || []).forEach(function(row) {
+    var a = String(row.ID_Asset || "").trim(), p = depreciationPeriodKey(row.Period);
+    if (!a || !p) return;
+    if (!lastPeriodMap[a] || p > lastPeriodMap[a].period)
+      lastPeriodMap[a] = { period: p, closing: Number(row.ClosingBookValue), accumulated: Number(row.AccumulatedDepreciation) };
+  });
+  var candidates = [], skipped = 0, eligible = 0;
+  (assets || []).forEach(function(asset) {
+    var n = validateDepreciationAsset(asset);
+    if (n.errors.length || !isCanonicalActive(asset.IsActive)) return;
+    if (target < n.acquisition) return;
+    var last = addDepreciationMonth(n.acquisition, n.life - 1);
+    var effectiveLast = n.disposal && n.disposal < last ? n.disposal : last;
+    var ls = lastPeriodMap[n.id];
+    var startPeriod = ls ? (ls.period >= target ? null : addDepreciationMonth(ls.period, 1)) : n.acquisition;
+    if (!startPeriod) return;
+    var base = n.cost - n.residual, normDep = Math.round(base / n.life);
+    var opening = ls ? ls.closing : n.cost, acc = ls ? ls.accumulated : 0;
+    eligible++;
+    var period = startPeriod;
+    while (period <= target && period <= effectiveLast) {
+      var key = n.id + "|" + period;
+      if (existingKeys[key]) { skipped++; period = addDepreciationMonth(period, 1); continue; }
+      var rem = base - acc, dep, isFinal = addDepreciationMonth(n.acquisition, n.life - 1) === period;
+      dep = isFinal || (n.disposal && n.disposal === period) ? rem : Math.min(normDep, rem);
+      dep = Math.max(0, dep); acc += dep;
+      var closing = opening - dep;
+      candidates.push({ ID_Dep: depreciationLedgerId(n.id, period), Period: period,
+        ID_Asset: n.id, OpeningBookValue: opening, Depreciation: dep,
+        AccumulatedDepreciation: acc, ClosingBookValue: closing });
+      opening = closing; period = addDepreciationMonth(period, 1);
+    }
+  });
+  return { candidates: candidates, eligibleAssetCount: eligible, skippedExistingCount: skipped, targetPeriod: target };
+}
+
+function executeDepreciationContinuation(ss, targetPeriod, dryRun) {
+  var lock = LockService.getScriptLock(), acquired = false;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var assets = readCanonicalTable(ss, "Assets", DEPRECIATION_POLICY.ASSET_HEADERS);
+    var existingLedger = readCanonicalTable(ss, "DepreciationLedger", DEPRECIATION_POLICY.LEDGER_HEADERS);
+    var latestPeriod = depreciationContinuationLatestPeriod(ss);
+    var plan = buildDepreciationContinuationCandidates(assets, existingLedger, targetPeriod);
+    var lk = Object.create(null), dups = [];
+    plan.candidates.forEach(function(r) { var k = r.ID_Asset + "|" + r.Period; if (lk[k]) dups.push(k); lk[k] = true; });
+    if (dups.length) throw new Error("Duplicate keys: " + dups.length);
+    var result = { targetPeriod: plan.targetPeriod, latestExistingPeriod: latestPeriod,
+      candidateCount: plan.candidates.length, eligibleAssetCount: plan.eligibleAssetCount,
+      skippedExistingCount: plan.skippedExistingCount, appendCount: 0,
+      beforeRowCount: existingLedger.length, afterRowCount: existingLedger.length,
+      verificationState: "NOT_EXECUTED", dryRun: !!dryRun };
+    if (dryRun || !plan.candidates.length) {
+      result.verificationState = plan.candidates.length === 0 ? "NO_CANDIDATES" : "DRY_RUN_PASS";
+      return result;
+    }
+    var sheet = ss.getSheetByName("DepreciationLedger");
+    if (!sheet) throw new Error("DepreciationLedger missing");
+    var startRow = existingLedger.length + 2;
+    var values = plan.candidates.map(function(r) {
+      return [r.ID_Dep, r.Period, r.ID_Asset, r.OpeningBookValue, r.Depreciation,
+        r.AccumulatedDepreciation, r.ClosingBookValue, new Date()];
+    });
+    for (var o = 0; o < values.length; o += DEPRECIATION_BACKFILL_BATCH_SIZE) {
+      sheet.getRange(startRow + o, 1, Math.min(DEPRECIATION_BACKFILL_BATCH_SIZE, values.length - o),
+        DEPRECIATION_POLICY.LEDGER_HEADERS.length).setValues(values.slice(o, o + DEPRECIATION_BACKFILL_BATCH_SIZE));
+    }
+    SpreadsheetApp.flush();
+    var after = readCanonicalTable(ss, "DepreciationLedger", DEPRECIATION_POLICY.LEDGER_HEADERS);
+    result.appendCount = after.length - existingLedger.length;
+    result.afterRowCount = after.length;
+    result.verificationState = result.appendCount === plan.candidates.length ? "PASS" : "APPEND_MISMATCH";
+    return result;
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function runDepreciationContinuation() {
+  var target = arguments && arguments[0] ? String(arguments[0]) : null;
+  if (!target) return { status: "INVALID_TARGET" };
+  return executeDepreciationContinuation(SpreadsheetApp.getActiveSpreadsheet(), target, false);
+}
+
+function runDepreciationContinuationDryRun() {
+  var target = arguments && arguments[0] ? String(arguments[0]) : null;
+  if (!target) return { status: "INVALID_TARGET" };
+  return executeDepreciationContinuation(SpreadsheetApp.getActiveSpreadsheet(), target, true);
 }

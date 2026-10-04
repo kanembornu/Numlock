@@ -1,6 +1,8 @@
 var BALANCE_FOUNDATION_POLICY = Object.freeze({
   AUDIT_FIELDS: Object.freeze(["CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]),
   ACCOUNT_METADATA: Object.freeze({
+    "6210": Object.freeze({ AccountName: "Raw Material Supplies Expense", AccountType: "Expense",
+      StatementGroup: "Supplies Expense", CashFlowGroup: "Operating", NormalBalance: "DEBIT" }),
     "1500": Object.freeze({ StatementGroup: "Non-current Assets", NormalBalance: "DEBIT" }),
     "1590": Object.freeze({ StatementGroup: "Contra Assets", NormalBalance: "CREDIT" }),
     "3000": Object.freeze({ StatementGroup: "Owner Equity", NormalBalance: "CREDIT", AccountName: "Owner Capital" }),
@@ -8,7 +10,8 @@ var BALANCE_FOUNDATION_POLICY = Object.freeze({
     "3200": Object.freeze({ StatementGroup: "Retained Earnings", NormalBalance: "CREDIT", AccountName: "Retained Earnings" }),
     "6900": Object.freeze({ StatementGroup: "Depreciation Expense", NormalBalance: "DEBIT" })
   }),
-  REQUIRED_ACCOUNT_CODES: Object.freeze(["1500", "1590", "3000", "3100", "3200", "6900"]),
+  REQUIRED_ACCOUNT_CODES: Object.freeze(["1500", "1590", "3000", "3100", "3200", "6210", "6900"]),
+  POLICY_C_TRANSITION_DATE: "2026-10-01",
   OPENING_V2_HEADERS: Object.freeze(["ID", "EffectiveDate", "AccountCode", "Debit", "Credit", "Source",
     "ExternalRef", "Keterangan", "IsActive", "CreatedAt", "CreatedBy", "UpdatedAt", "UpdatedBy"]),
   BALANCE_LEDGER_HEADERS: Object.freeze(["JournalID", "LineID", "Tanggal", "AccountCode", "Debit", "Credit",
@@ -41,8 +44,428 @@ var BALANCE_FOUNDATION_POLICY = Object.freeze({
   INVENTORY_ASSET_ACCOUNT: Object.freeze({ AccountCode: "1100", AccountName: "Inventory Asset",
     AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT" }),
   RECIPE_AUTO_CONSUMPTION_ENABLED: false,
-  HPP_AUTHORITY: "tabsal.HPP"
+  HPP_AUTHORITY: "tabsal.HPP",
+  ACCOUNTS_PAYABLE: Object.freeze({ AccountCode: "2000", AccountName: "Accounts Payable",
+    AccountType: "Liability", StatementGroup: "Current Liabilities", CashFlowGroup: "Operating", NormalBalance: "CREDIT" })
 });
+
+var ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION = Object.freeze({
+  sheet: "Accounts",
+  headers: Object.freeze(["AccountCode", "AccountName", "AccountType", "StatementGroup",
+    "CashFlowGroup", "IsActive", "CreatedAt", "UpdatedAt", "NormalBalance"]),
+  account: Object.freeze({ AccountCode: "2000", AccountName: "Accounts Payable", AccountType: "Liability",
+    StatementGroup: "Current Liabilities", CashFlowGroup: "Operating", IsActive: true, NormalBalance: "CREDIT" })
+});
+
+function accountsPayableAccountMigrationClassify_(values) {
+  var policy = ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION;
+  if (!Array.isArray(values) || JSON.stringify((values[0] || []).map(String)) !== JSON.stringify(policy.headers)) {
+    return { status: "REFUSED_INVALID_HEADERS", writeCount: 0 };
+  }
+  var rows = balanceFoundationRowsFromValues(values), seen = {}, match = null;
+  for (var i = 0; i < rows.length; i++) {
+    var code = String(rows[i].AccountCode || "").trim();
+    if (!code || seen[code]) return { status: "REFUSED_DUPLICATE_OR_BLANK_ACCOUNT_CODE", writeCount: 0 };
+    seen[code] = true;
+    if (code === policy.account.AccountCode) match = rows[i];
+    else if (String(rows[i].AccountName || "").trim() === policy.account.AccountName &&
+        String(rows[i].AccountType || "").trim() === policy.account.AccountType) {
+      return { status: "REFUSED_SEMANTIC_ACCOUNT_CONFLICT", writeCount: 0 };
+    }
+  }
+  if (!match) return { status: "READY", writeCount: 0, businessRows: rows.length };
+  var exact = ["AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "NormalBalance"]
+    .every(function(field) { return String(match[field] || "").trim() === String(policy.account[field]); }) &&
+    isCanonicalActive(match.IsActive);
+  return exact ? { status: "ALREADY_MIGRATED", writeCount: 0, businessRows: rows.length } :
+    { status: "REFUSED_ACCOUNT_CONFLICT", writeCount: 0, businessRows: rows.length };
+}
+
+function executeAccountsPayableAccountMigration_(runtime) {
+  var sheet = runtime.spreadsheet.getSheetByName(ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION.sheet);
+  if (!sheet) return { status: "REFUSED_MISSING_ACCOUNTS_SHEET", writeCount: 0 };
+  var before = sheet.getDataRange().getValues(), state = accountsPayableAccountMigrationClassify_(before);
+  if (state.status !== "READY") return state;
+  var timestamp = runtime.timestamp, candidate = Object.assign({}, ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION.account,
+    { CreatedAt: timestamp, UpdatedAt: timestamp });
+  try {
+    sheet.getRange(sheet.getLastRow() + 1, 1, 1, ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION.headers.length)
+      .setValues([ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION.headers.map(function(header) { return candidate[header]; })]);
+    runtime.flush();
+    var freshSheet = runtime.freshSpreadsheet().getSheetByName(ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION.sheet);
+    var after = freshSheet && freshSheet.getDataRange().getValues();
+    var accepted = accountsPayableAccountMigrationClassify_(after);
+    if (accepted.status !== "ALREADY_MIGRATED" || accepted.businessRows !== state.businessRows + 1 ||
+        JSON.stringify(before) !== JSON.stringify(after.slice(0, before.length))) throw new Error("ACCOUNT_2000_READBACK_FAILED");
+    return { status: "MIGRATED", writeCount: 1, rowsAppended: 1, cellsWritten: 9 };
+  } catch (error) {
+    return { status: "MIGRATION_UNCERTAIN", writeCount: "UNKNOWN", reason: error.message,
+      next: "STOP_NO_RETRY_RECONCILE_READ_ONLY" };
+  }
+}
+
+function runAccountsPayableAccountMigration() {
+  var lock = LockService.getScriptLock(), acquired = false;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var spreadsheet = requireNumlockProductionSpreadsheet();
+    var result = executeAccountsPayableAccountMigration_({ spreadsheet: spreadsheet, timestamp: new Date(),
+      flush: function() { SpreadsheetApp.flush(); }, freshSpreadsheet: requireNumlockProductionSpreadsheet });
+    Logger.log(JSON.stringify(result));
+    return result;
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function policyCJournalLine_(journalId, suffix, date, accountCode, debit, credit, movementType, sourceType, sourceId) {
+  return { JournalID: journalId, LineID: journalId + "-" + suffix, Tanggal: capitalEquityDateKey(date),
+    AccountCode: accountCode, Debit: debit, Credit: credit, MovementType: movementType, SourceType: sourceType,
+    SourceID: sourceId, ExternalRef: "", Keterangan: "", IsActive: true,
+    CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" };
+}
+
+function policyCExistingSourceRows_(rows, sourceType, sourceId) {
+  return (rows || []).filter(function(row) {
+    return isCanonicalActive(row.IsActive) && String(row.SourceType || "").trim() === sourceType &&
+      String(row.SourceID || "").trim() === sourceId;
+  });
+}
+
+function resolvePolicyCAccountingRegime_(economicDate) {
+  var dateKey = capitalEquityDateKey(economicDate);
+  if (!dateKey) return { status: "REFUSED", reason: "ECONOMIC_DATE_REQUIRED" };
+  return { status: "RESOLVED", regime: dateKey < BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE ?
+    "LEGACY_PRE_TRANSITION" : "PROSPECTIVE_PURCHASE_EXPENSE", dateKey: dateKey };
+}
+
+function policyCExistingJournalState_(rows, sourceType, sourceId) {
+  var existing = policyCExistingSourceRows_(rows, sourceType, sourceId);
+  if (!existing.length) return { status: "NONE", rows: [] };
+  var journals = {}, debit = 0, credit = 0;
+  existing.forEach(function(row) {
+    journals[String(row.JournalID || "")] = true;
+    debit += Number(row.Debit || 0); credit += Number(row.Credit || 0);
+  });
+  return Object.keys(journals).length === 1 && existing.length === 2 && debit > 0 && debit === credit ?
+    { status: "COMPLETE", rows: existing } : { status: "CONFLICT", rows: existing };
+}
+
+function buildPolicyCPurchaseJournal(event, existingRows) {
+  var id = String(event && event.EventID || "").trim(), amount = Number(event && event.AcquisitionValue);
+  var status = String(event && event.PaymentStatus || "").trim();
+  var regime = resolvePolicyCAccountingRegime_(event && event.ExpenseDate);
+  if (regime.status !== "RESOLVED") return { status: "REFUSED", reason: regime.reason, rows: [] };
+  if (!id || !isFinite(amount) || amount <= 0 || PURCHASE_PAYMENT_STATUSES.indexOf(status) === -1) {
+    return { status: "REFUSED", reason: "PURCHASE_NOT_ACCOUNTING_ELIGIBLE", rows: [] };
+  }
+  var state = policyCExistingJournalState_(existingRows || [], "PURCHASE_EVENT", id);
+  if (state.status === "COMPLETE") return { status: "ALREADY_POSTED", rows: state.rows, writeCount: 0 };
+  if (state.status === "CONFLICT") return { status: "ACCOUNTING_EXCEPTION", reason: "IDENTITY_CONFLICT", rows: [], writeCount: 0 };
+  var credit = status === "PAID" ? String(event.CashAccountCode || "").trim() : "2000";
+  if (!credit || status === "UNPAID" && !String(event.SupplierID || "").trim()) {
+    return { status: "REFUSED", reason: "PURCHASE_PAYMENT_AUTHORITY_REQUIRED", rows: [] };
+  }
+  var prospective = regime.regime === "PROSPECTIVE_PURCHASE_EXPENSE";
+  var journalId = (prospective ? "POLICYC-PEXP-PURCHASE-" : "POLICYC-PURCHASE-") + id;
+  return { status: "READY", accountingRegime: regime.regime, rows: [
+    policyCJournalLine_(journalId, "1", regime.dateKey, prospective ? "6210" : "1100", amount, 0,
+      "PURCHASE_RECOGNITION", "PURCHASE_EVENT", id),
+    policyCJournalLine_(journalId, "2", regime.dateKey, credit, 0, amount, "PURCHASE_RECOGNITION", "PURCHASE_EVENT", id)
+  ] };
+}
+
+function policyCInventoryBookBasis(rows, throughDate) {
+  return (rows || []).reduce(function(total, row) {
+    return isCanonicalActive(row.IsActive) && String(row.AccountCode || "").trim() === "1100" &&
+      (!throughDate || capitalEquityDateKey(row.Tanggal) <= throughDate) ? total + Number(row.Debit || 0) - Number(row.Credit || 0) : total;
+  }, 0);
+}
+
+function buildPolicyCSalesHppJournal(sale, existingRows) {
+  var id = String(sale && (sale.ID_Trx || sale.id) || "").trim();
+  var regime = resolvePolicyCAccountingRegime_(sale && (sale.Tanggal || sale.date));
+  var hpp = Number(sale && (sale.HPP !== undefined ? sale.HPP : sale.cogs));
+  if (!id || regime.status !== "RESOLVED" || !isFinite(hpp) || hpp < 0) {
+    return { status: "REFUSED", reason: regime.reason || "INVALID_SALES_HPP", rows: [] };
+  }
+  var date = regime.dateKey;
+  var existing = policyCExistingSourceRows_(existingRows || [], "SALE_HPP", id);
+  if (existing.length) return { status: "ALREADY_POSTED", rows: existing };
+  if (regime.regime === "PROSPECTIVE_PURCHASE_EXPENSE") {
+    return { status: "NON_POSTING_ANALYTICAL_AUTHORITY",
+      reason: "PROSPECTIVE_HPP_LEDGER_POSTING_PROHIBITED", accountingRegime: regime.regime, rows: [], writeCount: 0 };
+  }
+  var available = policyCInventoryBookBasis(existingRows || [], date);
+  if (available < hpp) return { status: "ACCOUNTING_EXCEPTION", reason: "INSUFFICIENT_INVENTORY_BOOK_BASIS",
+    sourceId: id, date: date, requiredHpp: hpp, availableBasis: available, shortfall: hpp - available,
+    postingState: "REFUSED", rows: [] };
+  var journalId = "POLICYC-HPP-" + id;
+  return { status: "READY", rows: [
+    policyCJournalLine_(journalId, "1", date, "5000", hpp, 0, "SALE_HPP", "SALE_HPP", id),
+    policyCJournalLine_(journalId, "2", date, "1100", 0, hpp, "SALE_HPP", "SALE_HPP", id)
+  ] };
+}
+
+function policyCJournalSignature_(rows) {
+  return (rows || []).map(function(row) {
+    return [row.AccountCode, Number(row.Debit), Number(row.Credit), row.MovementType,
+      row.SourceType, row.SourceID, capitalEquityDateKey(row.Tanggal)].join("|");
+  }).sort().join("||");
+}
+
+function policyCReverseJournal(originalRows, reversalId, date, sourceType, sourceId) {
+  if (!(originalRows || []).length || !reversalId || !capitalEquityDateKey(date)) {
+    return { status: "REFUSED", reason: "REVERSAL_EVIDENCE_REQUIRED", rows: [] };
+  }
+  return { status: "READY", originalJournalId: originalRows[0].JournalID,
+    rows: originalRows.map(function(row, index) {
+      var line = policyCJournalLine_(reversalId, String(index + 1), date, row.AccountCode,
+        Number(row.Credit), Number(row.Debit), "POLICY_C_REVERSAL", sourceType, sourceId);
+      line.ExternalRef = String(row.JournalID || "");
+      return line;
+    }) };
+}
+
+function buildPolicyCApSettlementJournal(command, originalRows, existingRows) {
+  var id = String(command && command.SettlementID || "").trim();
+  var eventId = String(command && command.EventID || "").trim();
+  var amount = Number(command && command.Amount), cash = String(command && command.CashAccountCode || "").trim();
+  var regime = resolvePolicyCAccountingRegime_(command && command.SettlementDate);
+  var original = policyCExistingSourceRows_(originalRows || [], "PURCHASE_EVENT", eventId);
+  if (!id || !eventId || regime.status !== "RESOLVED" || !cash || !isFinite(amount) || amount <= 0 ||
+      amount !== policyCAccountNet_(original, "2000", "CREDIT")) {
+    return { status: "REFUSED", reason: "UNSUPPORTED_PARTIAL_SETTLEMENT", rows: [] };
+  }
+  if (policyCExistingSourceRows_(existingRows || [], "PURCHASE_AP_SETTLEMENT", id).length) {
+    return { status: "ALREADY_POSTED", rows: [], writeCount: 0 };
+  }
+  var journalId = "POLICYC-AP-SETTLEMENT-" + id;
+  return { status: "READY", obligationId: "AP-" + eventId, rows: [
+    policyCJournalLine_(journalId, "1", regime.dateKey, "2000", amount, 0, "AP_SETTLEMENT", "PURCHASE_AP_SETTLEMENT", id),
+    policyCJournalLine_(journalId, "2", regime.dateKey, cash, 0, amount, "AP_SETTLEMENT", "PURCHASE_AP_SETTLEMENT", id)
+  ] };
+}
+
+function policyCAccountNet_(rows, code, normalSide) {
+  return (rows || []).reduce(function(total, row) {
+    if (!isCanonicalActive(row.IsActive) || String(row.AccountCode) !== code) return total;
+    return total + (normalSide === "CREDIT" ? Number(row.Credit || 0) - Number(row.Debit || 0) :
+      Number(row.Debit || 0) - Number(row.Credit || 0));
+  }, 0);
+}
+
+function buildPolicyCPurchaseAdjustmentJournal(command, originalRows, existingRows) {
+  var type = String(command && command.Type || "").trim(), id = String(command && command.AdjustmentID || "").trim();
+  var eventId = String(command && command.EventID || "").trim(), amount = Number(command && command.Amount);
+  var regime = resolvePolicyCAccountingRegime_(command && command.TransactionDate);
+  var original = policyCExistingSourceRows_(originalRows || [], "PURCHASE_EVENT", eventId);
+  var paid = policyCAccountNet_(original, "6210", "DEBIT") > 0 && policyCAccountNet_(original, "2000", "CREDIT") === 0;
+  var cash = String(command && command.CashAccountCode || "").trim();
+  if (!id || !eventId || regime.status !== "RESOLVED" || !original.length || !isFinite(amount) || amount <= 0 ||
+      ["PAID_REVERSAL", "UNPAID_REVERSAL", "SUPPLIER_REFUND", "SUPPLIER_AP_CREDIT"].indexOf(type) === -1) {
+    return { status: "REFUSED", reason: "UNSUPPORTED_PURCHASE_ADJUSTMENT", rows: [] };
+  }
+  var originalNet = policyCAccountNet_(original, "6210", "DEBIT");
+  var prior = (existingRows || []).filter(function(row) { return isCanonicalActive(row.IsActive) &&
+    String(row.ExternalRef || "") === String(original[0].JournalID || "") && String(row.AccountCode) === "6210"; });
+  var priorCredits = prior.reduce(function(sum, row) { return sum + Number(row.Credit || 0); }, 0);
+  if (amount > originalNet - priorCredits || ((type === "PAID_REVERSAL" || type === "SUPPLIER_REFUND") && (!paid || !cash)) ||
+      ((type === "UNPAID_REVERSAL" || type === "SUPPLIER_AP_CREDIT") && paid) ||
+      /REVERSAL$/.test(type) && amount !== originalNet - priorCredits) {
+    return { status: "REFUSED", reason: "PURCHASE_ADJUSTMENT_BOUNDS_OR_AUTHORITY", rows: [] };
+  }
+  var sourceType = "PURCHASE_" + type;
+  if (policyCExistingSourceRows_(existingRows || [], sourceType, id).length) return { status: "ALREADY_POSTED", rows: [], writeCount: 0 };
+  var journalId = "POLICYC-" + type + "-" + id, debitAccount = paid ? cash : "2000";
+  var rows = [
+    policyCJournalLine_(journalId, "1", regime.dateKey, debitAccount, amount, 0, type, sourceType, id),
+    policyCJournalLine_(journalId, "2", regime.dateKey, "6210", 0, amount, type, sourceType, id)
+  ];
+  rows.forEach(function(row) { row.ExternalRef = String(original[0].JournalID || ""); });
+  return { status: "READY", rows: rows };
+}
+
+function buildPolicyCProspectiveDisposalJournal(event) {
+  var regime = resolvePolicyCAccountingRegime_(event && event.DisposalDate);
+  return regime.status === "RESOLVED" && regime.regime === "PROSPECTIVE_PURCHASE_EXPENSE" ?
+    { status: "NON_POSTING_OPERATIONAL_EVENT", reason: "ALREADY_EXPENSED_MATERIAL", rows: [], writeCount: 0 } :
+    { status: "REFUSED", reason: regime.reason || "LEGACY_DISPOSAL_REQUIRES_LEGACY_POLICY", rows: [] };
+}
+
+function policyCPersistJournalCandidate_(candidate, runtime) {
+  if (!candidate || candidate.status !== "READY") return candidate;
+  var before = runtime.readLedger();
+  var existing = policyCExistingSourceRows_(before, candidate.rows[0].SourceType, candidate.rows[0].SourceID);
+  if (existing.length) return policyCJournalSignature_(existing) === policyCJournalSignature_(candidate.rows) ?
+    { status: "ALREADY_POSTED", journalId: existing[0].JournalID, rows: existing, writeCount: 0 } :
+    { status: "ACCOUNTING_EXCEPTION", reason: "IDENTITY_CONFLICT", rows: [], writeCount: 0 };
+  runtime.writeLedger(candidate.rows); runtime.flush();
+  var after = policyCExistingSourceRows_(runtime.readLedger(), candidate.rows[0].SourceType, candidate.rows[0].SourceID);
+  if (policyCJournalSignature_(after) !== policyCJournalSignature_(candidate.rows)) {
+    return { status: "ACCOUNTING_EXCEPTION", reason: "POSTING_READBACK_FAILED", rows: after, writeCount: candidate.rows.length };
+  }
+  return { status: "POSTED", journalId: candidate.rows[0].JournalID, rows: after, writeCount: candidate.rows.length };
+}
+
+function postPolicyCPurchaseEvent_(event, runtime) {
+  var result = policyCPersistJournalCandidate_(buildPolicyCPurchaseJournal(event, runtime.readLedger()), runtime);
+  var status = result.status === "POSTED" || result.status === "ALREADY_POSTED" ?
+    (String(event.PaymentStatus) === "UNPAID" ? "SETTLEMENT_PENDING" : "POSTED") : "ACCOUNTING_EXCEPTION";
+  runtime.updatePurchaseAccounting(event.EventID, status, result.journalId || "", result.reason || "");
+  var readback = runtime.readPurchaseEvent(event.EventID);
+  if (!readback || String(readback.AccountingStatus) !== status) {
+    return { status: "ACCOUNTING_EXCEPTION", reason: "ACCOUNTING_STATUS_READBACK_FAILED", writeCount: result.writeCount || 0 };
+  }
+  result.accountingStatus = status;
+  result.obligationId = status === "SETTLEMENT_PENDING" ? "AP-" + event.EventID : null;
+  return result;
+}
+
+function postPolicyCSalesHpp_(sale, runtime, explicitRecovery) {
+  var sourceId = String(sale.ID_Trx || sale.id);
+  if (explicitRecovery !== true && runtime.hasUnresolvedException && runtime.hasUnresolvedException("SALE_HPP", sourceId)) {
+    return { status: "REFUSED", reason: "EXPLICIT_RECOVERY_REQUIRED", rows: [] };
+  }
+  var candidate = buildPolicyCSalesHppJournal(sale, runtime.readLedger());
+  if (candidate.status === "ACCOUNTING_EXCEPTION") {
+    runtime.recordException({ ExceptionID: "POLICYC-HPP-EXCEPTION-" + candidate.sourceId,
+      SourceType: "SALE_HPP", SourceID: candidate.sourceId, Date: candidate.date,
+      RequiredAmount: candidate.requiredHpp, AvailableBasis: candidate.availableBasis,
+      Shortfall: candidate.shortfall, PostingState: candidate.postingState, Reason: candidate.reason });
+    return candidate;
+  }
+  if (candidate.status === "NON_POSTING_ANALYTICAL_AUTHORITY") return candidate;
+  var result = policyCPersistJournalCandidate_(candidate, runtime);
+  if ((result.status === "POSTED" || result.status === "ALREADY_POSTED") && runtime.resolveException) {
+    runtime.resolveException("SALE_HPP", sourceId, result.journalId);
+  }
+  return result;
+}
+
+function policyCSalesHppRuntime_(ss, audit) {
+  function append(sheet, headers, row) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, 1, headers.length).setValues([headers.map(function(header) {
+      return row[header] === undefined ? "" : row[header];
+    })]);
+  }
+  function exceptionLogs() {
+    return readCanonicalTable(ss, "Logs", CANONICAL_ENTRY.LOG_HEADERS).filter(function(row) {
+      return String(row.Module || "") === "PolicyCAccounting";
+    });
+  }
+  return {
+    readLedger: function() { return readCanonicalTable(ss, "BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); },
+    writeLedger: function(rows) {
+      var sheet = ss.getSheetByName("BalanceLedger");
+      requireCanonicalHeaders(sheet, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+      rows.forEach(function(row) { append(sheet, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS, row); });
+    },
+    flush: function() { SpreadsheetApp.flush(); },
+    recordException: function(exception) {
+      var sheet = ss.getSheetByName("Logs");
+      requireCanonicalHeaders(sheet, CANONICAL_ENTRY.LOG_HEADERS);
+      append(sheet, CANONICAL_ENTRY.LOG_HEADERS, { ID_Log: exception.ExceptionID, Timestamp: audit.at,
+        Level: "ERROR", Module: "PolicyCAccounting", Action: "ACCOUNTING_EXCEPTION", RecordID: exception.SourceID,
+        User: audit.actor, Message: exception.Reason, Metadata: JSON.stringify(exception) });
+      SpreadsheetApp.flush();
+    },
+    hasUnresolvedException: function(sourceType, sourceId) {
+      var unresolved = false;
+      exceptionLogs().forEach(function(row) {
+        if (String(row.RecordID || "") !== sourceId) return;
+        if (String(row.Action || "") === "ACCOUNTING_EXCEPTION") unresolved = true;
+        if (String(row.Action || "") === "ACCOUNTING_EXCEPTION_RESOLVED") unresolved = false;
+      });
+      return unresolved;
+    },
+    resolveException: function(sourceType, sourceId, journalId) {
+      if (!this.hasUnresolvedException(sourceType, sourceId)) return;
+      var sheet = ss.getSheetByName("Logs");
+      append(sheet, CANONICAL_ENTRY.LOG_HEADERS, { ID_Log: "POLICYC-HPP-RESOLVED-" + sourceId,
+        Timestamp: audit.at, Level: "INFO", Module: "PolicyCAccounting", Action: "ACCOUNTING_EXCEPTION_RESOLVED",
+        RecordID: sourceId, User: audit.actor, Message: journalId, Metadata: JSON.stringify({ SourceType: sourceType }) });
+      SpreadsheetApp.flush();
+    }
+  };
+}
+
+function postPolicyCSalesHppFromSpreadsheet_(ss, sale, audit, explicitRecovery) {
+  return postPolicyCSalesHpp_(sale, policyCSalesHppRuntime_(ss, audit), explicitRecovery === true);
+}
+
+var POLICY_C_MONETARY_OPENING_HEADERS = Object.freeze(["OpeningID", "EffectiveDate", "InventoryDebit",
+  "CounterpartComponents", "SourceReferences", "PreparedBy", "ReviewedBy", "ApprovedAt",
+  "SupersedesOpeningID", "Status"]);
+
+function buildPolicyCMonetaryOpeningJournal(opening, existingRows) {
+  var id = String(opening && opening.OpeningID || "").trim(), amount = Number(opening && opening.InventoryDebit);
+  var components = opening && opening.CounterpartComponents;
+  if (!id || !capitalEquityDateKey(opening.EffectiveDate) || !isFinite(amount) || amount <= 0 ||
+      !Array.isArray(components) || !components.length || !Array.isArray(opening.SourceReferences) ||
+      !opening.SourceReferences.length || !String(opening.PreparedBy || "").trim() ||
+      !String(opening.ReviewedBy || "").trim() || opening.PreparedBy === opening.ReviewedBy ||
+      !opening.ApprovedAt || String(opening.Status) !== "APPROVED") {
+    return { status: "REFUSED", reason: "MONETARY_OPENING_EVIDENCE_REQUIRED", rows: [] };
+  }
+  var total = 0;
+  for (var i = 0; i < components.length; i++) {
+    var component = components[i], code = String(component.AccountCode || "").trim(), credit = Number(component.Credit);
+    if (!code || code === "3210" || code === "3200" && component.Automatic === true || !isFinite(credit) || credit <= 0 ||
+        !String(component.SourceRef || "").trim()) return { status: "REFUSED", reason: "INVALID_OPENING_COUNTERPART", rows: [] };
+    total += credit;
+  }
+  if (total !== amount) return { status: "REFUSED", reason: "UNBALANCED_MONETARY_OPENING", rows: [] };
+  var existing = policyCExistingSourceRows_(existingRows || [], "MONETARY_INVENTORY_OPENING", id);
+  if (existing.length) return { status: "ALREADY_POSTED", rows: existing };
+  var jid = "POLICYC-OPENING-" + id;
+  var rows = [policyCJournalLine_(jid, "1", opening.EffectiveDate, "1100", amount, 0,
+    "MONETARY_INVENTORY_OPENING", "MONETARY_INVENTORY_OPENING", id)];
+  components.forEach(function(component, index) {
+    var line = policyCJournalLine_(jid, String(index + 2), opening.EffectiveDate, String(component.AccountCode), 0,
+      Number(component.Credit), "MONETARY_INVENTORY_OPENING", "MONETARY_INVENTORY_OPENING", id);
+    line.ExternalRef = String(component.SourceRef); rows.push(line);
+  });
+  return { status: "READY", rows: rows };
+}
+
+function evaluatePolicyCFinalizationGate(state) {
+  var issues = [], regime = String(state && state.accountingRegime || "LEGACY_PRE_TRANSITION");
+  var prospective = regime === "PROSPECTIVE_PURCHASE_EXPENSE";
+  var keys = prospective ? ["unpostedPurchases", "unclassifiedPayments", "apInconsistencies",
+    "cashInconsistencies", "correctionInconsistencies", "ledgerImbalances", "disclosureIncomplete"] :
+    ["insufficientInventoryBasis", "unpostedPurchases", "unpostedSalesHpp", "apInconsistencies"];
+  keys.forEach(function(key) { if (Number(state && state[key] || 0) > 0) issues.push(key); });
+  if (!prospective && state && state.production === true && state.monetaryOpeningReady !== true) {
+    issues.push("monetaryOpeningUnavailable");
+  }
+  return { status: issues.length ? "ACCOUNTING_DATA_PENDING_RESOLUTION" : "FINAL", finalValuesAllowed: !issues.length,
+    accountingRegime: regime, issues: issues };
+}
+
+function buildPolicyCStatementReconciliation(ledgerRows, gateState) {
+  var gate = evaluatePolicyCFinalizationGate(gateState || {});
+  if (!gate.finalValuesAllowed) return { status: gate.status, finalValues: null, issues: gate.issues };
+  var balances = {}, debits = 0, credits = 0;
+  (ledgerRows || []).forEach(function(row) {
+    if (!isCanonicalActive(row.IsActive)) return;
+    var code = String(row.AccountCode || "").trim(), debit = Number(row.Debit) || 0, credit = Number(row.Credit) || 0;
+    balances[code] = (balances[code] || 0) + debit - credit; debits += debit; credits += credit;
+  });
+  var inventory = balances["1100"] || 0;
+  var prospective = gate.accountingRegime === "PROSPECTIVE_PURCHASE_EXPENSE";
+  if ((!prospective && inventory < 0) || debits !== credits || balances["3210"] || balances["5010"]) {
+    return { status: "ACCOUNTING_DATA_PENDING_RESOLUTION", finalValues: null,
+      issues: [!prospective && inventory < 0 ? "NEGATIVE_INVENTORY_BOOK_BASIS" :
+        debits !== credits ? "UNBALANCED_LEDGER" : "PROHIBITED_ACCOUNT"] };
+  }
+  var cash = ["1000", "1010", "1020"].reduce(function(sum, code) { return sum + (balances[code] || 0); }, 0);
+  return { status: "FINAL", finalValues: { inventoryBookValue: prospective ? null : inventory,
+    inventoryStatus: prospective ? "OMITTED_UNPROVEN" : "FINAL",
+    accountsPayable: -(balances["2000"] || 0), hpp: prospective ? null : balances["5000"] || 0,
+    materialPurchasesExpensed: prospective ? balances["6210"] || 0 : null, cashChange: cash,
+    balanced: true }, policyDisclosures: prospective ? [
+      "Ordinary materials are expensed on purchase; no prospective inventory asset is recognized; historical inventory monetary accuracy is unproven."
+    ] : [], issues: [] };
+}
 
 function buildBalanceAccountMetadata(accounts) {
   var source = {}, errors = [];

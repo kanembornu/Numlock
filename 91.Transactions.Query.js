@@ -215,6 +215,39 @@ function getInventoryReceiptEntryOptions(receiptDate) {
   } catch (error) { return canonicalEntryFailure(error); }
 }
 
+function buildProductsReadModel_(items, recipes) {
+  var recipeCountByItem = Object.create(null);
+  (recipes || []).forEach(function(recipe) {
+    var itemId = String(recipe.ID_Ingredient || "").trim();
+    if (itemId && recipe.IsActive === true) recipeCountByItem[itemId] = (recipeCountByItem[itemId] || 0) + 1;
+  });
+  return (items || []).slice(0, 200).map(function(item) {
+    var itemId = String(item.ItemID || "");
+    return {
+      itemId: itemId,
+      name: String(item.ItemName || ""),
+      category: String(item.Classification || ""),
+      uom: String(item.BaseUOM || ""),
+      isActive: item.IsActive === true,
+      activeRecipeCount: recipeCountByItem[itemId] || 0
+    };
+  });
+}
+
+function getProductsReadModel() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var items = readCanonicalTable(ss, "InventoryItems", BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS);
+    var recipeSheet = ss.getSheetByName("COGSRecipes");
+    var recipes = recipeSheet ? readCanonicalTable(ss, "COGSRecipes",
+      ["ID_Recipe", "ID_Prod", "Tipe", "ID_Ingredient", "UsageQty", "IsActive"]) : [];
+    return { success: true, data: { source: "InventoryItems", recipeSource: recipeSheet ? "COGSRecipes" : null,
+      products: buildProductsReadModel_(items, recipes) } };
+  } catch (error) {
+    return { success: false, error: { code: "PRODUCTS_READ_FAILED", message: "Products could not be loaded." } };
+  }
+}
+
 function readInventoryReceiptTransactionRows_(ss, purchases) {
   if (!ss.getSheetByName("InventoryReceipts")) return [];
   var receipts = readCanonicalTable(ss, "InventoryReceipts", INVENTORY_RECEIPT_POLICY.HEADERS);

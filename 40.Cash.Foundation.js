@@ -262,32 +262,37 @@ function buildCashPostingCandidate(settlement, context) {
       cashLedgerLine(journalId, "2", settlement, revenueAccount, 0, amount,
         "PAID_SALE", sourceType, sourceId)
     ];
-  } else if (sourceType === "PURCHASE_SETTLEMENT") {
+  } else if (sourceType === "AP_SETTLEMENT") {
     var purchaseEvent = cashPurchaseEventById(context.purchaseEvents, transactionId);
-    if (!purchaseEvent || String(settlement.RelatedTransactionType || "") !== "PurchaseEvent") {
+    if (!purchaseEvent || String(settlement.RelatedTransactionType || "") !== "PurchaseEvent" ||
+        String(purchaseEvent.paymentStatus || purchaseEvent.PaymentStatus || "").trim() !== "UNPAID" ||
+        ["MATERIAL_PURCHASE", "DIRECT_HPP_COMPONENT"].indexOf(String(
+          purchaseEvent.purchaseRelationship || purchaseEvent.PurchaseRelationship || "MATERIAL_PURCHASE").trim()) === -1) {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
     var purchaseAmount = Number(purchaseEvent.acquisitionValue || purchaseEvent.AcquisitionValue || 0);
     if (purchaseAmount !== amount) {
-      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
+      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_PARTIAL_AP_SETTLEMENT", readOnly: true, writeCount: 0 };
     }
-    // DIRECT_HPP_COMPONENT: debit canonical Inventory Asset (1100), not Expense account.
-    // NON_HPP and other relationships are not routeable through PurchaseEvent settlement.
-    var purchaseRelationship = String(purchaseEvent.purchaseRelationship || purchaseEvent.PurchaseRelationship || "").trim();
-    if (purchaseRelationship !== "DIRECT_HPP_COMPONENT") {
-      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
-    }
-    var inventoryAssetAccountCode = BALANCE_FOUNDATION_POLICY.INVENTORY_ASSET_ACCOUNT.AccountCode;
-    if (cashTransactionEffectAlreadyPosted(context.balanceLedgerRows, transactionId,
-        inventoryAssetAccountCode, "Debit")) {
-      return { status: "REFUSED", reason: "TRANSACTION_EFFECT_ALREADY_POSTED", readOnly: true, writeCount: 0 };
+    var obligationId = "AP-" + transactionId;
+    var recognition = cashExistingSourceRows(context.balanceLedgerRows, "PURCHASE_EVENT", transactionId);
+    var hasPayable = recognition.some(function(row) {
+      return String(row.AccountCode || "").trim() === BALANCE_FOUNDATION_POLICY.ACCOUNTS_PAYABLE.AccountCode &&
+        Number(row.Credit) === amount;
+    });
+    if (!hasPayable) {
+      return { status: "REFUSED", reason: "AP_OBLIGATION_NOT_POSTED", readOnly: true, writeCount: 0 };
     }
     lines = [
-      cashLedgerLine(journalId, "1", settlement, inventoryAssetAccountCode, amount, 0,
-        "PAID_PURCHASE", sourceType, sourceId),
+      cashLedgerLine(journalId, "1", settlement, BALANCE_FOUNDATION_POLICY.ACCOUNTS_PAYABLE.AccountCode, amount, 0,
+        "AP_SETTLEMENT", sourceType, sourceId),
       cashLedgerLine(journalId, "2", settlement, String(settlement.AccountCode), 0, amount,
-        "PAID_PURCHASE", sourceType, sourceId)
+        "AP_SETTLEMENT", sourceType, sourceId)
     ];
+    lines.forEach(function(line) { line.ExternalRef = obligationId; });
+  } else if (sourceType === "PURCHASE_SETTLEMENT") {
+    return { status: "REFUSED", reason: "PURCHASE_SETTLEMENT_RETIRED_USE_PURCHASE_RECOGNITION_OR_AP_SETTLEMENT",
+      readOnly: true, writeCount: 0 };
   } else {
     var expense = cashTransactionById(context.transactions, transactionId, "Expense");
     if (!expense || String(settlement.RelatedTransactionType || "") !== "Expense" ||
@@ -1409,5 +1414,108 @@ function runCashFoundationDisposableRuntimeProof() {
     }
   });
   Logger.log(JSON.stringify(result));
+  return result;
+}
+
+function runCashProductionDiagnostic() {
+  var result = {
+    readOnly: true,
+    writeCount: 0,
+    settlementExecutions: 0,
+    settlementWrites: 0,
+    balanceLedgerWrites: 0
+  };
+
+  // Canonical storage probe — surfaces SpreadsheetApp.openById failure
+  var storageProbe = { success: false, spreadsheetIdMatch: false, errorName: null, errorMessage: null };
+  try {
+    var probeSs = SpreadsheetApp.openById(NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID);
+    storageProbe.success = true;
+    storageProbe.spreadsheetIdMatch = (probeSs && typeof probeSs.getId === "function" &&
+      String(probeSs.getId()) === NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID);
+  } catch (probeErr) {
+    storageProbe.errorName = probeErr && probeErr.name ? String(probeErr.name) : null;
+    storageProbe.errorMessage = probeErr && probeErr.message ? String(probeErr.message) : null;
+  }
+  result.storageProbe = storageProbe;
+
+  try {
+    var runtime = createCashProductionRuntime();
+    var state = runtime.readSheets();
+
+    // Policy state
+    result.productionPolicy = {
+      enabled: CASH_PRODUCTION_POLICY.ENABLED,
+      cutoverDate: CASH_FOUNDATION_POLICY.CUTOVER_DATE
+    };
+
+    // Business-row counts (header excluded by balanceFoundationRowsFromValues)
+    result.settlementsRowCount = state.settlements.length;
+    result.balanceLedgerRowCount = state.balanceLedger.length;
+
+    // Latest SettlementID (last row in sheet order)
+    var latestSettlementId = null;
+    for (var i = state.settlements.length - 1; i >= 0; i--) {
+      var sid = String(state.settlements[i].SettlementID || "").trim();
+      if (sid) { latestSettlementId = sid; break; }
+    }
+    result.latestSettlementId = latestSettlementId;
+
+    // Latest BalanceLedger JournalID (last row in sheet order)
+    var latestJournalId = null;
+    for (var j = state.balanceLedger.length - 1; j >= 0; j--) {
+      var jid = String(state.balanceLedger[j].JournalID || "").trim();
+      if (jid) { latestJournalId = jid; break; }
+    }
+    result.latestJournalId = latestJournalId;
+
+    // Candidate search: scan from newest (end) to find first valid SETTLEMENT_PENDING
+    // tanggal > CUTOVER_DATE, required metadata complete, not already posted to ledger
+    result.candidate = null;
+    var cutoverDate = CASH_FOUNDATION_POLICY.CUTOVER_DATE;
+    for (var k = state.settlements.length - 1; k >= 0; k--) {
+      var row = state.settlements[k];
+      var status = String(row.Status || "").trim();
+      var tanggal = String(row.Tanggal || "").trim();
+      var settlementId = String(row.SettlementID || "").trim();
+      var sourceType = String(row.SourceType || "").trim();
+      var sourceId = String(row.SourceID || "").trim();
+      var accountCode = String(row.AccountCode || "").trim();
+      var amount = Number(row.Amount);
+
+      // Must be PENDING status
+      if (status !== "PENDING") continue;
+      // Required metadata complete
+      if (!settlementId || !sourceType || !sourceId || !accountCode || !isFinite(amount) || amount <= 0) continue;
+      if (!tanggal || !(tanggal > cutoverDate)) continue;
+
+      // Check already posted: does this sourceType+sourceId exist in BalanceLedger?
+      var alreadyPosted = false;
+      for (var m = 0; m < state.balanceLedger.length; m++) {
+        var lr = state.balanceLedger[m];
+        if (isCanonicalActive(lr.IsActive) &&
+            String(lr.SourceType || "").trim() === sourceType &&
+            String(lr.SourceID || "").trim() === sourceId) {
+          alreadyPosted = true;
+          break;
+        }
+      }
+      if (alreadyPosted) continue;
+
+      result.candidate = {
+        settlementId: settlementId,
+        sourceType: sourceType,
+        sourceId: sourceId,
+        cashAccountCode: accountCode,
+        amount: amount,
+        tanggal: tanggal,
+        alreadyPosted: false
+      };
+      break; // Stop after one candidate
+    }
+  } catch (e) {
+    result.error = e && e.message ? e.message : String(e);
+  }
+
   return result;
 }

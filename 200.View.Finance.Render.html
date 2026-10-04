@@ -57,21 +57,27 @@
       var expenseBreakdown = Array.isArray(response && response.expenseBreakdown)
         ? response.expenseBreakdown
         : [];
+      var prospective = response && response.accountingRegime === "PROSPECTIVE_PURCHASE_EXPENSE";
+      var split = response && response.accountingRegime === "SPLIT_PRESENTATION_BY_ACCOUNTING_REGIME";
       var currencyMetrics = {
         financeRevenue: summary.revenue,
-        financeCogs: summary.cogs,
-        financeGrossProfit: summary.grossProfit,
+        financeCogs: prospective ? summary.materialPurchasesExpensed : summary.cogs,
+        financeGrossProfit: prospective || split ? null : summary.grossProfit,
         financeOperatingExpenses: summary.operatingExpenses,
         financeOperatingNetProfit: summary.operatingNetProfit
       };
 
       Object.keys(currencyMetrics).forEach(function(id) {
+        if (currencyMetrics[id] === null || currencyMetrics[id] === undefined) {
+          getFinanceElement(id).textContent = "Not available under purchase-expense accounting";
+          return;
+        }
         renderFinanceMetricValue(getFinanceElement(id), currencyMetrics[id], formatFinanceCurrency);
       });
       [
         ["financeStatementRevenue", summary.revenue],
-        ["financeStatementCogs", summary.cogs],
-        ["financeStatementGrossProfit", summary.grossProfit],
+        ["financeStatementCogs", prospective ? summary.materialPurchasesExpensed : summary.cogs],
+        ["financeStatementGrossProfit", prospective || split ? null : summary.grossProfit],
         ["financeStatementOperatingExpenses", summary.operatingExpenses],
         ["financeStatementDepreciation", summary.depreciationExpense],
         ["financeStatementOperatingNetProfit", summary.operatingNetProfit]
@@ -86,10 +92,22 @@
 
       getFinanceElement("financePeriodLabel").textContent =
         String(period.label || "Selected period");
-      getFinanceElement("financeRecognitionDisclosure").textContent =
-        policy.recognitionBasis === "TRANSACTION_DATE_OPERATING"
+      var disclosures = Array.isArray(response && response.policyDisclosures) ? response.policyDisclosures : [];
+      getFinanceElement("financeRecognitionDisclosure").textContent = disclosures.length
+        ? disclosures.join(" ")
+        : policy.recognitionBasis === "TRANSACTION_DATE_OPERATING"
           ? "Transaction-date operating basis"
           : "Operating recognition policy";
+      if (prospective) {
+        var cogsElement = getFinanceElement("financeCogs");
+        var statementCogsElement = getFinanceElement("financeStatementCogs");
+        if (cogsElement.parentElement && cogsElement.parentElement.querySelector("dt")) {
+          cogsElement.parentElement.querySelector("dt").textContent = "Material Purchases Expensed";
+        }
+        if (statementCogsElement.parentElement && statementCogsElement.parentElement.querySelector("dt")) {
+          statementCogsElement.parentElement.querySelector("dt").textContent = "(−) Material Purchases Expensed";
+        }
+      }
       getFinanceElement("financeDepreciationDisclosure").textContent =
         policy.depreciationIncluded === true && policy.depreciationSource === "DepreciationLedger"
           ? "Depreciation is included from the authoritative DepreciationLedger."
@@ -320,6 +338,58 @@
       return !Number.isFinite(Number(balance.totalKnownAssets)) && !Number.isFinite(Number(liabilities.total)) && !Number.isFinite(Number(equity.totalEquity));
     }
 
+    function renderFinanceCashFlow(response) {
+      if (!response || !response.statement) {
+        getFinanceElement("financeCashFlowContent").hidden = true;
+        return;
+      }
+      var stmt = response.statement;
+      getFinanceElement("financeCashFlowContent").hidden = false;
+      if (stmt.openingCashAvailable) {
+        renderFinanceMetricValue(getFinanceElement("financeCfOpening"), stmt.openingCash, formatFinanceCurrency);
+        renderFinanceMetricValue(getFinanceElement("financeCfClosing"), stmt.closingCash, formatFinanceCurrency);
+      } else {
+        getFinanceElement("financeCfOpening").textContent = "—";
+        getFinanceElement("financeCfClosing").textContent = "—";
+        getFinanceElement("financeCfOpening").classList.remove("finance-negative");
+        getFinanceElement("financeCfClosing").classList.remove("finance-negative");
+      }
+      getFinanceElement("financeCfOperating").textContent = formatFinanceCurrency(stmt.operating);
+      getFinanceElement("financeCfInvesting").textContent = formatFinanceCurrency(stmt.investing);
+      getFinanceElement("financeCfFinancing").textContent = formatFinanceCurrency(stmt.financing);
+      getFinanceElement("financeCfNetChange").textContent = formatFinanceCurrency(stmt.netChange);
+      getFinanceElement("financeCfOpValue").textContent = formatFinanceCurrency(stmt.operating);
+      getFinanceElement("financeCfInvValue").textContent = formatFinanceCurrency(stmt.investing);
+      getFinanceElement("financeCfFinValue").textContent = formatFinanceCurrency(stmt.financing);
+      getFinanceElement("financeCfNetValue").textContent = formatFinanceCurrency(stmt.netChange);
+    }
+
+    function renderFinanceAssets(response)
+    {
+      if (!response || !Array.isArray(response.assets) || !response.summary) {
+        throw new Error("Assets response is unavailable or malformed");
+      }
+      var assets = response.assets;
+      var summary = response.summary;
+      getFinanceElement("financePeriodLabel").textContent = "Current fixed-asset register";
+      getFinanceElement("financeAssetsTotal").textContent = formatFinanceNullableInteger(summary.totalAssets);
+      getFinanceElement("financeAssetsActive").textContent = formatFinanceNullableInteger(summary.activeAssets);
+      getFinanceElement("financeAssetsCost").textContent = formatFinanceNullableCurrency(summary.totalAcquisitionCost);
+      getFinanceElement("financeAssetsRegisterBody").innerHTML = assets.length
+        ? assets.map(function(asset) {
+          var status = asset.DisposedAt ? "Disposed" : asset.IsActive ? "Active" : "Inactive";
+          return "<tr data-asset-id=\"" + escapeUiHtml(asset.ID_Asset) + "\">" +
+            "<td>" + escapeUiHtml(asset.Nama) + "</td>" +
+            "<td>" + escapeUiHtml(asset.Kategori) + "</td>" +
+            "<td class=\"finance-number\">" + escapeUiHtml(String(asset.Jumlah)) + "</td>" +
+            "<td>" + escapeUiHtml(formatFinanceDate(asset.TanggalPerolehan)) + "</td>" +
+            "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.BiayaPerolehan)) + "</td>" +
+            "<td>" + escapeUiHtml(status) + "</td></tr>";
+        }).join("")
+        : "<tr><td colspan=\"6\" class=\"finance-table-empty\">No assets available.</td></tr>";
+      return assets.length === 0;
+    }
+
     function renderFinanceDepreciation(response)
     {
       if (!response || !response.summary) {
@@ -410,6 +480,10 @@
       bsContent.hidden = state === "loading" || state === "error" || financeState.destination !== "balance-sheet";
       var depContent = getFinanceElement("financeDepreciationContent");
       depContent.hidden = state === "loading" || state === "error" || financeState.destination !== "depreciation";
+      var assetsContent = getFinanceElement("financeAssetsContent");
+      assetsContent.hidden = state === "loading" || state === "error" || financeState.destination !== "assets";
+      var cfContent = getFinanceElement("financeCashFlowContent");
+      cfContent.hidden = state === "loading" || state === "error" || financeState.destination !== "cash-flow";
       retry.hidden = state !== "error";
 
       var destLabel = financeState.destination === "capital-equity"
@@ -420,7 +494,11 @@
             ? "Balance Position"
             : financeState.destination === "depreciation"
               ? "Depreciation"
-              : "Profit & Loss";
+              : financeState.destination === "assets"
+                ? "Assets"
+                : financeState.destination === "cash-flow"
+                  ? "Cash Flow"
+                  : "Profit & Loss";
 
       getFinanceElement("financeStatusText").textContent = isLoading
         ? "Loading " + destLabel + "…"

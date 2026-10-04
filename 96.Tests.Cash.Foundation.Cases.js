@@ -81,24 +81,28 @@ function testCashFoundationContracts() {
     changed(expensePosting.rows[0], { SourceType: "EXPENSE_RECOGNITION", SourceID: "EXP-1" })
   ] }).reason === "TRANSACTION_EFFECT_ALREADY_POSTED", "prior expense recognition refused");
 
-  var purchaseEvents = cashFoundationPurchaseEvents();
+  var purchaseEvents = cashFoundationPurchaseEvents().map(function(event) {
+    return changed(event, { paymentStatus: "UNPAID", supplierId: "SUP-1" });
+  });
+  var purchaseRecognition = buildPolicyCPurchaseJournal({ EventID: "PE-REQ-001", ExpenseDate: "2026-10-02",
+    AcquisitionValue: 1000, PaymentStatus: "UNPAID", SupplierID: "SUP-1" }, []);
   var purchaseSettlement = cashFoundationSettlement({ SettlementID: "SET-PE-1", Direction: "OUTFLOW", AccountCode: "1000",
-    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-1", RelatedTransactionType: "PurchaseEvent",
+    SourceType: "AP_SETTLEMENT", SourceID: "SET-PE-1", RelatedTransactionType: "PurchaseEvent",
     RelatedTransactionID: "PE-REQ-001" });
   var purchasePosting = buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
-    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] });
-  check(purchasePosting.status === "READY" && purchasePosting.rows[0].AccountCode === "1100" &&
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purchaseRecognition.rows, settlements: [] });
+  check(purchasePosting.status === "READY" && purchasePosting.rows[0].AccountCode === "2000" &&
     purchasePosting.rows[0].Debit === 1000 && purchasePosting.rows[1].Credit === 1000 &&
-    purchasePosting.rows[1].AccountCode === "1000" && purchasePosting.rows[0].MovementType === "PAID_PURCHASE",
-    "valid purchase settlement DIRECT_HPP Dr 1100");
+    purchasePosting.rows[1].AccountCode === "1000" && purchasePosting.rows[0].MovementType === "AP_SETTLEMENT",
+    "valid AP settlement Dr 2000 without second 1100 debit");
   check(purchasePosting.externalCashFlowClassification === "BY_TRANSACTION_SUBSTANCE",
     "purchase settlement has external cash flow classification");
   check(buildCashPostingCandidate(changed(purchaseSettlement, { Amount: 500 }), { accounts: accounts,
-    transactions: transactions, purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason ===
-    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "purchase amount mismatch refused");
+    transactions: transactions, purchaseEvents: purchaseEvents, balanceLedgerRows: purchaseRecognition.rows }).reason ===
+    "REFUSED_UNSUPPORTED_PARTIAL_AP_SETTLEMENT", "purchase amount mismatch refused");
   check(buildCashPostingCandidate(changed(purchaseSettlement, { Amount: 2000 }), { accounts: accounts,
-    transactions: transactions, purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason ===
-    "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "purchase amount overpayment refused");
+    transactions: transactions, purchaseEvents: purchaseEvents, balanceLedgerRows: purchaseRecognition.rows }).reason ===
+    "REFUSED_UNSUPPORTED_PARTIAL_AP_SETTLEMENT", "purchase amount overpayment refused");
   check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
     purchaseEvents: [], balanceLedgerRows: [] }).reason === "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT",
     "purchase without purchase event refused");
@@ -109,20 +113,20 @@ function testCashFoundationContracts() {
     purchaseEvents: [changed(purchaseEvents[0], { isActive: false })], balanceLedgerRows: [] }).reason ===
     "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", "inactive purchase event refused");
   check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
-    purchaseEvents: purchaseEvents, balanceLedgerRows: purchasePosting.rows }).status === "ALREADY_POSTED",
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purchaseRecognition.rows.concat(purchasePosting.rows) }).status === "ALREADY_POSTED",
     "purchase not posted twice");
   check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
     purchaseEvents: purchaseEvents, balanceLedgerRows: [
       changed(purchasePosting.rows[0], { SourceType: "PURCHASE_RECOGNITION", SourceID: "PE-REQ-001" })
-    ] }).reason === "TRANSACTION_EFFECT_ALREADY_POSTED", "prior purchase recognition refused");
+    ] }).reason === "AP_OBLIGATION_NOT_POSTED", "settlement without durable AP recognition refused");
   var purchaseDateLater = changed(purchaseSettlement, { Tanggal: "2026-10-05" });
   check(buildCashPostingCandidate(purchaseDateLater, { accounts: accounts, transactions: transactions,
-    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] }).status === "READY",
-    "purchase settlement date later than transaction date accepted");
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purchaseRecognition.rows, settlements: [] }).status === "READY",
+    "purchase settlement date later than transaction date accepted after recognition");
   var purchaseDateEarlier = changed(purchaseSettlement, { Tanggal: "2026-10-01" });
   check(buildCashPostingCandidate(purchaseDateEarlier, { accounts: accounts, transactions: transactions,
-    purchaseEvents: purchaseEvents, balanceLedgerRows: [], settlements: [] }).status === "READY",
-    "purchase settlement date earlier than transaction date accepted");
+    purchaseEvents: purchaseEvents, balanceLedgerRows: purchaseRecognition.rows, settlements: [] }).status === "READY",
+    "purchase settlement date earlier than transaction date accepted after recognition");
   var nonHppPurchase = changed(purchaseEvents[0], { purchaseRelationship: "NON_HPP" });
   check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
     purchaseEvents: [nonHppPurchase], balanceLedgerRows: [] }).reason ===
@@ -131,8 +135,9 @@ function testCashFoundationContracts() {
     SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-WRONG", RelatedTransactionType: "Expense",
     RelatedTransactionID: "PE-REQ-001" });
   check(buildCashPostingCandidate(purchaseWrongType, { accounts: accounts, transactions: transactions,
-    purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason === "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT",
-    "purchase settlement with wrong RelatedTransactionType refused");
+    purchaseEvents: purchaseEvents, balanceLedgerRows: [] }).reason ===
+    "PURCHASE_SETTLEMENT_RETIRED_USE_PURCHASE_RECOGNITION_OR_AP_SETTLEMENT",
+    "retired purchase settlement source refused");
   check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions,
       balanceLedgerRows: [] }).reason === "SETTLEMENT_CONTEXT_INCOMPLETE",
       "missing settlements context refuses business-event deduplication");
@@ -173,11 +178,11 @@ function testCashFoundationContracts() {
     settlements: [outflow], balanceLedgerRows: expensePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
     "same expense different settlement refused");
   var purchaseSettlement2 = cashFoundationSettlement({ SettlementID: "SET-PE-2", Direction: "OUTFLOW", AccountCode: "1000",
-    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-2", RelatedTransactionType: "PurchaseEvent",
+    SourceType: "AP_SETTLEMENT", SourceID: "SET-PE-2", RelatedTransactionType: "PurchaseEvent",
     RelatedTransactionID: "PE-REQ-001" });
   check(buildCashPostingCandidate(purchaseSettlement2, { accounts: accounts, transactions: transactions,
     purchaseEvents: purchaseEvents, settlements: [purchaseSettlement],
-    balanceLedgerRows: purchasePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
+    balanceLedgerRows: purchaseRecognition.rows.concat(purchasePosting.rows) }).reason === "REFUSED_DUPLICATE_SOURCE",
     "same purchase different settlement refused");
   check(buildCashPostingCandidate(inflow, { accounts: accounts, transactions: transactions,
     settlements: [inflow], balanceLedgerRows: salePosting.rows }).status === "ALREADY_POSTED",
@@ -187,7 +192,7 @@ function testCashFoundationContracts() {
     "same expense same settlement idempotent");
   check(buildCashPostingCandidate(purchaseSettlement, { accounts: accounts, transactions: transactions,
     purchaseEvents: purchaseEvents, settlements: [purchaseSettlement],
-    balanceLedgerRows: purchasePosting.rows }).status === "ALREADY_POSTED",
+    balanceLedgerRows: purchaseRecognition.rows.concat(purchasePosting.rows) }).status === "ALREADY_POSTED",
     "same purchase same settlement idempotent");
   var saleSettlementNoLedger = cashFoundationSettlement({ SettlementID: "SET-SALE-3", Direction: "INFLOW", AccountCode: "1000",
     SourceType: "SALE_SETTLEMENT", SourceID: "SET-SALE-3", RelatedTransactionType: "Sales",
@@ -305,14 +310,14 @@ function testCashFoundationContracts() {
     settlements: [outflow], balanceLedgerRows: expensePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
     "expense second origin still refused");
 
-  // Test 8: Purchase regression — unchanged
+  // Test 8: AP settlement regression
   var pur2 = cashFoundationSettlement({ SettlementID: "SET-PE-2", Direction: "OUTFLOW", AccountCode: "1000",
-    SourceType: "PURCHASE_SETTLEMENT", SourceID: "SET-PE-2", RelatedTransactionType: "PurchaseEvent",
+    SourceType: "AP_SETTLEMENT", SourceID: "SET-PE-2", RelatedTransactionType: "PurchaseEvent",
     RelatedTransactionID: "PE-REQ-001" });
   check(buildCashPostingCandidate(pur2, { accounts: accounts, transactions: transactions,
     purchaseEvents: purchaseEvents, settlements: [purchaseSettlement],
-    balanceLedgerRows: purchasePosting.rows }).reason === "REFUSED_DUPLICATE_SOURCE",
-    "purchase second origin still refused");
+    balanceLedgerRows: purchaseRecognition.rows.concat(purchasePosting.rows) }).reason === "REFUSED_DUPLICATE_SOURCE",
+    "AP settlement second origin still refused");
 
   // Test 9: Ledger independence
   var liA = cashSplitTenderSettlement("SET-LI-A", 20000, "1000");
@@ -981,13 +986,33 @@ function testCashSettlementPersistence() {
   check(resultExpDup.status === "REFUSED" && resultExpDup.reason === "REFUSED_DUPLICATE_SOURCE",
     "expense duplicate REFUSED_DUPLICATE_SOURCE");
 
-  // --- 8. Purchase normal ---
-  var rt8 = mockCashRuntime(accounts, transactions, purchaseEvents);
+  // --- 8. AP settlement after durable UNPAID purchase recognition ---
+  var unpaidPurchaseEvents = purchaseEvents.map(function(event) {
+    return Object.assign({}, event, { paymentStatus: "UNPAID", supplierId: "SUP-1" });
+  });
+  var rt8 = mockCashRuntime(accounts, transactions, unpaidPurchaseEvents);
+  var recognition = buildPolicyCPurchaseJournal({ EventID: "PE-REQ-001", ExpenseDate: "2026-10-02",
+    AcquisitionValue: 1000, PaymentStatus: "UNPAID", SupplierID: "SUP-1" }, []);
+  recognition.rows.forEach(function(row) { rt8.ledger.push(row); });
   var purchase1 = cashFoundationSettlement({ SettlementID: "P-PE-1", Direction: "OUTFLOW", AccountCode: "1000",
-    SourceType: "PURCHASE_SETTLEMENT", SourceID: "P-PE-1", RelatedTransactionType: "PurchaseEvent",
+    SourceType: "AP_SETTLEMENT", SourceID: "P-PE-1", RelatedTransactionType: "PurchaseEvent",
     RelatedTransactionID: "PE-REQ-001", Amount: 1000 });
   var resultPur = cashSettleAndPersist({ settlement: purchase1 }, rt8);
-  check(resultPur.status === "POSTED", "purchase normal POSTED");
+  var purchaseExpenseDebits = rt8.ledger.filter(function(row) {
+    return row.SourceType === "PURCHASE_EVENT" && row.AccountCode === "6210" && Number(row.Debit) === 1000;
+  });
+  var settlementExpenseDebits = rt8.ledger.filter(function(row) {
+    return row.SourceType === "AP_SETTLEMENT" && row.AccountCode === "6210" && Number(row.Debit) > 0;
+  });
+  check(resultPur.status === "POSTED" && rt8.ledger.length === 4 &&
+    recognition.rows[0].AccountCode === "6210" && recognition.rows[0].Debit === 1000 &&
+    recognition.rows[1].AccountCode === "2000" && recognition.rows[1].Credit === 1000 &&
+    rt8.ledger.filter(function(row) { return row.SourceType === "AP_SETTLEMENT" &&
+      row.AccountCode === "2000" && Number(row.Debit) === 1000; }).length === 1 &&
+    rt8.ledger.filter(function(row) { return row.SourceType === "AP_SETTLEMENT" &&
+      row.AccountCode === "1000" && Number(row.Credit) === 1000; }).length === 1 &&
+    purchaseExpenseDebits.length === 1 && settlementExpenseDebits.length === 0,
+    "prospective unpaid purchase posts Dr6210/Cr2000 once and AP settlement posts Dr2000/CrCash without second 6210");
 
   // --- 9. Transfer normal ---
   var rt9 = mockCashRuntime(accounts, transactions, purchaseEvents);
@@ -1229,15 +1254,18 @@ function testCashProductionRuntimeAdapter() {
   rt12.lock.release();
   check(!lock12.state.acquired, "lock released after release");
 
-  // --- 13. Runner gate default = disabled ---
-  check(CASH_PRODUCTION_POLICY.ENABLED === false, "runner gate default is disabled");
+  // --- 13. Runner gate enabled after local foundation acceptance ---
+  check(CASH_PRODUCTION_POLICY.ENABLED === true, "runner gate is enabled");
 
-  // --- 14-15. Disabled runner produces zero writes, does not call mutable persistence ---
+  // --- 14-15. Missing canonical storage fails closed with zero writes ---
   var resolveCalled = false;
   resolveNumlockProductionSpreadsheetWithRuntime = function() { resolveCalled = true; return null; };
-  var disabledResult = runCashSettleAndPersist({ settlement: cashFoundationSettlement() });
-  check(disabledResult.status === "DISABLED", "disabled runner returns DISABLED");
-  check(!resolveCalled, "disabled runner does not resolve production spreadsheet");
+  var missingStorageError = null;
+  try { runCashSettleAndPersist({ settlement: cashFoundationSettlement() }); }
+  catch (error) { missingStorageError = error; }
+  check(missingStorageError && missingStorageError.message === "Cash production runtime requires canonical storage",
+    "missing canonical storage is refused");
+  check(resolveCalled, "enabled runner resolves canonical production spreadsheet");
   resolveNumlockProductionSpreadsheetWithRuntime = originalResolve;
 
   // --- 16-17. Existing mockCashRuntime tests unchanged (verified by testCashSettlementPersistence) ---
@@ -1505,12 +1533,55 @@ function testCashProductionRuntimeAuthorityBridge() {
   return { passed: true, scenarios: scenarios };
 }
 
+function testCashDiagnosticStorageProbe() {
+  var scenarios = 0;
+  function check(condition, message) { scenarios++; if (!condition) throw new Error(message); }
+
+  var result = runCashProductionDiagnostic();
+
+  // --- 1. storageProbe field present ---
+  check(result.storageProbe !== undefined && result.storageProbe !== null, "storageProbe field present");
+
+  // --- 2. storageProbe structure ---
+  var probe = result.storageProbe;
+  check(typeof probe.success === "boolean", "storageProbe.success is boolean");
+  check(typeof probe.spreadsheetIdMatch === "boolean", "storageProbe.spreadsheetIdMatch is boolean");
+  check(probe.errorName === null || typeof probe.errorName === "string", "storageProbe.errorName is string or null");
+  check(probe.errorMessage === null || typeof probe.errorMessage === "string", "storageProbe.errorMessage is string or null");
+
+  // --- 3. existing diagnostic fields unchanged ---
+  check(result.readOnly === true, "readOnly remains true");
+  check(result.writeCount === 0, "writeCount remains 0");
+  check(result.settlementExecutions === 0, "settlementExecutions remains 0");
+  check(result.settlementWrites === 0, "settlementWrites remains 0");
+  check(result.balanceLedgerWrites === 0, "balanceLedgerWrites remains 0");
+
+  // --- 4. success path: spreadsheetIdMatch must be true ---
+  if (probe.success) {
+    check(probe.spreadsheetIdMatch === true, "successful probe has spreadsheetIdMatch=true");
+    check(probe.errorName === null, "successful probe has no errorName");
+    check(probe.errorMessage === null, "successful probe has no errorMessage");
+  }
+
+  // --- 5. failure path: error metadata exposed ---
+  if (!probe.success) {
+    check(probe.errorName !== null, "failed probe has errorName");
+    check(probe.errorMessage !== null, "failed probe has errorMessage");
+    check(typeof probe.errorName === "string" && probe.errorName.length > 0, "errorName non-empty string");
+    check(typeof probe.errorMessage === "string" && probe.errorMessage.length > 0, "errorMessage non-empty string");
+  }
+
+  Logger.log("PASS: testCashDiagnosticStorageProbe | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function cashFoundationTestAccounts() {
   return [
     { AccountCode: "1000", AccountName: "Cash on Hand", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "1010", AccountName: "DANA Business", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "1020", AccountName: "Cash in Owner Custody - BluBCA", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "1100", AccountName: "Inventory Asset", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
+    { AccountCode: "2000", AccountName: "Accounts Payable", AccountType: "Liability", StatementGroup: "Current Liabilities", CashFlowGroup: "Operating", NormalBalance: "CREDIT", IsActive: true },
     { AccountCode: "4000", AccountName: "Sales Revenue", AccountType: "Revenue", StatementGroup: "Operating Revenue", CashFlowGroup: "Operating", NormalBalance: "CREDIT", IsActive: true },
     { AccountCode: "6100", AccountName: "Salary Expense", AccountType: "Expense", StatementGroup: "Personnel Expense", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true }
   ];
@@ -1536,7 +1607,7 @@ function cashFoundationTransactions() {
 function cashFoundationPurchaseEvents() {
   return [
     { id: "PE-REQ-001", canonicalTransactionType: "PurchaseEvent", dateKey: "2026-10-02",
-      acquisitionValue: 1000, expenseId: "EXP-1", isActive: true,
+      acquisitionValue: 1000, expenseId: "EXP-1", isActive: true, paymentStatus: "UNPAID", supplierId: "SUP-1",
       purchaseRelationship: "DIRECT_HPP_COMPONENT", costType: "VARIABLE_COST" }
   ];
 }

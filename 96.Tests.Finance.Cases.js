@@ -1,3 +1,89 @@
+function testPolicyCIntegratedAccountingContract() {
+  var scenarios = 0;
+  function check(value, label) { scenarios++; if (!value) throw new Error("Policy C: " + label); }
+  var paid = { EventID: "PE-PAID", ExpenseDate: "2026-10-01", AcquisitionValue: 1000,
+    PaymentStatus: "PAID", CashAccountCode: "1000", SupplierID: "" };
+  var unpaid = { EventID: "PE-UNPAID", ExpenseDate: "2026-10-01", AcquisitionValue: 2000,
+    PaymentStatus: "UNPAID", CashAccountCode: "", SupplierID: "SUP-1" };
+  var paidPosting = buildPolicyCPurchaseJournal(paid, []);
+  check(paidPosting.status === "READY" && paidPosting.rows[0].AccountCode === "6210" &&
+    paidPosting.rows[1].AccountCode === "1000", "paid acquisition Dr6210 CrCash");
+  var unpaidPosting = buildPolicyCPurchaseJournal(unpaid, paidPosting.rows);
+  check(unpaidPosting.status === "READY" && unpaidPosting.rows[0].AccountCode === "6210" &&
+    unpaidPosting.rows[1].AccountCode === "2000", "unpaid acquisition Dr6210 Cr2000");
+  check(buildPolicyCPurchaseJournal(paid, paidPosting.rows).status === "ALREADY_POSTED", "purchase retry idempotent");
+  var sale = { ID_Trx: "SAL-1", Tanggal: "2026-09-30", HPP: 2500 };
+  var legacyPaid = buildPolicyCPurchaseJournal(Object.assign({}, paid, { EventID: "PE-LEGACY-PAID", ExpenseDate: "2026-09-30" }), []);
+  var legacyUnpaid = buildPolicyCPurchaseJournal(Object.assign({}, unpaid, { EventID: "PE-LEGACY-UNPAID", ExpenseDate: "2026-09-30" }), []);
+  var basis = legacyPaid.rows.concat(legacyUnpaid.rows);
+  var hpp = buildPolicyCSalesHppJournal(sale, basis);
+  check(hpp.status === "READY" && hpp.rows[0].AccountCode === "5000" && hpp.rows[1].AccountCode === "1100",
+    "sale HPP Dr5000 Cr1100");
+  check(policyCInventoryBookBasis(basis.concat(hpp.rows)) === 500, "1100 remains non-negative");
+  var refused = buildPolicyCSalesHppJournal({ ID_Trx: "SAL-2", Tanggal: "2026-09-30", HPP: 501 }, basis.concat(hpp.rows));
+  check(refused.status === "ACCOUNTING_EXCEPTION" && refused.reason === "INSUFFICIENT_INVENTORY_BOOK_BASIS" &&
+    refused.rows.length === 0 && refused.shortfall === 1, "insufficient basis persists exact refusal evidence");
+  check(buildPolicyCSalesHppJournal(sale, basis.concat(hpp.rows)).status === "ALREADY_POSTED", "HPP retry idempotent");
+  var reversal = policyCReverseJournal(hpp.rows, "POLICYC-HPP-REV-SAL-1", "2026-10-03", "SALE_HPP_REVERSAL", "SAL-1-R1");
+  check(reversal.status === "READY" && policyCInventoryBookBasis(basis.concat(hpp.rows, reversal.rows)) === 3000,
+    "HPP reversal restores basis and preserves original");
+  var opening = buildPolicyCMonetaryOpeningJournal({ OpeningID: "OPEN-1", EffectiveDate: "2026-09-30",
+    InventoryDebit: 3000, CounterpartComponents: [{ AccountCode: "2000", Credit: 2000, SourceRef: "INV-1" },
+      { AccountCode: "3000", Credit: 1000, SourceRef: "OWNER-1" }], SourceReferences: ["INV-1", "OWNER-1"],
+    PreparedBy: "PREP", ReviewedBy: "REVIEW", ApprovedAt: "2026-10-01", Status: "APPROVED" }, []);
+  check(opening.status === "READY" && opening.rows.length === 3, "evidence-backed monetary opening balanced");
+  check(buildPolicyCMonetaryOpeningJournal({ OpeningID: "BAD", EffectiveDate: "2026-09-30", InventoryDebit: 1,
+    CounterpartComponents: [{ AccountCode: "3210", Credit: 1, SourceRef: "X" }], SourceReferences: ["X"],
+    PreparedBy: "A", ReviewedBy: "B", ApprovedAt: "x", Status: "APPROVED" }, []).status === "REFUSED",
+    "3210 opening refused");
+  var pending = buildPolicyCStatementReconciliation(basis, { unpostedSalesHpp: 1 });
+  check(pending.status === "ACCOUNTING_DATA_PENDING_RESOLUTION" && pending.finalValues === null,
+    "finalization fails closed");
+  var reconciled = buildPolicyCStatementReconciliation(basis.concat(hpp.rows), {});
+  check(reconciled.status === "FINAL" && reconciled.finalValues.inventoryBookValue === 500 &&
+    reconciled.finalValues.accountsPayable === 2000 && reconciled.finalValues.hpp === 2500,
+    "balance and P&L reconcile without plug");
+  check(INVENTORY_RECEIPT_ACTIVATION.enabled === false && BALANCE_FOUNDATION_POLICY.HPP_AUTHORITY === "tabsal.HPP",
+    "InventoryReceipt and InventoryLedger non-authoritative");
+  check(resolvePolicyCAccountingRegime_("2026-09-30").regime === "LEGACY_PRE_TRANSITION" &&
+    resolvePolicyCAccountingRegime_("2026-10-01").regime === "PROSPECTIVE_PURCHASE_EXPENSE" &&
+    resolvePolicyCAccountingRegime_(null).reason === "ECONOMIC_DATE_REQUIRED", "economic-date boundary and fail-closed routing");
+  var createdAfter = buildPolicyCPurchaseJournal(Object.assign({}, paid, { EventID: "PE-CREATED-AFTER",
+    ExpenseDate: "2026-09-30", CreatedAt: "2026-10-02" }), []);
+  var createdBefore = buildPolicyCPurchaseJournal(Object.assign({}, paid, { EventID: "PE-CREATED-BEFORE",
+    ExpenseDate: "2026-10-01", CreatedAt: "2026-09-01" }), []);
+  check(createdAfter.rows[0].AccountCode === "1100" && createdBefore.rows[0].AccountCode === "6210",
+    "CreatedAt cannot select accounting regime");
+  check(buildPolicyCPurchaseJournal(Object.assign({}, paid, { CashAccountCode: "" }), []).status === "REFUSED" &&
+    buildPolicyCPurchaseJournal(Object.assign({}, unpaid, { SupplierID: "" }), []).status === "REFUSED",
+    "payment authority fails closed");
+  var partialIdentity = [Object.assign({}, paidPosting.rows[0])];
+  check(buildPolicyCPurchaseJournal(paid, partialIdentity).reason === "IDENTITY_CONFLICT",
+    "partial purchase identity fails closed");
+  var prospectiveHpp = buildPolicyCSalesHppJournal({ ID_Trx: "SAL-PROSPECTIVE", Tanggal: "2026-10-01", HPP: 999999 }, []);
+  check(prospectiveHpp.status === "NON_POSTING_ANALYTICAL_AUTHORITY" && prospectiveHpp.rows.length === 0,
+    "prospective HPP refuses before inventory sufficiency evaluation");
+  var originalPaid = paidPosting.rows;
+  var paidRefund = buildPolicyCPurchaseAdjustmentJournal({ Type: "SUPPLIER_REFUND", AdjustmentID: "REF-1",
+    EventID: paid.EventID, Amount: 400, CashAccountCode: "1000", TransactionDate: "2026-10-03" }, originalPaid, originalPaid);
+  check(paidRefund.status === "READY" && paidRefund.rows[0].AccountCode === "1000" &&
+    paidRefund.rows[1].AccountCode === "6210", "supplier refund DrCash Cr6210");
+  var unpaidCredit = buildPolicyCPurchaseAdjustmentJournal({ Type: "SUPPLIER_AP_CREDIT", AdjustmentID: "CR-1",
+    EventID: unpaid.EventID, Amount: 500, TransactionDate: "2026-10-03" }, unpaidPosting.rows, unpaidPosting.rows);
+  check(unpaidCredit.status === "READY" && unpaidCredit.rows[0].AccountCode === "2000" &&
+    unpaidCredit.rows[1].AccountCode === "6210", "supplier AP credit Dr2000 Cr6210");
+  var settlement = buildPolicyCApSettlementJournal({ SettlementID: "SET-1", EventID: unpaid.EventID,
+    Amount: 2000, CashAccountCode: "1000", SettlementDate: "2026-10-03" }, unpaidPosting.rows, unpaidPosting.rows);
+  check(settlement.status === "READY" && settlement.rows[0].AccountCode === "2000" &&
+    settlement.rows[1].AccountCode === "1000" && settlement.rows.every(function(row) { return row.AccountCode !== "6210"; }),
+    "AP settlement has no second 6210");
+  var prospectiveGate = evaluatePolicyCFinalizationGate({ accountingRegime: "PROSPECTIVE_PURCHASE_EXPENSE",
+    production: true, monetaryOpeningReady: false, insufficientInventoryBasis: 1, unpostedSalesHpp: 1 });
+  check(prospectiveGate.status === "FINAL", "prospective finalization ignores historical M and legacy inventory-HPP gates");
+  Logger.log("PASS: testPolicyCIntegratedAccountingContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function testFinanceCoreBackendContract() {
   var source = {
     sales: [
@@ -97,7 +183,7 @@ function testFinanceCoreBackendContract() {
       result.accountingPolicy.depreciationSource !== "DepreciationLedger" ||
       result.accountingPolicy.cashBalanceAvailable !== false ||
       result.accountingPolicy.inventoryBalanceAvailable !== false || result.accountingPolicy.balanceSheetAvailable !== false ||
-      result.accountingPolicy.cashFlowAvailable !== false) throw new Error("Finance accounting-policy disclosure mismatch");
+      result.accountingPolicy.cashFlowAvailable !== true) throw new Error("Finance accounting-policy disclosure mismatch");
   var financeSource = getFinanceDataWithRuntime.toString() + getFinanceData.toString() +
     buildFinanceProfitAndLoss.toString() + buildFinanceDepreciationSource.toString();
   ["getDashboardData(", "buildFinancial(", 'getSheetByName(\"Transaction\")', 'getSheetByName(\"Helper\")'].forEach(function(token) {
@@ -154,6 +240,14 @@ function financeIsolationTestSpreadsheet(options) {
     return assetH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
   });
   sheets.push(capitalEquitySchemaTestSheet("Assets", [assetH].concat(assetRows)));
+
+  if (options.balanceLedger) {
+    var balanceH = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
+    var balanceRows = options.balanceLedger.map(function(r) {
+      return balanceH.map(function(h) { return r[h] === undefined ? "" : r[h]; });
+    });
+    sheets.push(capitalEquitySchemaTestSheet("BalanceLedger", [balanceH].concat(balanceRows)));
+  }
 
   if (!options.omitCapitalEquity) {
     var ceH = CAPITAL_EQUITY_POLICY.HEADERS;
@@ -378,7 +472,21 @@ function testFinanceErrorDestinationMessaging() {
   return { passed: true, scenarios: scenarios };
 }
 
+function financePolicyCTestLedger() {
+  var audit = { ExternalRef: "", Keterangan: "", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" };
+  return [
+    Object.assign({ JournalID: "J-BAL", LineID: "L-1", Tanggal: "2026-01-01", AccountCode: "1100", Debit: 300000,
+      Credit: 0, MovementType: "MONETARY_INVENTORY_OPENING", SourceType: "TEST", SourceID: "TEST-BAL" }, audit),
+    Object.assign({ JournalID: "J-BAL", LineID: "L-2", Tanggal: "2026-01-01", AccountCode: "2000", Debit: 0,
+      Credit: 300000, MovementType: "MONETARY_INVENTORY_OPENING", SourceType: "TEST", SourceID: "TEST-BAL" }, audit)
+  ];
+}
+
 function testPartialBalancePositionReport() {
+  return testPolicyCBalanceServiceFinalization();
+}
+
+function testLegacyPartialBalancePositionReport() {
   var scenarios = 0;
   function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
 
@@ -494,6 +602,10 @@ function testPartialBalancePositionReport() {
 }
 
 function testPartialBalanceEquityUnavailable() {
+  return testPolicyCBalanceServiceFinalization();
+}
+
+function testLegacyPartialBalanceEquityUnavailable() {
   var scenarios = 0;
   function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
 
@@ -524,6 +636,10 @@ function testPartialBalanceEquityUnavailable() {
 }
 
 function testPartialBalanceNoFixedAssets() {
+  return testPolicyCBalanceServiceFinalization();
+}
+
+function testLegacyPartialBalanceNoFixedAssets() {
   var scenarios = 0;
   function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
 
@@ -555,6 +671,27 @@ function testPartialBalanceNoFixedAssets() {
 
   Logger.log("PASS: testPartialBalanceNoFixedAssets | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
+}
+
+function testPolicyCBalanceServiceFinalization() {
+  var ss = financeIsolationTestSpreadsheet({
+    accounts: financeIsolationTestAccounts(), sales: financeIsolationTestSales(), expenses: financeIsolationTestExpenses(),
+    products: financeIsolationTestProducts(), expenseItems: financeIsolationTestExpenseItems(),
+    depreciationLedger: financeIsolationTestDepreciation(), assets: financeIsolationTestAssets(),
+    capitalEquity: [], openingBalances: [], balanceLedger: financePolicyCTestLedger()
+  });
+  var result = getPartialBalanceDataWithRuntime({ spreadsheet: ss }, "custom", "2026-01-01", "2026-01-31");
+  if (result.status !== "FINAL" || !result.finalValues || result.assets.inventory.amount !== 300000 ||
+      result.liabilities.accountsPayable !== 300000 || result.finalValues.balanced !== true) {
+    throw new Error("Policy C Balance service did not expose reconciled FINAL values");
+  }
+  var pending = getPartialBalanceDataWithRuntime({ spreadsheet: ss,
+    policyCFinalizationState: { insufficientInventoryBasis: 1 } }, "custom", "2026-01-01", "2026-01-31");
+  if (pending.status !== "ACCOUNTING_DATA_PENDING_RESOLUTION" || pending.finalValues !== null ||
+      pending.assets !== null || pending.liabilities !== null || pending.equity !== null) {
+    throw new Error("Policy C Balance service exposed authoritative values while pending");
+  }
+  return { passed: true, scenarios: 2 };
 }
 
 function testFinanceResponseBackwardCompatibility() {
@@ -608,5 +745,187 @@ function testFinanceResponseBackwardCompatibility() {
   check(degResult.capitalEquity.error.length > 0, "degraded capitalEquity has error message");
 
   Logger.log("PASS: testFinanceResponseBackwardCompatibility | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testCashFlowOpeningClosing() {
+  var scenarios = 0;
+  function check(cond, msg) { scenarios++; if (!cond) throw new Error(msg); }
+
+  // Minimal ledger rows for a single operating cash movement
+  var accounts = [
+    { AccountCode: "1000", AccountName: "Cash", AccountType: "Asset", StatementGroup: "Cash", CashFlowGroup: "", IsActive: true },
+    { AccountCode: "4100", AccountName: "Sales", AccountType: "Revenue", StatementGroup: "Revenue", CashFlowGroup: "Operating", IsActive: true }
+  ];
+  var ledger = [
+    { AccountCode: "1000", JournalID: "J1", Debit: 50000, Credit: 0, IsActive: true },
+    { AccountCode: "4100", JournalID: "J1", Debit: 0, Credit: 50000, IsActive: true }
+  ];
+  var period = { filter: "custom", startDate: "2026-01-01", endDate: "2026-01-31", label: "Jan" };
+
+  // Scenario 1-3: opening unavailable → null, false
+  var stmtNoOpening = buildCashFlowStatement(ledger, accounts, period);
+  check(stmtNoOpening.openingCash === null, "S1: openingCash null when no context");
+  check(stmtNoOpening.closingCash === null, "S2: closingCash null when opening unavailable");
+  check(stmtNoOpening.openingCashAvailable === false, "S3: openingCashAvailable false when no context");
+
+  // Scenario 4: valid cash opening balances are summed (1000 + 1010 + 1020)
+  var accountsPlus = accounts.concat([
+    { AccountCode: "1010", AccountName: "Bank", AccountType: "Asset", StatementGroup: "Cash", CashFlowGroup: "", IsActive: true },
+    { AccountCode: "1020", AccountName: "E-Wallet", AccountType: "Asset", StatementGroup: "Cash", CashFlowGroup: "", IsActive: true }
+  ]);
+  var openingSum = buildCashFlowStatement(ledger, accountsPlus, period, { openingCash: 30000 + 20000 + 10000 });
+  check(openingSum.openingCash === 60000, "S4: openingCash is sum of 1000+1010+1020");
+  check(openingSum.openingCashAvailable === true, "S4: openingCashAvailable true with valid context");
+
+  // Scenario 5: non-cash opening accounts excluded
+  var stmtNonCash = buildCashFlowStatement(ledger, accounts, period, { openingCash: 0 });
+  check(stmtNonCash.openingCash === 0, "S5a: zero opening is available (legitimate)");
+  check(stmtNonCash.openingCashAvailable === true, "S5b: zero opening available, not confused with unavailable");
+
+  // Scenario 6: closingCash = openingCash + netChange
+  var stmtWithOpening = buildCashFlowStatement(ledger, accounts, period, { openingCash: 100000 });
+  check(stmtWithOpening.netChange === 50000, "S6a: netChange correct");
+  check(stmtWithOpening.closingCash === 150000, "S6b: closingCash = 100000 + 50000");
+
+  // Scenario 7: full invariant holds
+  var invariantSum = stmtWithOpening.openingCash + stmtWithOpening.operating + stmtWithOpening.investing + stmtWithOpening.financing;
+  check(invariantSum === stmtWithOpening.closingCash, "S7: openingCash + operating + investing + financing === closingCash");
+
+  // Scenario 8: legitimate opening value 0 is available
+  var stmtZero = buildCashFlowStatement(ledger, accounts, period, { openingCash: 0 });
+  check(stmtZero.openingCash === 0, "S8a: zero opening value preserved");
+  check(stmtZero.openingCashAvailable === true, "S8b: zero opening marked available");
+  check(stmtZero.closingCash === 50000, "S8c: closingCash with zero opening = 0 + netChange");
+
+  // Scenario 9: existing Cash Flow classification unchanged
+  check(stmtWithOpening.operating === 50000, "S9a: operating classification preserved");
+  check(stmtWithOpening.investing === 0, "S9b: investing unchanged");
+  check(stmtWithOpening.financing === 0, "S9c: financing unchanged");
+  check(stmtWithOpening.ambiguous.length === 0, "S9d: no ambiguous entries");
+
+  // Verify return shape includes all new fields
+  check("openingCash" in stmtNoOpening, "S9e: openingCash key present");
+  check("closingCash" in stmtNoOpening, "S9f: closingCash key present");
+  check("openingCashAvailable" in stmtNoOpening, "S9g: openingCashAvailable key present");
+
+  // Test invalid openingContext values
+  var stmtBad = buildCashFlowStatement(ledger, accounts, period, { openingCash: "bad" });
+  check(stmtBad.openingCash === null, "S9h: non-numeric opening falls back to null");
+  check(stmtBad.openingCashAvailable === false, "S9i: non-numeric opening marks unavailable");
+
+  var stmtUndefined = buildCashFlowStatement(ledger, accounts, period, {});
+  check(stmtUndefined.openingCash === null, "S9j: empty context falls back to null");
+  check(stmtUndefined.openingCashAvailable === false, "S9k: empty context marks unavailable");
+
+  Logger.log("PASS: testCashFlowOpeningClosing | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceCrossBoundaryExpenseBreakdownReconciliation() {
+  var scenarios = 0;
+  function check(value, label) { scenarios++; if (!value) throw new Error("Cross-boundary Finance: " + label); }
+  var canonical = { records: [
+    { transactionType: "Expense", dateKey: "2026-09-30", expenseItemIsActive: true, expenseAccountCode: "6100", expense: 100 },
+    { transactionType: "Expense", dateKey: "2026-10-01", expenseItemIsActive: true, expenseAccountCode: "6100", expense: 200 },
+    { transactionType: "Expense", dateKey: "2026-10-02", expenseItemIsActive: true, expenseAccountCode: "6210", expense: 50 }
+  ], lifecycleRecords: [], sourceQuality: { unresolvedProducts: [], unresolvedExpenseItems: [] } };
+  var accounts = [
+    { AccountCode: "6100", AccountName: "Salary Expense", AccountType: "Expense", StatementGroup: "Personnel Expense", IsActive: true },
+    { AccountCode: "6210", AccountName: "Raw Material Supplies Expense", AccountType: "Expense", StatementGroup: "Supplies Expense", IsActive: true }
+  ];
+  var depreciation = { rows: [], quality: { duplicateLogicalKeys: [], invalidDepreciationRows: [], invalidPeriodRows: [], unresolvedAssetReferences: [] } };
+  var ledger = [{ Tanggal: "2026-10-01", AccountCode: "6210", Debit: 40, Credit: 0, IsActive: true }];
+  function period(start, end) { return { filter: "custom", startDate: start, endDate: end, label: start + " to " + end }; }
+  var split = buildFinanceProfitAndLoss(canonical, accounts, period("2026-09-30", "2026-10-02"), depreciation, ledger);
+  var sum = split.expenseBreakdown.reduce(function(total, item) { return total + item.amount; }, 0);
+  check(sum === split.summary.operatingExpenses && sum === 350, "full cross-boundary breakdown reconciles");
+  check(split.expenseBreakdown.length === 2 && split.expenseBreakdown.filter(function(item) {
+    return item.AccountCode === "6210";
+  }).length === 1, "account groups deterministic with one 6210 row");
+  check(split.accountingRegime === "SPLIT_PRESENTATION_BY_ACCOUNTING_REGIME" && split.regimeSections.legacy &&
+    split.regimeSections.prospective && split.policyDisclosures.length === 2, "split sections and disclosures preserved");
+  check(split.summary.cogs === null && split.summary.grossProfit === null && split.grossProfit === null &&
+    split.grossProfitAvailable === false && split.summary.materialPurchasesExpensed === null,
+    "incompatible top-level material semantics remain null");
+  check(split.expenseBreakdown.every(function(item) { return ["6100", "6210"].indexOf(item.AccountCode) !== -1; }),
+    "no HPP COGS or inventory row invented");
+  var year = buildFinanceProfitAndLoss(canonical, accounts, period("2026-01-01", "2026-12-31"), depreciation, ledger);
+  check(year.expenseBreakdown.reduce(function(total, item) { return total + item.amount; }, 0) === year.summary.operatingExpenses,
+    "populated year cross-boundary breakdown reconciles");
+  var month = buildFinanceProfitAndLoss(canonical, accounts, period("2026-10-01", "2026-10-31"), depreciation, ledger);
+  check(month.accountingRegime === "PROSPECTIVE_PURCHASE_EXPENSE" && month.summary.materialPurchasesExpensed === 40 &&
+    month.summary.cogs === null && month.summary.grossProfit === null && month.grossProfitAvailable === false,
+    "prospective-only material semantics unchanged");
+  var day = buildFinanceProfitAndLoss(canonical, accounts, period("2026-10-01", "2026-10-01"), depreciation, ledger);
+  check(day.expenseBreakdown.reduce(function(total, item) { return total + item.amount; }, 0) === day.summary.operatingExpenses,
+    "inclusive custom range remains reconciled");
+  var legacy = buildFinanceProfitAndLoss(canonical, accounts, period("2026-09-01", "2026-09-30"), depreciation, ledger);
+  check(legacy.accountingRegime === "LEGACY_PRE_TRANSITION" && legacy.expenseBreakdown.length === 1 &&
+    legacy.grossProfitAvailable === true, "legacy-only response unchanged");
+  var source = buildFinanceProfitAndLoss.toString();
+  check(["writeLedger", "setValue", "setValues", "postPolicyC"].every(function(token) { return source.indexOf(token) === -1; }),
+    "repair introduces no write or posting API");
+  Logger.log("PASS: testFinanceCrossBoundaryExpenseBreakdownReconciliation | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceProductionRuntimeReconciliationContract() {
+  var scenarios = 0;
+  function check(value, label) { scenarios++; if (!value) throw new Error("Finance runtime reconciliation: " + label); }
+  function finance(summary, expenseAmount) {
+    return { summary: summary, expenseBreakdown: expenseAmount === null ? [] : [{ amount: expenseAmount }] };
+  }
+  function summary(grossProfit, operatingExpenses, operatingNetProfit) {
+    return { revenue: 100, cogs: grossProfit === null ? null : 40, grossProfit: grossProfit,
+      operatingExpenses: operatingExpenses, depreciationExpense: 10, operatingNetProfit: operatingNetProfit };
+  }
+  var legacyValid = buildFinanceRuntimeReconciliation_(finance(summary(60, 20, 30), 20));
+  check(legacyValid.formulaReconciles && legacyValid.expenseReconciles, "legacy valid formulas pass");
+  check(!buildFinanceRuntimeReconciliation_(finance(summary(59, 20, 29), 20)).formulaReconciles,
+    "legacy invalid gross-profit formula fails");
+  var prospectiveValid = buildFinanceRuntimeReconciliation_(finance(summary(null, 20, 70), 20));
+  check(prospectiveValid.formulaReconciles && prospectiveValid.expenseReconciles,
+    "prospective null gross profit passes with valid expenses");
+  var splitValid = buildFinanceRuntimeReconciliation_(finance(summary(null, 20, 30), 20));
+  check(splitValid.formulaReconciles && splitValid.expenseReconciles,
+    "split null gross profit passes with valid expenses");
+  check(!buildFinanceRuntimeReconciliation_(finance(summary(null, 20, 70), 19)).expenseReconciles,
+    "prospective expense mismatch fails");
+  check(!buildFinanceRuntimeReconciliation_(finance(summary(null, 20, 30), 19)).expenseReconciles,
+    "split expense mismatch fails");
+  var empty = buildFinanceRuntimeReconciliation_(finance({ revenue: 0, cogs: null, grossProfit: null,
+    operatingExpenses: 0, depreciationExpense: 0, operatingNetProfit: 0 }, null));
+  check(empty.formulaReconciles && empty.expenseReconciles && empty.expenseTotal === 0,
+    "empty period remains valid");
+  Logger.log("PASS: testFinanceProductionRuntimeReconciliationContract | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
+function testFinanceFinalReadinessEvidenceDiagnostic() {
+  var scenarios = 0;
+  function check(value, label) { scenarios++; if (!value) throw new Error("Finance readiness diagnostic: " + label); }
+  var source = buildFinanceFinalReadinessEvidence_.toString() + runFinanceFinalReadinessEvidenceDiagnostic.toString();
+  check(source.indexOf("READ_ONLY: true") !== -1 && source.indexOf("WRITE_COUNT: 0") !== -1,
+    "read-only zero-write contract");
+  check(source.indexOf('["6210", "2000", "1000", "1010", "1020"]') !== -1,
+    "only required account evidence requested");
+  check(source.indexOf('readCanonicalTable(ss, "BalanceLedger"') !== -1 &&
+    source.indexOf("depreciation, ledger") !== -1, "actual BalanceLedger reaches Finance builder");
+  ["writeLedger", "postPolicyC", "runPurchaseEventSchemaMigration", "Recovery", "setValue", "setValues", "batchUpdate"]
+    .forEach(function(token) { check(source.indexOf(token) === -1, "excludes mutation token " + token); });
+  check(source.indexOf("PaymentStatus") === -1 && source.indexOf("CashAccountCode") === -1 &&
+    source.indexOf("SupplierID") === -1, "no payment inference or legacy classification");
+  var missing = { found: false, AccountCode: "6210", AccountName: null, Type: null,
+    StatementGroup: null, CashFlowGroup: null, IsActive: null };
+  check(missing.found === false && missing.AccountName === null, "missing account remains missing");
+  check(source.indexOf("predicateADifference") !== -1 && source.indexOf("predicateBDifference") !== -1,
+    "reconciliation differences exposed");
+  check(source.indexOf("openingCash: cashFlow.openingCash") !== -1 && source.indexOf("grossProfit: prospective.summary.grossProfit") !== -1,
+    "null Finance values preserved");
+  check(["fullAvailablePeriod", "populatedMonth", "populatedYear", "inclusiveCustomRange"].every(function(name) {
+    return buildFinanceRuntimeValidationPeriods.toString().indexOf(name) !== -1;
+  }), "Finance cases bounded to canonical periods");
+  Logger.log("PASS: testFinanceFinalReadinessEvidenceDiagnostic | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
 }

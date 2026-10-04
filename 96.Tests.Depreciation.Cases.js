@@ -106,15 +106,13 @@ function testDepreciationEngineContract() {
   }
   check(populatedRefused, "populated-ledger refusal");
 
-  var accepted = {};
-  Object.keys(DEPRECIATION_BACKFILL_ACCEPTANCE).forEach(function(key) { accepted[key] = DEPRECIATION_BACKFILL_ACCEPTANCE[key]; });
-  accepted.rows = new Array(DEPRECIATION_BACKFILL_ACCEPTANCE.generatedRowCount);
-  accepted.invalidAssets = []; accepted.duplicateLogicalKeys = []; accepted.reconciliationFailures = [];
-  check(assertDepreciationBackfillCandidate(accepted) === accepted, "candidate exact expected count and aggregates");
-  accepted.generatedRowCount--;
+  var accepted = buildDepreciationDryRun([asset()], DEPRECIATION_POLICY.TARGET_PERIOD);
+  check(assertDepreciationBackfillCandidate(accepted) === accepted,
+    "candidate logical invariants accepted without absolute row-count authority");
+  accepted.rows[0].ID_Dep = "NON_DETERMINISTIC";
   var candidateRejected = false;
   try { assertDepreciationBackfillCandidate(accepted); } catch (error) { candidateRejected = true; }
-  check(candidateRejected, "candidate mismatch rejected before write");
+  check(candidateRejected, "candidate identity mismatch rejected before write");
 
   var writeRows = depreciationRowsForWrite(multiple, new Date(2026, 7, 31));
   check(writeRows[0].length === 8 && writeRows[0][0] === multiple.rows[0].ID_Dep &&
@@ -557,4 +555,73 @@ function testDepreciationReportContract() {
 
   Logger.log("PASS: testDepreciationReportContract | scenarios=" + scenarios);
   return { passed: true, scenarios: scenarios };
+}
+
+function testDepreciationContinuationContract() {
+  var scenarios = 0;
+  function check(c, m) { scenarios++; if (!c) throw new Error(m); }
+  var assets = [
+    { ID_Asset:"AST-1",Nama:"A1",Kategori:"EQ",Jumlah:1,TanggalPerolehan:"2026-01-01",BiayaPerolehan:120000,UmurEkonomisBulan:12,NilaiResidu:0,DepreciationMethod:"StraightLine",IsActive:true,DisposedAt:"",Notes:"" },
+    { ID_Asset:"AST-2",Nama:"A2",Kategori:"FB",Jumlah:1,TanggalPerolehan:"2026-03-01",BiayaPerolehan:60000,UmurEkonomisBulan:6,NilaiResidu:6000,DepreciationMethod:"StraightLine",IsActive:true,DisposedAt:"",Notes:"" },
+    { ID_Asset:"AST-INACT",Nama:"IN",Kategori:"X",Jumlah:1,TanggalPerolehan:"2026-01-01",BiayaPerolehan:10000,UmurEkonomisBulan:12,NilaiResidu:0,DepreciationMethod:"StraightLine",IsActive:false,DisposedAt:"",Notes:"" },
+    { ID_Asset:"AST-DISP",Nama:"DP",Kategori:"Y",Jumlah:1,TanggalPerolehan:"2026-01-01",BiayaPerolehan:48000,UmurEkonomisBulan:12,NilaiResidu:0,DepreciationMethod:"StraightLine",IsActive:true,DisposedAt:"2026-06-15",Notes:"" }
+  ];
+  var aug = [];
+  for (var m=0;m<8;m++){var p="2026-"+String(m+1).padStart(2,"0")+"-01";aug.push({ID_Dep:"DEP-AST-1-"+p.replace(/-/g,"").slice(0,6),Period:p,ID_Asset:"AST-1",OpeningBookValue:120000-m*10000,Depreciation:10000,AccumulatedDepreciation:(m+1)*10000,ClosingBookValue:120000-(m+1)*10000});}
+  var sep=buildDepreciationContinuationCandidates(assets,aug,"2026-09-01");
+  check(sep.candidates.length>0,"Sep has candidates");
+  check(sep.candidates.every(function(c){return c.Period<="2026-09-01";}) &&
+    sep.candidates.some(function(c){return c.Period==="2026-09-01";}),"Sep target bounded and complete");
+  var multi=buildDepreciationContinuationCandidates(assets,aug,"2026-11-01");
+  var ps={};multi.candidates.forEach(function(c){ps[c.Period]=true;});
+  check(ps["2026-09-01"]&&ps["2026-10-01"]&&ps["2026-11-01"],"Multi-period catch-up");
+  var early=buildDepreciationContinuationCandidates(assets,aug,"2026-06-01");
+  check(early.candidates.filter(function(c){return c.ID_Asset==="AST-1";}).length===0,
+    "Target before covered for existing asset");
+  check(early.candidates.some(function(c){return c.ID_Asset==="AST-2"&&c.Period==="2026-06-01";}) &&
+    early.candidates.some(function(c){return c.ID_Asset==="AST-DISP"&&c.Period==="2026-06-01";}),
+    "Target completeness retained for uncovered eligible assets");
+  var threw=false;try{buildDepreciationContinuationCandidates(assets,[],"bad");}catch(e){threw=true;}
+  check(threw,"Invalid target throws");
+  var fl=[];for(var m2=0;m2<6;m2++){var p2="2026-"+String(m2+3).padStart(2,"0")+"-01";fl.push({ID_Dep:"DEP-AST-2-"+p2.replace(/-/g,"").slice(0,6),Period:p2,ID_Asset:"AST-2",OpeningBookValue:60000-m2*9000,Depreciation:9000,AccumulatedDepreciation:(m2+1)*9000,ClosingBookValue:60000-(m2+1)*9000});}
+  var fully=buildDepreciationContinuationCandidates(assets,fl,"2026-12-01");
+  check(fully.candidates.filter(function(c){return c.ID_Asset==="AST-2";}).length===0,"Fully dep skip");
+  var disp=buildDepreciationContinuationCandidates(assets,[],"2026-12-01");
+  check(disp.candidates.filter(function(c){return c.ID_Asset==="AST-DISP";}).every(function(c){return c.Period<="2026-06-01";}),"Disposed stops");
+  check(disp.candidates.filter(function(c){return c.ID_Asset==="AST-INACT";}).length===0,"Inactive skip");
+  var bl=aug.length;buildDepreciationContinuationCandidates(assets,aug,"2026-09-01");
+  check(aug.length===bl,"Historical unchanged");
+  var ra=[{ID_Asset:"AST-R",Nama:"R",Kategori:"X",Jumlah:1,TanggalPerolehan:"2026-01-01",BiayaPerolehan:10000,UmurEkonomisBulan:2,NilaiResidu:9000,DepreciationMethod:"StraightLine",IsActive:true,DisposedAt:"",Notes:""}];
+  var res=buildDepreciationContinuationCandidates(ra,[],"2026-12-01");
+  var ar=res.candidates.filter(function(c){return c.ID_Asset==="AST-R";});
+  check(ar.length>0,"Residual asset has candidates");
+  check(ar[ar.length-1].ClosingBookValue>=9000,"Closing >= residual");
+  // Period resolution regression tests
+  var datePeriod = depreciationPeriodKey(new Date(2026, 7, 1));
+  check(datePeriod === "2026-08-01", "Date object normalized to YYYY-MM-01");
+  var stringPeriod = depreciationPeriodKey("2026-09-15");
+  check(stringPeriod === "2026-09-01", "String normalized to YYYY-MM-01");
+  var isoPeriod = depreciationPeriodKey("2026-09-01");
+  check(isoPeriod === "2026-09-01", "ISO string preserved as YYYY-MM-01");
+  var invalidPeriod = depreciationPeriodKey("invalid");
+  check(invalidPeriod === null, "Invalid period returns null");
+  // Chronological comparison: 2021-09 vs 2026-08
+  var p2021 = depreciationPeriodKey(new Date(2021, 8, 1));
+  var p2026 = depreciationPeriodKey(new Date(2026, 7, 1));
+  check(p2021 === "2021-09-01", "2021-09 normalized");
+  check(p2026 === "2026-08-01", "2026-08 normalized");
+  check(p2026 > p2021, "2026-08 > 2021-09 chronologically");
+  // Aug 2026 → Sep 2026 continuation
+  var augLedger = [{ ID_Dep: "DEP-1", Period: new Date(2026, 7, 1), ID_Asset: "AST-1",
+    OpeningBookValue: 120000, Depreciation: 10000, AccumulatedDepreciation: 80000, ClosingBookValue: 40000 }];
+  var augAssets = [{ ID_Asset:"AST-1",Nama:"A",Kategori:"X",Jumlah:1,TanggalPerolehan:"2026-01-01",
+    BiayaPerolehan:120000,UmurEkonomisBulan:12,NilaiResidu:0,DepreciationMethod:"StraightLine",
+    IsActive:true,DisposedAt:"",Notes:"" }];
+  var augPlan = buildDepreciationContinuationCandidates(augAssets, augLedger, "2026-09-01");
+  check(augPlan.candidates.length === 1, "Aug→Sep generates exactly one candidate");
+  check(augPlan.candidates[0].Period === "2026-09-01", "Candidate period is Sep 2026");
+  check(augPlan.candidates[0].OpeningBookValue === 40000, "Opening matches prior closing");
+  check(augPlan.candidates[0].ClosingBookValue === 30000, "Closing = opening - depreciation");
+  Logger.log("PASS: testDepreciationContinuationContract | scenarios="+scenarios);
+  return {passed:true,scenarios:scenarios};
 }

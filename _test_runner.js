@@ -22,6 +22,7 @@ globalThis.SpreadsheetApp = {
 globalThis.invalidateDashboardCache = function() {};
 globalThis.getDashboardCacheRevision = function() { return 'LOCAL_FIXTURE'; };
 globalThis.dateFormat = function() { return 'yyyy-MM-dd'; };
+globalThis.Session = { getScriptTimeZone: function() { return 'Asia/Jakarta'; } };
 
 // Client-side recovery stubs (used by test PurchaseResolveEvidenceContracts)
 var _purchaseRecoveryStore = {};
@@ -49,6 +50,8 @@ var files = [
   '22.Transaction.Lifecycle.js',
   '38.CapitalEquity.Service.js',
   '39.Balance.Foundation.js',
+  '40.Cash.Foundation.js',
+  '41.Inventory.Opening.Staging.js',
   '42.Inventory.Receipt.Foundation.js',
   '43.Inventory.Receipt.Migration.js',
   '44.Inventory.Receipt.Operational.js',
@@ -57,10 +60,21 @@ var files = [
   '47.Purchase.Events.js',
   '48.Purchase.Events.Migration.js',
   '21.Transaction.Entry.js',
+  '90.Dashboard.DateRange.js',
+  '36.Finance.Service.js',
+  '37.Depreciation.Service.js',
+  '12A.Depreciation.Report.Service.js',
+  '37.Inventory.Policy.Evidence.js',
   '91.Transactions.Query.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
-  '96.Tests.Purchase.Events.Migration.Cases.js'
+  '96.Tests.Purchase.Events.Migration.Cases.js',
+  '96.Tests.Cash.Foundation.Cases.js',
+  '96.Tests.Depreciation.Cases.js',
+  '96.Tests.CapitalEquity.Cases.js',
+  '96.Tests.Balance.Foundation.Cases.js',
+  '96.Tests.Finance.Cases.js',
+  '96.Tests.Inventory.Policy.Evidence.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -160,5 +174,20 @@ run('testPurchaseResolveEvidenceContracts', 'testPurchaseResolveEvidenceContract
 
 run('testPurchaseUIContracts', 'testPurchaseUIContracts()');
 
-console.log('\n===== NUMLOCK PURCHASE-EVENT HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
+// Policy C local acceptance matrix. Production functions and existing fixtures only.
+run('testCashFoundationContracts', 'testCashFoundationContracts()');
+run('testDepreciationEngineContract', 'testDepreciationEngineContract()');
+run('testDepreciationReportContract', 'testDepreciationReportContract()');
+run('testDepreciationContinuationContract', 'testDepreciationContinuationContract()');
+run('testFinanceCoreBackendContract', 'testFinanceCoreBackendContract()');
+run('testFinancePAndLIsolation', 'testFinancePAndLIsolation()');
+run('testFinanceCapitalEquityGracefulDegradation', 'testFinanceCapitalEquityGracefulDegradation()');
+run('testFinanceCapitalEquitySuccess', 'testFinanceCapitalEquitySuccess()');
+run('testFinanceResponseBackwardCompatibility', 'testFinanceResponseBackwardCompatibility()');
+run('testPolicyCBalanceServiceFinalization', 'testPolicyCBalanceServiceFinalization()');
+run('testCashFlowOpeningClosing', 'testCashFlowOpeningClosing()');
+run('testPolicyCIntegratedAccountingContract', 'testPolicyCIntegratedAccountingContract()');
+run('testInventoryPolicyEvidenceDiagnosticContracts', 'testInventoryPolicyEvidenceDiagnosticContracts()');
+
+console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

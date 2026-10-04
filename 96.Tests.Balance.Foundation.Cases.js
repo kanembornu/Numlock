@@ -7,7 +7,7 @@ function testBalanceFoundationContracts() {
 
   var accounts = balanceFoundationTestAccounts();
   var taxonomy = buildBalanceAccountMetadata(accounts);
-  check(taxonomy.status === "PASS" && taxonomy.rows.length === 6, "required balance account taxonomy");
+  check(taxonomy.status === "PASS" && taxonomy.rows.length === 7, "required balance account taxonomy");
   check(taxonomy.rows.filter(function(row) { return row.AccountCode === "3000"; })[0].NormalBalance === "CREDIT" &&
     taxonomy.rows.filter(function(row) { return row.AccountCode === "3100"; })[0].NormalBalance === "DEBIT" &&
     taxonomy.rows.filter(function(row) { return row.AccountCode === "3200"; })[0].NormalBalance === "CREDIT",
@@ -431,6 +431,64 @@ function testBalanceFoundationContracts() {
   return { passed: true, scenarios: scenarios };
 }
 
+function testAccountsPayableAccountMigrationContracts() {
+  var scenarios = 0;
+  function check(value, label) { scenarios++; if (!value) throw new Error("Account 2000 migration: " + label); }
+  var headers = ACCOUNTS_PAYABLE_ACCOUNT_MIGRATION.headers.slice(), timestamp = new Date("2026-10-03T00:00:00Z");
+  var base = [headers, ["1000", "Cash on Hand", "Asset", "Current Assets", "Operating", true,
+    "old", "old", "DEBIT"]];
+  function runtime(values, failReadback) {
+    var writes = 0, sheet = { values: values.map(function(row) { return row.slice(); }),
+      getDataRange: function() { return { getValues: function() { return sheet.values.map(function(row) { return row.slice(); }); } }; },
+      getLastRow: function() { return sheet.values.length; }, getRange: function() { return { setValues: function(rows) {
+        writes++; sheet.values = sheet.values.concat(rows.map(function(row) { return row.slice(); }));
+      } }; } };
+    var spreadsheet = { getSheetByName: function(name) { return name === "Accounts" ? sheet : null; } };
+    return { runtime: { spreadsheet: spreadsheet, timestamp: timestamp, flush: function() {},
+      freshSpreadsheet: function() { return failReadback ? { getSheetByName: function() { return null; } } : spreadsheet; } },
+      sheet: sheet, writes: function() { return writes; } };
+  }
+  var first = runtime(base), before = JSON.stringify(first.sheet.values);
+  var migrated = executeAccountsPayableAccountMigration_(first.runtime);
+  check(migrated.status === "MIGRATED" && migrated.writeCount === 1 && migrated.rowsAppended === 1 &&
+    migrated.cellsWritten === 9 && first.writes() === 1, "absent appends one nine-cell row");
+  check(JSON.stringify(first.sheet.values.slice(0, 2)) === before, "existing rows preserved");
+  var row = balanceFoundationRowsFromValues(first.sheet.values).filter(function(item) { return item.AccountCode === "2000"; })[0];
+  check(row.AccountName === "Accounts Payable" && row.AccountType === "Liability" &&
+    row.StatementGroup === "Current Liabilities" && row.CashFlowGroup === "Operating" && row.IsActive === true &&
+    row.NormalBalance === "CREDIT" && row.CreatedAt === timestamp && row.UpdatedAt === timestamp,
+    "canonical row and one runtime timestamp persisted");
+  check(executeAccountsPayableAccountMigration_(first.runtime).status === "ALREADY_MIGRATED" && first.writes() === 1,
+    "second execution writes zero");
+  var conflict = runtime(base.concat([["2000", "Wrong", "Liability", "Current Liabilities", "Operating", true,
+    timestamp, timestamp, "CREDIT"]]));
+  check(executeAccountsPayableAccountMigration_(conflict.runtime).status === "REFUSED_ACCOUNT_CONFLICT" && conflict.writes() === 0,
+    "metadata mismatch refused");
+  var duplicate = runtime(base.concat([["2000", "Accounts Payable", "Liability", "Current Liabilities", "Operating", true,
+    timestamp, timestamp, "CREDIT"], ["2000", "Accounts Payable", "Liability", "Current Liabilities", "Operating", true,
+    timestamp, timestamp, "CREDIT"]]));
+  check(executeAccountsPayableAccountMigration_(duplicate.runtime).status === "REFUSED_DUPLICATE_OR_BLANK_ACCOUNT_CODE",
+    "duplicate 2000 refused");
+  var duplicateOther = runtime(base.concat([base[1].slice()]));
+  check(executeAccountsPayableAccountMigration_(duplicateOther.runtime).status === "REFUSED_DUPLICATE_OR_BLANK_ACCOUNT_CODE",
+    "duplicate other code refused");
+  var invalid = runtime([["Wrong"], ["1000"]]);
+  check(executeAccountsPayableAccountMigration_(invalid.runtime).status === "REFUSED_INVALID_HEADERS", "invalid headers refused");
+  var similar = runtime(base.concat([["2010", "Accounts Payable", "Liability", "Current Liabilities", "Operating", true,
+    timestamp, timestamp, "CREDIT"]]));
+  check(executeAccountsPayableAccountMigration_(similar.runtime).status === "REFUSED_SEMANTIC_ACCOUNT_CONFLICT" &&
+    similar.writes() === 0, "similar account under other code refuses without substitution");
+  var uncertain = runtime(base, true);
+  check(executeAccountsPayableAccountMigration_(uncertain.runtime).status === "MIGRATION_UNCERTAIN" && uncertain.writes() === 1,
+    "readback failure returns uncertain without rollback");
+  var source = executeAccountsPayableAccountMigration_.toString();
+  check(["BalanceLedger", "PurchaseEvents", "Settlements", "postPolicyC", "writeLedger"].every(function(token) {
+    return source.indexOf(token) === -1;
+  }), "no ledger transaction or posting side effect");
+  Logger.log("PASS: testAccountsPayableAccountMigrationContracts | scenarios=" + scenarios);
+  return { passed: true, scenarios: scenarios };
+}
+
 function balanceFoundationTestAccounts() {
   return [
     { AccountCode: "1500", AccountName: "Fixed Assets", AccountType: "Asset", StatementGroup: "Non-current Assets", IsActive: true },
@@ -439,6 +497,8 @@ function balanceFoundationTestAccounts() {
     { AccountCode: "3000", AccountName: "Owner Capital", AccountType: "Equity", StatementGroup: "Owner Equity", IsActive: true },
     { AccountCode: "3100", AccountName: "Owner Draw", AccountType: "Equity", StatementGroup: "Owner Equity", IsActive: true },
     { AccountCode: "3200", AccountName: "Retained Earnings", AccountType: "Equity", StatementGroup: "Retained Earnings", IsActive: true },
+    { AccountCode: "6210", AccountName: "Raw Material Supplies Expense", AccountType: "Expense",
+      StatementGroup: "Supplies Expense", CashFlowGroup: "Operating", IsActive: true },
     { AccountCode: "6900", AccountName: "Depreciation", AccountType: "Expense",
       StatementGroup: "Depreciation Expense", IsActive: true }
   ];
