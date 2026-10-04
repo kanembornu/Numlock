@@ -41,6 +41,7 @@
 !90.Dashboard.DateRange.js
 !90.Dashboard.Reporting.js
 !91.Transactions.Query.js
+!92.Products.Domain.js
 !92.Tests.Analytics.Fixtures.js
 !92.Tests.Dashboard.Fixtures.js
 !92.Tests.Frontend.Fixtures.js
@@ -72,6 +73,7 @@
 !96.Tests.ColdStart.Profiling.Cases.js
 !96.Tests.Finance.WarmCache.Cases.js
 !96.Tests.ProductProfitability.Cases.js
+!96.Tests.Products.Domain.Cases.js
 !98.Tests.Runner.js
 !100.Code.js
 !189.View.Tailwind.html

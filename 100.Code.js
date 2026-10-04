@@ -16,6 +16,35 @@ function include(filename) {
 
 }
 
+function recipeStandardCostWebResponse_(status) {
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet()
+    .getSheetByName(RECIPE_STANDARD_COST_CONTRACT.SHEET);
+  var headers = sheet
+    ? sheet.getRange(1, 1, 1, RECIPE_STANDARD_COST_CONTRACT.HEADERS.length).getValues()[0]
+    : [];
+  var result = {
+    status: status,
+    sheetExists: !!sheet,
+    headerCount: headers.length,
+    headersExact: JSON.stringify(headers) === JSON.stringify(RECIPE_STANDARD_COST_CONTRACT.HEADERS),
+    businessRowCount: sheet ? Math.max(0, sheet.getLastRow() - 1) : 0
+  };
+
+  return ContentService.createTextOutput(JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+
+}
+
+function runApplyRecipeStandardCost() {
+
+  if (!RECIPE_STANDARD_COST_CONTRACT.STANDARD_COST_APPLY_ACTIVATION) {
+    return { status: "DISABLED", writeCount: 0, errors: [] };
+  }
+  return applyRecipeStandardCost(arguments[0], SpreadsheetApp.getActiveSpreadsheet());
+
+}
+
 function diagnoseCapitalEquityRuntime_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var result = { phase: "3B.2-R", timestamp: new Date().toISOString() };
@@ -92,6 +121,12 @@ function diagnoseCapitalEquityRuntime_() {
 function doGet(e) {
 
   var adminRoute = String(e && e.parameter ? e.parameter.admin || "" : "");
+  if (adminRoute === "bootstrapRecipeStandardCost") {
+    return recipeStandardCostWebResponse_(runBootstrapRecipeStandardCost().status);
+  }
+  if (adminRoute === "verifyRecipeStandardCost") {
+    return recipeStandardCostWebResponse_("VERIFIED");
+  }
   if (adminRoute === "diagnoseCapitalEquity") {
     return ContentService.createTextOutput(JSON.stringify(diagnoseCapitalEquityRuntime_()))
       .setMimeType(ContentService.MimeType.JSON);
