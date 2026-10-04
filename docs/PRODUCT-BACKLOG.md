@@ -4,6 +4,10 @@ This document owns remaining work, readiness, blockers, dependencies, and accept
 
 ## Current closure classification
 
+Finance Policy C local implementation and acceptance are complete at measured 30/30 PASS. Remaining gate: publish candidate, then run canonical Apps Script `runAllBackendTestsDiagnostic()`. Production Finance must not close until monetary-opening owner evidence (`ACTUAL_M_READY`) and separate production authorization exist. Physical opening, InventoryReceipt, and InventoryLedger are not Finance or statement-finalization blockers/authorities.
+
+Transactions PaymentStatus compatibility repair — **PRODUCTION COMPLETE / PASS** at canonical `@691` (2026-10-04); deployment ID unchanged; active deployments exactly `@HEAD` + `@691`. **Products Contract Reconciliation: OPEN/DEFERRED.** `96.Tests.Products.Domain.Cases.js` requires whole-contract reconciliation against `92.Products.Domain.js` + `100.Code.js` + `98.Tests.Runner.js` + docs; four successive assertion drifts proved incremental repair unsafe (activation expectation → Component Cost fixture shape → proposedCost ownership → COGS Kind cascade). Cumulative Products work preserved locally (untracked). NOT a cleanup defect; future Products work must begin with a full assertion inventory, not one-assertion-at-a-time chasing. Broad canonical backend suite recorded 97 PASS / 29 FAIL with Products failures inside the unrelated/deferred known-gap classification (intentionally isolated Products expectations). Non-Products working tree reconciliation: in progress — five baseline commits pending downstream.
+
 The v1.0 feature/backend baseline is stable, but UI/UX 2.0 is reopened for the ordered visual and navigation work in the [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md). Historical item narratives remain historical.
 
 | Classification | Count | Items | Resume boundary |

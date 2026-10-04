@@ -8,6 +8,12 @@ NUMLOCK is a Google Apps Script V8 and Google Sheets business-intelligence dashb
 
 ## 2. Current status
 
+**Fluid Desktop Stage 3 — COMPLETE in production (2026-10-04).** Canonical production retains its stable deployment ID; Stage 3 acceptance evidence was measured on immutable Apps Script version 690 (historical Stage 3 release evidence, preserved). Current canonical production serves version 691 (recorded below). Production browser acceptance passed 160/160 measured assertions with 2 optional unverified cache observations; all 154 required assertions passed. Sidebar authority 64/224/264, compact isolation paths, viewport/height geometry, readiness, and zero relevant errors passed. Post-promotion Finance validation passed read-only across five periods. Temporary candidate @689 was retired after this acceptance; final live architecture is project HEAD plus canonical production @691.
+
+**Transactions PaymentStatus compatibility repair — PRODUCTION COMPLETE / PASS (2026-10-04).** Transactions PaymentStatus compatibility repair delivered at canonical Apps Script version **691** (description: "Transactions PaymentStatus compatibility repair"). Canonical deployment ID unchanged: `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q`. Active deployments: exactly 2 — project `@HEAD` plus canonical `@691`. Production acceptance evidence (MEASURED post-promotion via `clasp run` diagnostics): PurchaseEvents production read PASS (9 rows readable); legacy missing-PaymentStatus compatibility PASS (no `INVALID_PAYMENT_STATUS`); PaymentStatus-related runtime error CLOSED; `validateFinanceProductionRuntime` PASS (five periods, no failures); Inventory Policy Evidence diagnostic PASS (read-only, unresolved count 0); business-data writes caused by validation: 0; `PRODUCTION_MIGRATION_INVOCATIONS`: 0. Root cause: `LEGACY_PURCHASEEVENT_COMPATIBILITY_GAP` (decision recorded in DECISIONS.md). Local pre-delivery evidence (MEASURED): Policy C local harness 30 PASS / 0 FAIL; PaymentStatus CASE 1–8 PASS (legacy read, valid current, explicit invalid rejected, strict write preserved, service-level getTransactionsPage chain PASS, zero writes). Broad canonical backend suite: 97 PASS / 29 FAIL (`runAllBackendTestsDiagnostic`) — failures classified as unrelated or deferred, including intentionally isolated Products expectations; recorded as a known gap, NOT a clean pass. UNKNOWN gaps (not failures): browser-level Transactions page acceptance (browser capability not configured for delivery run); direct remote getTransactionsPage / getTransactionsPeriodRows probes; direct production valid/invalid PaymentStatus write probes (skipped to preserve zero production business writes; local MEASURED evidence retained). Products Contract Reconciliation: **OPEN/DEFERRED** pending whole-contract reconciliation (see PRODUCT-BACKLOG.md). Non-Products working tree reconciliation: in progress — five baseline commits pending downstream.
+
+**Finance Policy C local acceptance — COMPLETE, production not closed (2026-10-03).** Frozen local architecture uses PurchaseEvent 29-column schema, legacy payment non-inference, PAID Dr1100/CrCash, UNPAID Dr1100/Cr2000 plus AP identity, controlled AP settlement, `tabsal.HPP` authority, non-negative 1100, insufficient-basis refusal/recovery, history-preserving correction/reversal, physical-opening retirement, preserved monetary-opening production gate, InventoryReceipt/Ledger non-authority, shared P&L/Balance/Cash Flow finalization, and depreciation logical validation. Authoritative statements either reconcile as `FINAL` or expose no final values under `ACCOUNTING_DATA_PENDING_RESOLUTION`. Local harness: 30/30 PASS measured. Apps Script canonical validation awaits publication. `ACTUAL_M_READY=false`; production Finance remains open.
+
 **Finance Phase 11U — COMPLETE/FROZEN with a documented preservation-evidence limitation (2026-09-06).** ING-018 Lemon authority is active at 1000 gr to 24 slice from 2026-10-01; 22 accepted active authorities and zero conflicts are verified. InventoryOpenings and InventoryLedger remain header-only. Historical comparisons for unrelated authorities and global no-unrelated-mutation proof remain unproven because no PRE-11U snapshot exists. The [conservative closure and POST-11U baseline](evidence/finance-phase-11u2e/README.md) govern future preservation checks. This finance closure does not update deployment or release evidence below.
 
 **Feature Complete v1.0**
@@ -22,9 +28,96 @@ The documented bounded v1.0 feature baseline is implemented, stabilized, and acc
 
 ## 4. Current phase
 
-**Design System Foundation — complete locally**
+**Design System Foundation — CLOSED**
 
 The bounded v1.0 feature/backend baseline remains stable. Package 025 established the reusable global visual foundation without changing backend, response, formula, route, layout, or runtime ownership. Its final light-theme sidebar contrast correction preserves the bright soft palette and clarifies brand, divider, active, normal, and unavailable hierarchy.
+
+## 4A. Phase 3 roadmap
+
+Phase 3 is accepted. **Phase 3A (Products) is CLOSED at production v657.** **Phase 3B (Capital & Equity) is CLOSED at production v658 — READ-ONLY COMPLETE.** **Phase 3C (Assets) is CLOSED at production v662 — READ-ONLY COMPLETE.** **Phase 3D (Depreciation) is CLOSED at production v664 — September 2026 continuation PASS.** **Phase 3E (Financial Statements) is CLOSED; v676 is historical acceptance evidence, not the current canonical binding.** P&L and Cash Flow UI are ACTIVE. Balance Position is PENDING_FINANCE_OPENING. Combined focused runtime evidence: 106/106 PASS. Full suite NOT RUN. Pre-Stage-3-promotion inventory measured the stable canonical deployment at v665 and the accepted temporary Stage 3 candidate at v689; promotion retains the canonical deployment ID.
+
+## 4B. Phase 3A closure — CLOSED
+
+**Phase 3A (Products Read Surface & Navigation Activation) is CLOSED at production v657.**
+
+| Domain | Status | Authority |
+| --- | --- | --- |
+| Product Catalog | COMPLETE | Products sheet (ID_Prod, Produk, Kategori, Kind) |
+| COGS & Recipe | COMPLETE | COGSRecipes (ID_Prod + Tipe + ID_Ingredient + UsageQty) |
+| Standard Cost | COMPLETE | COGSIngredients.PurchaseCost / COGSIngredients.UsableQty per BaseUOM |
+| Inventory Items | COMPLETE | InventoryItems (separate ingredient/packaging master) |
+| Simulation | COMPLETE | Proposed Usage + Proposed Selling Price (simulation-only, no persistence) |
+
+Production capabilities: Product Catalog, COGS & Recipe, Inventory Items — three-tab Products surface active.
+
+Non-blockers confirmed: responsive/mobile deferred, recipe-write activation not required, simulation persistence not required, ProductPricing write not required, Finance opening WAITING_EXTERNAL.
+
+Phase 3B dependency gate: OPEN.
+
+## 4C. Phase 3B closure — CLOSED
+
+**Phase 3B (Capital & Equity) is CLOSED at production v658 — READ-ONLY COMPLETE.**
+
+| Domain | Status | Authority |
+| --- | --- | --- |
+| CapitalEquity | READ-ONLY COMPLETE | Historical/read-reporting projection (LEGACY_XLSM_MIGRATION) |
+| Migration | ALREADY_COMPLETE | 10 valid rows; re-execution forbidden |
+| Retained Earnings | COMPLETE | FinanceOpeningBalances V2: Credit 7,407,000 - Debit 0 |
+| Owner Draws | BOUNDARY | Uses Transactions workflow; no CapitalEquity write surface |
+
+Production state: 10 valid CapitalEquity rows (Dekker 5, Erway 5; OWNER_CONTRIBUTION 2, RETURN_OF_CAPITAL 8). FinanceOpeningBalances V2 schema confirmed. Account 3200 opening = 7,407,000. Current retained earnings = 6,597,400 (opening + post-cutoff P&L).
+
+Non-blockers: diagnostic V2 schema bug (LATER priority), Finance opening WAITING_EXTERNAL.
+
+Phase 3C dependency gate: OPEN.
+
+## 4D. Phase 3C closure — CLOSED
+
+**Phase 3C (Assets Foundation & Management) is CLOSED at production v662 — READ-ONLY COMPLETE.**
+
+| Domain | Status | Authority |
+| --- | --- | --- |
+| Asset Register | COMPLETE | Assets sheet (69 migrated assets, read-only master) |
+| Depreciation | RELOCATED | DepreciationLedger (existing capability moved to Assets tab) |
+| Unified Workspace | COMPLETE | Asset Register + Depreciation tabs |
+| Navigation | CONSOLIDATED | Separate Depreciation sidebar removed |
+
+Production values: Total Assets 69, Active Assets 69, Acquisition Cost Rp 32.880.000. Depreciation Expense Rp 1.715.054, Accumulated Depreciation Rp 25.060.700, Net Book Value Rp 7.819.300, Fully Depreciated 49.
+
+Non-blockers: responsive/mobile deferred, focused Apps Script tests unproven, Finance opening WAITING_EXTERNAL.
+
+Phase 3D dependency gate: OPEN.
+
+## 4E. Phase 3D closure — CLOSED
+
+**Phase 3D (Depreciation Surface + Production Activation) is CLOSED at production v664.**
+
+| Domain | Status | Authority |
+| --- | --- | --- |
+| Depreciation | COMPLETE | DepreciationLedger (StraightLine, append-only continuation) |
+| Continuation Runtime | COMPLETE | Explicit target period, ID_Asset+Period idempotency |
+| September 2026 | APPEND PASS | 20 rows appended, 2679→2699 total |
+| Idempotency | VERIFIED | Post-run dry-run: 0 candidates, 0 writes |
+
+Production ledger: 2699 rows through 2026-09-01. Historical 2679 rows immutable. Runtime model: ON_DEMAND_READ_GUARD. No scheduled trigger required.
+
+Non-blockers: responsive/mobile deferred, Finance opening WAITING_EXTERNAL, focused/static tests UNPROVEN.
+
+Phase 3E dependency gate: OPEN.
+
+## 4F. Phase 3E closure — CLOSED
+
+**Phase 3E (Financial Statements UI) is CLOSED; v676 is preserved as historical focused-runtime evidence.**
+
+| Domain | Status | Authority |
+| --- | --- | --- |
+| P&L | ACTIVE | 48/48 focused runtime PASS |
+| Cash Flow | ACTIVE | 11/11 focused runtime PASS |
+| Balance Position | PENDING_FINANCE_OPENING | 47/47 focused runtime PASS (gated, no fabricated values) |
+
+Production state before Stage 3 promotion: canonical Production Web measured at v665; the API executable serves project HEAD. P&L and Cash Flow are production-ready. Balance Position is intentionally gated pending Finance Opening. Warming/inflight contracts validated. No business data mutated.
+
+Non-blockers: Finance Opening waits for 2026-09-30 EOD physical count/final evidence. Cash first-live proof waits for >= 2026-10-01 and real eligible traffic. Period Close remains not required for current scope. Full suite NOT RUN.
 
 ## 5. Latest completed sprint/package
 
@@ -32,7 +125,9 @@ The bounded v1.0 feature/backend baseline remains stable. Package 025 establishe
 
 **UI/UX 2.0 Package 022 — CLOSED on 2026-09-22.** Production v587 is active. Backend passed 114/114, functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 is remediated. Immutable v585 is the rollback target; rollback drill was not required.
 
-**Package 025 — DESIGN SYSTEM FOUNDATION is COMPLETE locally on 2026-08-09.** Six focused theme/UI contracts and the ordered local `runAllBackendTests()` gate pass at 41/41. Two Tailwind builds produced the same SHA-256 hash, and `git diff --check` passed. The authored CSS and generated Tailwind candidate were uploaded during Packages 025/025A; no upload was performed during closure because source did not change. Apps Script runtime remains unverified because the configured API executable does not expose the current focused or unified functions; deployment and browser visual acceptance were not run.
+**Package 025 — DESIGN SYSTEM FOUNDATION is CLOSED.** Production v611 is active. Local 41/41 gate passed. Deployed runtime health passed. Browser acceptance passed at 1440×900, 1280×768, 768px, and 375px browser/device viewport. Light/Dark/System parity verified. No Package 025 regressions observed. The unified backend suite did not complete during the acceptance session (pre-existing baseline interruption unrelated to Package 025); Package 025 closure is based on its established focused/local acceptance, production health, and browser acceptance.
+
+**Phase 3E.16 Financial Statements UI — CLOSED at production v676.** Focused runtime evidence: 106/106 PASS (P&L 48/48, Cash Flow 11/11, Balance Position 47/47). Production Web and API Executable both serve v676. Balance Position intentionally gated as PENDING_FINANCE_OPENING.
 
 ## 6. Current test gate and evidence level
 
@@ -238,6 +333,8 @@ UI/UX 2.0 must not imply editable targets, broader transaction access, API proje
 | 2026-08-06 | UI/UX 2.0 Package 021 | Removed five proven reconstruction-debt symbols, replaced one brittle metadata assertion, and raised the ordered local gate to 40/40 without changing geometry or product behavior. |
 | 2026-09-22 | UI/UX 2.0 Package 022 closed | Production v587 active; backend 114/114, functional 24/24, visual 80/80 (1,440/1,440 decisions), and production health 17/17 passed. VD-001 remediated; v585 retained for rollback; rollback drill not required. |
 | 2026-09-22 | Purchase Recovery Incident — Hakaes CLOSED | Canonical boolean persistence fixed; Hakaes row remediated; automatic pending recovery added; incident-only public RPCs removed. Production v595. |
+| 2026-09-29 | Phase 3E.16 Financial Statements UI CLOSED | Production v676 active; focused runtime 106/106 PASS (P&L 48/48, Cash Flow 11/11, Balance Position 47/47). Balance Position PENDING_FINANCE_OPENING. Finance Opening WAITING_EXTERNAL (2026-09-30 EOD). |
+| 2026-10-04 | Transactions PaymentStatus compatibility repair PRODUCTION COMPLETE | Canonical @691 "Transactions PaymentStatus compatibility repair"; deployment ID unchanged; active deployments @HEAD + @691. Post-promotion diagnostics PASS (PurchaseEvents read 9 rows; legacy missing-PaymentStatus compatibility PASS; PaymentStatus runtime error CLOSED; validateFinanceProductionRuntime PASS five periods; Inventory Policy Evidence PASS unresolved 0; 0 business-data writes; PRODUCTION_MIGRATION_INVOCATIONS 0). Local MEASURED: Policy C harness 30/0; PaymentStatus CASE 1–8 PASS. Broad suite 97/29 recorded as known gap (unrelated/deferred, incl. isolated Products expectations). UNKNOWN: browser Transactions acceptance; remote getTransactionsPage/getTransactionsPeriodRows probes; direct production valid/invalid PaymentStatus write probes. Products Contract Reconciliation OPEN/DEFERRED. Stage 3 @690 acceptance evidence remains historical. |
 
 ## 21. Purchase Recovery Incident — Hakaes (CLOSED)
 

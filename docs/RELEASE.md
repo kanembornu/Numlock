@@ -4,7 +4,33 @@ This document owns the authoritative release process. NUMLOCK `1.0.0` is the cur
 
 ## UI/UX 2.0 Package 022 closure
 
-Package 022 is CLOSED. Production v587 is active at the unchanged stable URL. Backend passed 114/114, functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 is remediated, and immutable v585 is retained for rollback. Rollback drill was not required.
+Package 022 is CLOSED. Versions 585 and 587 are preserved as historical Package 022 rollback and acceptance evidence; they are not the current canonical binding. Backend passed 114/114, functional acceptance passed 24/24, exhaustive visual acceptance passed 80/80 with 1,440/1,440 criterion decisions, and production health passed 17/17. VD-001 is remediated. Pre-Stage-3-promotion inventory measured the unchanged canonical deployment ID at v665 and the accepted temporary Stage 3 candidate at v689.
+
+## Fluid Desktop Stage 3 production release — 2026-10-04
+
+- Audited Apps Script upload surface: 90/90 files matched project HEAD; Category C differences: 0.
+- Upload: one `clasp push`, result `Script is already up to date.`
+- Post-push Finance validation: PASS, read-only, five periods, zero failures, zero unresolved mappings.
+- Immutable release version: 690 (`Stage 3 Fluid Desktop production release`).
+- Canonical deployment retained the same ID and was promoted in place from version 665 to 690.
+- Production browser acceptance: 160 PASS, 0 FAIL, 2 optional UNVERIFIED; all 154 required assertions passed.
+- Sidebar authority 64/224/264 and accepted compact direct-target isolation passed.
+- PurchaseEvent schema migration was not invoked.
+- Candidate @689 became eligible for retirement only after production acceptance passed.
+
+## Transactions PaymentStatus compatibility repair — 2026-10-04
+
+- **Outcome:** PRODUCTION COMPLETE / PASS — Transactions PaymentStatus compatibility repair.
+- **Canonical version:** 691 — description: "Transactions PaymentStatus compatibility repair".
+- **Canonical deployment ID unchanged:** `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q`.
+- **Active deployments:** exactly 2 — `@HEAD` plus canonical `@691`.
+- **Historical preservation:** the Fluid Desktop Stage 3 release entry above remains version 690 evidence; @689 remains the retired Stage 3 candidate.
+- **Production acceptance (MEASURED post-promotion via `clasp run` diagnostics):** PurchaseEvents production read PASS (9 rows readable); legacy missing-PaymentStatus compatibility PASS (no `INVALID_PAYMENT_STATUS`); PaymentStatus-related runtime error CLOSED; `validateFinanceProductionRuntime` PASS (five periods, no failures); Inventory Policy Evidence diagnostic PASS (read-only, unresolved count 0); business-data writes caused by validation: 0; `PRODUCTION_MIGRATION_INVOCATIONS`: 0.
+- **Local validation (MEASURED pre-delivery):** Policy C local harness 30 PASS / 0 FAIL; PaymentStatus CASE 1–8 PASS (legacy read, valid current, explicit invalid rejected, strict write preserved, service-level getTransactionsPage chain PASS, zero writes).
+- **Broad canonical backend suite (MEASURED via `runAllBackendTestsDiagnostic`):** 97 PASS / 29 FAIL. Failures classified as unrelated or deferred, including intentionally isolated Products expectations — known gap, not a clean pass.
+- **UNKNOWN gaps:** browser-level Transactions page acceptance (browser capability not configured for delivery run); direct remote `getTransactionsPage`/`getTransactionsPeriodRows` probes (not separately allowlisted); direct production valid/invalid PaymentStatus write probes (skipped to preserve zero production business writes; local MEASURED evidence retained).
+- **Migration posture:** no PurchaseEvent migration invoked; `PRODUCTION_MIGRATION_INVOCATIONS: 0`; migration never rerun.
+- **Products Contract Reconciliation:** OPEN/DEFERRED pending whole-contract reconciliation (see PRODUCT-BACKLOG.md).
 
 ## Semantic versioning
 

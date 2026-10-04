@@ -1,0 +1,18 @@
+{
+  "artifactRole": "frozen-opening-evidence",
+  "repositoryPath": "docs/evidence/finance-phase-11r/inventory-opening-evidence-intake.xlsx",
+  "driveFileId": "1898Qe_MaTR6JMVOLnQN9z9Us1cwxOgX2",
+  "destinationFolderId": "1Un69xogJ5s64xO6iRM7PBXLTJ-GMlynu",
+  "fileName": "inventory-opening-evidence-intake.xlsx",
+  "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "size": 28029,
+  "frozenSha256": "c7335b1d155cb8ee7cce10983b0fa2986efd950d502514038d13bfe124296dd9",
+  "preUploadSha256": "c7335b1d155cb8ee7cce10983b0fa2986efd950d502514038d13bfe124296dd9",
+  "postUploadSha256": "c7335b1d155cb8ee7cce10983b0fa2986efd950d502514038d13bfe124296dd9",
+  "byteIdentityMatch": true,
+  "publicationStatus": "PUBLISHED_AND_VERIFIED",
+  "publicationTimestamp": "2026-09-25T18:59:48Z",
+  "verificationStatus": "PASS",
+  "authorizationState": "CONSUMED",
+  "note": "Audit evidence only. Not runtime trust root."
+}

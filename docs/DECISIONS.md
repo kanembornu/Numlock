@@ -1,5 +1,24 @@
 # Engineering Decisions
 
+### Separate PurchaseEvent read compatibility from strict write validation (LEGACY_PURCHASEEVENT_COMPATIBILITY_GAP)
+
+Root cause of the Transactions PaymentStatus production defect: historical PurchaseEvent NormalizedPayload rows legitimately predate `paymentStatus` / `cashAccountCode` / `supplierId`; `purchaseEventHistory_` incorrectly reused the current strict CREATE/WRITE normalizer (`normalizePurchaseEventRequest_`), turning missing values into `""` and throwing `INVALID_PAYMENT_STATUS`.
+
+Repair contract (delivered at canonical `@691`, "Transactions PaymentStatus compatibility repair"):
+
+- `normalizePurchaseEventRequestWithCompatibility_()` and `normalizePurchaseEventHistoryRequest_()` in `47.Purchase.Events.js` own history/read compatibility.
+- Strict write validation path is preserved unchanged; no invented PaymentStatus; no row mutation; no migration.
+- `PRODUCTION_MIGRATION_INVOCATIONS: 0` in the delivery run. **Migration is never rerun.**
+- Production acceptance MEASURED post-promotion: PurchaseEvents read PASS (9 rows), legacy compatibility PASS (no `INVALID_PAYMENT_STATUS`), runtime error CLOSED, `validateFinanceProductionRuntime` PASS (five periods), Inventory Policy Evidence PASS (unresolved 0), 0 business-data writes caused by validation.
+
+Products Contract Reconciliation is **OPEN/DEFERRED**: `96.Tests.Products.Domain.Cases.js` requires whole-contract reconciliation against `92.Products.Domain.js` + `100.Code.js` + `98.Tests.Runner.js` + docs. Four successive assertion drifts proved incremental repair unsafe (activation expectation → Component Cost fixture shape → proposedCost ownership → COGS Kind cascade). Cumulative Products work is preserved locally (untracked). This is not a cleanup defect; future Products work begins with a full assertion inventory, never one-assertion-at-a-time chasing.
+
+### Freeze Finance Policy C finalization and authority boundaries
+
+PurchaseEvent has 29 columns and never infers payment from legacy rows. PAID acquisition is Dr1100/CrCash; UNPAID recognition is Dr1100/Cr2000 with one `AP-<EventID>` obligation; settlement is Dr2000/CrCash and never repeats acquisition. `tabsal.HPP` owns HPP; insufficient 1100 basis fails closed and supports explicit recovery. InventoryReceipt, InventoryLedger, and physical-opening evidence have no statement/HPP authority. Monetary-opening production gate remains.
+
+P&L, Balance Position, and Cash Flow share one finalization rule: reconciled accounting returns `FINAL`; unresolved accounting returns `ACCOUNTING_DATA_PENDING_RESOLUTION` outside authoritative values with `finalValues: null`. No 3210, 5010, balancing plug, fabricated counterpart, or final UNKNOWN/UNAVAILABLE/PARTIAL values. Correction/reversal preserves original source and journal, uses stable reversal identity and lineage, prevents duplicate effects, and refuses unsupported lifecycle operations explicitly. Depreciation logical validation remains unchanged. Local evidence is 30/30 PASS; canonical Apps Script evidence requires publication and production Finance remains open.
+
 ### Keep UI/UX 2.0 closure evidence non-substitutable
 
 Package 022 separates local/static contracts, Apps Script live execution, upload/deployment identity, functional browser acceptance, screenshot-based visual fidelity, production health, and rollback identity. The 41st runner entry may verify the required matrix and forbid unsupported claims, but it cannot turn static source inspection into visual PASS. UI/UX 2.0 becomes COMPLETE only when every current-candidate evidence class passes; otherwise it remains a Closure Candidate or BLOCKED.

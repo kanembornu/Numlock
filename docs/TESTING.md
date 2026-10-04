@@ -1,5 +1,43 @@
 # NUMLOCK Testing
 
+## Finance Policy C local acceptance — 2026-10-03
+
+`node _test_runner.js` measured 30/30 PASS after final source repair. Coverage includes PurchaseEvent 29-column schema and migration, PAID and UNPAID purchase recognition, AP settlement controls, idempotency, correction/reversal, Sales HPP from `tabsal.HPP`, insufficient-basis fail-closed and recovery, physical-opening retirement, monetary-opening gate, InventoryReceipt/Ledger non-authority, depreciation validation, P&L, Balance Position, Cash Flow, shared finalization, and integrated Policy C reconciliation. Balance service exposes authoritative values only for `FINAL`; pending accounting uses `ACCOUNTING_DATA_PENDING_RESOLUTION` and `finalValues: null`.
+
+Physical-opening requirements and Finance dependency measure false behaviorally; `ACTUAL_M_READY=false` does not fail local acceptance. Production monetary-opening evidence remains required. Canonical `runAllBackendTestsDiagnostic()` was not executed because current source requires Apps Script publication. Local PASS is not deployment, browser, production, or canonical runtime evidence.
+
+## Transactions PaymentStatus compatibility repair — local and production acceptance — 2026-10-04
+
+### Local validation (MEASURED pre-delivery)
+
+- Policy C local harness: **30 PASS / 0 FAIL** (`node _test_runner.js`).
+- PaymentStatus **CASE 1–8: PASS** — legacy read, valid current, explicit invalid rejected, strict write preserved, service-level getTransactionsPage chain PASS, zero writes.
+
+### Broad canonical backend suite (MEASURED via `runAllBackendTestsDiagnostic`)
+
+- **97 PASS / 29 FAIL.** Failures classified as unrelated or deferred, including intentionally isolated Products expectations. Recorded as a **known gap**, NOT a clean pass.
+
+### Production acceptance (MEASURED post-promotion via `clasp run` diagnostics)
+
+- PurchaseEvents production read **PASS** (9 rows readable).
+- Legacy missing-PaymentStatus compatibility **PASS** (no `INVALID_PAYMENT_STATUS`).
+- PaymentStatus-related runtime error **CLOSED**.
+- `validateFinanceProductionRuntime` **PASS** (five periods, no failures).
+- Inventory Policy Evidence diagnostic **PASS** (read-only, unresolved count 0).
+- Business-data writes caused by validation: **0**.
+- `PRODUCTION_MIGRATION_INVOCATIONS`: **0**.
+- Canonical version: **691** ("Transactions PaymentStatus compatibility repair"); deployment ID unchanged; active deployments exactly `@HEAD` + `@691`. Stage 3 @690 evidence remains historical.
+
+### UNKNOWN gaps (not failures)
+
+- Browser-level Transactions page acceptance: **UNKNOWN** (browser capability not configured for delivery run).
+- Direct remote `getTransactionsPage` / `getTransactionsPeriodRows` probes: **UNKNOWN** (not separately allowlisted).
+- Direct production valid/invalid PaymentStatus write probes: **UNKNOWN** (skipped to preserve zero production business writes; local MEASURED evidence retained).
+
+### Related deferral
+
+Products Contract Reconciliation: **OPEN/DEFERRED** pending whole-contract reconciliation (see PRODUCT-BACKLOG.md and DECISIONS.md). Migration never rerun.
+
 ## Finance Phase 10F.5 Cash cutover evidence contract — complete and frozen
 
 Phase 10F.5 freezes the evidence package for the three physical Cash authorities. The cutover is the verified

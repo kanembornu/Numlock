@@ -4,6 +4,14 @@ This document owns project direction, sequencing, and milestone placement. [Proj
 
 ## Completed
 
+### Finance Policy C local architecture closure
+
+Policy C source architecture is frozen locally: PurchaseEvent uses 29 columns with no legacy payment inference; PAID acquisition posts Dr1100/CrCash; UNPAID recognition posts Dr1100/Cr2000 with `AP-<EventID>` identity; AP settlement posts Dr2000/CrCash with duplicate, partial, over-settlement, invalid, reversal, idempotency, and recovery controls. `tabsal.HPP` remains HPP authority; insufficient basis fails closed with explicit recovery; 1100 cannot become negative. InventoryReceipt and InventoryLedger have no statement/HPP authority.
+
+P&L, Balance Position, and Cash Flow share Policy C finalization. Authoritative values exist only when reconciliation is `FINAL`; unresolved accounting returns `ACCOUNTING_DATA_PENDING_RESOLUTION` with `finalValues: null`. No 3210, 5010, balancing plug, or physical-opening gate is allowed. Physical opening is retired from Finance activation and statement finalization; monetary opening production gate remains. Correction/reversal preserves source and journal history with stable reversal identity and explicit fail-closed unsupported operations. Depreciation logical validation remains intact.
+
+Local harness measured 30/30 PASS on 2026-10-03. Canonical `runAllBackendTestsDiagnostic()` remains pending Apps Script publication. Production Finance is not closed; `ACTUAL_M_READY=false`.
+
 ### Sprint 5.7 Package 003 — release and version metadata
 
 Semantic versioning begins at `1.0.0`. `10.Config.js` is the authoritative release metadata source, and future releases must update it together with `docs/CHANGELOG.md`. The verified source structure and production hardening are complete.
@@ -286,4 +294,38 @@ Closed on 2026-09-22. Production v587 is active. Backend passed 114/114, deploye
 
 ### Package 025 — Design System Foundation
 
-Next. Establish reusable visual foundations while preserving the stable application architecture, backend, responses, formulas, routes, IDs, accessibility, themes, print, charts, and performance contracts.
+Closed. Production v611. Local 41/41, deployed runtime/health PASS, browser acceptance PASS at 1440×900, 1280×768, 768px, and 375px device viewport. No regressions observed. Reusable visual foundations established without changing backend, response, formula, route, layout, or runtime ownership.
+
+## Phase 3 — Major Capability Architecture
+
+### Phase 3A — Products Read Surface & Navigation Activation — CLOSED
+
+Production v657. Complete. Product Catalog, COGS & Recipe, and Inventory Items are active in a three-tab Products production surface. Product authority: Products sheet. Recipe authority: COGSRecipes (ID_Prod + Tipe + ID_Ingredient + UsageQty). Standard Cost authority: COGSIngredients.PurchaseCost / COGSIngredients.UsableQty per BaseUOM. Simulation supports Proposed Usage and Proposed Selling Price (simulation-only, no business-data persistence). MWA and purchase transaction price are NOT Standard Cost. Historical tabsal HPP/HJ snapshots remain immutable. Responsive/mobile redesign deferred. Recipe-write activation not required for 3A closure. Phase 3B dependency gate is OPEN.
+
+### Phase 3B — Capital & Equity Surface + Production Activation — CLOSED
+
+Production v658. READ-ONLY COMPLETE. CapitalEquity is a historical/read-reporting projection with Source = LEGACY_XLSM_MIGRATION. Production migration already complete (10 valid rows: Dekker 5, Erway 5; OWNER_CONTRIBUTION 2, RETURN_OF_CAPITAL 8). Migration MUST NOT be re-executed. FinanceOpeningBalances production uses V2 Debit/Credit schema; Account 3200 authoritative opening = Credit 7,407,000 - Debit 0 = 7,407,000. Retained earnings = opening + post-cutoff P&L. No CapitalEquity write surface required — operational owner draws use existing Transactions workflow. CapitalEquity does not duplicate Transactions authority. Phase 3C dependency gate is OPEN.
+
+### Phase 3C — Assets Foundation & Management — CLOSED
+
+Production v662. READ-ONLY COMPLETE. Unified Assets workspace with two tabs: Asset Register (Assets sheet authority, 69 migrated assets, read-only master) and Depreciation (DepreciationLedger authority, relocated existing capability). Separate Depreciation sidebar removed. Authority boundaries preserved. No accounting behavior changed. No business-data mutation path. Responsive/mobile deferred. Phase 3D dependency gate is OPEN.
+
+### Phase 3D — Depreciation Surface + Production Activation — CLOSED
+
+Production v664. Depreciation authority: DepreciationLedger. Method: StraightLine. Continuation runtime: APPEND-ONLY, explicit target period, idempotent by ID_Asset + Period. Historical ledger through 2026-08-01 (2679 rows) remains immutable. September 2026 production continuation PASS: appended 20 rows, total 2699, post-run dry-run confirms 0 candidates / 0 writes. Depreciation remains inside unified Assets workspace. No direct BalanceLedger/Finance mutation. Runtime model: ON_DEMAND_READ_GUARD. Phase 3E dependency gate is OPEN.
+
+### Phase 3E — Financial Statements — CLOSED
+
+Phase 3E is CLOSED. Version 676 remains historical focused-runtime evidence: 106/106 PASS (P&L 48/48, Cash Flow 11/11, Balance Position 47/47). P&L and Cash Flow UI are ACTIVE. Balance Position remains intentionally gated as PENDING_FINANCE_OPENING. Full suite NOT RUN. Pre-Stage-3-promotion inventory measured the stable canonical Production Web at v665 and the API executable at project HEAD. Finance Opening waits for final external evidence. Period Close remains outside current scope.
+
+### Fluid Desktop Stage 3 — CLOSED
+
+Production promotion completed on immutable Apps Script version 690 using the unchanged canonical deployment ID. Production runtime acceptance passed: 160 PASS, 0 FAIL, 2 optional UNVERIFIED; all 154 required assertions passed. Sidebar widths 64/224/264, compact direct-target isolation, viewport and height matrices, dashboard geometry, scroll ownership, cache/lifecycle checks, and zero relevant errors passed. Finance production validation remained read-only and passed all five periods. Temporary candidate @689 was then retired; final live architecture is project HEAD plus canonical production @690. This section records historical Stage 3 release evidence; current canonical production serves @691 (recorded below).
+
+### Transactions PaymentStatus compatibility repair — PRODUCTION COMPLETE
+
+Delivered 2026-10-04 at canonical Apps Script version **691** ("Transactions PaymentStatus compatibility repair"). Canonical deployment ID unchanged; active deployments remain exactly `@HEAD` + canonical `@691`. Post-promotion MEASURED diagnostics passed: PurchaseEvents production read (9 rows), legacy missing-PaymentStatus compatibility (no `INVALID_PAYMENT_STATUS`), PaymentStatus runtime error CLOSED, `validateFinanceProductionRuntime` (five periods), Inventory Policy Evidence (read-only, unresolved 0), with 0 business-data writes caused by validation and `PRODUCTION_MIGRATION_INVOCATIONS: 0`. Root cause `LEGACY_PURCHASEEVENT_COMPATIBILITY_GAP`: repair separates read-compatibility normalization from strict write validation via `normalizePurchaseEventRequestWithCompatibility_()` and `normalizePurchaseEventHistoryRequest_()` in `47.Purchase.Events.js`; strict write path preserved; no invented PaymentStatus; no row mutation; no migration. Broad canonical backend suite measured 97 PASS / 29 FAIL with unrelated/deferred classification (including intentionally isolated Products expectations) — known gap. Products Contract Reconciliation: **OPEN/DEFERRED** — `96.Tests.Products.Domain.Cases.js` requires whole-contract reconciliation; incremental assertion repair proved unsafe; full assertion inventory first. Non-Products working tree reconciliation in progress (five baseline commits pending downstream).
+
+### Dependency semantics
+
+Products: independent. Capital & Equity: independent domain, soft pattern dependency on 3A. Assets: independent domain, soft pattern reuse from 3A. Depreciation: hard dependency on Assets. Financial Statements: hard dependencies on Capital & Equity + Assets + Depreciation; opening-balance completeness as established by accounting contract.
