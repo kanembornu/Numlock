@@ -23,6 +23,8 @@ permission:
     "git -C /Users/azer/Documents/GitHub/Numlock rev-parse --show-toplevel": allow
     "git -C /Users/azer/Documents/GitHub/Numlock status --short": allow
     "git -C /Users/azer/Documents/GitHub/Numlock rev-parse HEAD": allow
+    "node --check *": allow
+    "node _test_runner.js": allow
   read: allow
   glob: allow
   grep: allow

@@ -17,6 +17,7 @@ permission:
     "git ls-files*": allow
     "node *": ask
     "node --check *": allow
+    "node _test_runner.js": allow
     "npx*": ask
   read: allow
   glob: allow
