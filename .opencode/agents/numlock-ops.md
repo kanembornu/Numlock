@@ -15,6 +15,10 @@ permission:
     "clasp run runInventoryPolicyEvidenceDiagnostic": allow
     "clasp run runAllBackendTestsDiagnostic": allow
     "clasp run runCashProductionDiagnostic": allow
+    "clasp run runTransactionProductionPreflightDiagnostic": allow
+    "clasp run executeTransactionSchemaActivationWithRuntime": allow
+    "clasp run executeProductVariantBootstrapWithRuntime": allow
+    "clasp run executeRecipeVersionBootstrapWithRuntime": allow
     "clasp push --force": allow
     "clasp versions": allow
     "clasp version *": allow
