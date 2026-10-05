@@ -14,6 +14,7 @@ permission:
     "clasp run runMonetaryOpeningEvidenceCompletionDiagnostic": allow
     "node *": ask
     "node --check *": allow
+    "node _test_runner.js": allow
     "npm run *": ask
     "pwd": allow
     "codegraph explore*": allow
