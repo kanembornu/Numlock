@@ -91,7 +91,7 @@ Derived from the completed Business Decision Contract Reconciliation and the can
 - DINE_IN/TAKE_AWAY.
 - Supplier Master.
 - Recipe Versioning.
-- ADMIN/OPERATOR roles.
+- No role capability: single-authority architecture is active; role infrastructure is not required.
 - Recommended Standard Cost (capability boundary only; algorithm undefined).
 - PAID-based reporting dimensions.
 
@@ -141,7 +141,7 @@ Undecided implementation details. These are NOT business blockers. Defining them
 | 1 | Recommended/Proposed Standard Cost algorithm | Contract §16.1 permits a recommendation; §16.2 forbids inventing/assuming the algorithm. Algorithm MUST be decided in explicit implementation/product planning before any coding that consumes a recommendation. Recommended cost remains a proposal, never authority (§16.3). Applying a proposal as Approved Standard Cost requires the explicit authorized action of §17.3. |
 | 2 | Human-readable Order Number exact format | §23.3–23.7: system-generated; NOT relational primary authority; MUST NOT be reused; MUST NOT encode unnecessary meaning (Customer/Order Type). Format is an implementation decision that must satisfy those rules. |
 | 3 | Exact physical schema/table strategy for Order, Payment, RecipeVersion domains | Must satisfy business authority (stable immutable IDs, §23) and historical compatibility (§28). Storage layout is an implementation decision; business semantics are not. |
-| 4 | Authentication/identity mechanism for ADMIN/OPERATOR | §25 roles are decided; the identity/authentication mechanism is an implementation decision if not already authoritative in source architecture. Actor audit identity MUST be preserved where applicable (§25.7). |
+| 4 | `SUPERSEDED_NOT_REQUIRED` | Single-authority architecture requires no ADMIN/OPERATOR authentication or authorization mechanism. Audit identity may be preserved independently; this gate has no blocking effect. |
 
 ## 8. Phase Architecture — Summary
 
@@ -154,7 +154,7 @@ Undecided implementation details. These are NOT business blockers. Defining them
 | 5 | Order Domain Foundation | HIGH | MISSING Order model/DINE_IN/TAKE_AWAY → KEEP; tabsal sale-line operational writes superseded (read compatibility preserved) |
 | 6 | Payment / Finance Settlement | CRITICAL | MISSING Payment entity → KEEP; Revenue/HPP recognition authority established at Payment |
 | 7 | Fulfillment | MEDIUM | MISSING Fulfillment lifecycle → KEEP |
-| 8 | Role / Permission Enforcement | MEDIUM | MISSING ADMIN/OPERATOR → KEEP |
+| 8 | Role / Permission Enforcement — SUPERSEDED — NOT REQUIRED | NONE | IMPLEMENTATION_WORK: NONE; PRODUCTION_REQUIREMENT: NONE; BLOCKING_EFFECT: NONE |
 | 9 | Reporting Alignment | HIGH | CHANGE all-sales-as-revenue → KEEP PAID-only Revenue; MISSING PAID dimensions → KEEP |
 | 10 | Dashboard / Analytics Alignment | LOW–MEDIUM | Reporting consumers aligned; no new business rules |
 | 11 | Global Form UX Conformance | LOW | CHANGE form UX guidance/validation → KEEP |
@@ -164,9 +164,9 @@ Undecided implementation details. These are NOT business blockers. Defining them
 
 ## 9. Phase Contracts
 
-Each phase below carries the full Phase Contract. Phases are ordered by dependency: master data → costing authority → purchase → product/recipe → order → payment → fulfillment → roles → reporting → dashboard → UX conformance → end-to-end → production → retirement audit.
+Each active phase below carries the full Phase Contract. Phases are ordered by dependency: master data → costing authority → purchase → product/recipe → order → payment → fulfillment → superseded historical Phase 8 slot → reporting → dashboard → UX conformance → end-to-end → production → retirement audit.
 
-Role-enforcement foundations MAY be pulled earlier than Phase 8 only where source architecture requires minimal authorization infrastructure for safe implementation; complete role-enforcement acceptance remains Phase 8 (see Phase 8 notes).
+Phase 8 and Decision Gate 4 are `SUPERSEDED_NOT_REQUIRED`. Transaction and master-data implementation has no role-authorization prerequisite. Audit identity remains independent metadata.
 
 ---
 
@@ -186,7 +186,7 @@ Every later operational phase references master identities. Supplier Master is M
 - Business Decision Gate COMPLETE; reconciliation PASS recorded.
 - This roadmap status ACTIVE — DERIVED FROM CANONICAL BUSINESS CONTRACT.
 - Existing Item/Ingredient, UOM, and conversion data read successfully in current source architecture.
-- Phase 8 foundational authorization mechanism (if required earlier) identified or scoped as a prerequisite decision.
+- P1.6 / Phase 8 authorization package is `SUPERSEDED_NOT_REQUIRED`; no role foundation blocks this phase.
 
 **In Scope**
 
@@ -198,7 +198,7 @@ Every later operational phase references master identities. Supplier Master is M
 - Item-filtered Purchase UOM: Purchase UOM dropdown filtered by selected Item (§13.3); UOM from database/configuration; no free-text UOM (§13.4).
 - UOM conversion authority: each Purchase UOM has an authoritative Base UOM conversion (§13.5); conversion contains NO yield/waste (§13.12, §14.4); conversion change is prospective configuration/versioning (§13.10); operator MUST NOT edit conversion from Purchase (§13.6).
 - Structural-history protection: historical UOM and conversion records MUST NOT be hard-deleted (§13.11).
-- Admin-only master mutation boundary (contract §25; full enforcement acceptance in Phase 8 — Phase 1 implements the mutation boundary for master writes touched here).
+- Master mutations use normal validation and audit boundaries; no role check or permission infrastructure (§25).
 - Global form UX contract for affected master forms: visible label, meaningful placeholder/helper, dropdown prompt, specific validation (§27).
 - Explicit acceptance that downstream Purchase (Phase 3) and Recipe (Phase 4) can consume this authoritative master data.
 
@@ -210,13 +210,13 @@ Every later operational phase references master identities. Supplier Master is M
 - Purchase or Order write-path rework (Phases 3, 5–6).
 - Standard Cost authority changes (Phase 2).
 - Recipe Versioning (Phase 4).
-- Full OPERATOR role enforcement acceptance (Phase 8).
+- Role enforcement (permanently out of scope; Phase 8 superseded).
 - Retirement of dormant inventory/AP code (Phase 14).
 - New business requirements beyond the contract.
 
 **Key Dependencies**
 
-- Business Contract §11–§13 (Supplier Master, Item/Ingredient Master, UOM and Conversion), §27 (UX), §25 (role boundary).
+- Business Contract §11–§13 (Supplier Master, Item/Ingredient Master, UOM and Conversion), §27 (UX), §25 (single-authority boundary).
 - Frozen Finance Final Baseline: SupplierID already exists in PurchaseEvent 29-column schema; master IDs must align with existing identity conventions.
 - Current source master-data structures (Products sheet, item/UOM structures) as compatibility context.
 
@@ -256,7 +256,7 @@ MEDIUM — master-data mistakes propagate to every downstream Purchase/Recipe wr
 - Supplier Master exists and is the only Supplier source for Purchase (free-text Supplier impossible at write path by design; enforced test).
 - All master hard-delete/history protections proven by tests.
 - Base UOM + item-filtered Purchase UOM + authoritative conversions proven by tests.
-- Admin-only master mutation boundary in force for writes introduced/touched in this phase.
+- Master writes enforce business validation and audit metadata without role checks.
 - Global form UX contract conformance proven for affected master forms.
 - Downstream Purchase/Recipe consumption contract passes against master authority.
 - No stock-on-hand capability added or implied.
@@ -305,7 +305,7 @@ Purchase writes (Phase 3) and Recipe costing (Phase 4) both depend on a single c
 - Actual Purchase Cost definition: normalized actual unit cost = Purchase Total / Base Qty (§14.5); reporting/analysis history only; NOT authoritative for Recipe/Product costing (§15.1–15.4).
 - Normalized Base Qty costing: Qty/UOM → Base Qty via authoritative conversion; cost math uses Base Qty, not Purchase UOM (§13.8, §14.5).
 - Standard Cost authoritative path: Approved Standard Cost is authoritative for Recipe and Product costing (§17.2); recipe component cost = Recipe Qty × authoritative Ingredient Standard Cost (§17.4); Product cost = Recipe × authoritative Ingredient Standard Cost (§19.5).
-- Explicit Standard Cost change authority: changes require explicit authorized action (ADMIN authority; §17.3); prospective for costing (§17.5); MUST NOT rewrite Purchase history (§17.7); MUST NOT automatically change Selling Price (§17.8, §8.8).
+- Explicit Standard Cost change authority: changes require an explicit action by the sole authority (§17.3); prospective for costing (§17.5); MUST NOT rewrite Purchase history (§17.7); MUST NOT automatically change Selling Price (§17.8, §8.8).
 - Recommended/Proposed Standard Cost capability boundary: system MAY calculate a recommendation from Purchase history (§16.1); recommendation is a proposal, NOT authoritative (§16.3); applying a proposal requires the §17.3 explicit authorized action; algorithm undefined unless Decision Gate 1 closed (§16.2).
 - Product/Recipe cost consumption of Standard Cost: Recipe version costing derives from Approved Standard Cost at the authoritative path.
 - **No automatic Purchase → Standard Cost mutation** (§15.3): Purchase writes never write Standard Cost.
@@ -643,7 +643,7 @@ Payment (Phase 6) settles Orders; Fulfillment (Phase 7) transitions them; Report
 - Business Contract §3–§4, §8, §20–§24, §29 reviewed.
 - Migration/compatibility strategy for tabsal/history drafted as explicit non-destructive plan (no data rewrite).
 - Decision Gate 2 (Order Number format) and Decision Gate 3 (physical schema strategy) identified; format/schema decisions recorded or explicitly in-flight — must satisfy §23 rules regardless.
-- Minimal authorization infrastructure (if required earlier for safe Order writes) identified per Phase 8 note; complete role enforcement remains Phase 8.
+- No authorization infrastructure prerequisite; single-authority architecture applies.
 
 **In Scope**
 
@@ -657,7 +657,7 @@ Payment (Phase 6) settles Orders; Fulfillment (Phase 7) transitions them; Report
 - PaymentStatus = UNPAID initially (§3.1, §5.8).
 - FulfillmentStatus = OPEN initially (§6.1).
 - CreatedAt automatic, not editable (§24.1).
-- Actor identity recorded where applicable (§25.7; enforcement in Phase 8).
+- Audit identity recorded where applicable (§25.4); it is not authorization.
 - NO Customer entity; NO Customer Master (§3.8).
 - NO Receive Via requirement at Order creation (§3.2).
 - NO Revenue posting merely from Order creation (§3.5, §26.12 — UNPAID is not Revenue).
@@ -673,7 +673,7 @@ Payment (Phase 6) settles Orders; Fulfillment (Phase 7) transitions them; Report
 - Dashboard/reporting cutover (Phases 9–10).
 - Historical tabsal data rewrite or migration rerun of any Finance migration.
 - Stock-on-hand; operational AP.
-- Full OPERATOR/ADMIN enforcement acceptance (Phase 8; foundations may precede if required).
+- Role enforcement and authorization foundations (permanently out of scope).
 
 **Key Dependencies**
 
@@ -773,7 +773,7 @@ Order (Phase 5) provides settleable Orders. Settlement is the critical financial
 - One successful Payment per Order (§5.1, §29.1); retries MUST NOT duplicate Payment (§29.2).
 - Payment settles 100% of Order Total only; NO partial Payment; NO split Payment (§5.2, §5.13, §3.10–3.11).
 - Payment Amount derives from Order Total (§5.3).
-- Receive Via mandatory at Payment (§5.4); comes from authoritative configuration/database (§5.5; OPERATOR may not change Receive Via/account mapping per §25.4).
+- Receive Via mandatory at Payment (§5.4); comes from authoritative configuration/database (§5.5); mapping changes are explicit configuration operations.
 - Operator-facing Receive Via values use business-friendly labels (e.g. Cash, BCA, QRIS; §5.6); backend MUST map Receive Via to Finance account authority (§5.7).
 - Immutable PaymentID; PaidAt automatic (§24.5); PaidBy actor identity (§25.7).
 - Idempotent Payment; atomic/fail-closed settlement (§29.6).
@@ -975,102 +975,19 @@ MEDIUM — backward transition bugs or timestamp overwrite corrupt operational t
 
 ---
 
-### Phase 8 — Role / Permission Enforcement
+### Phase 8 — Role / Permission Enforcement — Status: SUPERSEDED — NOT REQUIRED
 
-**Objective**
+**Architecture Decision**
 
-Establish ADMIN and OPERATOR roles with contract-mandated authority boundaries. ADMIN: master/config + operations. OPERATOR: Order, DINE_IN/TAKE_AWAY, Product/Qty, Fulfillment, Payment/Receive Via, Purchase. OPERATOR MUST NOT mutate Master Data, Recipe, Selling Price, Standard Cost, UOM/Conversion, Receive Via/account mapping. No transaction approval workflow.
+NUMLOCK uses one authority/user context. Role separation, RBAC, permission matrices, role lookup, role assignment, role-based server checks, and role-based UI visibility are permanently out of scope. Audit identity remains independent metadata and is not authorization.
 
-**Why This Phase Occurs Here**
+- `IMPLEMENTATION_WORK: NONE`
+- `PRODUCTION_REQUIREMENT: NONE`
+- `BLOCKING_EFFECT: NONE`
+- `DECISION_GATE_4: SUPERSEDED_NOT_REQUIRED`
+- `P1.6: SUPERSEDED_NOT_REQUIRED`
 
-Operational write domains (Phases 3, 5–7) create authority-bearing mutations. Role enforcement completes the safety boundary around those mutations. If source architecture requires minimal authorization infrastructure earlier for safe implementation, foundational authorization MAY be introduced earlier — but complete role-enforcement acceptance remains here.
-
-**Entry Criteria**
-
-- Phases 3, 5, 6 write surfaces exist or are in-flight with known mutation points (mutating endpoints enumerated).
-- Business Contract §25 reviewed.
-- Decision Gate 4 (authentication/identity mechanism) decided or explicitly in-flight; mechanism must preserve actor audit identity (§25.7).
-- Foundational authorization infrastructure (if pulled earlier) documented and distinguishable from full enforcement acceptance.
-
-**In Scope**
-
-- ADMIN role: full authority including master/configuration and operations (§25.2).
-- OPERATOR role MAY: create Order; choose DINE_IN/TAKE_AWAY; add Product + Qty; move valid Fulfillment lifecycle; execute Payment; choose Receive Via; create Purchase (§25.3).
-- OPERATOR MUST NOT change: Master Data; Recipe; Selling Price; Standard Cost; UOM/Conversion; Receive Via/account mapping (§25.4).
-- Enforce at mutation boundary (backend authority checks), not only UI hiding.
-- Actor audit identity preserved where applicable (§25.7).
-- NO transaction approval workflow (§25.5); valid transaction applies when saved (§25.6).
-- Roles limited to ADMIN and OPERATOR (§25.1) — no invented extra roles.
-- UX feedback for permission-denied states conforms to form UX contract patterns (specific messages; Phase 11 verifies consistency).
-
-**Explicitly Out of Scope**
-
-- Invented approval workflows, multi-level authorization, customer-facing roles (out of scope; §25.5, §32).
-- Master-data content changes (Phase 1); Standard Cost/Recipe/Pricing content rules (Phases 2, 4).
-- Dashboard/role-based dashboard features beyond mutation authority (Phases 9–10).
-- Migration of historical actor fields (no historical rewrite).
-- Retirement of legacy permission-adjacent code (Phase 14).
-- New business requirements.
-
-**Key Dependencies**
-
-- Phases 1, 3, 5–7 mutation surfaces (enumerated endpoints).
-- Business Contract §25, §27 (UX), §29 (audit identity).
-- Decision Gate 4 identity mechanism.
-
-**Finance Boundary**
-
-- Role checks gate Finance-touching mutations (Payment settlement, Purchase PAID writes) but do not change Finance semantics; Finance authority remains frozen.
-- OPERATOR may execute Payment/Purchase (operations) — authority ≠ new Finance rules.
-- No Finance journal implications from role checks themselves.
-
-**Historical Compatibility Boundary**
-
-- Historical actor/audit fields preserved; no backfill invention.
-- Historical transactions remain valid regardless of current role assignments.
-
-**Implementation Risk**
-
-MEDIUM — permission checks must cover every mutating endpoint; missed endpoint = authority bypass.
-
-**Operational Risk**
-
-MEDIUM — bypass risk on unlisted write paths; false-deny risk blocking valid OPERATOR flows; approval-workflow creep would violate §25.5.
-
-**Required Tests**
-
-- ADMIN: master/config mutations allowed (Supplier/Item/UOM/Recipe/Selling Price/Standard Cost/Receive Via mapping where applicable).
-- OPERATOR: allowed operations succeed (Order create, DINE_IN/TAKE_AWAY, Product+Qty, Fulfillment transitions, Payment with Receive Via, Purchase create).
-- OPERATOR denied on: Master Data mutation; Recipe mutation; Selling Price mutation; Standard Cost mutation; UOM/Conversion mutation; Receive Via/account mapping mutation — each denied at backend boundary with explicit error.
-- No transaction approval workflow artifacts present; valid transaction applies on save for authorized roles.
-- Actor audit identity captured on mutating operations.
-- Role limit: no third role creatable through operational paths.
-- Permission-denied UX states conform to specific-validation contract (Phase 11 will re-verify globally).
-- Regression: previously passing Financial/business tests unchanged when run under each role.
-
-**Acceptance Gate**
-
-- All denial/allowance tests PASS with recorded evidence at backend mutation boundary.
-- OPERATOR forbidden-mutation matrix fully covered (every §25.4 item).
-- No approval workflow introduced.
-- Actor identity proven; audit trail usable.
-
-**Exit Criteria**
-
-- Acceptance Gate PASS with recorded evidence.
-- Phase 12 role-matrix end-to-end acceptance executable.
-- Phase 13 rollout includes role enforcement in preflight.
-
-**Rollback/Fail-Closed Considerations**
-
-- Authorization fails closed at mutation boundary: unknown role/denied → no write.
-- Rollback = permission-rule revert; no historical data impact.
-- Fail-closed preference over fail-open when identity mechanism unavailable for an operation (aligns with financial mutation safety).
-
-**Expected Classification Transitions**
-
-- MISSING ADMIN/OPERATOR roles → KEEP.
-- Foundational authorization (if earlier) → distinct from complete enforcement; enforcement KEEP only after this phase.
+Historical phase number retained for traceability. Phase 8 creates no dependency for Transaction, master-data, reporting, acceptance, or production planning.
 
 ---
 
@@ -1082,7 +999,7 @@ Align reporting authorities to the canonical contract: Revenue = PAID Orders; Qt
 
 **Why This Phase Occurs Here**
 
-Order/Payment/Fulfillment (Phases 5–7) produce the authoritative transaction facts; Role enforcement (Phase 8) bounds write authority. Reporting must consume the new authorities before Dashboard (Phase 10) or UX polish (Phase 11). HIGH gate: reporting authority cutover.
+Order/Payment/Fulfillment (Phases 5–7) produce the authoritative transaction facts. Phase 8 is superseded and creates no dependency. Reporting must consume the new authorities before Dashboard (Phase 10) or UX polish (Phase 11). HIGH gate: reporting authority cutover.
 
 **Entry Criteria**
 
@@ -1405,7 +1322,7 @@ Per-domain gates (Phases 1–11) prove local conformance; Phase 12 proves cross-
   1. Order → Payment → Preparing → Ready → Completed (early payment).
   2. Order → Preparing → Ready → Payment → Completed (late payment).
   - Revenue/HPP recognized exactly at Payment in both orderings; CLOSED only when PAID + COMPLETED.
-- Negative proofs: no Customer dependency; no promo/discount; no operational AP; no stock-on-hand; no Yield/UsableQty authority in operational paths; historical read compatibility; retry/idempotency; roles matrix; reporting consistency (dashboard ≡ reporting model).
+- Negative proofs: no Customer dependency; no promo/discount; no operational AP; no stock-on-hand; no Yield/UsableQty authority in operational paths; no RBAC infrastructure; historical read compatibility; retry/idempotency; reporting consistency (dashboard ≡ reporting model).
 - Cross-phase integration evidence: master → purchase cost → recipe costing → order → payment HPP snapshot → fulfillment → reporting/dashboard chain.
 - Measured evidence recording per AGENTS evidence classes (local/runtime; no deployment claims).
 
@@ -1734,7 +1651,7 @@ This roadmap keeps TARGET and CURRENT distinct at all times.
 | Item/UOM | Base UOM authority; item-filtered UOM; conversion authority (§13) | Exists; needs hardening (CHANGE→KEEP) |
 | Costing | Approved Standard Cost authority; Base Qty normalization; no Yield/UsableQty (§14–§17) | UsableQty/PurchaseCost path (CHANGE; DORMANT target treatment); Standard Cost dual-path |
 | Recipe | Recipe Versioning; Base UOM; Standard Cost consumption (§18–§20) | Recipe exists; Versioning MISSING |
-| Roles | ADMIN/OPERATOR only (§25) | MISSING |
+| Authority model | Single authority; audit identity independent; no RBAC (§25) | ACTIVE; no implementation work required |
 | Reporting | PAID-only Revenue; Payment-time HPP; contract dimensions (§26) | Legacy reporting semantics (CHANGE) |
 | Stock | No stock-on-hand; no stock reporting (§22, §26.10) | Dormant inventory code present (DORMANT; must not activate) |
 | AP | No operational AP (§10, §32) | AP backend historical/dormant (DORMANT; historical reads preserved) |

@@ -46,7 +46,7 @@ This document is the canonical NUMLOCK business contract.
 
 1.3 Where current implementation conflicts with this contract, the implementation MUST be treated as non-conformant and repaired toward this contract. The contract MUST NOT be bent to match implementation.
 
-1.4 Scope: NUMLOCK operational domain — Sales/Order, Payment, Fulfillment, Selling Price, Expense, Purchase, Supplier/Item/Product/Recipe masters, UOM, Standard Cost, identity/timestamps, roles, reporting, form UX, historical integrity, idempotency safety, and the Finance integration boundary.
+1.4 Scope: NUMLOCK operational domain — Sales/Order, Payment, Fulfillment, Selling Price, Expense, Purchase, Supplier/Item/Product/Recipe masters, UOM, Standard Cost, audit identity/timestamps, reporting, form UX, historical integrity, idempotency safety, and the Finance integration boundary.
 
 1.5 This document does NOT authorize any deployment, migration, production write, or evidence mutation. It does NOT claim implementation conformance.
 
@@ -66,7 +66,7 @@ This document is the canonical NUMLOCK business contract.
 
 2.5 Purchase history, Recipe definition, and Standard Cost authority are three distinct concepts (Sections 15–17, 19). Purchase history MUST NOT silently become costing authority.
 
-2.6 Roles are limited to ADMIN and OPERATOR (Section 25). There is no transaction approval workflow.
+2.6 NUMLOCK has one authority/user context (Section 25). There is no role separation or transaction approval workflow.
 
 2.7 Revenue and HPP recognition authority is successful Payment (Sections 5, 21, 26). CLOSED is operational, derived, and is NOT revenue-recognition authority (Section 7).
 
@@ -109,8 +109,8 @@ This document is the canonical NUMLOCK business contract.
 5.2 Payment settles 100% of Order Total. There is NO partial Payment.
 5.3 Payment Amount derives from Order Total.
 5.4 Receive Via is mandatory at Payment.
-5.5 Receive Via comes from authoritative configuration/database (Section 25: OPERATOR may not change Receive Via/account mapping).
-5.6 Operator-facing values MUST use business-friendly labels (e.g. Cash, BCA, QRIS).
+5.5 Receive Via comes from authoritative configuration/database. Changes to Receive Via/account mapping are explicit configuration operations.
+5.6 User-facing values MUST use business-friendly labels (e.g. Cash, BCA, QRIS).
 5.7 Backend MUST map Receive Via to Finance account authority.
 5.8 Successful Payment transitions PaymentStatus UNPAID → PAID.
 5.9 Successful Payment triggers Revenue + HPP recognition.
@@ -266,7 +266,7 @@ This document is the canonical NUMLOCK business contract.
 
 17.1 Three distinct concepts MUST be kept separate: Actual Purchase Cost (Section 15), Recommended/Proposed Standard Cost (Section 16), and Approved Standard Cost.
 17.2 Approved Standard Cost is authoritative for Recipe and Product costing.
-17.3 Standard Cost changes require explicit authorized action (ADMIN authority; Section 25).
+17.3 Standard Cost changes require an explicit action by the sole authority (Section 25).
 17.4 Recipe component cost derives from Recipe Qty × authoritative Ingredient Standard Cost.
 17.5 Standard Cost changes are prospective for costing.
 17.6 Historical Sales HPP remains immutable (Sections 21, 28).
@@ -361,21 +361,25 @@ This document is the canonical NUMLOCK business contract.
 24.10 Purchase CreatedAt is automatic.
 24.11 Purchase UpdatedAt is audit metadata.
 
-## 25. Roles and Permissions
+## 25. Single-Authority Operating Model
 
 **TARGET BUSINESS CONTRACT**
 
-25.1 Only required roles: ADMIN, OPERATOR.
+25.1 NUMLOCK has exactly one user and one authority context. The sole user is Owner, Administrator, Operator, sole business decision authority, and sole application decision authority.
 
-25.2 ADMIN: full authority, including master/configuration and operations.
+25.2 The sole authority MAY perform every master/configuration and operational action allowed by this contract, including Order, Payment, Fulfillment, Purchase, Expense, Recipe, Selling Price, Standard Cost, UOM/Conversion, and Receive Via/account mapping operations.
 
-25.3 OPERATOR MAY: create Order; choose DINE_IN/TAKE_AWAY; add Product + Qty; move valid Fulfillment lifecycle; execute Payment; choose Receive Via; create Purchase.
+25.3 Master-data and transaction operations require no role check, permission matrix, role lookup, role assignment, or identity-based approval hierarchy.
 
-25.4 OPERATOR MUST NOT change: Master Data; Recipe; Selling Price; Standard Cost; UOM/Conversion; Receive Via/account mapping.
+25.4 Session identity MAY be recorded as audit metadata such as CreatedBy, UpdatedBy, or PaidBy. Audit identity is not authorization and MUST NOT require a Users or AccessControl master.
 
-25.5 There is NO transaction approval workflow.
-25.6 A valid transaction applies when saved.
-25.7 Actor audit identity MUST be preserved where applicable.
+25.5 There is NO transaction approval workflow. A valid transaction applies when saved.
+
+25.6 Role-based access control, user roles, role master, Users master for authorization, AccessControl master, administrator bootstrap, operator restrictions, privilege hierarchy, multi-user authorization, and future multi-user preparation are explicitly out of scope.
+
+25.7 **Architecture decision record:** `NUMLOCK_SINGLE_AUTHORITY_ARCHITECTURE` prospectively supersedes all ADMIN / OPERATOR role-separation requirements. Effective from this authority reconciliation. Historical baseline `e56acfefb3dfbb3eaa08de7e9af0a42e6ba02a0b` remains immutable historical evidence and is not changed by this amendment.
+
+25.8 Decision Gate 4 is `SUPERSEDED_NOT_REQUIRED` and has no blocking effect on implementation.
 
 ## 26. Reporting Authority
 
@@ -510,6 +514,12 @@ Out of scope (MUST NOT be implemented as in-scope business requirements):
 - Stock Opname
 - waste/expired stock movement
 - direct-resale/no-recipe Product
+- ADMIN / OPERATOR role separation
+- user roles, role master, and role assignment
+- Users or AccessControl masters for authorization
+- RBAC, permission matrices, and role-based UI/server enforcement
+- identity-based approval or privilege hierarchies
+- multi-user authorization and future multi-user preparation
 
 ## 33. Current Implementation Gap Summary
 
@@ -522,7 +532,7 @@ This section describes implementation state based on BUSINESS_DECISION_CONTRACT_
 | **KEEP** | Selling Price snapshot; HPP snapshot; Ordinary Expense; Item/Ingredient Master; UOM conversion; Product Master; Recipe; existing transaction IDs/timestamps where compatible |
 | **CHANGE** | tabsal sale-line semantics → Order + Payment model; Receive Via authority/labels; Purchase UNPAID/evidence/free-text Supplier behavior; UsableQty costing authority; Standard Cost dual-path; Reporting → PAID-only Revenue authority; Form UX guidance/validation |
 | **DORMANT** | AP Settlement operational workflow; Purchase UNPAID operational path; InventoryReceipt; InventoryLedger; Goods Receipt/attested activation; incompatible COGSIngredients PurchaseCost/UsableQty authority path |
-| **MISSING** | Order model; Payment entity; Fulfillment lifecycle; DINE_IN/TAKE_AWAY; Supplier Master; Recipe Versioning; ADMIN/OPERATOR roles; Recommended Standard Cost; PAID-based reporting dimensions |
+| **MISSING** | Order model; Payment entity; Fulfillment lifecycle; DINE_IN/TAKE_AWAY; Supplier Master; Recipe Versioning; Recommended Standard Cost; PAID-based reporting dimensions |
 | **RETIRE_CANDIDATE** | none currently authorized |
 
 Explicit statement: this table describes implementation state. It does NOT weaken the target contract. Implementation conformance is NOT claimed.
