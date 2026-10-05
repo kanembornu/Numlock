@@ -69,6 +69,7 @@ var files = [
   '93.Master.WritePolicy.js',
   '94.Supplier.Master.js',
   '95.Transaction.Operational.js',
+  '95A.Transaction.Production.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',

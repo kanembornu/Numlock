@@ -119,14 +119,24 @@ function resolveOperationalProduct_(line, authority, at) {
   var productID = transactionOperationalText_(line.productID, "PRODUCT_REQUIRED", "productID");
   var product = transactionOperationalMap_(authority.products, "ProductID")[productID];
   if (!product || !masterSelectionEligible(product.IsActive)) throw transactionOperationalError_("PRODUCT_NOT_AVAILABLE", "productID");
+  var variantID = transactionOperationalText_(line.productVariantID, "PRODUCT_VARIANT_REQUIRED", "productVariantID");
+  var variant = transactionOperationalMap_(authority.productVariants, "ProductVariantID")[variantID];
+  if (!variant || !masterSelectionEligible(variant.IsActive)) throw transactionOperationalError_("PRODUCT_VARIANT_NOT_AVAILABLE", "productVariantID");
+  if (String(variant.ProductID || "").trim() !== productID) throw transactionOperationalError_("PRODUCT_VARIANT_MISMATCH", "productVariantID");
   var qty = transactionOperationalPositive_(line.qty, "INVALID_QTY", "qty");
   var recipes = (authority.recipeVersions || []).filter(function(recipe) {
     var start = canonicalDate(recipe.EffectiveFrom), end = recipe.EffectiveTo ? canonicalDate(recipe.EffectiveTo) : null;
-    return String(recipe.ProductID || "").trim() === productID && isCanonicalActive(recipe.IsActive) && start && start <= at && (!end || at <= end);
+    return String(recipe.ProductVariantID || "").trim() === variantID && isCanonicalActive(recipe.IsActive) && start && start <= at && (!end || at <= end);
   });
   if (recipes.length !== 1 || !Array.isArray(recipes[0].Components) || !recipes[0].Components.length) {
-    throw transactionOperationalError_("RECIPE_VERSION_NOT_AVAILABLE", "productID");
+    throw transactionOperationalError_("RECIPE_VERSION_NOT_AVAILABLE", "productVariantID");
   }
+  var prices = (authority.pricing || []).filter(function(priceRow) {
+    var start = canonicalDate(priceRow.EffectiveFrom), end = priceRow.EffectiveTo ? canonicalDate(priceRow.EffectiveTo) : null;
+    return String(priceRow.ID_Prod || "").trim() === productID && transactionVariantType_(priceRow.Tipe) === variant.Tipe &&
+      isCanonicalActive(priceRow.IsActive) && start && start <= at && (!end || at <= end);
+  });
+  if (prices.length !== 1) throw transactionOperationalError_("SELLING_PRICE_NOT_AVAILABLE", "productVariantID");
   var itemMap = transactionOperationalMap_(authority.items, "ItemID"), totalHpp = 0;
   recipes[0].Components.forEach(function(component) {
     var item = itemMap[String(component.ItemID || "").trim()];
@@ -136,12 +146,13 @@ function resolveOperationalProduct_(line, authority, at) {
       var start = canonicalDate(cost.EffectiveFrom), end = cost.EffectiveTo ? canonicalDate(cost.EffectiveTo) : null;
       return String(cost.ItemID || "").trim() === String(item.ItemID || "").trim() && isCanonicalActive(cost.IsActive) && start && start <= at && (!end || at <= end);
     });
-    if (costs.length !== 1) throw transactionOperationalError_("STANDARD_COST_NOT_AVAILABLE", "productID");
+    if (costs.length !== 1) throw transactionOperationalError_("STANDARD_COST_NOT_AVAILABLE", "productVariantID");
     totalHpp += usage * transactionOperationalPositive_(costs[0].StandardCost, "INVALID_STANDARD_COST", "StandardCost");
   });
-  var price = transactionOperationalPositive_(product.SellingPrice, "INVALID_SELLING_PRICE", "productID");
-  return { productID: productID, productName: product.Name, qty: qty, sellingPriceSnapshot: price,
-    recipeVersionID: recipes[0].RecipeVersionID, unitHppSnapshot: totalHpp, lineTotal: qty * price, lineHpp: qty * totalHpp };
+  var price = transactionOperationalPositive_(prices[0].Harga, "INVALID_SELLING_PRICE", "productVariantID");
+  return { productID: productID, productVariantID: variantID, tipe: variant.Tipe, productName: product.Name, qty: qty,
+    sellingPriceSnapshot: price, recipeVersionID: recipes[0].RecipeVersionID, unitHppSnapshot: totalHpp,
+    lineTotal: qty * price, lineHpp: qty * totalHpp };
 }
 
 function prepareOperationalOrder(payload, authority, runtime) {

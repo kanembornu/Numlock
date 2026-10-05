@@ -4,25 +4,28 @@ function testTransactionOperationalFoundationContracts(indexSource, actionSource
   function refuses(code, operation) { try { operation(); } catch (error) { return error.code === code; } return false; }
   var date = new Date("2026-10-05T02:00:00Z"), sequence = 0;
   var authority = {
-    products: [{ ProductID: "PROD-1", Name: "Coffee", SellingPrice: 25000, IsActive: true }],
+    products: [{ ProductID: "PROD-1", Name: "Coffee", IsActive: true }],
+    productVariants: [{ ProductVariantID: "PV-1-HOT", ProductID: "PROD-1", Tipe: "HOT", IsActive: true }],
+    pricing: [{ ID_Prod: "PROD-1", Tipe: "Hot", Harga: 25000, EffectiveFrom: "2026-01-01", EffectiveTo: "", IsActive: true }],
     items: [{ ItemID: "ING-1", ItemName: "Beans", BaseUOM: "gr", IsActive: true }],
     standardCosts: [{ ItemID: "ING-1", StandardCost: 100, EffectiveFrom: "2026-01-01", EffectiveTo: "", IsActive: true }],
-    recipeVersions: [{ RecipeVersionID: "REC-1-V1", ProductID: "PROD-1", EffectiveFrom: "2026-01-01", EffectiveTo: "", IsActive: true,
+    recipeVersions: [{ RecipeVersionID: "REC-1-V1", ProductVariantID: "PV-1-HOT", EffectiveFrom: "2026-01-01", EffectiveTo: "", IsActive: true,
       Components: [{ ItemID: "ING-1", QtyBase: 10, UOM: "gr" }] }]
   };
   var runtime = { now: function() { return date; }, uuid: function() { sequence++; return String(sequence); },
     orderSequence: function() { return "0001"; }, actor: function() { return "owner@example.com"; } };
   var repo = createOperationalMemoryRepository({ paymentMethods: [{ code: "CASH", AccountCode: "1000", IsActive: true }] });
   var order = createOperationalOrderWithRepository({ orderType: "DINE_IN", lines: [
-    { productID: "PROD-1", qty: 2 }, { productID: "PROD-1", qty: 1 }] }, authority, runtime, repo).order;
+    { productID: "PROD-1", productVariantID: "PV-1-HOT", qty: 2 }, { productID: "PROD-1", productVariantID: "PV-1-HOT", qty: 1 }] }, authority, runtime, repo).order;
   check("O1", order.PaymentStatus === "UNPAID" && !Object.prototype.hasOwnProperty.call(order, "ReceiveVia"));
   check("O2", order.FulfillmentStatus === "OPEN");
   check("O3", order.OrderType === "DINE_IN");
-  check("O4", prepareOperationalOrder({ orderType: "TAKE_AWAY", lines: [{ productID: "PROD-1", qty: 1 }] }, authority, runtime).OrderType === "TAKE_AWAY");
+  check("O4", prepareOperationalOrder({ orderType: "TAKE_AWAY", lines: [{ productID: "PROD-1", productVariantID: "PV-1-HOT", qty: 1 }] }, authority, runtime).OrderType === "TAKE_AWAY");
   check("O5", order.Lines.length === 2);
-  check("O6", order.Lines[0].sellingPriceSnapshot === 25000 && order.Lines[0].recipeVersionID === "REC-1-V1");
+  check("O6", order.Lines[0].sellingPriceSnapshot === 25000 && order.Lines[0].recipeVersionID === "REC-1-V1" &&
+    order.Lines[0].productVariantID === "PV-1-HOT" && order.Lines[0].tipe === "HOT");
   check("O7", refuses("PRODUCT_NOT_AVAILABLE", function() { prepareOperationalOrder({ orderType: "DINE_IN", lines: [{ productID: "BAD", qty: 1 }] }, authority, runtime); }));
-  check("O8", refuses("RECIPE_VERSION_NOT_AVAILABLE", function() { prepareOperationalOrder({ orderType: "DINE_IN", lines: [{ productID: "PROD-1", qty: 1 }] }, Object.assign({}, authority, { recipeVersions: [] }), runtime); }));
+  check("O8", refuses("RECIPE_VERSION_NOT_AVAILABLE", function() { prepareOperationalOrder({ orderType: "DINE_IN", lines: [{ productID: "PROD-1", productVariantID: "PV-1-HOT", qty: 1 }] }, Object.assign({}, authority, { recipeVersions: [] }), runtime); }));
   check("O9", repo.read().payments.length === 0);
   check("O10", order.HppTotalSnapshot === 3000 && repo.read().writeCount === 1);
   var preparing = transitionOperationalFulfillmentWithRepository(order.OrderID, "PREPARING", runtime, repo).order;
