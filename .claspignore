@@ -42,6 +42,10 @@
 !90.Dashboard.Reporting.js
 !91.Transactions.Query.js
 !92.Products.Domain.js
+!93.Master.WritePolicy.js
+!94.Supplier.Master.js
+!95.Transaction.Operational.js
+!95A.Transaction.Production.js
 !92.Tests.Analytics.Fixtures.js
 !92.Tests.Dashboard.Fixtures.js
 !92.Tests.Frontend.Fixtures.js
