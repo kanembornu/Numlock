@@ -214,11 +214,14 @@ function createDurableOperationalOrder_(payload, authority, runtime, repository)
   var order = prepareOperationalOrder(normalized, authority, deterministic); order.OrderID = orderID; order.OrderNumber = orderID;
   order.Lines.forEach(function(line, index) { line.OrderLineID = transactionStableBusinessID_("OL-", orderID, String(index + 1)); });
   var operation = transactionResolveOperation_(repository, "ORDER_CREATE", requestKey, hash, orderID, order, now);
+  if (runtime.crash) runtime.crash("ORDER_AFTER_INTENT");
   var committed = repository.findOrder(orderID); if (operation.State === "COMMITTED") { if (!committed) throw new Error("COMMITTED_ORDER_MISSING"); return committed; }
   order = JSON.parse(operation.OperationPlan);
   repository.createOrder(order);
+  if (runtime.crash) runtime.crash("ORDER_AFTER_PERSIST");
   var readback = repository.findOrder(orderID), expected = transactionOperationalMap_(order.Lines, "OrderLineID"), actual = transactionOperationalMap_(readback && readback.Lines, "OrderLineID");
   if (!readback || Object.keys(actual).length !== order.Lines.length || Object.keys(expected).some(function(id) { return !actual[id] || actual[id].ProductVariantID !== expected[id].productVariantID || Number(actual[id].SellingPriceSnapshot) !== Number(expected[id].sellingPriceSnapshot) || actual[id].RecipeVersionID !== expected[id].recipeVersionID; })) throw new Error("ORDER_READBACK_INCOMPLETE");
+  if (runtime.crash) runtime.crash("ORDER_BEFORE_COMMIT");
   transactionCommitOperation_(repository, operation, runtime.now()); return readback;
 }
 
@@ -229,23 +232,31 @@ function createDurableOperationalPayment_(orderID, payload, runtime, repository)
   var requestKey = transactionOperationalText_(payload && payload.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"), hash = transactionPayloadHash_({ orderID: orderID, receiveVia: payload.receiveVia, amount: payload.amount });
   var paymentID = transactionStableBusinessID_("PAY-", "PAYMENT", requestKey), plan = { orderID: orderID, paymentID: paymentID, requestKey: requestKey,
     receiveVia: payload.receiveVia, amount: payload.amount }, operation = transactionResolveOperation_(repository, "PAYMENT", requestKey, hash, paymentID, plan, runtime.now());
+  if (runtime.crash) runtime.crash("PAYMENT_AFTER_INTENT");
   plan = JSON.parse(operation.OperationPlan); orderID = plan.orderID; payload = { requestKey: plan.requestKey, receiveVia: plan.receiveVia, amount: plan.amount };
   var order = repository.findOrder(orderID); if (!order) throw transactionOperationalError_("ORDER_NOT_FOUND", "OrderID");
-  var existing = repository.findPaymentByRequest(requestKey);
+  var existing = repository.findPaymentByRequest(requestKey), successful = (repository.read().payments || []).filter(function(p) { return p.OrderID === orderID && p.Status === "SUCCESS"; });
+  if (!existing && successful.length) throw transactionOperationalError_("SECOND_PAYMENT_REFUSED", "OrderID");
   if (operation.State === "COMMITTED") return { payment: existing, order: order, idempotent: true, writeCount: 0 };
   var method = transactionOperationalMap_(repository.read().paymentMethods, "code")[transactionOperationalText_(payload.receiveVia, "RECEIVE_VIA_REQUIRED", "receiveVia")];
   if (!method || !masterSelectionEligible(method.IsActive)) throw transactionOperationalError_("INVALID_RECEIVE_VIA", "receiveVia");
   if (Number(payload.amount) !== Number(order.OrderTotal)) throw transactionOperationalError_("PAYMENT_AMOUNT_MISMATCH", "amount");
   var payment = existing || { PaymentID: paymentID, OrderID: orderID, RequestKey: requestKey, ReceiveVia: payload.receiveVia, AccountCode: method.AccountCode,
     Amount: order.OrderTotal, PaidAt: operation.CreatedAt, PaidBy: runtime.actor(), Status: "SUCCESS" };
-  if (!transactionFinanceSettlementExists_(runtime.spreadsheet, paymentID)) {
+  var financeExists = runtime.financeExists ? runtime.financeExists(paymentID) : transactionFinanceSettlementExists_(runtime.spreadsheet, paymentID);
+  if (!financeExists) {
     var settlement = runtime.settle({ settlement: buildOperationalPaymentSettlement_(order, payment), order: order });
     if (!settlement || ["POSTED", "ALREADY_POSTED"].indexOf(settlement.status) === -1) throw transactionOperationalError_("PAYMENT_FINANCE_CUTOVER_BLOCKED", "settlement");
   }
+  if (runtime.crash) runtime.crash("PAYMENT_AFTER_FINANCE");
   if (!existing) repository.createPayment(payment);
+  if (runtime.crash) runtime.crash("PAYMENT_AFTER_ROW");
   order = repository.findOrder(orderID); if (order.PaymentStatus !== "PAID") repository.updateOrder(Object.assign({}, order, { PaymentStatus: "PAID", UpdatedAt: runtime.now(), UpdatedBy: runtime.actor() }));
+  if (runtime.crash) runtime.crash("PAYMENT_AFTER_ORDER_PAID");
   var paid = repository.findOrder(orderID), stored = repository.findPaymentByRequest(requestKey);
-  if (!stored || stored.PaymentID !== paymentID || paid.PaymentStatus !== "PAID" || !transactionFinanceSettlementExists_(runtime.spreadsheet, paymentID)) throw new Error("PAYMENT_READBACK_INCOMPLETE");
+  financeExists = runtime.financeExists ? runtime.financeExists(paymentID) : transactionFinanceSettlementExists_(runtime.spreadsheet, paymentID);
+  if (!stored || stored.PaymentID !== paymentID || paid.PaymentStatus !== "PAID" || !financeExists) throw new Error("PAYMENT_READBACK_INCOMPLETE");
+  if (runtime.crash) runtime.crash("PAYMENT_BEFORE_COMMIT");
   transactionCommitOperation_(repository, operation, runtime.now()); return { payment: stored, order: paid, idempotent: !!existing, writeCount: existing ? 0 : 2 };
 }
 
@@ -380,30 +391,30 @@ function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
   } finally { if (acquired) lock.releaseLock(); }
 }
 
+function recoverTransactionOperationWithRuntime_(operationID, r) {
+  var id = transactionOperationalText_(operationID, "OPERATION_ID_REQUIRED", "operationID");
+  var matches = r.repository.readRows("OPERATIONS").filter(function(row) { return row.OperationID === id; });
+  if (matches.length !== 1) throw transactionOperationalError_("OPERATION_NOT_FOUND", "operationID");
+  var operation = matches[0];
+  if (operation.State === "COMMITTED") return operation;
+  if (operation.OperationType === "ORDER_CREATE") {
+    var orderPlan = JSON.parse(operation.OperationPlan); r.repository.createOrder(orderPlan);
+    var order = r.repository.findOrder(operation.BusinessID);
+    if (!order || order.Lines.length !== orderPlan.Lines.length) throw transactionOperationalError_("ORDER_RECOVERY_INCOMPLETE", "operationID");
+    transactionCommitOperation_(r.repository, operation, r.now()); return operation;
+  }
+  if (operation.OperationType === "PAYMENT") {
+    var plan = JSON.parse(operation.OperationPlan);
+    createDurableOperationalPayment_(plan.orderID, { requestKey: plan.requestKey, receiveVia: plan.receiveVia, amount: plan.amount }, r, r.repository);
+    return r.repository.findOperation("PAYMENT", plan.requestKey);
+  }
+  throw transactionOperationalError_("UNKNOWN_OPERATION_TYPE", "operationID");
+}
+
 function recoverTransactionOperation(operationID) {
   return transactionResponse_(function() {
-    var id = transactionOperationalText_(operationID, "OPERATION_ID_REQUIRED", "operationID"), r = transactionProductionRuntime_(), acquired = false;
-    try {
-      r.lock.waitLock(30000); acquired = true;
-      var matches = r.repository.readRows("OPERATIONS").filter(function(row) { return row.OperationID === id; });
-      if (matches.length !== 1) throw transactionOperationalError_("OPERATION_NOT_FOUND", "operationID");
-      var operation = matches[0];
-      if (operation.State === "COMMITTED") return operation;
-      if (operation.OperationType === "ORDER_CREATE") {
-        var plan = JSON.parse(operation.OperationPlan); r.repository.createOrder(plan);
-        var order = r.repository.findOrder(operation.BusinessID);
-        if (!order || order.Lines.length !== plan.Lines.length) throw transactionOperationalError_("ORDER_RECOVERY_INCOMPLETE", "operationID");
-        transactionCommitOperation_(r.repository, operation, r.now()); return operation;
-      }
-      if (operation.OperationType === "PAYMENT") {
-        var paymentRows = r.repository.readRows("PAYMENTS").filter(function(row) { return row.PaymentID === operation.BusinessID; });
-        if (paymentRows.length === 1 && transactionFinanceSettlementExists_(r.spreadsheet, operation.BusinessID)) {
-          var paidOrder = r.repository.findOrder(paymentRows[0].OrderID);
-          if (paidOrder && paidOrder.PaymentStatus === "PAID") { transactionCommitOperation_(r.repository, operation, r.now()); return operation; }
-        }
-        throw transactionOperationalError_("RECOVERY_RETRY_WITH_ORIGINAL_PAYLOAD_REQUIRED", "operationID");
-      }
-      throw transactionOperationalError_("UNKNOWN_OPERATION_TYPE", "operationID");
-    } finally { if (acquired) r.lock.releaseLock(); }
+    var r = transactionProductionRuntime_(), acquired = false;
+    try { r.lock.waitLock(30000); acquired = true; return recoverTransactionOperationWithRuntime_(operationID, r); }
+    finally { if (acquired) r.lock.releaseLock(); }
   });
 }

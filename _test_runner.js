@@ -201,6 +201,7 @@ run('testMasterWritePolicyContracts', 'testMasterWritePolicyContracts()');
 run('testSupplierMasterContracts', 'testSupplierMasterContracts()');
 run('testTransactionOperationalFoundationContracts', 'testTransactionOperationalFoundationContracts(_htmlIndex, _htmlActions)');
 run('testTransactionProductionReadinessMatrices', 'testTransactionProductionReadinessMatrices()');
+run('testTransactionCrashRecoveryExecution', 'testTransactionCrashRecoveryExecution()');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
