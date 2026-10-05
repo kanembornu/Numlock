@@ -9,7 +9,8 @@
         operationalTransactionState.authority = response.data;
         populateOperationalSelect("operationalProduct", response.data.products, "ProductID", "Name", "Pilih item");
         populateOperationalSelect("operationalSupplier", response.data.suppliers, "SupplierID", "Name", "Pilih supplier");
-        populateOperationalSelect("operationalPurchaseItem", response.data.items, "ItemID", "ItemName", "Pilih item");
+        populateOperationalSelect("operationalPurchaseItem", response.data.purchaseItems, "ExpenseItemID", "label", "Pilih item");
+        populateOperationalSelect("operationalExpenseCategory", response.data.expenseItems, "ExpenseItemID", "label", "Pilih expense");
         ["operationalReceiveVia", "operationalPurchasePaidVia", "operationalExpensePaidVia"].forEach(function(id) {
           populateOperationalSelect(id, response.data.paymentMethods, "code", "label", "Pilih metode pembayaran");
         });
@@ -75,7 +76,7 @@
     function saveOperationalOrder()
     {
       if (!operationalTransactionState.lines.length) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
-      operationalServerCall("submitOperationalOrder", { orderType: operationalElement("operationalOrderType").value,
+      operationalServerCall("submitOperationalOrder", { requestKey: "order-" + String(Date.now()), orderType: operationalElement("operationalOrderType").value,
         lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, productVariantID: line.productVariantID, qty: line.qty }; }) }, function(order) {
         operationalTransactionState.order = order; renderOperationalOrderStatus();
         operationalElement("operationalPaymentFields").hidden = false; operationalElement("operationalFulfillmentFields").hidden = false;
@@ -112,15 +113,16 @@
 
     function filterOperationalPurchaseUoms()
     {
-      var id = operationalElement("operationalPurchaseItem").value, authority = operationalTransactionState.authority || {};
-      var rows = (authority.conversions || []).filter(function(row) { return row.ItemID === id; });
+      var expenseItemID = operationalElement("operationalPurchaseItem").value, authority = operationalTransactionState.authority || {};
+      var selected = (authority.purchaseItems || []).filter(function(row) { return row.ExpenseItemID === expenseItemID; })[0];
+      var rows = (authority.conversions || []).filter(function(row) { return selected && row.ItemID === selected.ItemID; });
       populateOperationalSelect("operationalPurchaseUom", rows, "PurchaseUOM", "PurchaseUOM", "Pilih UOM");
     }
 
     function saveOperationalPurchase()
     {
-      var payload = { purchaseDate: operationalElement("operationalPurchaseDate").value, supplierID: operationalElement("operationalSupplier").value,
-        itemID: operationalElement("operationalPurchaseItem").value, qty: Number(operationalElement("operationalPurchaseQty").value),
+      var payload = { requestKey: "purchase-" + String(Date.now()), purchaseDate: operationalElement("operationalPurchaseDate").value, supplierID: operationalElement("operationalSupplier").value,
+        expenseItemID: operationalElement("operationalPurchaseItem").value, qty: Number(operationalElement("operationalPurchaseQty").value),
         purchaseUOM: operationalElement("operationalPurchaseUom").value, purchasePrice: Number(operationalElement("operationalPurchasePrice").value),
         paidVia: operationalElement("operationalPurchasePaidVia").value };
       var error = validateOperationalTransactionInput(payload); if (error) { operationalElement("operationalPurchaseError").innerText = error; return; }
@@ -129,7 +131,7 @@
 
     function saveOperationalExpense()
     {
-      var payload = { date: operationalElement("operationalExpenseDate").value, category: operationalElement("operationalExpenseCategory").value,
+      var payload = { date: operationalElement("operationalExpenseDate").value, expenseItemID: operationalElement("operationalExpenseCategory").value,
         description: operationalElement("operationalExpenseDescription").value, amount: Number(operationalElement("operationalExpenseAmount").value),
         paidVia: operationalElement("operationalExpensePaidVia").value };
       if (!payload.paidVia) { operationalElement("operationalExpenseError").innerText = "Metode pembayaran wajib dipilih."; return; }

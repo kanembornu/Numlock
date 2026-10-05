@@ -161,6 +161,36 @@ function normalizePurchaseEventRequestWithCompatibility_(payload, allowLegacyPay
   return normalized;
 }
 
+function normalizeCanonicalTransactionPurchase_(payload, authority) {
+  var p = payload || {}, expenses = authority.expenses || [], route = resolveExpensePurchasePolicy_(String(p.expenseItemID || ""), expenses);
+  if (!expensePolicyIsPurchase_(route)) inventoryReceiptFail_('NOT_PURCHASE_POLICY');
+  if (route.inventoryItemIds.length !== 1) inventoryReceiptFail_('PURCHASE_ITEM_AUTHORITY_AMBIGUOUS');
+  var itemID = route.inventoryItemIds[0], item = transactionOperationalMap_(authority.items, 'ItemID')[itemID];
+  if (!item || !masterSelectionEligible(item.IsActive)) inventoryReceiptFail_('ITEM_NOT_FOUND');
+  var supplierID = String(p.supplierID || '').trim(), supplier = transactionOperationalMap_(authority.suppliers, 'SupplierID')[supplierID];
+  if (!supplier || !masterSelectionEligible(supplier.IsActive)) inventoryReceiptFail_('SUPPLIER_INACTIVE');
+  var method = transactionOperationalMap_(authority.paymentMethods, 'code')[String(p.paidVia || '').trim()];
+  if (!method || !masterSelectionEligible(method.IsActive)) inventoryReceiptFail_('INVALID_PAID_VIA');
+  var conversion = resolvePurchaseConversion_(itemID, String(p.purchaseUOM || '').trim(), p.purchaseDate, authority.items, authority.conversions, true);
+  var qty = transactionOperationalPositive_(p.qty, 'INVALID_QTY', 'qty'), amount = transactionOperationalPositive_(p.purchasePrice, 'INVALID_PURCHASE_PRICE', 'purchasePrice');
+  return { transactionType: 'CANONICAL_TRANSACTION_PURCHASE', requestKey: transactionOperationalText_(p.requestKey, 'REQUEST_KEY_REQUIRED', 'requestKey'),
+    expenseItemId: String(p.expenseItemID), itemID: itemID, supplierID: supplierID, purchaseDate: String(p.purchaseDate), qty: qty,
+    purchaseUOM: String(p.purchaseUOM), baseQty: qty * conversion.factorToBase, baseUOM: item.BaseUOM, amount: amount,
+    paidVia: String(p.paidVia), cashAccountCode: method.AccountCode, paymentStatus: 'PAID', receiptStatus: 'RECEIVED' };
+}
+
+function buildCanonicalTransactionPurchaseEvent_(request, expense, audit) {
+  var normalized = JSON.stringify(request);
+  return { EventID: 'PE-' + request.requestKey, ExpenseID: request.expenseItemId, BusinessLabel: String(expense.Item),
+    PolicyVersion: EXPENSE_PURCHASE_POLICY.version, PolicyRevision: EXPENSE_PURCHASE_POLICY.revision, CostType: 'VARIABLE_COST',
+    PurchaseRelationship: resolveExpensePurchasePolicy_(request.expenseItemId, [expense]).PurchaseRelationship,
+    ExpenseDate: request.purchaseDate, ReceiptDate: request.purchaseDate, PurchaseQty: request.qty, PurchaseUOM: request.purchaseUOM,
+    AcquisitionValue: request.amount, SupplierSource: '', ExternalRef: '', ExternalDocumentStatus: '', Attestation: '',
+    AllocationStatus: 'CANONICAL_PAID_RECEIVED_NO_INVENTORY', RequestKey: request.requestKey, NormalizedPayload: normalized,
+    ReceiptPlan: 'null', Lifecycle: 'CAPTURED_OPERATIONAL', RecoveryKey: '', CreatedAt: audit.at, CreatedBy: audit.actor,
+    IsActive: true, PaymentStatus: 'PAID', CashAccountCode: request.cashAccountCode, SupplierID: request.supplierID, AccountingStatus: 'PENDING' };
+}
+
 function normalizePurchaseEventRequest_(payload) {
   return normalizePurchaseEventRequestWithCompatibility_(payload, false);
 }
