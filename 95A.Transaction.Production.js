@@ -4,7 +4,8 @@ var TRANSACTION_PRODUCTION_CONTRACT = Object.freeze({
   RECIPE_VERSION_LINES: Object.freeze({ SHEET: "RecipeVersionLines", HEADERS: Object.freeze(["RecipeVersionLineID", "RecipeVersionID", "ItemID", "QtyBase", "BaseUOM"]) }),
   ORDERS: Object.freeze({ SHEET: "Orders", HEADERS: Object.freeze(["OrderID", "OrderNumber", "OrderType", "PaymentStatus", "FulfillmentStatus", "OrderTotal", "HppTotalSnapshot", "CreatedAt", "CreatedBy", "PreparingAt", "ReadyAt", "CompletedAt", "UpdatedAt", "UpdatedBy"]) }),
   ORDER_LINES: Object.freeze({ SHEET: "OrderLines", HEADERS: Object.freeze(["OrderLineID", "OrderID", "ProductID", "ProductVariantID", "Tipe", "Qty", "SellingPriceSnapshot", "RecipeVersionID", "UnitHppSnapshot", "LineTotal", "LineHpp"]) }),
-  PAYMENTS: Object.freeze({ SHEET: "Payments", HEADERS: Object.freeze(["PaymentID", "OrderID", "RequestKey", "ReceiveVia", "AccountCode", "Amount", "PaidAt", "PaidBy", "Status"]) })
+  PAYMENTS: Object.freeze({ SHEET: "Payments", HEADERS: Object.freeze(["PaymentID", "OrderID", "RequestKey", "ReceiveVia", "AccountCode", "Amount", "PaidAt", "PaidBy", "Status"]) }),
+  OPERATIONS: Object.freeze({ SHEET: "TransactionOperations", HEADERS: Object.freeze(["OperationID", "OperationType", "BusinessID", "RequestKey", "State", "PayloadHash", "CreatedAt", "UpdatedAt", "LastError"]) })
 });
 
 function transactionVariantType_(value) {
@@ -124,7 +125,7 @@ function transactionReadRecipeVersions_(ss) {
 function createTransactionSpreadsheetRepository(ss) {
   if (!ss || String(ss.getId()) !== NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID) throw new Error("TRANSACTION_CANONICAL_STORAGE_REQUIRED");
   var contracts = TRANSACTION_PRODUCTION_CONTRACT, sheets = {};
-  ["ORDERS", "ORDER_LINES", "PAYMENTS"].forEach(function(key) { sheets[key] = ss.getSheetByName(contracts[key].SHEET); requireCanonicalHeaders(sheets[key], contracts[key].HEADERS); });
+  ["ORDERS", "ORDER_LINES", "PAYMENTS", "OPERATIONS"].forEach(function(key) { sheets[key] = ss.getSheetByName(contracts[key].SHEET); requireCanonicalHeaders(sheets[key], contracts[key].HEADERS); });
   function rows(key) { return readCanonicalTable(ss, contracts[key].SHEET, contracts[key].HEADERS); }
   function append(key, row) { var c = contracts[key], s = sheets[key]; s.getRange(s.getLastRow() + 1, 1, 1, c.HEADERS.length).setValues([c.HEADERS.map(function(h) { return row[h] === undefined ? "" : row[h]; })]); }
   function orderWithLines(row) { if (!row) return null; var order = Object.assign({}, row); order.Lines = rows("ORDER_LINES").filter(function(line) { return line.OrderID === order.OrderID; }); return order; }
@@ -208,6 +209,78 @@ function runTransactionProductionPreflightDiagnostic() {
       eligibleProductVariantCount: variantPlan.planCount, blockedCount: variantPlan.blockedCount, blockers: variantPlan.blocked },
     recipeVersionReadiness: { existingRecipeVersionCount: schema.RECIPE_VERSIONS.businessRowCount, variantsRequiringBootstrap: recipePlan.planCount,
       bootstrapPlanCount: recipePlan.planCount, bootstrapBlockedCount: recipePlan.blockedCount, bootstrapReady: recipePlan.status === "READY", blockers: recipePlan.blocked },
+    operationReadiness: { schema: schema.OPERATIONS, recoveryEntrypointPresent: typeof recoverTransactionOperation === "function" },
+    purchaseReadiness: { ready: false, reason: "PURCHASEEVENT_BUSINESS_CONTRACT_CONFLICT" },
+    expenseReadiness: { ready: true, authority: "ExpenseItems.ID_Ops" },
     financePreimage: { receiveViaAuthorityReady: methods.length > 0, requiredCashAccountsReady: methods.length === CASH_FOUNDATION_POLICY.ACCOUNT_CODES.length,
       orderPaymentSettlementSourceReady: typeof runCashSettleAndPersist === "function", legacySalesPathPresent: !!ss.getSheetByName("tabsal"), paymentCorrelation: "PaymentID" } };
+}
+
+function executeTransactionSchemaActivationWithRuntime(runtime) {
+  var lock = runtime.lock, acquired = false, ss = runtime.spreadsheet;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var state = {};
+    Object.keys(TRANSACTION_PRODUCTION_CONTRACT).forEach(function(key) { state[key] = transactionSchemaState_(ss.getSheetByName(TRANSACTION_PRODUCTION_CONTRACT[key].SHEET), TRANSACTION_PRODUCTION_CONTRACT[key]); });
+    var plan = buildTransactionSchemaActivationPlan(state);
+    if (plan.status === "BLOCKED" || plan.status === "ALREADY_READY") return Object.assign({}, plan, { writeCount: 0 });
+    var writes = 0;
+    plan.actions.forEach(function(action) { var sheet = ss.insertSheet(action.sheet); sheet.getRange(1, 1, 1, action.headers.length).setValues([action.headers]); writes++; });
+    runtime.flush();
+    plan.actions.forEach(function(action) { requireCanonicalHeaders(ss.getSheetByName(action.sheet), action.headers); });
+    return { status: "ACTIVATED", writeCount: writes, createdSheets: plan.actions.map(function(a) { return a.sheet; }) };
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function transactionBootstrapSource_(ss) {
+  return { products: readCanonicalTable(ss, "Products", PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS),
+    pricing: readCanonicalTable(ss, "ProductPricing", PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS),
+    recipes: readCanonicalTable(ss, "COGSRecipes", PRODUCTS_DOMAIN_CONTRACT.RECIPE_HEADERS),
+    items: readCanonicalTable(ss, "InventoryItems", BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS),
+    standardCosts: readCanonicalTable(ss, RECIPE_STANDARD_COST_CONTRACT.SHEET, RECIPE_STANDARD_COST_CONTRACT.HEADERS) };
+}
+
+function transactionAppendExactRows_(sheet, headers, rows) {
+  if (!rows.length) return 0;
+  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows.map(function(row) { return headers.map(function(h) { return row[h] === undefined ? "" : row[h]; }); }));
+  return rows.length;
+}
+
+function executeProductVariantBootstrapWithRuntime(runtime, activationBoundary) {
+  var lock = runtime.lock, acquired = false, ss = runtime.spreadsheet;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var contract = TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS, sheet = ss.getSheetByName(contract.SHEET); requireCanonicalHeaders(sheet, contract.HEADERS);
+    var plan = buildProductVariantBootstrapPlan(transactionBootstrapSource_(ss), activationBoundary);
+    if (plan.status !== "READY") return Object.assign({}, plan, { writeCount: 0 });
+    var existing = readCanonicalTable(ss, contract.SHEET, contract.HEADERS), index = transactionOperationalMap_(existing, "ProductVariantID"), pending = [];
+    plan.rows.forEach(function(row) { var found = index[row.ProductVariantID]; if (!found) pending.push(row); else if (String(found.ProductID) !== row.ProductID || transactionVariantType_(found.Tipe) !== row.Tipe) throw new Error("PRODUCT_VARIANT_IDENTITY_CONFLICT"); });
+    var writes = transactionAppendExactRows_(sheet, contract.HEADERS, pending); runtime.flush();
+    return { status: writes ? "APPLIED" : "ALREADY_APPLIED", rowCount: writes, writeCount: writes };
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
+  var lock = runtime.lock, acquired = false, ss = runtime.spreadsheet;
+  try {
+    lock.waitLock(30000); acquired = true;
+    var vc = TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS, lc = TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSION_LINES;
+    var vs = ss.getSheetByName(vc.SHEET), ls = ss.getSheetByName(lc.SHEET); requireCanonicalHeaders(vs, vc.HEADERS); requireCanonicalHeaders(ls, lc.HEADERS);
+    var source = transactionBootstrapSource_(ss); source.productVariants = readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.SHEET, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS);
+    var plan = buildRecipeVersionBootstrapPlan(source, activationBoundary);
+    if (plan.status !== "READY") return Object.assign({}, plan, { writeCount: 0 });
+    var existing = transactionOperationalMap_(readCanonicalTable(ss, vc.SHEET, vc.HEADERS), "RecipeVersionID"), pendingVersions = [], pendingLines = [];
+    plan.versions.forEach(function(row) { if (!existing[row.RecipeVersionID]) pendingVersions.push(row); else if (existing[row.RecipeVersionID].ProductVariantID !== row.ProductVariantID) throw new Error("RECIPE_VERSION_IDENTITY_CONFLICT"); });
+    var lineIndex = transactionOperationalMap_(readCanonicalTable(ss, lc.SHEET, lc.HEADERS), "RecipeVersionLineID");
+    plan.lines.forEach(function(row) { if (!lineIndex[row.RecipeVersionLineID]) pendingLines.push(row); });
+    var writes = transactionAppendExactRows_(vs, vc.HEADERS, pendingVersions) + transactionAppendExactRows_(ls, lc.HEADERS, pendingLines); runtime.flush();
+    return { status: writes ? "APPLIED" : "ALREADY_APPLIED", versionRows: pendingVersions.length, lineRows: pendingLines.length, writeCount: writes };
+  } finally { if (acquired) lock.releaseLock(); }
+}
+
+function recoverTransactionOperation(operationID) {
+  return transactionResponse_(function() {
+    transactionOperationalText_(operationID, "OPERATION_ID_REQUIRED", "operationID");
+    throw transactionOperationalError_("RECOVERY_NOT_IMPLEMENTED", "operationID");
+  });
 }
