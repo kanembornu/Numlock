@@ -66,6 +66,7 @@ var files = [
   '12A.Depreciation.Report.Service.js',
   '37.Inventory.Policy.Evidence.js',
   '91.Transactions.Query.js',
+  '93.Master.WritePolicy.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
   '96.Tests.Purchase.Events.Migration.Cases.js',
@@ -74,7 +75,8 @@ var files = [
   '96.Tests.CapitalEquity.Cases.js',
   '96.Tests.Balance.Foundation.Cases.js',
   '96.Tests.Finance.Cases.js',
-  '96.Tests.Inventory.Policy.Evidence.Cases.js'
+  '96.Tests.Inventory.Policy.Evidence.Cases.js',
+  '96.Tests.Master.WritePolicy.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -188,6 +190,8 @@ run('testPolicyCBalanceServiceFinalization', 'testPolicyCBalanceServiceFinalizat
 run('testCashFlowOpeningClosing', 'testCashFlowOpeningClosing()');
 run('testPolicyCIntegratedAccountingContract', 'testPolicyCIntegratedAccountingContract()');
 run('testInventoryPolicyEvidenceDiagnosticContracts', 'testInventoryPolicyEvidenceDiagnosticContracts()');
+
+run('testMasterWritePolicyContracts', 'testMasterWritePolicyContracts()');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
