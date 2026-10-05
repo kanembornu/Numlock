@@ -80,6 +80,11 @@ function testTransactionOperationalFoundationContracts(indexSource, actionSource
   check("UX3", actions.indexOf("Supplier wajib dipilih.") !== -1 && actions.indexOf("Qty harus lebih besar dari 0.") !== -1 && actions.indexOf("UOM tidak valid untuk item ini.") !== -1);
   var orderRegion = ui.slice(ui.indexOf('id="operationalOrderFields"'), ui.indexOf('id="operationalPaymentFields"'));
   check("UX4", orderRegion.indexOf("Receive Via") === -1);
-  check("UX5", ui.indexOf('id="operationalPaymentFields"') !== -1 && ui.indexOf("Receive Via") !== -1 && ui.indexOf("Start Preparing") !== -1 && ui.indexOf("Mark Ready") !== -1 && ui.indexOf("Complete") !== -1);
+  check("UX5", ui.indexOf('id="operationalPaymentFields"') !== -1 && ui.indexOf("Receive Via") !== -1 &&
+    actions.indexOf('operationalServerCall("submitOperationalOrder"') !== -1 &&
+    actions.indexOf('operationalServerCall("submitOperationalPayment"') !== -1 &&
+    actions.indexOf('operationalServerCall("submitOperationalFulfillment"') !== -1 &&
+    actions.indexOf('operationalServerCall("submitOperationalPurchase"') !== -1 &&
+    actions.indexOf('operationalServerCall("submitOperationalExpense"') !== -1);
   return { pass: pass, fail: 0, ids: ids };
 }

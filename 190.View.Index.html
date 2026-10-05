@@ -3500,29 +3500,32 @@
               <section id="operationalOrderFields" class="transaction-entry-fields" aria-labelledby="operationalOrderHeading" hidden>
                 <h3 id="operationalOrderHeading">Order details</h3>
                 <label for="operationalOrderType">Order Type</label><select id="operationalOrderType"><option value="DINE_IN">Dine In</option><option value="TAKE_AWAY">Take Away</option></select>
-                <label for="operationalProduct">Product</label><select id="operationalProduct"><option value="">Pilih item</option></select>
-                <label for="operationalOrderQty">Qty</label><input id="operationalOrderQty" type="number" min="1" step="1">
-                <button type="button">Add Line</button><button type="button">Save Order</button>
+                <label for="operationalProduct">Product</label><select id="operationalProduct" onchange="updateOperationalOrderPrice()"><option value="">Pilih item</option></select>
+                <label for="operationalOrderQty">Qty</label><input id="operationalOrderQty" type="number" min="1" step="1" value="1" oninput="updateOperationalOrderPrice()">
+                <label for="operationalSellingPrice">Selling Price</label><input id="operationalSellingPrice" type="text" readonly>
+                <p id="operationalOrderError" class="transaction-entry-error" role="alert"></p><div id="operationalOrderLines"></div><p id="operationalOrderTotal">Total: Rp 0</p>
+                <button type="button" onclick="addOperationalOrderLine()">Add Line</button><button type="button" onclick="saveOperationalOrder()">Save Order</button>
               </section>
               <section id="operationalPaymentFields" class="transaction-entry-fields" aria-labelledby="operationalPaymentHeading" hidden>
                 <h3 id="operationalPaymentHeading">Payment</h3>
                 <label for="operationalReceiveVia">Receive Via</label><select id="operationalReceiveVia"><option value="">Pilih metode pembayaran</option></select>
                 <label for="operationalPaymentAmount">Amount</label><input id="operationalPaymentAmount" type="text" readonly>
-                <button type="button">Confirm Payment</button>
+                <p id="operationalPaymentError" class="transaction-entry-error" role="alert"></p><button type="button" onclick="confirmOperationalPayment()">Confirm Payment</button>
               </section>
               <section id="operationalFulfillmentFields" class="transaction-entry-fields" aria-labelledby="operationalFulfillmentHeading" hidden>
                 <h3 id="operationalFulfillmentHeading">Fulfillment</h3>
-                <button type="button">Start Preparing</button><button type="button">Mark Ready</button><button type="button">Complete</button>
+                <p id="operationalOrderStatus"></p><button id="operationalFulfillmentNext" type="button" onclick="advanceOperationalFulfillment()"></button>
               </section>
               <section id="operationalPurchaseFields" class="transaction-entry-fields" aria-labelledby="operationalPurchaseHeading" hidden>
                 <h3 id="operationalPurchaseHeading">Purchase</h3>
                 <label for="operationalPurchaseDate">Purchase Date</label><input id="operationalPurchaseDate" type="date">
                 <label for="operationalSupplier">Supplier</label><select id="operationalSupplier"><option value="">Pilih supplier</option></select>
-                <label for="operationalPurchaseItem">Item</label><select id="operationalPurchaseItem"><option value="">Pilih item</option></select>
+                <label for="operationalPurchaseItem">Item</label><select id="operationalPurchaseItem" onchange="filterOperationalPurchaseUoms()"><option value="">Pilih item</option></select>
                 <label for="operationalPurchaseQty">Qty</label><input id="operationalPurchaseQty" type="number" min="0" step="any">
                 <label for="operationalPurchaseUom">UOM</label><select id="operationalPurchaseUom"><option value="">Pilih UOM</option></select>
                 <label for="operationalPurchasePrice">Purchase Price</label><input id="operationalPurchasePrice" type="text" inputmode="numeric">
                 <label for="operationalPurchasePaidVia">Paid Via</label><select id="operationalPurchasePaidVia"><option value="">Pilih metode pembayaran</option></select>
+                <p id="operationalPurchaseError" class="transaction-entry-error" role="alert"></p><button type="button" onclick="saveOperationalPurchase()">Save Purchase</button>
               </section>
               <section id="operationalExpenseFields" class="transaction-entry-fields" aria-labelledby="operationalExpenseHeading" hidden>
                 <h3 id="operationalExpenseHeading">Expense</h3>
@@ -3531,6 +3534,7 @@
                 <label for="operationalExpenseDescription">Description</label><input id="operationalExpenseDescription" type="text">
                 <label for="operationalExpenseAmount">Amount (IDR)</label><input id="operationalExpenseAmount" type="text" inputmode="numeric">
                 <label for="operationalExpensePaidVia">Paid Via</label><select id="operationalExpensePaidVia"><option value="">Pilih metode pembayaran</option></select>
+                <p id="operationalExpenseError" class="transaction-entry-error" role="alert"></p><button type="button" onclick="saveOperationalExpense()">Save Expense</button>
               </section>
               <section id="salesEntryFields" class="transaction-entry-fields" aria-labelledby="salesEntryHeading" hidden>
                 <h3 id="salesEntryHeading"><span><i class="fas fa-receipt" aria-hidden="true"></i> Sales details</span><span id="salesEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>

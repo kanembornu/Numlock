@@ -1,3 +1,130 @@
+    var operationalTransactionState = { authority: null, lines: [], order: null };
+
+    function operationalElement(id) { return document.getElementById(id); }
+
+    function loadOperationalTransactionAuthority()
+    {
+      google.script.run.withSuccessHandler(function(response) {
+        if (!response || response.success !== true) return;
+        operationalTransactionState.authority = response.data;
+        populateOperationalSelect("operationalProduct", response.data.products, "ProductID", "Name", "Pilih item");
+        populateOperationalSelect("operationalSupplier", response.data.suppliers, "SupplierID", "Name", "Pilih supplier");
+        populateOperationalSelect("operationalPurchaseItem", response.data.items, "ItemID", "ItemName", "Pilih item");
+        ["operationalReceiveVia", "operationalPurchasePaidVia", "operationalExpensePaidVia"].forEach(function(id) {
+          populateOperationalSelect(id, response.data.paymentMethods, "code", "label", "Pilih metode pembayaran");
+        });
+        var today = new Date().toISOString().slice(0, 10);
+        operationalElement("operationalPurchaseDate").value = today;
+        operationalElement("operationalExpenseDate").value = today;
+      }).getOperationalTransactionAuthority();
+    }
+
+    function populateOperationalSelect(id, rows, valueField, labelField, prompt)
+    {
+      var select = operationalElement(id);
+      select.innerHTML = '<option value="">' + prompt + '</option>';
+      (rows || []).forEach(function(row) {
+        var option = document.createElement("option"); option.value = row[valueField]; option.textContent = row[labelField]; select.appendChild(option);
+      });
+    }
+
+    function updateOperationalOrderPrice()
+    {
+      var authority = operationalTransactionState.authority || {}, id = operationalElement("operationalProduct").value;
+      var product = (authority.products || []).filter(function(row) { return row.ProductID === id; })[0];
+      operationalElement("operationalSellingPrice").value = product ? formatEntryCurrency(product.SellingPrice) : "";
+    }
+
+    function addOperationalOrderLine()
+    {
+      var id = operationalElement("operationalProduct").value, qty = Number(operationalElement("operationalOrderQty").value);
+      var products = operationalTransactionState.authority ? operationalTransactionState.authority.products : [];
+      var product = (products || []).filter(function(row) { return row.ProductID === id; })[0];
+      if (!product) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
+      if (!(qty > 0)) { operationalElement("operationalOrderError").innerText = "Qty harus lebih besar dari 0."; return; }
+      operationalTransactionState.lines.push({ productID: id, qty: qty, name: product.Name, price: product.SellingPrice });
+      renderOperationalOrderLines();
+    }
+
+    function renderOperationalOrderLines()
+    {
+      var total = operationalTransactionState.lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0);
+      operationalElement("operationalOrderLines").textContent = operationalTransactionState.lines.map(function(line) { return line.name + " × " + line.qty; }).join(", ");
+      operationalElement("operationalOrderTotal").textContent = "Total: " + formatEntryCurrency(total);
+    }
+
+    function operationalServerCall(method, payload, onSuccess, errorElement)
+    {
+      google.script.run.withSuccessHandler(function(response) {
+        if (!response || response.success !== true) { errorElement.innerText = response && response.error ? response.error.message : "Transaction could not be saved."; return; }
+        errorElement.innerText = ""; onSuccess(response.data);
+      }).withFailureHandler(function() { errorElement.innerText = "Transaction could not be saved."; })[method](payload);
+    }
+
+    function saveOperationalOrder()
+    {
+      if (!operationalTransactionState.lines.length) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
+      operationalServerCall("submitOperationalOrder", { orderType: operationalElement("operationalOrderType").value,
+        lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, qty: line.qty }; }) }, function(order) {
+        operationalTransactionState.order = order; renderOperationalOrderStatus();
+        operationalElement("operationalPaymentFields").hidden = false; operationalElement("operationalFulfillmentFields").hidden = false;
+        operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal);
+      }, operationalElement("operationalOrderError"));
+    }
+
+    function renderOperationalOrderStatus()
+    {
+      var order = operationalTransactionState.order;
+      operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.PaymentStatus + " · " + order.FulfillmentStatus + " · " + formatEntryCurrency(order.OrderTotal);
+      var actions = { OPEN: ["Start Preparing", "PREPARING"], PREPARING: ["Mark Ready", "READY"], READY: ["Complete", "COMPLETED"] };
+      var next = actions[order.FulfillmentStatus], button = operationalElement("operationalFulfillmentNext");
+      button.hidden = !next; if (next) { button.textContent = next[0]; button.dataset.next = next[1]; }
+    }
+
+    function confirmOperationalPayment()
+    {
+      var order = operationalTransactionState.order, via = operationalElement("operationalReceiveVia").value;
+      if (!via) { operationalElement("operationalPaymentError").innerText = "Metode pembayaran wajib dipilih."; return; }
+      operationalServerCall("submitOperationalPayment", { orderID: order.OrderID, receiveVia: via,
+        requestKey: order.OrderID + "-PAYMENT", amount: order.OrderTotal }, function(result) {
+        operationalTransactionState.order = result.order; renderOperationalOrderStatus();
+      }, operationalElement("operationalPaymentError"));
+    }
+
+    function advanceOperationalFulfillment()
+    {
+      var order = operationalTransactionState.order, next = operationalElement("operationalFulfillmentNext").dataset.next;
+      operationalServerCall("submitOperationalFulfillment", { orderID: order.OrderID, next: next }, function(updated) {
+        operationalTransactionState.order = updated; renderOperationalOrderStatus();
+      }, operationalElement("operationalOrderError"));
+    }
+
+    function filterOperationalPurchaseUoms()
+    {
+      var id = operationalElement("operationalPurchaseItem").value, authority = operationalTransactionState.authority || {};
+      var rows = (authority.conversions || []).filter(function(row) { return row.ItemID === id; });
+      populateOperationalSelect("operationalPurchaseUom", rows, "PurchaseUOM", "PurchaseUOM", "Pilih UOM");
+    }
+
+    function saveOperationalPurchase()
+    {
+      var payload = { purchaseDate: operationalElement("operationalPurchaseDate").value, supplierID: operationalElement("operationalSupplier").value,
+        itemID: operationalElement("operationalPurchaseItem").value, qty: Number(operationalElement("operationalPurchaseQty").value),
+        purchaseUOM: operationalElement("operationalPurchaseUom").value, purchasePrice: Number(operationalElement("operationalPurchasePrice").value),
+        paidVia: operationalElement("operationalPurchasePaidVia").value };
+      var error = validateOperationalTransactionInput(payload); if (error) { operationalElement("operationalPurchaseError").innerText = error; return; }
+      operationalServerCall("submitOperationalPurchase", payload, function() { operationalElement("operationalPurchaseError").innerText = "Purchase saved."; }, operationalElement("operationalPurchaseError"));
+    }
+
+    function saveOperationalExpense()
+    {
+      var payload = { date: operationalElement("operationalExpenseDate").value, category: operationalElement("operationalExpenseCategory").value,
+        description: operationalElement("operationalExpenseDescription").value, amount: Number(operationalElement("operationalExpenseAmount").value),
+        paidVia: operationalElement("operationalExpensePaidVia").value };
+      if (!payload.paidVia) { operationalElement("operationalExpenseError").innerText = "Metode pembayaran wajib dipilih."; return; }
+      operationalServerCall("submitOperationalExpense", payload, function() { operationalElement("operationalExpenseError").innerText = "Expense saved."; }, operationalElement("operationalExpenseError"));
+    }
+
     function validateOperationalTransactionInput(input)
     {
       var value = input || {};
