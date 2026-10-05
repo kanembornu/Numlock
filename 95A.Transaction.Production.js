@@ -5,7 +5,7 @@ var TRANSACTION_PRODUCTION_CONTRACT = Object.freeze({
   ORDERS: Object.freeze({ SHEET: "Orders", HEADERS: Object.freeze(["OrderID", "OrderNumber", "OrderType", "PaymentStatus", "FulfillmentStatus", "OrderTotal", "HppTotalSnapshot", "CreatedAt", "CreatedBy", "PreparingAt", "ReadyAt", "CompletedAt", "UpdatedAt", "UpdatedBy"]) }),
   ORDER_LINES: Object.freeze({ SHEET: "OrderLines", HEADERS: Object.freeze(["OrderLineID", "OrderID", "ProductID", "ProductVariantID", "Tipe", "Qty", "SellingPriceSnapshot", "RecipeVersionID", "UnitHppSnapshot", "LineTotal", "LineHpp"]) }),
   PAYMENTS: Object.freeze({ SHEET: "Payments", HEADERS: Object.freeze(["PaymentID", "OrderID", "RequestKey", "ReceiveVia", "AccountCode", "Amount", "PaidAt", "PaidBy", "Status"]) }),
-  OPERATIONS: Object.freeze({ SHEET: "TransactionOperations", HEADERS: Object.freeze(["OperationID", "OperationType", "BusinessID", "RequestKey", "State", "PayloadHash", "CreatedAt", "UpdatedAt", "LastError"]) })
+  OPERATIONS: Object.freeze({ SHEET: "TransactionOperations", HEADERS: Object.freeze(["OperationID", "OperationType", "BusinessID", "RequestKey", "State", "PayloadHash", "OperationPlan", "CreatedAt", "UpdatedAt", "LastError"]) })
 });
 
 function transactionVariantType_(value) {
@@ -196,12 +196,12 @@ function transactionPayloadHash_(value) {
   return transactionStableBootstrapId_("H-", [JSON.stringify(canonical(value))]);
 }
 function transactionOperationID_(type, requestKey) { return transactionStableBootstrapId_("TXOP-", [type, requestKey]); }
-function transactionOperation_(type, businessID, requestKey, hash, now) { return { OperationID: transactionOperationID_(type, requestKey), OperationType: type,
-  BusinessID: businessID, RequestKey: requestKey, State: "IN_PROGRESS", PayloadHash: hash, CreatedAt: now, UpdatedAt: now, LastError: "" }; }
-function transactionResolveOperation_(repository, type, requestKey, hash, businessID, now) {
+function transactionOperation_(type, businessID, requestKey, hash, plan, now) { return { OperationID: transactionOperationID_(type, requestKey), OperationType: type,
+  BusinessID: businessID, RequestKey: requestKey, State: "IN_PROGRESS", PayloadHash: hash, OperationPlan: JSON.stringify(plan), CreatedAt: now, UpdatedAt: now, LastError: "" }; }
+function transactionResolveOperation_(repository, type, requestKey, hash, businessID, plan, now) {
   var existing = repository.findOperation(type, requestKey);
-  if (existing) { if (existing.PayloadHash !== hash || existing.BusinessID !== businessID) throw transactionOperationalError_("OPERATION_PAYLOAD_CONFLICT", "requestKey"); return existing; }
-  return repository.createOperation(transactionOperation_(type, businessID, requestKey, hash, now));
+  if (existing) { if (existing.PayloadHash !== hash || existing.BusinessID !== businessID || existing.OperationPlan !== JSON.stringify(plan)) throw transactionOperationalError_("OPERATION_PAYLOAD_CONFLICT", "requestKey"); return existing; }
+  return repository.createOperation(transactionOperation_(type, businessID, requestKey, hash, plan, now));
 }
 function transactionCommitOperation_(repository, operation, now) { operation.State = "COMMITTED"; operation.UpdatedAt = now; operation.LastError = ""; return repository.updateOperation(operation); }
 function transactionStableBusinessID_(prefix) { return transactionStableBootstrapId_(prefix, Array.prototype.slice.call(arguments, 1)); }
@@ -210,11 +210,12 @@ function createDurableOperationalOrder_(payload, authority, runtime, repository)
   var requestKey = transactionOperationalText_(payload && payload.requestKey, "REQUEST_KEY_REQUIRED", "requestKey");
   var normalized = { orderType: payload.orderType, lines: (payload.lines || []).map(function(line) { return { productID: line.productID, productVariantID: line.productVariantID, qty: line.qty }; }) };
   var hash = transactionPayloadHash_(normalized), orderID = transactionStableBusinessID_("ORD-", "ORDER_CREATE", requestKey), now = runtime.now();
-  var operation = transactionResolveOperation_(repository, "ORDER_CREATE", requestKey, hash, orderID, now);
-  var committed = repository.findOrder(orderID); if (operation.State === "COMMITTED") { if (!committed) throw new Error("COMMITTED_ORDER_MISSING"); return committed; }
-  var deterministic = { now: function() { return operation.CreatedAt; }, uuid: function() { return orderID.slice(4); }, orderSequence: function() { return orderID.slice(4); }, actor: runtime.actor };
+  var deterministic = { now: function() { return now; }, uuid: function() { return orderID.slice(4); }, orderSequence: function() { return orderID.slice(4); }, actor: runtime.actor };
   var order = prepareOperationalOrder(normalized, authority, deterministic); order.OrderID = orderID; order.OrderNumber = orderID;
   order.Lines.forEach(function(line, index) { line.OrderLineID = transactionStableBusinessID_("OL-", orderID, String(index + 1)); });
+  var operation = transactionResolveOperation_(repository, "ORDER_CREATE", requestKey, hash, orderID, order, now);
+  var committed = repository.findOrder(orderID); if (operation.State === "COMMITTED") { if (!committed) throw new Error("COMMITTED_ORDER_MISSING"); return committed; }
+  order = JSON.parse(operation.OperationPlan);
   repository.createOrder(order);
   var readback = repository.findOrder(orderID), expected = transactionOperationalMap_(order.Lines, "OrderLineID"), actual = transactionOperationalMap_(readback && readback.Lines, "OrderLineID");
   if (!readback || Object.keys(actual).length !== order.Lines.length || Object.keys(expected).some(function(id) { return !actual[id] || actual[id].ProductVariantID !== expected[id].productVariantID || Number(actual[id].SellingPriceSnapshot) !== Number(expected[id].sellingPriceSnapshot) || actual[id].RecipeVersionID !== expected[id].recipeVersionID; })) throw new Error("ORDER_READBACK_INCOMPLETE");
@@ -226,7 +227,9 @@ function transactionFinanceSettlementExists_(ss, paymentID) {
 }
 function createDurableOperationalPayment_(orderID, payload, runtime, repository) {
   var requestKey = transactionOperationalText_(payload && payload.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"), hash = transactionPayloadHash_({ orderID: orderID, receiveVia: payload.receiveVia, amount: payload.amount });
-  var paymentID = transactionStableBusinessID_("PAY-", "PAYMENT", requestKey), operation = transactionResolveOperation_(repository, "PAYMENT", requestKey, hash, paymentID, runtime.now());
+  var paymentID = transactionStableBusinessID_("PAY-", "PAYMENT", requestKey), plan = { orderID: orderID, paymentID: paymentID, requestKey: requestKey,
+    receiveVia: payload.receiveVia, amount: payload.amount }, operation = transactionResolveOperation_(repository, "PAYMENT", requestKey, hash, paymentID, plan, runtime.now());
+  plan = JSON.parse(operation.OperationPlan); orderID = plan.orderID; payload = { requestKey: plan.requestKey, receiveVia: plan.receiveVia, amount: plan.amount };
   var order = repository.findOrder(orderID); if (!order) throw transactionOperationalError_("ORDER_NOT_FOUND", "OrderID");
   var existing = repository.findPaymentByRequest(requestKey);
   if (operation.State === "COMMITTED") return { payment: existing, order: order, idempotent: true, writeCount: 0 };
@@ -275,7 +278,12 @@ function submitOperationalPurchase(payload) { return transactionResponse_(functi
     var sheet = r.spreadsheet.getSheetByName(PURCHASE_EVENT_POLICY.sheet); requireCanonicalHeaders(sheet, PURCHASE_EVENT_POLICY.headers);
     sheet.getRange(sheet.getLastRow() + 1, 1, 1, PURCHASE_EVENT_POLICY.headers.length).setValues([PURCHASE_EVENT_POLICY.headers.map(function(h) { return row[h]; })]);
     SpreadsheetApp.flush();
-    return Object.assign(projectPurchaseEventTransaction_(row), { paymentStatus: "PAID", receiptStatus: "RECEIVED", inventoryWrites: 0, payableWrites: 0 });
+    var purchaseRuntime = purchaseEventProductionRuntime_(r.spreadsheet, r.lock, expenses, r.now());
+    var accounting = postPolicyCPurchaseEvent_(row, purchaseRuntime);
+    if (["POSTED", "ALREADY_POSTED"].indexOf(accounting.status) === -1) throw transactionOperationalError_("PURCHASE_ACCOUNTING_BLOCKED", "expenseItemID");
+    row = purchaseRuntime.readPurchaseEvent(row.EventID) || row;
+    return Object.assign(projectPurchaseEventTransaction_(row), { paymentStatus: "PAID", receiptStatus: "RECEIVED", accountingStatus: row.AccountingStatus,
+      inventoryWrites: 0, payableWrites: 0 });
   } finally { if (acquired) r.lock.releaseLock(); }
 }); }
 function submitOperationalExpense(payload) {
@@ -301,9 +309,11 @@ function runTransactionProductionPreflightDiagnostic() {
       eligibleProductVariantCount: variantPlan.planCount, blockedCount: variantPlan.blockedCount, blockers: variantPlan.blocked },
     recipeVersionReadiness: { existingRecipeVersionCount: schema.RECIPE_VERSIONS.businessRowCount, variantsRequiringBootstrap: recipePlan.planCount,
       bootstrapPlanCount: recipePlan.planCount, bootstrapBlockedCount: recipePlan.blockedCount, bootstrapReady: recipePlan.status === "READY", blockers: recipePlan.blocked },
-    operationReadiness: { schema: schema.OPERATIONS, recoveryEntrypointPresent: typeof recoverTransactionOperation === "function" },
-    purchaseReadiness: { ready: false, reason: "PURCHASEEVENT_BUSINESS_CONTRACT_CONFLICT" },
-    expenseReadiness: { ready: true, authority: "ExpenseItems.ID_Ops" },
+    operationReadiness: { schema: schema.OPERATIONS, recoveryEntrypointPresent: typeof recoverTransactionOperation === "function",
+      persistedPlanAuthority: TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS.indexOf("OperationPlan") !== -1 },
+    purchaseReadiness: { ready: typeof normalizeCanonicalTransactionPurchase_ === "function" && typeof postPolicyCPurchaseEvent_ === "function",
+      authority: "ExpenseItems.ID_Ops -> EXPENSE_PURCHASE_POLICY -> ItemID", evidenceRequired: false, attestationRequired: false },
+    expenseReadiness: { ready: typeof submitCanonicalTransaction === "function", authority: "ExpenseItems.ID_Ops", paidAtRecognition: true },
     financePreimage: { receiveViaAuthorityReady: methods.length > 0, requiredCashAccountsReady: methods.length === CASH_FOUNDATION_POLICY.ACCOUNT_CODES.length,
       orderPaymentSettlementSourceReady: typeof runCashSettleAndPersist === "function", legacySalesPathPresent: !!ss.getSheetByName("tabsal"), paymentCorrelation: "PaymentID" } };
 }
@@ -380,8 +390,9 @@ function recoverTransactionOperation(operationID) {
       var operation = matches[0];
       if (operation.State === "COMMITTED") return operation;
       if (operation.OperationType === "ORDER_CREATE") {
+        var plan = JSON.parse(operation.OperationPlan); r.repository.createOrder(plan);
         var order = r.repository.findOrder(operation.BusinessID);
-        if (!order || !order.Lines.length) throw transactionOperationalError_("RECOVERY_RETRY_WITH_ORIGINAL_PAYLOAD_REQUIRED", "operationID");
+        if (!order || order.Lines.length !== plan.Lines.length) throw transactionOperationalError_("ORDER_RECOVERY_INCOMPLETE", "operationID");
         transactionCommitOperation_(r.repository, operation, r.now()); return operation;
       }
       if (operation.OperationType === "PAYMENT") {
