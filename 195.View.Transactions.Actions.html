@@ -28,21 +28,32 @@
       });
     }
 
+    function updateOperationalVariants()
+    {
+      var authority = operationalTransactionState.authority || {}, productID = operationalElement("operationalProduct").value;
+      var variants = (authority.productVariants || []).filter(function(row) { return row.ProductID === productID; });
+      populateOperationalSelect("operationalProductVariant", variants, "ProductVariantID", "Tipe", "Pilih variant");
+      if (variants.length === 1) operationalElement("operationalProductVariant").value = variants[0].ProductVariantID;
+      updateOperationalOrderPrice();
+    }
+
     function updateOperationalOrderPrice()
     {
-      var authority = operationalTransactionState.authority || {}, id = operationalElement("operationalProduct").value;
-      var product = (authority.products || []).filter(function(row) { return row.ProductID === id; })[0];
-      operationalElement("operationalSellingPrice").value = product ? formatEntryCurrency(product.SellingPrice) : "";
+      var authority = operationalTransactionState.authority || {}, variantID = operationalElement("operationalProductVariant").value;
+      var variant = (authority.productVariants || []).filter(function(row) { return row.ProductVariantID === variantID; })[0];
+      operationalElement("operationalSellingPrice").value = variant && variant.SellingPrice ? formatEntryCurrency(variant.SellingPrice) : "Server validated at save";
     }
 
     function addOperationalOrderLine()
     {
-      var id = operationalElement("operationalProduct").value, qty = Number(operationalElement("operationalOrderQty").value);
-      var products = operationalTransactionState.authority ? operationalTransactionState.authority.products : [];
-      var product = (products || []).filter(function(row) { return row.ProductID === id; })[0];
+      var id = operationalElement("operationalProduct").value, variantID = operationalElement("operationalProductVariant").value;
+      var qty = Number(operationalElement("operationalOrderQty").value), authority = operationalTransactionState.authority || {};
+      var product = (authority.products || []).filter(function(row) { return row.ProductID === id; })[0];
+      var variant = (authority.productVariants || []).filter(function(row) { return row.ProductVariantID === variantID && row.ProductID === id; })[0];
       if (!product) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
+      if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant."; return; }
       if (!(qty > 0)) { operationalElement("operationalOrderError").innerText = "Qty harus lebih besar dari 0."; return; }
-      operationalTransactionState.lines.push({ productID: id, qty: qty, name: product.Name, price: product.SellingPrice });
+      operationalTransactionState.lines.push({ productID: id, productVariantID: variantID, qty: qty, name: product.Name + " · " + (variant.Tipe === "HOT" ? "Hot" : "Cold"), price: Number(variant.SellingPrice || 0) });
       renderOperationalOrderLines();
     }
 
@@ -65,7 +76,7 @@
     {
       if (!operationalTransactionState.lines.length) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
       operationalServerCall("submitOperationalOrder", { orderType: operationalElement("operationalOrderType").value,
-        lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, qty: line.qty }; }) }, function(order) {
+        lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, productVariantID: line.productVariantID, qty: line.qty }; }) }, function(order) {
         operationalTransactionState.order = order; renderOperationalOrderStatus();
         operationalElement("operationalPaymentFields").hidden = false; operationalElement("operationalFulfillmentFields").hidden = false;
         operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal);

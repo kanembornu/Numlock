@@ -3500,7 +3500,8 @@
               <section id="operationalOrderFields" class="transaction-entry-fields" aria-labelledby="operationalOrderHeading" hidden>
                 <h3 id="operationalOrderHeading">Order details</h3>
                 <label for="operationalOrderType">Order Type</label><select id="operationalOrderType"><option value="DINE_IN">Dine In</option><option value="TAKE_AWAY">Take Away</option></select>
-                <label for="operationalProduct">Product</label><select id="operationalProduct" onchange="updateOperationalOrderPrice()"><option value="">Pilih item</option></select>
+                <label for="operationalProduct">Product</label><select id="operationalProduct" onchange="updateOperationalVariants()"><option value="">Pilih item</option></select>
+                <label for="operationalProductVariant">Variant</label><select id="operationalProductVariant" onchange="updateOperationalOrderPrice()"><option value="">Pilih variant</option></select>
                 <label for="operationalOrderQty">Qty</label><input id="operationalOrderQty" type="number" min="1" step="1" value="1" oninput="updateOperationalOrderPrice()">
                 <label for="operationalSellingPrice">Selling Price</label><input id="operationalSellingPrice" type="text" readonly>
                 <p id="operationalOrderError" class="transaction-entry-error" role="alert"></p><div id="operationalOrderLines"></div><p id="operationalOrderTotal">Total: Rp 0</p>
