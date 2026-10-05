@@ -89,3 +89,70 @@ function testTransactionCrashRecoveryExecution() {
   var final = secondRepo.state(); [final.payments.length === 1, Object.keys(f).length === 1, final.orders[0].PaymentStatus === "PAID", final.operations[0].State === "COMMITTED"].forEach(function(v) { if (!v) throw new Error("PC_EXEC"); passPC++; });
   return { OC: { total: 8, pass: passOC, fail: 8 - passOC, simulated: true }, PC: { total: 10, pass: passPC, fail: 10 - passPC, simulated: true } };
 }
+
+function transactionFixtureSpreadsheet_(initial) {
+  var sheets = Object.create(null);
+  function sheet(name, values) {
+    var rows = (values || []).map(function(r) { return r.slice(); });
+    return { getName: function() { return name; }, getLastRow: function() { return rows.length; }, getLastColumn: function() { return rows.length ? rows[0].length : 0; },
+      getMaxRows: function() { return Math.max(1, rows.length); }, getDataRange: function() { return { getValues: function() { return rows.map(function(r) { return r.slice(); }); } }; },
+      getRange: function(row, col, height, width) { return { getValues: function() { return rows.slice(row - 1, row - 1 + height).map(function(r) { return r.slice(col - 1, col - 1 + width); }); },
+        getFormulas: function() { return Array.from({ length: height }, function() { return Array(width).fill(""); }); }, getNotes: function() { return Array.from({ length: height }, function() { return Array(width).fill(""); }); },
+        setValues: function(input) { input.forEach(function(r, i) { while (rows.length < row + i) rows.push([]); r.forEach(function(v, j) { rows[row - 1 + i][col - 1 + j] = v; }); }); return this; } }; },
+      values: rows };
+  }
+  Object.keys(initial || {}).forEach(function(name) { sheets[name] = sheet(name, initial[name]); });
+  return { getSheetByName: function(name) { return sheets[name] || null; }, insertSheet: function(name) { if (sheets[name]) throw new Error("COLLISION"); sheets[name] = sheet(name, []); return sheets[name]; },
+    fixtureSheet: function(name) { return sheets[name]; } };
+}
+function transactionFixtureTable_(headers, rows) { return [headers.slice()].concat((rows || []).map(function(row) { return headers.map(function(h) { return row[h] === undefined ? "" : row[h]; }); })); }
+function transactionFixtureLock_() { return { waitLock: function() {}, releaseLock: function() {} }; }
+
+function testTransactionExecutorFixtures() {
+  var pass = 0, boundary = new Date("2026-10-05T00:00:00Z"), base = {}, key;
+  Object.keys(TRANSACTION_PRODUCTION_CONTRACT).forEach(function(k) { var c = TRANSACTION_PRODUCTION_CONTRACT[k]; if (k !== "ORDERS") base[c.SHEET] = [c.HEADERS.slice()]; });
+  var ss = transactionFixtureSpreadsheet_(base), runtime = { spreadsheet: ss, lock: transactionFixtureLock_(), flush: function() {} };
+  var created = executeTransactionSchemaActivationWithRuntime(runtime); if (created.status === "ACTIVATED" && created.createdSheets.indexOf("Orders") !== -1) pass++;
+  var retry = executeTransactionSchemaActivationWithRuntime(runtime); if (retry.status === "ALREADY_READY" && retry.writeCount === 0) pass++;
+  if (ss.fixtureSheet("Orders").values.length === 1) pass++;
+  var malformed = Object.assign({}, base); malformed.Orders = [["Wrong"]];
+  if (executeTransactionSchemaActivationWithRuntime({ spreadsheet: transactionFixtureSpreadsheet_(malformed), lock: transactionFixtureLock_(), flush: function() {} }).status === "BLOCKED") pass++;
+  var products = [{ ID_Prod: "P1", Produk: "Coffee", Kategori: "Drink", Kind: "Menu", RevenueAccountCode: "4000", COGSAccountCode: "5000", IsActive: true }];
+  var pricing = [{ ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: boundary, EffectiveTo: "", HPP: 2, Harga: 20, IsActive: true }];
+  var recipes = [{ ID_Recipe: "R1", ID_Prod: "P1", Tipe: "Hot", ID_Ingredient: "I1", UsageQty: 1, IsActive: true }];
+  var items = [{ ItemID: "I1", ItemName: "Beans", Classification: "RAW", BaseUOM: "gr", EffectiveFrom: boundary, EffectiveTo: "", IsActive: true, SourceIngredientID: "I1", CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }];
+  var costs = [{ ID: "C1", ItemID: "I1", StandardCost: 2, EffectiveFrom: boundary, EffectiveTo: "", IsActive: true, CreatedAt: "", CreatedBy: "", UpdatedAt: "", UpdatedBy: "" }];
+  var data = { Products: transactionFixtureTable_(PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS, products), ProductPricing: transactionFixtureTable_(PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS, pricing),
+    COGSRecipes: transactionFixtureTable_(PRODUCTS_DOMAIN_CONTRACT.RECIPE_HEADERS, recipes), InventoryItems: transactionFixtureTable_(BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS, items),
+    RecipeStandardCost: transactionFixtureTable_(RECIPE_STANDARD_COST_CONTRACT.HEADERS, costs), ProductVariants: [TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS.slice()],
+    RecipeVersions: [TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS.slice()], RecipeVersionLines: [TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSION_LINES.HEADERS.slice()] };
+  var bs = transactionFixtureSpreadsheet_(data), br = { spreadsheet: bs, lock: transactionFixtureLock_(), flush: function() {} };
+  var pv = executeProductVariantBootstrapWithRuntime(br, boundary), pvRetry = executeProductVariantBootstrapWithRuntime(br, boundary);
+  if (pv.status === "APPLIED" && pv.rowCount === 1 && pvRetry.status === "ALREADY_APPLIED" && pvRetry.writeCount === 0) pass++;
+  var rv = executeRecipeVersionBootstrapWithRuntime(br, boundary), rvRetry = executeRecipeVersionBootstrapWithRuntime(br, boundary);
+  if (rv.status === "APPLIED" && rv.versionRows === 1 && rv.lineRows === 1 && rvRetry.status === "ALREADY_APPLIED" && rvRetry.writeCount === 0) pass++;
+  var versionRows = readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS);
+  if (versionRows[0].EffectiveFrom.getTime() === boundary.getTime() && versionRows[0].ProductVariantID) pass++;
+  if (JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("tabsal")) pass++;
+  return { total: 8, pass: pass, fail: 8 - pass };
+}
+
+function testTransactionPurchaseExpenseBehavioralFixtures() {
+  var pass = 0, expenses = [{ ID_Ops: "OSK01", Item: "Milk", Kategori: "Supply", Kind: "Variable", Group: "HPP", AccountCode: "6210", IsActive: true }];
+  var authority = { expenses: expenses, items: [{ ItemID: "ING-011", BaseUOM: "ml", IsActive: true }], suppliers: [{ SupplierID: "S1", IsActive: true }],
+    paymentMethods: [{ code: "1000", AccountCode: "1000", IsActive: true }], conversions: [{ ConversionID: "CV1", ItemID: "ING-011", PurchaseUOM: "liter", BaseUOM: "ml", FactorToBase: 1000, EffectiveFrom: "2026-01-01", IsActive: true }] };
+  var request = normalizeCanonicalTransactionPurchase_({ requestKey: "purchase-0001", expenseItemID: "OSK01", supplierID: "S1", purchaseDate: "2026-10-05",
+    qty: 2, purchaseUOM: "liter", purchasePrice: 100000, paidVia: "1000" }, authority);
+  var event = buildCanonicalTransactionPurchaseEvent_(request, expenses[0], { actor: "test", at: "2026-10-05T00:00:00Z" });
+  var journal = buildPolicyCPurchaseJournal(event, []);
+  [request.itemID === "ING-011", request.baseQty === 2000, request.paymentStatus === "PAID" && request.receiptStatus === "RECEIVED",
+    event.Attestation === "" && event.ExternalRef === "" && event.SupplierSource === "", journal.status === "READY",
+    journal.rows.some(function(r) { return r.AccountCode === "6210" && r.Debit === 100000; }), journal.rows.some(function(r) { return r.AccountCode === "1000" && r.Credit === 100000; }),
+    !journal.rows.some(function(r) { return r.AccountCode === "2000" || r.AccountCode === "1100"; }), event.ReceiptPlan === "null"].forEach(function(v) { if (!v) throw new Error("PURCHASE_BEHAVIOR"); pass++; });
+  var expense = prepareCanonicalExpenseEntry({ expenseItemId: "OSS01", amount: 5000 }, { timestamp: new Date(),
+    expenseItems: [{ ID_Ops: "OSS01", Item: "Rent", Kategori: "Fixed", Kind: "Expense", Group: "Overhead", AccountCode: "6100", IsActive: true }],
+    accounts: [{ AccountCode: "6100", IsActive: true }] });
+  [expense.expenseItemId === "OSS01", expense.amount === 5000, submitOperationalExpense.toString().indexOf("cashAccountCode") !== -1,
+    submitOperationalExpense.toString().indexOf("payable") === -1, submitOperationalExpense.toString().indexOf("description") === -1].forEach(function(v) { if (!v) throw new Error("EXPENSE_BEHAVIOR"); pass++; });
+  return { purchase: { total: 9, pass: 9, fail: 0 }, expense: { total: 5, pass: 5, fail: 0 }, total: 14, pass: pass, fail: 14 - pass };
+}
