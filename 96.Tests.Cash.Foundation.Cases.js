@@ -951,6 +951,27 @@ function testCashSettlementPersistence() {
     "exact retry ALREADY_POSTED COMPLETE");
   check(resultRetry.writeCount === 0, "exact retry writeCount 0");
 
+  // --- Canonical Order settlement: Payment recognizes Revenue + immutable HPP exactly once ---
+  var canonicalOrder = { OrderID: "ORD-1", OrderTotal: 75000, HppTotalSnapshot: 3000 };
+  var orderSettlement = cashFoundationSettlement({ SettlementID: "CSH-SAL-PAY-1", Direction: "INFLOW", AccountCode: "1000",
+    SourceType: "SALE_SETTLEMENT", SourceID: "PAY-1", RelatedTransactionType: "Order",
+    RelatedTransactionID: "ORD-1", Amount: 75000 });
+  var orderRuntime = mockCashRuntime(accounts, transactions, purchaseEvents);
+  var orderResult = cashSettleAndPersist({ settlement: orderSettlement, order: canonicalOrder }, orderRuntime);
+  check(orderResult.status === "POSTED" && orderResult.writeCount === 5, "canonical Order settlement POSTED");
+  check(orderRuntime.ledger.filter(function(row) { return row.AccountCode === "4000" && Number(row.Credit) === 75000; }).length === 1,
+    "canonical Order revenue recognized once");
+  check(orderRuntime.ledger.filter(function(row) { return row.AccountCode === "5000" && Number(row.Debit) === 3000; }).length === 1 &&
+    orderRuntime.ledger.filter(function(row) { return row.AccountCode === "1100" && Number(row.Credit) === 3000; }).length === 1,
+    "canonical Order immutable HPP snapshot recognized once");
+  var orderRetry = cashSettleAndPersist({ settlement: orderSettlement, order: canonicalOrder }, orderRuntime);
+  check(orderRetry.status === "ALREADY_POSTED" && orderRetry.writeCount === 0 && orderRuntime.ledger.length === 4,
+    "canonical Order Payment retry writes nothing");
+  var missingOrder = cashSettleAndPersist({ settlement: Object.assign({}, orderSettlement,
+    { SettlementID: "CSH-SAL-PAY-2", SourceID: "PAY-2" }) }, mockCashRuntime(accounts, transactions, purchaseEvents));
+  check(missingOrder.status === "REFUSED" && missingOrder.writeCount === 0,
+    "canonical Order settlement requires authoritative Order snapshot");
+
   // --- 5. Sale identity conflict: same SettlementID + different Amount ---
   var rt5 = mockCashRuntime(accounts, transactions, purchaseEvents);
   var saleOrig = cashFoundationSettlement({ SettlementID: "P-CONF-1", Direction: "INFLOW", AccountCode: "1000",
@@ -1583,6 +1604,7 @@ function cashFoundationTestAccounts() {
     { AccountCode: "1100", AccountName: "Inventory Asset", AccountType: "Asset", StatementGroup: "Current Assets", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "2000", AccountName: "Accounts Payable", AccountType: "Liability", StatementGroup: "Current Liabilities", CashFlowGroup: "Operating", NormalBalance: "CREDIT", IsActive: true },
     { AccountCode: "4000", AccountName: "Sales Revenue", AccountType: "Revenue", StatementGroup: "Operating Revenue", CashFlowGroup: "Operating", NormalBalance: "CREDIT", IsActive: true },
+    { AccountCode: "5000", AccountName: "Cost of Goods Sold", AccountType: "Expense", StatementGroup: "Cost of Goods Sold", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true },
     { AccountCode: "6100", AccountName: "Salary Expense", AccountType: "Expense", StatementGroup: "Personnel Expense", CashFlowGroup: "Operating", NormalBalance: "DEBIT", IsActive: true }
   ];
 }

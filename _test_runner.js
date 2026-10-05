@@ -68,6 +68,8 @@ var files = [
   '91.Transactions.Query.js',
   '93.Master.WritePolicy.js',
   '94.Supplier.Master.js',
+  '95.Transaction.Operational.js',
+  '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -195,6 +197,7 @@ run('testInventoryPolicyEvidenceDiagnosticContracts', 'testInventoryPolicyEviden
 
 run('testMasterWritePolicyContracts', 'testMasterWritePolicyContracts()');
 run('testSupplierMasterContracts', 'testSupplierMasterContracts()');
+run('testTransactionOperationalFoundationContracts', 'testTransactionOperationalFoundationContracts(_htmlIndex, _htmlActions)');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

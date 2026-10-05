@@ -1,3 +1,13 @@
+    function validateOperationalTransactionInput(input)
+    {
+      var value = input || {};
+      if (!String(value.supplierID || "").trim()) return "Supplier wajib dipilih.";
+      if (!(Number(value.qty) > 0)) return "Qty harus lebih besar dari 0.";
+      if (!String(value.purchaseUOM || "").trim()) return "UOM tidak valid untuk item ini.";
+      if (!String(value.paidVia || "").trim()) return "Metode pembayaran wajib dipilih.";
+      return "";
+    }
+
     function submitTransactionEntry(event)
     {
       event.preventDefault();

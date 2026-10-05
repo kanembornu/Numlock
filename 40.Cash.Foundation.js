@@ -188,12 +188,13 @@ function cashTransactionEffectAlreadyPosted(rows, transactionId, accountCode, si
   });
 }
 
-function cashEffectiveSaleSettlementAggregate(settlements, balanceLedgerRows, relatedTransactionId, excludeSettlementId) {
+function cashEffectiveSaleSettlementAggregate(settlements, balanceLedgerRows, relatedTransactionId, excludeSettlementId, relatedType) {
   var aggregate = 0;
   var excludeId = String(excludeSettlementId || "").trim();
+  relatedType = String(relatedType || "Sales").trim();
   (settlements || []).forEach(function(s) {
     if (excludeId && String(s.SettlementID || "").trim() === excludeId) return;
-    if (String(s.RelatedTransactionType || "").trim() !== "Sales") return;
+    if (String(s.RelatedTransactionType || "").trim() !== relatedType) return;
     if (String(s.RelatedTransactionID || "").trim() !== String(relatedTransactionId || "").trim()) return;
     if (!isCanonicalActive(s.IsActive)) return;
     if (String(s.Status || "").trim() !== "POSTED") return;
@@ -233,21 +234,21 @@ function buildCashPostingCandidate(settlement, context) {
         "CASH_TRANSFER", sourceType, sourceId)
     ];
   } else if (direction === "INFLOW") {
-    var sale = cashTransactionById(context.transactions, transactionId, "Sales");
-    if (!sale || String(settlement.RelatedTransactionType || "") !== "Sales" ||
-        sale.paymentTiming !== "AT_RECOGNITION") {
+    var relatedSaleType = String(settlement.RelatedTransactionType || "").trim();
+    var canonicalOrder = relatedSaleType === "Order" ? context.order : null;
+    var sale = canonicalOrder || cashTransactionById(context.transactions, transactionId, "Sales");
+    var authoritativeSaleAmount = Number(canonicalOrder ? canonicalOrder.OrderTotal : sale && sale.amount);
+    var hppSnapshot = Number(canonicalOrder && canonicalOrder.HppTotalSnapshot);
+    if (!sale || (relatedSaleType !== "Sales" && relatedSaleType !== "Order") ||
+        (canonicalOrder ? String(canonicalOrder.OrderID || "").trim() !== transactionId ||
+          !isFinite(hppSnapshot) || hppSnapshot < 0 || amount !== authoritativeSaleAmount :
+          sale.paymentTiming !== "AT_RECOGNITION") ||
+        !isFinite(authoritativeSaleAmount) || authoritativeSaleAmount <= 0) {
       return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
-    }
-    var authoritativeSaleAmount = Number(sale.amount);
-    if (!isFinite(authoritativeSaleAmount) || authoritativeSaleAmount <= 0) {
-      return { status: "REFUSED", reason: "REFUSED_UNSUPPORTED_ACCRUAL_SETTLEMENT", readOnly: true, writeCount: 0 };
-    }
-    if (!isFinite(amount) || amount <= 0) {
-      return { status: "REFUSED", reason: "INVALID_AMOUNT", readOnly: true, writeCount: 0 };
     }
     var existingAggregate = cashEffectiveSaleSettlementAggregate(
       context.settlements || [], context.balanceLedgerRows || [], transactionId,
-      String(settlement.SettlementID || "").trim());
+      String(settlement.SettlementID || "").trim(), relatedSaleType);
     var remaining = authoritativeSaleAmount - existingAggregate;
     if (remaining < 0 || amount > remaining) {
       return { status: "REFUSED", reason: "SALE_OVER_SETTLEMENT", readOnly: true, writeCount: 0 };
@@ -262,6 +263,15 @@ function buildCashPostingCandidate(settlement, context) {
       cashLedgerLine(journalId, "2", settlement, revenueAccount, 0, amount,
         "PAID_SALE", sourceType, sourceId)
     ];
+    if (canonicalOrder && hppSnapshot > 0) {
+      if (cashTransactionEffectAlreadyPosted(context.balanceLedgerRows, transactionId, "5000", "Debit")) {
+        return { status: "REFUSED", reason: "TRANSACTION_EFFECT_ALREADY_POSTED", readOnly: true, writeCount: 0 };
+      }
+      lines.push(cashLedgerLine(journalId, "3", settlement, "5000", hppSnapshot, 0,
+        "SALE_HPP", sourceType, sourceId));
+      lines.push(cashLedgerLine(journalId, "4", settlement, "1100", 0, hppSnapshot,
+        "SALE_HPP", sourceType, sourceId));
+    }
   } else if (sourceType === "AP_SETTLEMENT") {
     var purchaseEvent = cashPurchaseEventById(context.purchaseEvents, transactionId);
     if (!purchaseEvent || String(settlement.RelatedTransactionType || "") !== "PurchaseEvent" ||
@@ -434,6 +444,7 @@ function cashSettle(request, context) {
   }
   return buildCashPostingCandidate(settlement, {
     accounts: accounts,
+    order: request.order,
     transactions: context.transactions || [],
     purchaseEvents: context.purchaseEvents || [],
     balanceLedgerRows: context.balanceLedgerRows || [],
@@ -479,6 +490,7 @@ function cashSettleAndPersist(request, runtime) {
     var state = runtime.readSheets();
     var context = {
       accounts: state.accounts || [],
+      order: request.order,
       settlements: state.settlements || [],
       balanceLedgerRows: state.balanceLedger || [],
       transactions: state.transactions || [],
@@ -522,6 +534,7 @@ function cashSettleAndPersist(request, runtime) {
       } else {
         recoveryCandidate = buildCashPostingCandidate(settlement, {
           accounts: context.accounts,
+          order: context.order,
           transactions: context.transactions,
           purchaseEvents: context.purchaseEvents,
           balanceLedgerRows: context.balanceLedgerRows,
