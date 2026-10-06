@@ -21,6 +21,7 @@ permission:
     'clasp run executeRecipeVersionBootstrapWithRuntime': allow
     'clasp run runRecipeVersionProductionBootstrap': allow
     'clasp run runTransactionSchemaActivation': allow
+    'clasp run runProductVariantProductionBootstrap': allow
     'clasp run runApplyRecipeStandardCost': allow
     'clasp push --force': allow
     'clasp versions': allow

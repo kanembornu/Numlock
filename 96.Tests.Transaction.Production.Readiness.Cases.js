@@ -166,6 +166,38 @@ function testTransactionExecutorFixtures() {
   var versionRows = readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS);
   if (versionRows[0].EffectiveFrom.getTime() === boundary.getTime() && versionRows[0].ProductVariantID) pass++;
   if (JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("tabsal")) pass++;
+  var productWrapper = runProductVariantProductionBootstrap.toString();
+  if (runProductVariantProductionBootstrap.length === 0 && productWrapper.indexOf("transactionProductionRuntime_()") !== -1) pass++;
+  if ((productWrapper.match(/executeProductVariantBootstrapWithRuntime/g) || []).length === 1) pass++;
+  if (productWrapper.indexOf("expected = 53") !== -1 && productWrapper.indexOf("plan.planCount !== expected") !== -1 && productWrapper.indexOf("plan.blockedCount !== 0") !== -1) pass++;
+  if (productWrapper.indexOf("new Date()") !== -1 && productWrapper.indexOf("toISOString()") !== -1 && productWrapper.indexOf("2026-10-05") === -1) pass++;
+  if (["eligibleCandidateCount", "blockedCount", "createdProductVariantCount", "writeCount", "errors", "conflicts", "activationBoundary"].every(function(token) { return productWrapper.indexOf(token) !== -1; })) pass++;
+  if (["executeRecipeVersionBootstrapWithRuntime", "executeTransactionSchemaActivationWithRuntime", "RecipeStandardCost", "tabsal", "Finance", "Purchase", "Inventory"].every(function(token) { return productWrapper.indexOf(token) === -1; })) pass++;
+  var savedProductFactory = transactionProductionRuntime_, savedProductPlanner = buildProductVariantBootstrapPlan, savedProductExecutor = executeProductVariantBootstrapWithRuntime;
+  var productFactoryCalls = 0, productExecutorCalls = 0, productBoundary = null, productRuntime = { spreadsheet: bs };
+  transactionProductionRuntime_ = function() { productFactoryCalls++; return productRuntime; };
+  buildProductVariantBootstrapPlan = function(source, at) { productBoundary = at; return { status: "READY", planCount: 53, blockedCount: 0, blocked: [] }; };
+  executeProductVariantBootstrapWithRuntime = function(runtimeArg, at) { productExecutorCalls++; if (runtimeArg !== productRuntime || at !== productBoundary || runtimeArg.requiredProductVariantCandidateCount !== 53) throw new Error("PV_WRAPPER_FORWARDING"); return { status: "APPLIED", rowCount: 53, writeCount: 53 }; };
+  var productBefore = Date.now(), productResult;
+  try { productResult = runProductVariantProductionBootstrap(); } finally { transactionProductionRuntime_ = savedProductFactory; buildProductVariantBootstrapPlan = savedProductPlanner; executeProductVariantBootstrapWithRuntime = savedProductExecutor; }
+  if (productFactoryCalls === 1 && productExecutorCalls === 1 && productBoundary.getTime() >= productBefore && productBoundary.getTime() <= Date.now()) pass++;
+  if (productResult.status === "APPLIED" && productResult.eligibleCandidateCount === 53 && productResult.blockedCount === 0 && productResult.createdProductVariantCount === 53 && productResult.writeCount === 53 && !productResult.errors.length && !productResult.conflicts.length && productResult.activationBoundary === productBoundary.toISOString()) pass++;
+  function productWrapperRefusal(sheetRows, plan) {
+    var sf = transactionProductionRuntime_, sp = buildProductVariantBootstrapPlan, se = executeProductVariantBootstrapWithRuntime, calls = 0, result;
+    transactionProductionRuntime_ = function() { return { spreadsheet: transactionFixtureSpreadsheet_(sheetRows) }; };
+    buildProductVariantBootstrapPlan = function() { return plan; };
+    executeProductVariantBootstrapWithRuntime = function() { calls++; return {}; };
+    try { result = runProductVariantProductionBootstrap(); } finally { transactionProductionRuntime_ = sf; buildProductVariantBootstrapPlan = sp; executeProductVariantBootstrapWithRuntime = se; }
+    return { result: result, calls: calls };
+  }
+  var productMismatch = productWrapperRefusal(Object.assign({}, data, { ProductVariants: [TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS.slice()] }), { status: "READY", planCount: 52, blockedCount: 0, blocked: [] });
+  if (productMismatch.result.status === "REFUSED" && productMismatch.result.writeCount === 0 && productMismatch.calls === 0) pass++;
+  var productBlocked = productWrapperRefusal(Object.assign({}, data, { ProductVariants: [TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS.slice()] }), { status: "BLOCKED", planCount: 53, blockedCount: 1, blocked: [{ code: "TEST" }] });
+  if (productBlocked.result.status === "REFUSED" && productBlocked.result.blockedCount === 1 && productBlocked.calls === 0) pass++;
+  var productSchema = productWrapperRefusal({}, { status: "READY", planCount: 53, blockedCount: 0, blocked: [] });
+  if (productSchema.result.status === "REFUSED" && productSchema.result.errors[0].code === "PRODUCT_VARIANTS_SCHEMA_NOT_EXACT" && productSchema.calls === 0) pass++;
+  var productSecondGate = executeProductVariantBootstrapWithRuntime(Object.assign({}, br, { requiredProductVariantCandidateCount: 53 }), boundary);
+  if (productSecondGate.status === "REFUSED" && productSecondGate.reason === "PRODUCT_VARIANT_CANDIDATE_COUNT_MISMATCH" && productSecondGate.writeCount === 0) pass++;
   var wrapper = runRecipeVersionProductionBootstrap.toString();
   if (runRecipeVersionProductionBootstrap.length === 0 && wrapper.indexOf("transactionProductionRuntime_()") !== -1) pass++;
   if ((wrapper.match(/executeRecipeVersionBootstrapWithRuntime/g) || []).length === 1) pass++;
@@ -177,7 +209,7 @@ function testTransactionExecutorFixtures() {
   if (mismatched.status === "REFUSED" && mismatched.reason === "RECIPE_VERSION_CANDIDATE_COUNT_MISMATCH" && mismatched.writeCount === 0) pass++;
   if (readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS).length === 1 &&
       JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("FinanceLedger") && !bs.getSheetByName("PurchaseEvents") && !bs.getSheetByName("InventoryLedger")) pass++;
-  return { total: 26, pass: pass, fail: 26 - pass };
+  return { total: 38, pass: pass, fail: 38 - pass };
 }
 
 function testTransactionPurchaseExpenseBehavioralFixtures() {

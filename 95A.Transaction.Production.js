@@ -383,12 +383,27 @@ function executeProductVariantBootstrapWithRuntime(runtime, activationBoundary) 
     lock.waitLock(30000); acquired = true;
     var contract = TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS, sheet = ss.getSheetByName(contract.SHEET); requireCanonicalHeaders(sheet, contract.HEADERS);
     var plan = buildProductVariantBootstrapPlan(transactionBootstrapSource_(ss), activationBoundary);
-    if (plan.status !== "READY") return Object.assign({}, plan, { writeCount: 0 });
+    if (plan.status !== "READY" || runtime.requiredProductVariantCandidateCount != null && plan.planCount !== runtime.requiredProductVariantCandidateCount)
+      return Object.assign({}, plan, { status: "REFUSED", reason: plan.status !== "READY" ? "PRODUCT_VARIANT_BOOTSTRAP_NOT_READY" : "PRODUCT_VARIANT_CANDIDATE_COUNT_MISMATCH", writeCount: 0 });
     var existing = readCanonicalTable(ss, contract.SHEET, contract.HEADERS), index = transactionOperationalMap_(existing, "ProductVariantID"), pending = [];
     plan.rows.forEach(function(row) { var found = index[row.ProductVariantID]; if (!found) pending.push(row); else if (String(found.ProductID) !== row.ProductID || transactionVariantType_(found.Tipe) !== row.Tipe) throw new Error("PRODUCT_VARIANT_IDENTITY_CONFLICT"); });
     var writes = transactionAppendExactRows_(sheet, contract.HEADERS, pending); runtime.flush();
     return { status: writes ? "APPLIED" : "ALREADY_APPLIED", rowCount: writes, writeCount: writes };
   } finally { if (acquired) lock.releaseLock(); }
+}
+
+function runProductVariantProductionBootstrap() {
+  var expected = 53, boundary = new Date(), runtime = transactionProductionRuntime_();
+  var contract = TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS;
+  var schema = transactionSchemaState_(runtime.spreadsheet.getSheetByName(contract.SHEET), contract);
+  var plan = schema.headersExact ? buildProductVariantBootstrapPlan(transactionBootstrapSource_(runtime.spreadsheet), boundary) :
+    { status: "REFUSED", planCount: 0, blockedCount: 1, blocked: [{ code: "PRODUCT_VARIANTS_SCHEMA_NOT_EXACT" }] };
+  if (plan.status !== "READY" || plan.planCount !== expected || plan.blockedCount !== 0) return { status: "REFUSED", eligibleCandidateCount: plan.planCount,
+    blockedCount: plan.blockedCount, createdProductVariantCount: 0, writeCount: 0, errors: plan.blocked, conflicts: [], activationBoundary: boundary.toISOString() };
+  runtime.requiredProductVariantCandidateCount = expected;
+  var result = executeProductVariantBootstrapWithRuntime(runtime, boundary);
+  return { status: result.status, eligibleCandidateCount: plan.planCount, blockedCount: plan.blockedCount,
+    createdProductVariantCount: result.rowCount || 0, writeCount: result.writeCount || 0, errors: [], conflicts: [], activationBoundary: boundary.toISOString() };
 }
 
 function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
