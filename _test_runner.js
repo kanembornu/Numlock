@@ -205,6 +205,7 @@ run('testSupplierMasterContracts', 'testSupplierMasterContracts()');
 run('testTransactionOperationalFoundationContracts', 'testTransactionOperationalFoundationContracts(_htmlIndex, _htmlActions)');
 run('testSalesOperatorWorkflowContracts', 'testSalesOperatorWorkflowContracts(_htmlIndex, _htmlActions, _productionSource, _htmlForms)');
 run('testTransactionAuthorityTransportContract', 'testTransactionAuthorityTransportContract()');
+run('testOperationalOrderLookupTransportContract', 'testOperationalOrderLookupTransportContract()');
 run('testTransactionProductionReadinessMatrices', 'testTransactionProductionReadinessMatrices()');
 run('testTransactionCrashRecoveryExecution', 'testTransactionCrashRecoveryExecution()');
 run('testTransactionExecutorFixtures', 'testTransactionExecutorFixtures()');

@@ -296,6 +296,21 @@ function validateTransactionAuthorityTransport_(value, path) {
   if (type !== "object" || value instanceof Date || prototype && (!prototype.constructor || prototype.constructor.name !== "Object")) throw new Error("INVALID_AUTHORITY_TRANSPORT_VALUE:" + path);
   Object.keys(value).forEach(function(key) { validateTransactionAuthorityTransport_(value[key], path + "." + key); });
 }
+function transactionOperationalOrderTransportDto_(order) {
+  if (!order) return null;
+  var dto = {};
+  TRANSACTION_PRODUCTION_CONTRACT.ORDERS.HEADERS.forEach(function(field) {
+    dto[field] = ["CreatedAt", "PreparingAt", "ReadyAt", "CompletedAt", "UpdatedAt"].indexOf(field) !== -1
+      ? transactionAuthorityTransportDate_(order[field], "Order." + field) : order[field];
+  });
+  dto.Lines = (order.Lines || []).map(function(line) {
+    var projected = {};
+    TRANSACTION_PRODUCTION_CONTRACT.ORDER_LINES.HEADERS.forEach(function(field) { projected[field] = line[field]; });
+    return projected;
+  });
+  validateTransactionAuthorityTransport_(dto, "order");
+  return dto;
+}
 function transactionAuthorityTransportDto_(authority, now) {
   var dto = {
     products: authority.products,
@@ -341,7 +356,7 @@ function getOperationalTransactionAuthority() { return transactionResponse_(func
   return transactionAuthorityTransportDto_(authority, new Date());
 }); }
 function submitOperationalOrder(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalOrder_(payload, transactionProductionAuthority_(r.spreadsheet), r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }
-function findOperationalOrder(identifier) { return transactionResponse_(function() { var id = transactionOperationalText_(identifier, "ORDER_IDENTIFIER_REQUIRED", "identifier"); return transactionProductionRuntime_().repository.findOrder(id); }); }
+function findOperationalOrder(identifier) { return transactionResponse_(function() { var id = transactionOperationalText_(identifier, "ORDER_IDENTIFIER_REQUIRED", "identifier"); return transactionOperationalOrderTransportDto_(transactionProductionRuntime_().repository.findOrder(id)); }); }
 function listOpenOperationalOrders() { return transactionResponse_(function() { return transactionProductionRuntime_().repository.listOpenOrders(); }); }
 function findOperationalOperation(payload) { return transactionResponse_(function() { var p = payload || {}, type = transactionOperationalText_(p.operationType, "OPERATION_TYPE_REQUIRED", "operationType"), key = transactionOperationalText_(p.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"), r = transactionProductionRuntime_(), operation = r.repository.findOperation(type, key); return { operation: operation, order: operation && operation.BusinessID ? r.repository.findOrder(operation.BusinessID) : null, payment: type === "PAYMENT" ? r.repository.findPaymentByRequest(key) : null }; }); }
 function submitOperationalFulfillment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return transitionOperationalFulfillmentWithRepository(payload.orderID, payload.next, r, r.repository).order; } finally { if (acquired) r.lock.releaseLock(); } }); }

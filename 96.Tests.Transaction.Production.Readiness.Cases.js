@@ -32,6 +32,27 @@ function testTransactionAuthorityTransportContract() {
   return { total: 18, pass: pass, fail: 18 - pass };
 }
 
+function testOperationalOrderLookupTransportContract() {
+  var at = new Date("2026-10-06T01:02:03Z"), source = { sourceRowIndex: 2, OrderID: "O1", OrderNumber: "N1", OrderType: "DINE_IN",
+    PaymentStatus: "PAID", FulfillmentStatus: "OPEN", OrderTotal: 20, HppTotalSnapshot: 2, CreatedAt: at, CreatedBy: "test",
+    PreparingAt: "", ReadyAt: "", CompletedAt: "", UpdatedAt: at, UpdatedBy: "test", Lines: [{ sourceRowIndex: 2, OrderLineID: "L1",
+      OrderID: "O1", ProductID: "P1", ProductVariantID: "PV1", Tipe: "HOT", Qty: 1, SellingPriceSnapshot: 20,
+      RecipeVersionID: "RV1", UnitHppSnapshot: 2, LineTotal: 20, LineHpp: 2 }] };
+  var before = JSON.stringify(source), dto = transactionOperationalOrderTransportDto_(source), pass = 0;
+  function check(value, label) { if (!value) throw new Error("ORDER_LOOKUP_TRANSPORT:" + label); pass++; }
+  check(dto.CreatedAt === at.toISOString() && dto.UpdatedAt === at.toISOString(), "dates serialized");
+  check(dto.OrderID === "O1", "order id preserved");
+  check(dto.OrderNumber === "N1", "order number preserved");
+  check(transactionOperationalOrderTransportDto_(null) === null, "not found preserved");
+  check(!Object.prototype.hasOwnProperty.call(dto, "sourceRowIndex") && !Object.prototype.hasOwnProperty.call(dto.Lines[0], "sourceRowIndex"), "internal fields removed");
+  check(dto.PaymentStatus === "PAID", "paid status preserved");
+  check(dto.FulfillmentStatus === "OPEN", "open status preserved");
+  check(dto.Lines.length === 1 && dto.Lines[0].OrderLineID === "L1", "lines preserved");
+  check(JSON.stringify(source) === before, "lookup projection does not mutate source");
+  validateTransactionAuthorityTransport_(dto, "order"); check(true, "recursive transport hygiene");
+  return { total: 10, pass: pass, fail: 10 - pass };
+}
+
 function testTransactionProductionReadinessMatrices() {
   var totals = { PV: 20, RV: 10, PA: 21, OC: 8, PC: 10, FS: 8 }, passed = { PV: 0, RV: 0, PA: 0, OC: 0, PC: 0, FS: 0 };
   function check(group, condition, label) { if (!condition) throw new Error(group + ":" + label); passed[group]++; }
