@@ -209,7 +209,30 @@ function testTransactionExecutorFixtures() {
   if (mismatched.status === "REFUSED" && mismatched.reason === "RECIPE_VERSION_CANDIDATE_COUNT_MISMATCH" && mismatched.writeCount === 0) pass++;
   if (readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS).length === 1 &&
       JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("FinanceLedger") && !bs.getSheetByName("PurchaseEvents") && !bs.getSheetByName("InventoryLedger")) pass++;
-  return { total: 38, pass: pass, fail: 38 - pass };
+
+  var authorityData = Object.assign({}, data);
+  authorityData.ProductVariants = bs.fixtureSheet("ProductVariants").values;
+  authorityData.RecipeVersions = bs.fixtureSheet("RecipeVersions").values;
+  authorityData.RecipeVersionLines = bs.fixtureSheet("RecipeVersionLines").values;
+  authorityData.InventoryUOMConversions = [BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS.slice()];
+  authorityData.Accounts = transactionFixtureTable_(CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS,
+    [{ AccountCode: CASH_FOUNDATION_POLICY.ACCOUNT_CODES[0], AccountName: "Cash", IsActive: true }]);
+  var authorityWithoutSuppliers = transactionProductionAuthority_(transactionFixtureSpreadsheet_(authorityData));
+  if (authorityWithoutSuppliers.suppliers.length === 0) pass++;
+  if (authorityWithoutSuppliers.products.length === 1) pass++;
+  if (authorityWithoutSuppliers.productVariants.length === 1) pass++;
+  if (authorityWithoutSuppliers.paymentMethods.length === 1) pass++;
+  try {
+    normalizeCanonicalTransactionPurchase_({ expenseItemID: "OSK01", supplierID: "", paidVia: CASH_FOUNDATION_POLICY.ACCOUNT_CODES[0] },
+      { expenses: [{ ID_Ops: "OSK01" }], items: [{ ItemID: "ING-011", IsActive: true }], suppliers: [], paymentMethods: authorityWithoutSuppliers.paymentMethods, conversions: [] });
+  } catch (error) { if (error.message === "SUPPLIER_INACTIVE") pass++; }
+  var authorityMissingProducts = Object.assign({}, authorityData); delete authorityMissingProducts.Products;
+  try { transactionProductionAuthority_(transactionFixtureSpreadsheet_(authorityMissingProducts)); }
+  catch (error) { if (error.message === "Missing canonical sheet: Products") pass++; }
+  authorityData.Suppliers = transactionFixtureTable_(SUPPLIER_MASTER_CONTRACT.HEADERS,
+    [{ SupplierID: "SUP-1", Name: "Supplier", IsActive: true }]);
+  if (transactionProductionAuthority_(transactionFixtureSpreadsheet_(authorityData)).suppliers[0].SupplierID === "SUP-1") pass++;
+  return { total: 45, pass: pass, fail: 45 - pass };
 }
 
 function testTransactionPurchaseExpenseBehavioralFixtures() {

@@ -166,6 +166,11 @@ function transactionReadPaymentMethods_(ss) {
   }).map(function(row) { return { code: row.AccountCode, label: row.AccountName, AccountCode: row.AccountCode, IsActive: true }; });
 }
 
+function transactionReadSuppliers_(ss) {
+  return ss.getSheetByName(SUPPLIER_MASTER_CONTRACT.SHEET) ?
+    readCanonicalTable(ss, SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS) : [];
+}
+
 function transactionProductionAuthority_(ss) {
   var products = readCanonicalTable(ss, "Products", PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS).map(function(row) {
     return { ProductID: row.ID_Prod, Name: row.Produk, IsActive: row.IsActive };
@@ -175,7 +180,7 @@ function transactionProductionAuthority_(ss) {
     recipeVersions: transactionReadRecipeVersions_(ss), pricing: readCanonicalTable(ss, "ProductPricing", PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS),
     items: readCanonicalTable(ss, "InventoryItems", BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS),
     standardCosts: readCanonicalTable(ss, RECIPE_STANDARD_COST_CONTRACT.SHEET, RECIPE_STANDARD_COST_CONTRACT.HEADERS),
-    suppliers: readCanonicalTable(ss, SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS),
+    suppliers: transactionReadSuppliers_(ss),
     conversions: readCanonicalTable(ss, "InventoryUOMConversions", BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS),
     paymentMethods: transactionReadPaymentMethods_(ss) };
 }
