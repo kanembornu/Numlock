@@ -145,3 +145,43 @@ Status: ACCEPTED. Recorded 2026-10-06. Task lineage: `NUMLOCK-703-TIMELINE-20261
 - `SALES_CANONICAL_SOURCE_READY=TRUE`
 - `TRANSACTION_TECHNICAL_WORK=COMPLETE`
 - `SALES_GO_LIVE_READY=FALSE_PENDING_OWNER_CUTOVER`
+
+## First real sale, existing-order transport repair, and activation closeout
+
+Status: ACCEPTED. Recorded 2026-10-06. This append-only segment preserves all earlier attempts, failures, corrected measurements, and closeouts above.
+
+### First real sale chronology
+
+- **MEASURED:** The first canonical Order was created once through the normal @703 UI: Order `ORD-D0D68C09-ORDERCREATEO`, server `CreatedAt=2026-10-06T18:50:05.328Z`, `TAKE_AWAY`, Matcha Latte / COLD / qty 2, OrderTotal 36000, HppTotalSnapshot 15130.58, initially `UNPAID + OPEN`. No Order retry or duplicate was created.
+- **MEASURED:** The single Payment UI action initially returned UNKNOWN. Read-only reconciliation proved operation `TXOP-B3EEB322-PAYMENTPAYME` COMMITTED and Payment `PAY-B3EEB322-PAYMENTPAYME` SUCCESS for AccountCode/ReceiveVia 1010 (DANA Business), Amount 36000, PaidAt `2026-10-06T18:53:10.509Z`. The Order read back PAID. No Payment retry occurred.
+- **MEASURED + STATIC:** Automatic Finance settlement passed: settlement `CSH-SAL-PAY-B3EEB322-PAYMENTPAYME`, journal `CASH-SALE_SETTLEMENT-PAY-B3EEB322-PAYMENTPAYME`, SourceType SALE_SETTLEMENT, Payment source correlation, Revenue 36000, HPP 15130.58, AccountCode 1010, POSTED. Settlement count remained exactly one; manual Finance writes were zero.
+- **MEASURED:** The first fulfillment attempt timed out, then authoritative readback proved OPEN with all fulfillment timestamps empty; no mutation persisted and no blind retry occurred. A later diagnostic could not surface the existing Order in normal UI; no fulfillment action was dispatched and production remained PAID + OPEN.
+
+### Existing-order lookup defect and repair
+
+- **MEASURED — PRODUCT DEFECT:** Normal browser Find Order dispatched the exact scalar OrderNumber to `findOperationalOrder`, but reached the unknown callback while the same identifier returned the Order through authenticated CLI readback. The success handler was not reached, `operationalTransactionState.order` remained null, and fulfillment UI could not bind.
+- **MEASURED + STATIC — ROOT CAUSE:** The first failing boundary was Apps Script browser response transport. Repository rows retained raw Date values; the DATE serialization hypothesis was CONFIRMED when a transport DTO converting Order and line values to client-safe primitives restored browser delivery. The repair commit was `e934c6c85707c8b253dbbbedea2425b6acd32988` (`sales: repair existing order lookup transport`), adding `transactionOperationalOrderTransportDto_` to `findOperationalOrder` without changing lookup identity or mutation behavior.
+- **FROZEN local evidence:** focused and regression suites passed 10/10, 40/40, 30/30, 8/8, and 33/33; Finance PASS; syntax and diff checks PASS.
+- **MEASURED delivery:** one successful 62-file push; immutable version 704; candidate `AKfycbwjLzf1CYQNehp5wn4DRsdo5xlSwauqZLdQxZsFF-MLk0LhzB2z29pnnsPQ57Gc63Ke` pinned @704.
+- **MEASURED candidate acceptance:** Find Order returned a client-safe Order DTO with ISO timestamp strings, reached the success handler, populated active Order state, rendered PAID + OPEN, exposed fulfillment controls, and set next=PREPARING; page/console errors were empty. Gate 13 passed 12/0/0; T1-T8, F1-F9, and smoke passed.
+- **MEASURED promotion:** the existing canonical deployment `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` moved once from @703 to @704. Canonical Find Order then passed with the same rendered PAID + OPEN state and actionable PREPARING control.
+
+### Fulfillment and final readback
+
+- **MEASURED:** OPEN → PREPARING persisted once; `PreparingAt=2026-10-06T19:36:00.503Z`.
+- **MEASURED:** PREPARING → READY persisted once; `ReadyAt=2026-10-06T19:36:43.935Z`.
+- **MEASURED:** READY → COMPLETED persisted once; `CompletedAt=2026-10-06T19:37:34.169Z`.
+- **MEASURED + STATIC:** Final Order is PAID + COMPLETED; CLOSED is derived by contract, with no separate CLOSED mutation.
+- **MEASURED:** Final counts are Orders 1, OrderLines 1, Payments 1, TransactionOperations 2, settlements 1. Deltas from the 0/0/0/0 transaction baseline are +1/+1/+1/+2. Fulfillment transitions did not create operation records. No duplicate business records were found; manual Finance, Supplier, and Inventory writes were zero.
+
+### Cutover and historical closure
+
+- `FIRST_REAL_SALE_ACCEPTANCE=PASS`
+- `SALES_OPERATIONAL_CUTOVER_TIMESTAMP=2026-10-06T18:50:05.328Z` (`2026-10-07 01:50:05.328 +07:00`), defined by Order server CreatedAt, not fulfillment completion.
+- `SALES_GO_LIVE_READY=TRUE`
+- `SALES_OPERATIONAL_CUTOVER=COMPLETE`
+- `PAPER_OPERATIONAL_AUTHORITY=CLOSED`
+- `LEGACY_SALES_ENTRY_AUTHORITY=CLOSED`
+- `TRANSACTION_ACTIVATION=COMPLETE`
+- Historical period: start `2026-10-05`; end `2026-10-07 01:50:05.328 +07:00`; `OPTION_C_RECONCILED`; `OPEN_PAPER_ORDERS=0`; `REMAINING_UNRECORDED_REAL_SALES=0`. Source date 2026-10-05 remains provenance; owner recognition is 2026-10-07. No backfill or transferred-Sales modification occurred.
+- **MEASURED cleanup:** the single temporary @704 candidate was deleted once. Final deployment inventory is canonical @704 plus @HEAD; temporary and unexpected deployments are zero.
