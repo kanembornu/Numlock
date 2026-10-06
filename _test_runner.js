@@ -133,7 +133,9 @@ vm.runInContext(
 vm.runInContext([
   'var _htmlIndex = ' + JSON.stringify(fs.readFileSync('190.View.Index.html', 'utf8')) + ';',
   'var _htmlRender = ' + JSON.stringify(fs.readFileSync('193.View.Transactions.Render.html', 'utf8')) + ';',
-  'var _htmlActions = ' + JSON.stringify(fs.readFileSync('195.View.Transactions.Actions.html', 'utf8')) + ';'
+  'var _htmlActions = ' + JSON.stringify(fs.readFileSync('195.View.Transactions.Actions.html', 'utf8')) + ';',
+  'var _htmlForms = ' + JSON.stringify(fs.readFileSync('194.View.Transactions.Forms.html', 'utf8')) + ';',
+  'var _productionSource = ' + JSON.stringify(fs.readFileSync('95A.Transaction.Production.js', 'utf8')) + ';'
 ].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
@@ -201,6 +203,7 @@ run('testInventoryPolicyEvidenceDiagnosticContracts', 'testInventoryPolicyEviden
 run('testMasterWritePolicyContracts', 'testMasterWritePolicyContracts()');
 run('testSupplierMasterContracts', 'testSupplierMasterContracts()');
 run('testTransactionOperationalFoundationContracts', 'testTransactionOperationalFoundationContracts(_htmlIndex, _htmlActions)');
+run('testSalesOperatorWorkflowContracts', 'testSalesOperatorWorkflowContracts(_htmlIndex, _htmlActions, _productionSource, _htmlForms)');
 run('testTransactionAuthorityTransportContract', 'testTransactionAuthorityTransportContract()');
 run('testTransactionProductionReadinessMatrices', 'testTransactionProductionReadinessMatrices()');
 run('testTransactionCrashRecoveryExecution', 'testTransactionCrashRecoveryExecution()');

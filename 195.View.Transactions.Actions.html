@@ -1,4 +1,5 @@
-    var operationalTransactionState = { authority: null, authorityStatus: "UNAVAILABLE", authorityReason: "NOT_LOADED", lines: [], order: null };
+    var operationalTransactionState = { authority: null, authorityStatus: "UNAVAILABLE", authorityReason: "NOT_LOADED", lines: [], order: null,
+      pending: null, inFlight: { order: false, payment: false, fulfillment: false } };
 
     function operationalElement(id) { return document.getElementById(id); }
 
@@ -75,73 +76,71 @@
       operationalElement("operationalSellingPrice").value = variant && variant.SellingPrice ? formatEntryCurrency(variant.SellingPrice) : "Server validated at save";
     }
 
-    function addOperationalOrderLine()
+    function operationalRequestKey_(type) { return type.toLowerCase() + "-" + String(Date.now()) + "-" + Math.random().toString(36).slice(2); }
+    function persistOperationalRecovery_() { try { if (operationalTransactionState.pending) localStorage.setItem("numlock.sales.pending", JSON.stringify(operationalTransactionState.pending)); else localStorage.removeItem("numlock.sales.pending"); if (operationalTransactionState.order) localStorage.setItem("numlock.sales.order", operationalTransactionState.order.OrderNumber); } catch (error) {} }
+    function restoreOperationalRecovery() { try { var pending = JSON.parse(localStorage.getItem("numlock.sales.pending") || "null"), orderNumber = localStorage.getItem("numlock.sales.order"); if (pending) { operationalTransactionState.pending = pending; reconcileOperationalUnknown(); } else if (orderNumber) loadOperationalOrder(orderNumber); } catch (error) {} }
+    function setOperationalInFlight_(type, active) { operationalTransactionState.inFlight[type] = active; var ids = { order: "operationalSaveOrder", payment: "operationalConfirmPayment", fulfillment: "operationalFulfillmentNext" }; var button = operationalElement(ids[type]); if (button) { button.disabled = active; button.setAttribute("aria-busy", String(active)); } }
+    function operationalUnknown_(errorElement) { errorElement.innerText = "Result belum dapat dipastikan. Sistem akan memeriksa transaksi yang sama; jangan membuat transaksi baru."; if (operationalTransactionState.pending) operationalTransactionState.pending.state = "UNKNOWN"; persistOperationalRecovery_(); reconcileOperationalUnknown(); }
+
+    function addSelectedSalesOrderLine()
     {
-      var id = operationalElement("operationalProduct").value, variantID = operationalElement("operationalProductVariant").value;
-      var qty = Number(operationalElement("operationalOrderQty").value), authority = operationalTransactionState.authority || {};
-      var product = (authority.products || []).filter(function(row) { return row.ProductID === id; })[0];
-      var variant = (authority.productVariants || []).filter(function(row) { return row.ProductVariantID === variantID && row.ProductID === id; })[0];
-      if (!product) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
-      if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant."; return; }
-      if (!(qty > 0)) { operationalElement("operationalOrderError").innerText = "Qty harus lebih besar dari 0."; return; }
-      operationalTransactionState.lines.push({ productID: id, productVariantID: variantID, qty: qty, name: product.Name + " · " + (variant.Tipe === "HOT" ? "Hot" : "Cold"), price: Number(variant.SellingPrice || 0) });
+      var state = transactionEntryState, authority = operationalTransactionState.authority || {};
+      if (!state.selectedProduct || !state.selectedType || !state.pricing || !(state.qty > 0)) { operationalElement("operationalOrderError").innerText = "Pilih product, variant, dan qty."; return; }
+      var variant = (authority.productVariants || []).filter(function(row) { return row.ProductID === state.selectedProduct.productId && String(row.Tipe).toUpperCase() === state.selectedType.toUpperCase(); })[0];
+      if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant yang tersedia."; return; }
+      operationalTransactionState.lines.push({ productID: state.selectedProduct.productId, productVariantID: variant.ProductVariantID, qty: state.qty,
+        name: state.selectedProduct.product + " · " + state.selectedType, price: Number(state.pricing.price) });
       renderOperationalOrderLines();
     }
-
+    function removeOperationalOrderLine(index) { if (operationalTransactionState.pending) return; operationalTransactionState.lines.splice(index, 1); renderOperationalOrderLines(); }
     function renderOperationalOrderLines()
     {
-      var total = operationalTransactionState.lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0);
-      operationalElement("operationalOrderLines").textContent = operationalTransactionState.lines.map(function(line) { return line.name + " × " + line.qty; }).join(", ");
+      var total = operationalTransactionState.lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0), region = operationalElement("operationalOrderLines"); region.innerHTML = "";
+      operationalTransactionState.lines.forEach(function(line, index) { var row = document.createElement("div"); row.textContent = line.name + " × " + line.qty + " · " + formatEntryCurrency(line.price) + " · " + formatEntryCurrency(line.qty * line.price) + " "; var remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove"; remove.onclick = function() { removeOperationalOrderLine(index); }; row.appendChild(remove); region.appendChild(row); });
       operationalElement("operationalOrderTotal").textContent = "Total: " + formatEntryCurrency(total);
     }
-
-    function operationalServerCall(method, payload, onSuccess, errorElement)
+    function operationalServerCall(method, payload, onSuccess, onRefusal, onUnknown)
     {
-      if (operationalTransactionState.authorityStatus !== "READY" || !operationalTransactionState.authority) {
-        errorElement.innerText = "Transaction authority is unavailable."; return;
-      }
-      google.script.run.withSuccessHandler(function(response) {
-        if (!response || response.success !== true) { errorElement.innerText = response && response.error ? response.error.message : "Transaction could not be saved."; return; }
-        errorElement.innerText = ""; onSuccess(response.data);
-      }).withFailureHandler(function() { errorElement.innerText = "Transaction could not be saved."; })[method](payload);
+      if (operationalTransactionState.authorityStatus !== "READY" || !operationalTransactionState.authority) { onRefusal({ code: "AUTHORITY_UNAVAILABLE", message: "Transaction authority is unavailable." }); return; }
+      google.script.run.withSuccessHandler(function(response) { if (!response || typeof response !== "object") { onUnknown(); return; } if (response.success !== true) { onRefusal(response.error || { code: "DEFINITE_REFUSAL", message: "Transaction refused." }); return; } onSuccess(response.data); })
+        .withFailureHandler(function() { onUnknown(); })[method](payload);
     }
-
     function saveOperationalOrder()
     {
+      if (operationalTransactionState.inFlight.order) return;
       if (!operationalTransactionState.lines.length) { operationalElement("operationalOrderError").innerText = "Pilih item."; return; }
-      operationalServerCall("submitOperationalOrder", { requestKey: "order-" + String(Date.now()), orderType: operationalElement("operationalOrderType").value,
-        lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, productVariantID: line.productVariantID, qty: line.qty }; }) }, function(order) {
-        operationalTransactionState.order = order; renderOperationalOrderStatus();
-        operationalElement("operationalPaymentFields").hidden = false; operationalElement("operationalFulfillmentFields").hidden = false;
-        operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal);
-      }, operationalElement("operationalOrderError"));
+      var pending = operationalTransactionState.pending;
+      if (!pending) pending = operationalTransactionState.pending = { type: "ORDER_CREATE", requestKey: operationalRequestKey_("order"), state: "NEW", payload: { orderType: operationalElement("operationalOrderType").value, lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, productVariantID: line.productVariantID, qty: line.qty }; }) } };
+      pending.state = "SUBMITTING"; persistOperationalRecovery_(); setOperationalInFlight_("order", true);
+      operationalServerCall("submitOperationalOrder", Object.assign({ requestKey: pending.requestKey }, pending.payload), function(order) { pending.state = "CONFIRMED"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); showOperationalOrder(order); persistOperationalRecovery_(); }, function(error) { pending.state = "DEFINITE_FAILURE"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); operationalElement("operationalOrderError").innerText = error.message; persistOperationalRecovery_(); }, function() { setOperationalInFlight_("order", false); operationalUnknown_(operationalElement("operationalOrderError")); });
     }
-
+    function showOperationalOrder(order) { if (!order) return; operationalTransactionState.order = order; operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID"; operationalElement("operationalFulfillmentFields").hidden = false; operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal); renderOperationalOrderStatus(); }
+    function loadOperationalOrder(identifier) { operationalServerCall("findOperationalOrder", identifier, function(order) { if (order) { showOperationalOrder(order); persistOperationalRecovery_(); } else operationalElement("operationalOrderError").innerText = "Order tidak ditemukan."; }, function(error) { operationalElement("operationalOrderError").innerText = error.message; }, function() { operationalUnknown_(operationalElement("operationalOrderError")); }); }
+    function lookupOperationalOrder() { loadOperationalOrder(operationalElement("operationalOrderLookup").value); }
+    function listOperationalOpenOrders() { operationalServerCall("listOpenOperationalOrders", {}, function(orders) { operationalElement("operationalOpenOrders").textContent = orders.length ? "Open: " + orders.map(function(order) { return order.OrderNumber; }).join(", ") : "No open orders."; }, function() {}, function() {}); }
     function renderOperationalOrderStatus()
     {
-      var order = operationalTransactionState.order;
-      operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.PaymentStatus + " · " + order.FulfillmentStatus + " · " + formatEntryCurrency(order.OrderTotal);
-      var actions = { OPEN: ["Start Preparing", "PREPARING"], PREPARING: ["Mark Ready", "READY"], READY: ["Complete", "COMPLETED"] };
-      var next = actions[order.FulfillmentStatus], button = operationalElement("operationalFulfillmentNext");
-      button.hidden = !next; if (next) { button.textContent = next[0]; button.dataset.next = next[1]; }
+      var order = operationalTransactionState.order, lines = (order.Lines || []).map(function(line) { return (line.ProductID || line.productID) + " / " + (line.Tipe || line.tipe) + " × " + (line.Qty || line.qty) + " · " + formatEntryCurrency(line.SellingPriceSnapshot || line.sellingPriceSnapshot); }).join("; ");
+      operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.OrderType + " · " + lines + " · " + formatEntryCurrency(order.OrderTotal) + " · " + order.PaymentStatus + " · " + order.FulfillmentStatus;
+      operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID";
+      var actions = { OPEN: ["Start Preparing", "PREPARING"], PREPARING: ["Mark Ready", "READY"], READY: ["Complete", "COMPLETED"] }, next = actions[order.FulfillmentStatus], button = operationalElement("operationalFulfillmentNext"); button.hidden = !next; if (next) { button.textContent = next[0]; button.dataset.next = next[1]; }
     }
-
     function confirmOperationalPayment()
     {
-      var order = operationalTransactionState.order, via = operationalElement("operationalReceiveVia").value;
+      if (operationalTransactionState.inFlight.payment) return; var order = operationalTransactionState.order, via = operationalElement("operationalReceiveVia").value;
       if (!via) { operationalElement("operationalPaymentError").innerText = "Metode pembayaran wajib dipilih."; return; }
-      operationalServerCall("submitOperationalPayment", { orderID: order.OrderID, receiveVia: via,
-        requestKey: order.OrderID + "-PAYMENT", amount: order.OrderTotal }, function(result) {
-        operationalTransactionState.order = result.order; renderOperationalOrderStatus();
-      }, operationalElement("operationalPaymentError"));
+      var pending = operationalTransactionState.pending || { type: "PAYMENT", requestKey: operationalRequestKey_("payment"), state: "NEW", payload: { orderID: order.OrderID, receiveVia: via, amount: order.OrderTotal } }; operationalTransactionState.pending = pending; pending.state = "SUBMITTING"; persistOperationalRecovery_(); setOperationalInFlight_("payment", true);
+      operationalServerCall("submitOperationalPayment", Object.assign({ requestKey: pending.requestKey }, pending.payload), function(result) { operationalTransactionState.pending = null; setOperationalInFlight_("payment", false); showOperationalOrder(result.order); persistOperationalRecovery_(); }, function(error) { operationalTransactionState.pending = null; setOperationalInFlight_("payment", false); operationalElement("operationalPaymentError").innerText = error.message; persistOperationalRecovery_(); }, function() { setOperationalInFlight_("payment", false); operationalUnknown_(operationalElement("operationalPaymentError")); });
     }
-
     function advanceOperationalFulfillment()
     {
-      var order = operationalTransactionState.order, next = operationalElement("operationalFulfillmentNext").dataset.next;
-      operationalServerCall("submitOperationalFulfillment", { orderID: order.OrderID, next: next }, function(updated) {
-        operationalTransactionState.order = updated; renderOperationalOrderStatus();
-      }, operationalElement("operationalOrderError"));
+      if (operationalTransactionState.inFlight.fulfillment) return; var order = operationalTransactionState.order, next = operationalElement("operationalFulfillmentNext").dataset.next; setOperationalInFlight_("fulfillment", true);
+      operationalServerCall("submitOperationalFulfillment", { orderID: order.OrderID, next: next }, function(updated) { setOperationalInFlight_("fulfillment", false); showOperationalOrder(updated); }, function(error) { setOperationalInFlight_("fulfillment", false); operationalElement("operationalOrderError").innerText = error.message; }, function() { setOperationalInFlight_("fulfillment", false); loadOperationalOrder(order.OrderID); operationalUnknown_(operationalElement("operationalOrderError")); });
+    }
+    function reconcileOperationalUnknown()
+    {
+      var pending = operationalTransactionState.pending; if (!pending || pending.state !== "UNKNOWN") return; pending.state = "RECONCILING"; persistOperationalRecovery_();
+      operationalServerCall("findOperationalOperation", { operationType: pending.type, requestKey: pending.requestKey }, function(result) { if (result && result.operation && result.operation.State === "COMMITTED" && result.order) { operationalTransactionState.pending = null; showOperationalOrder(result.order); persistOperationalRecovery_(); } else { pending.state = "UNKNOWN"; persistOperationalRecovery_(); } }, function() { pending.state = "UNKNOWN"; persistOperationalRecovery_(); }, function() { pending.state = "UNKNOWN"; persistOperationalRecovery_(); });
     }
 
     function filterOperationalPurchaseUoms()

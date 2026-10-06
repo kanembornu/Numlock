@@ -3498,20 +3498,18 @@
 
             <form id="transactionEntryForm" novalidate onsubmit="submitTransactionEntry(event)">
               <section id="operationalOrderFields" class="transaction-entry-fields" aria-labelledby="operationalOrderHeading" hidden>
-                <h3 id="operationalOrderHeading">Order details</h3>
+                <h3 id="operationalOrderHeading">Order review</h3>
                 <label for="operationalOrderType">Order Type</label><select id="operationalOrderType"><option value="DINE_IN">Dine In</option><option value="TAKE_AWAY">Take Away</option></select>
-                <label for="operationalProduct">Product</label><select id="operationalProduct" onchange="updateOperationalVariants()"><option value="">Pilih item</option></select>
-                <label for="operationalProductVariant">Variant</label><select id="operationalProductVariant" onchange="updateOperationalOrderPrice()"><option value="">Pilih variant</option></select>
-                <label for="operationalOrderQty">Qty</label><input id="operationalOrderQty" type="number" min="1" step="1" value="1" oninput="updateOperationalOrderPrice()">
-                <label for="operationalSellingPrice">Selling Price</label><input id="operationalSellingPrice" type="text" readonly>
                 <p id="operationalOrderError" class="transaction-entry-error" role="alert"></p><div id="operationalOrderLines"></div><p id="operationalOrderTotal">Total: Rp 0</p>
-                <button type="button" onclick="addOperationalOrderLine()">Add Line</button><button type="button" onclick="saveOperationalOrder()">Save Order</button>
+                <button id="operationalSaveOrder" type="button" onclick="saveOperationalOrder()">Save Order</button>
+                <div class="transaction-entry-control"><label for="operationalOrderLookup">Continue existing order</label><input id="operationalOrderLookup" type="search" placeholder="Order number"><button id="operationalLookupButton" type="button" onclick="lookupOperationalOrder()">Find Order</button></div>
+                <div id="operationalOpenOrders" role="status" aria-live="polite"></div>
               </section>
               <section id="operationalPaymentFields" class="transaction-entry-fields" aria-labelledby="operationalPaymentHeading" hidden>
                 <h3 id="operationalPaymentHeading">Payment</h3>
                 <label for="operationalReceiveVia">Receive Via</label><select id="operationalReceiveVia"><option value="">Pilih metode pembayaran</option></select>
                 <label for="operationalPaymentAmount">Amount</label><input id="operationalPaymentAmount" type="text" readonly>
-                <p id="operationalPaymentError" class="transaction-entry-error" role="alert"></p><button type="button" onclick="confirmOperationalPayment()">Confirm Payment</button>
+                <p id="operationalPaymentError" class="transaction-entry-error" role="alert"></p><button id="operationalConfirmPayment" type="button" onclick="confirmOperationalPayment()">Confirm Payment</button>
               </section>
               <section id="operationalFulfillmentFields" class="transaction-entry-fields" aria-labelledby="operationalFulfillmentHeading" hidden>
                 <h3 id="operationalFulfillmentHeading">Fulfillment</h3>
@@ -3567,17 +3565,8 @@
                       <button type="button" aria-label="Increase quantity" onclick="adjustSalesEntryQty(1)"><i class="fas fa-plus" aria-hidden="true"></i></button>
                     </div>
                     <p id="salesEntryQtyError" class="transaction-entry-error" role="alert"></p>
+                    <button id="operationalAddLine" type="button" onclick="addSelectedSalesOrderLine()">Add Line</button>
                   </div>
-
-                  <fieldset class="transaction-entry-fieldset transaction-entry-cash-account">
-                    <legend>Received via</legend>
-                    <div class="transaction-entry-segments">
-                      <button id="salesCashAccount1000" type="button" role="radio" aria-checked="false" data-cash-account="1000" onclick="setCashAccountCode('sales', '1000')">Cash on Hand</button>
-                      <button id="salesCashAccount1010" type="button" role="radio" aria-checked="false" data-cash-account="1010" onclick="setCashAccountCode('sales', '1010')">DANA</button>
-                      <button id="salesCashAccount1020" type="button" role="radio" aria-checked="false" data-cash-account="1020" onclick="setCashAccountCode('sales', '1020')">BluBCA</button>
-                    </div>
-                    <p id="salesCashAccountError" class="transaction-entry-error" role="alert"></p>
-                  </fieldset>
                 </div>
 
                 <section id="salesPricingPreview" class="transaction-entry-preview" aria-labelledby="salesPricingHeading" aria-busy="false">

@@ -36,9 +36,7 @@
     {
       var entry = initializeStableDashboardElements().transactionEntry;
       var state = transactionEntryState;
-      var validSales = state.transactionType === "SALES" && state.selectedProduct &&
-        state.selectedType && Number.isInteger(state.qty) && state.qty >= 1 && state.pricing &&
-        state.cashAccountCode;
+      var validSales = false;
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
         (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0) &&
         state.cashAccountCode;
@@ -188,6 +186,8 @@
       entry.typeExpense.setAttribute("aria-checked", String(type === "EXPENSE"));
       entry.salesFields.hidden = type !== "SALES";
       entry.expenseFields.hidden = type !== "EXPENSE";
+      operationalElement("operationalOrderFields").hidden = type !== "SALES";
+      if (type === "SALES") { restoreOperationalRecovery(); listOperationalOpenOrders(); }
       var receipt = receiptEntryElements();
       updateExpensePurchaseFields();
       entry.generalError.innerText = "";

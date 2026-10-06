@@ -91,3 +91,41 @@ function testTransactionOperationalFoundationContracts(indexSource, actionSource
     actions.indexOf('operationalServerCall("submitOperationalExpense"') !== -1);
   return { pass: pass, fail: 0, ids: ids };
 }
+
+function testSalesOperatorWorkflowContracts(indexSource, actionSource, productionSource, formsSource) {
+  var ui = String(indexSource || ""), actions = String(actionSource || ""), production = String(productionSource || ""), forms = String(formsSource || ""), pass = 0;
+  function check(id, value) { if (!value) throw new Error("SALES_OPERATOR:" + id); pass++; }
+  [
+    ["visible path", forms.indexOf('operationalOrderFields").hidden = type !== "SALES"') !== -1],
+    ["desktop reachable", ui.indexOf('id="operationalOrderFields"') !== -1],
+    ["mobile reachable", ui.indexOf('class="transaction-entry-scroll"') !== -1],
+    ["multi-line", actions.indexOf("operationalTransactionState.lines.push") !== -1],
+    ["variant explicit", actions.indexOf("Pilih variant yang tersedia.") !== -1],
+    ["price non-editable", ui.indexOf('id="operationalSellingPrice"') === -1],
+    ["request key once", actions.indexOf('pending = operationalTransactionState.pending = { type: "ORDER_CREATE", requestKey: operationalRequestKey_') !== -1],
+    ["uncertain retry key", actions.indexOf("requestKey: pending.requestKey") !== -1],
+    ["confirmed clears key", actions.indexOf('pending.state = "CONFIRMED"; operationalTransactionState.pending = null') !== -1],
+    ["order in flight", actions.indexOf('setOperationalInFlight_("order", true)') !== -1],
+    ["payment in flight", actions.indexOf('setOperationalInFlight_("payment", true)') !== -1],
+    ["fulfillment in flight", actions.indexOf('setOperationalInFlight_("fulfillment", true)') !== -1],
+    ["definite refusal", actions.indexOf('pending.state = "DEFINITE_FAILURE"') !== -1],
+    ["unknown classified", actions.indexOf('pending.state = "UNKNOWN"') !== -1],
+    ["no blind resubmit", actions.indexOf("jangan membuat transaksi baru") !== -1],
+    ["committed reconciliation", actions.indexOf('result.operation.State === "COMMITTED"') !== -1],
+    ["open lookup", production.indexOf("function findOperationalOrder") !== -1],
+    ["refresh recovery", actions.indexOf('localStorage.setItem("numlock.sales.pending"') !== -1],
+    ["paid no payment", actions.indexOf('order.PaymentStatus === "PAID"') !== -1],
+    ["receive via payment only", ui.slice(ui.indexOf('id="operationalOrderFields"'), ui.indexOf('id="operationalPaymentFields"')).indexOf("Receive Via") === -1],
+    ["amount order total", actions.indexOf("amount: order.OrderTotal") !== -1],
+    ["duplicate payment", production.indexOf("SECOND_PAYMENT_REFUSED") !== -1],
+    ["fulfillment exact next", actions.indexOf('READY: ["Complete", "COMPLETED"]') !== -1],
+    ["fulfillment reread", actions.indexOf("loadOperationalOrder(order.OrderID)") !== -1],
+    ["closed derived", String(operationalOrderClosed).indexOf('PaymentStatus === "PAID"') !== -1],
+    ["no customer", ui.slice(ui.indexOf('id="operationalOrderFields"'), ui.indexOf('id="operationalPurchaseFields"')).indexOf("Customer") === -1],
+    ["no supplier", ui.slice(ui.indexOf('id="operationalOrderFields"'), ui.indexOf('id="operationalPaymentFields"')).indexOf("Supplier") === -1],
+    ["no inventory", actions.slice(actions.indexOf("function addSelectedSalesOrderLine"), actions.indexOf("function filterOperationalPurchaseUoms")).indexOf("Inventory") === -1],
+    ["no rbac", actions.toUpperCase().indexOf("RBAC") === -1],
+    ["no production mutation harness", ["clasp push", "createDeployment", "SpreadsheetApp"].every(function(token) { return actions.indexOf(token) === -1; })]
+  ].forEach(function(test) { check(test[0], test[1]); });
+  return { total: 30, pass: pass, fail: 30 - pass };
+}
