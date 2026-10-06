@@ -183,7 +183,7 @@ function transactionProductionAuthority_(ss) {
 function transactionProductionRuntime_() {
   var ss = requireNumlockProductionSpreadsheet();
   return { spreadsheet: ss, repository: createTransactionSpreadsheetRepository(ss), lock: LockService.getScriptLock(),
-    now: function() { return new Date(); }, uuid: function() { return Utilities.getUuid(); },
+    now: function() { return new Date(); }, uuid: function() { return Utilities.getUuid(); }, flush: function() { SpreadsheetApp.flush(); },
     orderSequence: function() { return Utilities.formatDate(new Date(), CANONICAL_ENTRY.TIMEZONE, "yyyyMMddHHmmss") + "-" + Utilities.getUuid().replace(/-/g, "").slice(0, 4); },
     actor: function() { return Session.getActiveUser().getEmail() || CANONICAL_ENTRY.USER; },
     settle: function(request) { return runCashSettleAndPersist(request); } };
@@ -381,7 +381,8 @@ function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
     var vs = ss.getSheetByName(vc.SHEET), ls = ss.getSheetByName(lc.SHEET); requireCanonicalHeaders(vs, vc.HEADERS); requireCanonicalHeaders(ls, lc.HEADERS);
     var source = transactionBootstrapSource_(ss); source.productVariants = readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.SHEET, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS);
     var plan = buildRecipeVersionBootstrapPlan(source, activationBoundary);
-    if (plan.status !== "READY") return Object.assign({}, plan, { writeCount: 0 });
+    if (plan.status !== "READY" || runtime.requiredRecipeVersionCandidateCount != null && plan.planCount !== runtime.requiredRecipeVersionCandidateCount)
+      return Object.assign({}, plan, { status: "REFUSED", reason: plan.status !== "READY" ? "RECIPE_VERSION_BOOTSTRAP_NOT_READY" : "RECIPE_VERSION_CANDIDATE_COUNT_MISMATCH", writeCount: 0 });
     var existing = transactionOperationalMap_(readCanonicalTable(ss, vc.SHEET, vc.HEADERS), "RecipeVersionID"), pendingVersions = [], pendingLines = [];
     plan.versions.forEach(function(row) { if (!existing[row.RecipeVersionID]) pendingVersions.push(row); else if (existing[row.RecipeVersionID].ProductVariantID !== row.ProductVariantID) throw new Error("RECIPE_VERSION_IDENTITY_CONFLICT"); });
     var lineIndex = transactionOperationalMap_(readCanonicalTable(ss, lc.SHEET, lc.HEADERS), "RecipeVersionLineID");
@@ -389,6 +390,20 @@ function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
     var writes = transactionAppendExactRows_(vs, vc.HEADERS, pendingVersions) + transactionAppendExactRows_(ls, lc.HEADERS, pendingLines); runtime.flush();
     return { status: writes ? "APPLIED" : "ALREADY_APPLIED", versionRows: pendingVersions.length, lineRows: pendingLines.length, writeCount: writes };
   } finally { if (acquired) lock.releaseLock(); }
+}
+
+function runRecipeVersionProductionBootstrap() {
+  var expected = 53, boundary = new Date(), runtime = transactionProductionRuntime_(), source = transactionBootstrapSource_(runtime.spreadsheet);
+  source.productVariants = readCanonicalTable(runtime.spreadsheet, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.SHEET, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS);
+  var plan = buildRecipeVersionBootstrapPlan(source, boundary);
+  if (plan.status !== "READY" || plan.planCount !== expected || plan.blockedCount !== 0) return { status: "REFUSED", eligibleCandidateCount: plan.planCount,
+    blockedCount: plan.blockedCount, createdRecipeVersionCount: 0, createdRecipeVersionLineCount: 0, writeCount: 0, errors: plan.blocked,
+    conflicts: [], activationBoundary: boundary.toISOString() };
+  runtime.requiredRecipeVersionCandidateCount = expected;
+  var result = executeRecipeVersionBootstrapWithRuntime(runtime, boundary);
+  return { status: result.status, eligibleCandidateCount: plan.planCount, blockedCount: plan.blockedCount,
+    createdRecipeVersionCount: result.versionRows || 0, createdRecipeVersionLineCount: result.lineRows || 0, writeCount: result.writeCount || 0,
+    errors: [], conflicts: [], activationBoundary: boundary.toISOString() };
 }
 
 function recoverTransactionOperationWithRuntime_(operationID, r) {

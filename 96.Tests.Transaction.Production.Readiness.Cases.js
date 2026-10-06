@@ -134,7 +134,18 @@ function testTransactionExecutorFixtures() {
   var versionRows = readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS);
   if (versionRows[0].EffectiveFrom.getTime() === boundary.getTime() && versionRows[0].ProductVariantID) pass++;
   if (JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("tabsal")) pass++;
-  return { total: 8, pass: pass, fail: 8 - pass };
+  var wrapper = runRecipeVersionProductionBootstrap.toString();
+  if (runRecipeVersionProductionBootstrap.length === 0 && wrapper.indexOf("transactionProductionRuntime_()") !== -1) pass++;
+  if ((wrapper.match(/executeRecipeVersionBootstrapWithRuntime/g) || []).length === 1) pass++;
+  if (wrapper.indexOf("expected = 53") !== -1 && wrapper.indexOf("plan.planCount !== expected") !== -1 && wrapper.indexOf("plan.blockedCount !== 0") !== -1) pass++;
+  if (wrapper.indexOf("new Date()") !== -1 && wrapper.indexOf("toISOString()") !== -1 && wrapper.indexOf("2026-10-05") === -1) pass++;
+  if (wrapper.indexOf("createdRecipeVersionCount") !== -1 && wrapper.indexOf("createdRecipeVersionLineCount") !== -1 && wrapper.indexOf("conflicts") !== -1) pass++;
+  if (transactionProductionRuntime_.toString().indexOf("flush: function() { SpreadsheetApp.flush(); }") !== -1) pass++;
+  var mismatched = executeRecipeVersionBootstrapWithRuntime(Object.assign({}, br, { requiredRecipeVersionCandidateCount: 53 }), boundary);
+  if (mismatched.status === "REFUSED" && mismatched.reason === "RECIPE_VERSION_CANDIDATE_COUNT_MISMATCH" && mismatched.writeCount === 0) pass++;
+  if (readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS).length === 1 &&
+      JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("FinanceLedger") && !bs.getSheetByName("PurchaseEvents") && !bs.getSheetByName("InventoryLedger")) pass++;
+  return { total: 16, pass: pass, fail: 16 - pass };
 }
 
 function testTransactionPurchaseExpenseBehavioralFixtures() {
