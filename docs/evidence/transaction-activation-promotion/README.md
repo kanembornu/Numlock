@@ -97,3 +97,51 @@ Status: ACCEPTED. Recorded 2026-10-06. The original acceptance record above rema
 - Gate 14: PASS.
 - Transaction activation: COMPLETE.
 - Ready for normal operation: TRUE.
+
+## Sales operator first-entry recovery closeout
+
+Status: ACCEPTED. Recorded 2026-10-06. Task lineage: `NUMLOCK-703-TIMELINE-20261006` and `NUMLOCK-703-EVIDENCE-20261006`. This segment extends the chronology without changing any prior failure, corrected-measurement, or closeout record above.
+
+### Classification chronology
+
+- **MEASURED — PRODUCT DEFECT:** The @702-era first-entry Open Orders failure was `RPC_TRIGGER_DEFECT`. Sales entry while authority was `LOADING` reached `operationalServerCall`, which synchronously refused with `AUTHORITY_UNAVAILABLE`; the empty refusal handler swallowed that result, and no READY transition retriggered the request. Server control returned authoritative `PASS_EMPTY`; ready-state rendering was healthy. The defect was client trigger timing, not the server result or empty-state renderer.
+- **STATIC — PRODUCT DEFECT REPAIR:** Commit `cd18be5a9aa3fb1eb96c3e050eedc9717f50703a` (`sales: defer open orders recovery until authority ready`) introduced `pendingOpenOrdersRecovery`. The READY hook at `195.View.Transactions.Actions.html:39-42` clears the pending flag before dispatch and consumes it once. Terminal authority-unavailable handling also clears it. `operationalServerCall` remained unchanged.
+- **MEASURED — ACCEPTED PRODUCT BEHAVIOR:** Local post-repair suites passed 8/8, 30/30, 33/33, and 39/39.
+- **FROZEN — ACCEPTED PRODUCT BEHAVIOR:** Candidate preparation pushed 62 files successfully, created version 703, then created immutable candidate deployment `AKfycbzHkmwJmUHToomHcmLAJOwj4BPk-1IUdzO506C58dOwi3nrqDhJkg7DqVUy25QG1DGZ` pinned at @703.
+- **MEASURED — HARNESS DEFECT:** The initial @703 first-entry proof timed out with incomplete observability. That timeout was inconclusive and is not classified or rewritten as a product failure. No blocked attempt was rewritten.
+- **STATIC — PROBE DRIFT:** Earlier probe sequencing/measurement drift remains preserved in the corrected-measurement record above. It is separate from the @702 product defect and from the incomplete-observability @703 harness timeout.
+
+### Focused @703 timeline diagnostic
+
+- **MEASURED — ACCEPTED PRODUCT BEHAVIOR:** Fresh page; no pre-wait for READY; one normal first Sales entry; no second Sales click, manual Open Orders refresh, reload, or harness-triggered RPC.
+- `PAGE_READY_MS=2870`; `SALES_ENTRY_MS=4555`; `AUTHORITY_LOADING_MS=1069.8`; `PENDING_RECOVERY_SET_MS=1130.2`; `AUTHORITY_READY_MS=7890.7`; `PENDING_RECOVERY_CONSUMED_MS=7890.7`; `OPEN_ORDERS_RPC_DISPATCH_MS=7883.4`; `OPEN_ORDERS_RPC_SETTLED_MS=11244.4`; `OPEN_ORDERS_RENDER_MS=11244.9`.
+- `OPEN_ORDERS_RPC_COUNT=1`; result `{success:true,data:[]}`; final text `No open orders.`; page errors `[]`; console errors `[]`.
+- `FIRST_ENTRY_CLASSIFICATION=PASS_REPAIR_CONFIRMED`.
+- Server control returned `{success:true,data:[]}` with writes 0.
+
+### Candidate acceptance and promotion
+
+- **MEASURED — ACCEPTED PRODUCT BEHAVIOR:** Candidate @703 Gate 13 passed 12/0/0. Desktop acceptance passed, including first-entry Open Orders, Find Order, Payment gating, and Fulfillment gating without submission. T1-T8 passed; F1-F9 passed; smoke passed; errors were `[]`.
+- **FROZEN — ACCEPTED PRODUCT BEHAVIOR:** Candidate mobile acceptance remained PASS from retained responsive-pattern evidence. It was not freshly re-measured in this closeout.
+- **MEASURED:** Pre-promotion preflight passed with `readOnly=true`, `writeCount=0`, no schema actions or blockers, and Orders/OrderLines/Payments/TransactionOperations counts `0/0/0/0`.
+- **MEASURED:** One canonical mutation updated the same canonical deployment object `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` from @702 to @703. No replacement canonical deployment was created.
+
+### Canonical acceptance and invariance
+
+- **MEASURED — ACCEPTED PRODUCT BEHAVIOR:** Fresh canonical first entry passed: `LOADING` → pending set → `READY` → pending consumed → exactly one automatic Open Orders RPC → authoritative `[]` → visible `No open orders.`. No application errors occurred.
+- **MEASURED:** Canonical desktop acceptance passed. Items 1-10 were retained; item 11 passed through repaired first-entry behavior; items 12 and 13 passed; item 14 retained `LOCAL_TEST_CITED` evidence. Canonical Gate 13 passed 12/0/0; T1-T8, F1-F9, and smoke passed; errors were `[]`.
+- **FROZEN:** Canonical mobile acceptance remained PASS from retained responsive-pattern evidence; it was not freshly re-measured.
+- **MEASURED:** Post-promotion preflight passed with `readOnly=true`, `writeCount=0`, no schema actions or blockers. Counts remained invariant at `0/0/0/0`.
+
+### Cleanup and final inventory
+
+- **MEASURED:** Temporary deployment objects @701, the separate @702 candidate, and the @703 candidate were deleted, 3/3 with one attempt each. Versions 701, 702, and 703 were preserved.
+- **MEASURED:** Final deployment inventory contains only canonical `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` @703 and @HEAD. `TEMPORARY_DEPLOYMENTS_REMAINING=0`; `UNEXPECTED_DEPLOYMENTS=0`.
+
+### Sales operator verdict
+
+- `CANONICAL_SALES_OPERATOR_ACCEPTANCE=PASS`
+- `OPERATOR_BLOCKERS_REMAINING=0`
+- `SALES_CANONICAL_SOURCE_READY=TRUE`
+- `TRANSACTION_TECHNICAL_WORK=COMPLETE`
+- `SALES_GO_LIVE_READY=FALSE_PENDING_OWNER_CUTOVER`
