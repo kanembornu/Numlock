@@ -164,22 +164,47 @@ function markAuthBlocked(page) {
 
 async function observeApplicationAuthority(app, startedAtMs, timeoutMs) {
   const deadline = Date.now() + timeoutMs;
+  let last = null;
   do {
-    const present = await app.evaluate(() => Boolean(
-      typeof operationalTransactionState !== "undefined" &&
-      operationalTransactionState && operationalTransactionState.authority
-    )).catch(() => false);
-    if (present) {
-      const appliedAtMs = Date.now();
+    last = await app.evaluate(() => {
+      const state = typeof operationalTransactionState !== "undefined" ? operationalTransactionState : null;
       return {
+        authorityStatus: state && state.authorityStatus ? String(state.authorityStatus) : null,
+        authorityReason: state && state.authorityReason ? String(state.authorityReason) : null,
+        authorityPresent: Boolean(state && state.authority)
+      };
+    }).catch(() => null);
+    const observedAtMs = Date.now();
+    if (last && last.authorityStatus === "READY" && last.authorityPresent) {
+      return {
+        terminalState: "READY",
         authorityPresent: true,
-        appliedAt: new Date(appliedAtMs).toISOString(),
-        latencyMs: appliedAtMs - startedAtMs
+        authorityReason: null,
+        appliedAt: new Date(observedAtMs).toISOString(),
+        readyMs: observedAtMs - startedAtMs,
+        terminalMs: observedAtMs - startedAtMs
+      };
+    }
+    if (last && last.authorityStatus === "UNAVAILABLE" && last.authorityReason && last.authorityReason !== "NOT_LOADED") {
+      return {
+        terminalState: "UNAVAILABLE",
+        authorityPresent: false,
+        authorityReason: last.authorityReason,
+        appliedAt: null,
+        readyMs: null,
+        terminalMs: observedAtMs - startedAtMs
       };
     }
     await app.waitForTimeout(POLL_MS);
   } while (Date.now() < deadline);
-  return { authorityPresent: false, appliedAt: null, latencyMs: null };
+  return {
+    terminalState: "TIMEOUT",
+    authorityPresent: false,
+    authorityReason: last && last.authorityReason ? last.authorityReason : null,
+    appliedAt: null,
+    readyMs: null,
+    terminalMs: Date.now() - startedAtMs
+  };
 }
 
 async function invokeAuthorityProbe(app, timeoutMs) {
@@ -451,35 +476,18 @@ function pricingFabricated(state) {
       return;
     }
 
-    // Probe terminal non-success settles immediately; successful authority continues into application/C–E observation.
-    const probeRpc = await probeRpcPromise;
-    let entryState;
-    let applicationRpc;
-    if (probeRpc.rpcOutcome === "SUCCESS_TRUE") {
-      [entryState, applicationRpc] = await Promise.all([
-        pollEntryState(app, AUTHORITY_TIMEOUT),
-        observeApplicationAuthority(app, applicationRpcStartedAtMs, AUTHORITY_TIMEOUT)
-      ]);
-    } else {
-      entryState = await pollEntryState(app, 0);
-      const authorityPresent = Boolean(entryState && entryState.authorityLoaded);
-      applicationRpc = {
-        authorityPresent,
-        appliedAt: authorityPresent ? new Date().toISOString() : null,
-        latencyMs: authorityPresent ? Date.now() - applicationRpcStartedAtMs : null
-      };
-    }
+    // Probe-owned RPC and application-owned authority load are independent state machines.
+    const applicationTerminalPromise = observeApplicationAuthority(app, applicationRpcStartedAtMs, AUTHORITY_TIMEOUT);
+    const entryStatePromise = pollEntryState(app, AUTHORITY_TIMEOUT);
+    const [probeRpc, applicationRpc, entryState] = await Promise.all([
+      probeRpcPromise,
+      applicationTerminalPromise,
+      entryStatePromise
+    ]);
     authorityObservation.probeRpc = probeRpc;
     authorityObservation.applicationRpc = applicationRpc;
-    if (probeRpc.rpcOutcome === "SUCCESS_TRUE") {
-      authorityObservation.browserLegClassification = applicationRpc.authorityPresent
-        ? "PROBE_RPC_SUCCESS_APPLICATION_APPLIED"
-        : "PROBE_RPC_SUCCESS_APPLICATION_NOT_APPLIED";
-    } else if (probeRpc.rpcOutcome === "UNSETTLED_TIMEOUT") {
-      authorityObservation.browserLegClassification = "PROBE_RPC_TIMEOUT";
-    } else {
-      authorityObservation.browserLegClassification = "PROBE_RPC_FAILURE";
-    }
+    authorityObservation.browserLegClassification =
+      `PROBE_${probeRpc.rpcOutcome}_APPLICATION_${applicationRpc.terminalState}`;
     const dom = await snapshotDom(app);
 
     const authorityRpcResolved = Boolean(entryState && entryState.authorityLoaded);
