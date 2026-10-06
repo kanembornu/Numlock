@@ -181,12 +181,17 @@ function transactionProductionAuthority_(ss) {
 }
 
 function transactionProductionRuntime_() {
-  var ss = requireNumlockProductionSpreadsheet();
-  return { spreadsheet: ss, repository: createTransactionSpreadsheetRepository(ss), lock: LockService.getScriptLock(),
+  var ss = requireNumlockProductionSpreadsheet(), runtime = { spreadsheet: ss, lock: LockService.getScriptLock(),
     now: function() { return new Date(); }, uuid: function() { return Utilities.getUuid(); }, flush: function() { SpreadsheetApp.flush(); },
     orderSequence: function() { return Utilities.formatDate(new Date(), CANONICAL_ENTRY.TIMEZONE, "yyyyMMddHHmmss") + "-" + Utilities.getUuid().replace(/-/g, "").slice(0, 4); },
     actor: function() { return Session.getActiveUser().getEmail() || CANONICAL_ENTRY.USER; },
     settle: function(request) { return runCashSettleAndPersist(request); } };
+  Object.defineProperty(runtime, "repository", { configurable: true, enumerable: true, get: function() {
+    var repository = createTransactionSpreadsheetRepository(ss);
+    Object.defineProperty(runtime, "repository", { configurable: true, enumerable: true, value: repository });
+    return repository;
+  } });
+  return runtime;
 }
 
 function transactionResponse_(operation) { try { return { success: true, data: operation() }; } catch (error) { return { success: false, error: { code: error.code || error.entryCode || "WRITE_FAILED", message: error.message, field: error.field || error.entryField || null } }; } }
@@ -343,6 +348,19 @@ function executeTransactionSchemaActivationWithRuntime(runtime) {
     plan.actions.forEach(function(action) { requireCanonicalHeaders(ss.getSheetByName(action.sheet), action.headers); });
     return { status: "ACTIVATED", writeCount: writes, createdSheets: plan.actions.map(function(a) { return a.sheet; }) };
   } finally { if (acquired) lock.releaseLock(); }
+}
+
+function runTransactionSchemaActivation() {
+  var runtime = transactionProductionRuntime_(), state = {};
+  Object.keys(TRANSACTION_PRODUCTION_CONTRACT).forEach(function(key) { state[key] = transactionSchemaState_(runtime.spreadsheet.getSheetByName(TRANSACTION_PRODUCTION_CONTRACT[key].SHEET), TRANSACTION_PRODUCTION_CONTRACT[key]); });
+  var plan = buildTransactionSchemaActivationPlan(state), evaluated = Object.keys(TRANSACTION_PRODUCTION_CONTRACT).map(function(key) { return TRANSACTION_PRODUCTION_CONTRACT[key].SHEET; });
+  var ready = evaluated.filter(function(sheet) { return plan.actions.every(function(action) { return action.sheet !== sheet; }) && plan.blocked.every(function(conflict) { return conflict.sheet !== sheet; }); });
+  var creating = plan.actions.map(function(action) { return action.sheet; }), conflicts = plan.blocked.slice();
+  if (plan.status === "BLOCKED") return { status: "REFUSED", schemasEvaluated: evaluated, schemasReady: ready, schemasRequiringCreation: creating,
+    schemasRefused: conflicts.map(function(conflict) { return conflict.sheet; }), createdSchemaCount: 0, writeCount: 0, errors: conflicts, conflicts: conflicts };
+  var result = executeTransactionSchemaActivationWithRuntime(runtime);
+  return { status: result.status, schemasEvaluated: evaluated, schemasReady: ready, schemasRequiringCreation: creating, schemasRefused: [],
+    createdSchemaCount: (result.createdSheets || []).length, writeCount: result.writeCount || 0, errors: [], conflicts: [] };
 }
 
 function transactionBootstrapSource_(ss) {

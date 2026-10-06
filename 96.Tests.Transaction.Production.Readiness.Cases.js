@@ -102,8 +102,9 @@ function transactionFixtureSpreadsheet_(initial) {
       values: rows };
   }
   Object.keys(initial || {}).forEach(function(name) { sheets[name] = sheet(name, initial[name]); });
-  return { getSheetByName: function(name) { return sheets[name] || null; }, insertSheet: function(name) { if (sheets[name]) throw new Error("COLLISION"); sheets[name] = sheet(name, []); return sheets[name]; },
+  var fixture = { getSheetByName: function(name) { return sheets[name] || null; }, insertSheet: function(name) { if (fixture.beforeInsert) fixture.beforeInsert(name); if (sheets[name]) throw new Error("COLLISION"); sheets[name] = sheet(name, []); return sheets[name]; },
     fixtureSheet: function(name) { return sheets[name]; } };
+  return fixture;
 }
 function transactionFixtureTable_(headers, rows) { return [headers.slice()].concat((rows || []).map(function(row) { return headers.map(function(h) { return row[h] === undefined ? "" : row[h]; }); })); }
 function transactionFixtureLock_() { return { waitLock: function() {}, releaseLock: function() {} }; }
@@ -117,6 +118,37 @@ function testTransactionExecutorFixtures() {
   if (ss.fixtureSheet("Orders").values.length === 1) pass++;
   var malformed = Object.assign({}, base); malformed.Orders = [["Wrong"]];
   if (executeTransactionSchemaActivationWithRuntime({ spreadsheet: transactionFixtureSpreadsheet_(malformed), lock: transactionFixtureLock_(), flush: function() {} }).status === "BLOCKED") pass++;
+  var schemaNames = Object.keys(TRANSACTION_PRODUCTION_CONTRACT).map(function(k) { return TRANSACTION_PRODUCTION_CONTRACT[k].SHEET; });
+  var wrapperSource = runTransactionSchemaActivation.toString();
+  if (runTransactionSchemaActivation.length === 0 && wrapperSource.indexOf("transactionProductionRuntime_()") !== -1 &&
+      (wrapperSource.match(/executeTransactionSchemaActivationWithRuntime/g) || []).length === 1) pass++;
+  if (schemaNames.length === 7 && wrapperSource.indexOf("TRANSACTION_PRODUCTION_CONTRACT") !== -1 && wrapperSource.indexOf("buildTransactionSchemaActivationPlan") !== -1) pass++;
+  var allMissing = transactionFixtureSpreadsheet_(), allMissingWrites = 0;
+  executeTransactionSchemaActivationWithRuntime({ spreadsheet: allMissing, lock: transactionFixtureLock_(), flush: function() {} });
+  schemaNames.forEach(function(name) { if (allMissing.fixtureSheet(name).values.length === 1) allMissingWrites++; });
+  if (allMissingWrites === 7) pass++;
+  var blockedWrites = 0, blockedFixture = transactionFixtureSpreadsheet_(malformed); blockedFixture.beforeInsert = function() { blockedWrites++; };
+  var blocked = executeTransactionSchemaActivationWithRuntime({ spreadsheet: blockedFixture, lock: transactionFixtureLock_(), flush: function() {} });
+  if (blocked.status === "BLOCKED" && blockedWrites === 0 && blocked.blocked[0].sheet === "Orders") pass++;
+  var emptyCollision = Object.assign({}, base); emptyCollision.Orders = [];
+  var collisionWrites = 0, collisionFixture = transactionFixtureSpreadsheet_(emptyCollision); collisionFixture.beforeInsert = function() { collisionWrites++; };
+  if (executeTransactionSchemaActivationWithRuntime({ spreadsheet: collisionFixture, lock: transactionFixtureLock_(), flush: function() {} }).status === "BLOCKED" && collisionWrites === 0) pass++;
+  var exactData = {}; Object.keys(TRANSACTION_PRODUCTION_CONTRACT).forEach(function(k) { var c = TRANSACTION_PRODUCTION_CONTRACT[k]; exactData[c.SHEET] = [c.HEADERS.slice()]; });
+  var exact = executeTransactionSchemaActivationWithRuntime({ spreadsheet: transactionFixtureSpreadsheet_(exactData), lock: transactionFixtureLock_(), flush: function() {} });
+  if (exact.status === "ALREADY_READY" && exact.writeCount === 0) pass++;
+  var partial = transactionFixtureSpreadsheet_(), insertCount = 0; partial.beforeInsert = function() { insertCount++; if (insertCount === 3) throw new Error("INTERRUPTED"); };
+  try { executeTransactionSchemaActivationWithRuntime({ spreadsheet: partial, lock: transactionFixtureLock_(), flush: function() {} }); } catch (error) {}
+  var reentry = executeTransactionSchemaActivationWithRuntime({ spreadsheet: partial, lock: transactionFixtureLock_(), flush: function() {} });
+  if (reentry.status === "ACTIVATED" && reentry.writeCount === 5 && schemaNames.every(function(name) { return partial.fixtureSheet(name).values.length === 1; })) pass++;
+  if (["executeProductVariantBootstrapWithRuntime", "executeRecipeVersionBootstrapWithRuntime", "RecipeStandardCost", "PurchaseEvents", "InventoryReceipt", "InventoryLedger"].every(function(token) { return wrapperSource.indexOf(token) === -1; })) pass++;
+  if (["schemasEvaluated", "schemasReady", "schemasRequiringCreation", "schemasRefused", "createdSchemaCount", "writeCount", "errors", "conflicts"].every(function(token) { return wrapperSource.indexOf(token) !== -1; })) pass++;
+  var savedFactory = transactionProductionRuntime_, savedExecutor = executeTransactionSchemaActivationWithRuntime, factoryCalls = 0, executorCalls = 0;
+  transactionProductionRuntime_ = function() { factoryCalls++; return { spreadsheet: transactionFixtureSpreadsheet_(), lock: transactionFixtureLock_(), flush: function() {} }; };
+  executeTransactionSchemaActivationWithRuntime = function() { executorCalls++; return { status: "ACTIVATED", writeCount: 7, createdSheets: schemaNames.slice() }; };
+  var wrapperResult;
+  try { wrapperResult = runTransactionSchemaActivation(); } finally { transactionProductionRuntime_ = savedFactory; executeTransactionSchemaActivationWithRuntime = savedExecutor; }
+  if (factoryCalls === 1 && executorCalls === 1 && wrapperResult.status === "ACTIVATED" && wrapperResult.schemasEvaluated.length === 7 &&
+      wrapperResult.schemasRequiringCreation.length === 7 && wrapperResult.createdSchemaCount === 7 && wrapperResult.writeCount === 7 && !wrapperResult.errors.length && !wrapperResult.conflicts.length) pass++;
   var products = [{ ID_Prod: "P1", Produk: "Coffee", Kategori: "Drink", Kind: "Menu", RevenueAccountCode: "4000", COGSAccountCode: "5000", IsActive: true }];
   var pricing = [{ ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: boundary, EffectiveTo: "", HPP: 2, Harga: 20, IsActive: true }];
   var recipes = [{ ID_Recipe: "R1", ID_Prod: "P1", Tipe: "Hot", ID_Ingredient: "I1", UsageQty: 1, IsActive: true }];
@@ -145,7 +177,7 @@ function testTransactionExecutorFixtures() {
   if (mismatched.status === "REFUSED" && mismatched.reason === "RECIPE_VERSION_CANDIDATE_COUNT_MISMATCH" && mismatched.writeCount === 0) pass++;
   if (readCanonicalTable(bs, "RecipeVersions", TRANSACTION_PRODUCTION_CONTRACT.RECIPE_VERSIONS.HEADERS).length === 1 &&
       JSON.stringify(data.Products) === JSON.stringify(bs.fixtureSheet("Products").values) && !bs.getSheetByName("FinanceLedger") && !bs.getSheetByName("PurchaseEvents") && !bs.getSheetByName("InventoryLedger")) pass++;
-  return { total: 16, pass: pass, fail: 16 - pass };
+  return { total: 26, pass: pass, fail: 26 - pass };
 }
 
 function testTransactionPurchaseExpenseBehavioralFixtures() {
