@@ -53,6 +53,32 @@ function testOperationalOrderLookupTransportContract() {
   return { total: 10, pass: pass, fail: 10 - pass };
 }
 
+function testOpenOperationalOrdersTransportContract() {
+  var at = new Date("2026-10-06T01:02:03Z"), rows = [{ sourceRowIndex: 2, OrderID: "O1", OrderNumber: "N1", OrderType: "DINE_IN",
+    PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN", OrderTotal: 20, HppTotalSnapshot: 2, CreatedAt: at, CreatedBy: "test",
+    PreparingAt: "", ReadyAt: "", CompletedAt: "", UpdatedAt: at, UpdatedBy: "test", Lines: [{ sourceRowIndex: 2, OrderLineID: "L1",
+      OrderID: "O1", ProductID: "P1", ProductVariantID: "PV1", Tipe: "HOT", Qty: 1, SellingPriceSnapshot: 20,
+      RecipeVersionID: "RV1", UnitHppSnapshot: 2, LineTotal: 20, LineHpp: 2 }] }], originalRuntime = transactionProductionRuntime_, pass = 0;
+  function check(value, label) { if (!value) throw new Error("OPEN_ORDERS_TRANSPORT:" + label); pass++; }
+  function noDate(value) { if (value instanceof Date) return false; if (Array.isArray(value)) return value.every(noDate); if (value && typeof value === "object") return Object.keys(value).every(function(key) { return noDate(value[key]); }); return true; }
+  try {
+    transactionProductionRuntime_ = function() { return { repository: { listOpenOrders: function() { return rows; } } }; };
+    var response = listOpenOperationalOrders(), order = response.data[0];
+    check(response.success === true && response.data.length === 1, "non-empty response");
+    check(noDate(response), "recursive transport hygiene");
+    check(order.CreatedAt === at.toISOString() && order.UpdatedAt === at.toISOString(), "dates serialized");
+    check(order.OrderID === "O1" && order.OrderNumber === "N1", "identity preserved");
+    check(order.PaymentStatus === "UNPAID" && order.FulfillmentStatus === "OPEN", "status preserved");
+    check(order.Lines.length === 1 && order.Lines[0].OrderLineID === "L1", "lines preserved");
+    check(!Object.prototype.hasOwnProperty.call(order, "sourceRowIndex") && !Object.prototype.hasOwnProperty.call(order.Lines[0], "sourceRowIndex"), "internal fields removed");
+    rows = []; check(listOpenOperationalOrders().data.length === 0, "empty response");
+    rows = [Object.assign({}, order, { OrderID: "O2", OrderNumber: "N2" }), Object.assign({}, order, { OrderID: "O3", OrderNumber: "N3" })];
+    check(listOpenOperationalOrders().data.length === 2, "multiple orders");
+    check(transactionOperationalOrderTransportDto_(null) === null, "lookup transport preserved");
+  } finally { transactionProductionRuntime_ = originalRuntime; }
+  return { total: 10, pass: pass, fail: 10 - pass };
+}
+
 function testTransactionProductionReadinessMatrices() {
   var totals = { PV: 20, RV: 10, PA: 21, OC: 8, PC: 10, FS: 8 }, passed = { PV: 0, RV: 0, PA: 0, OC: 0, PC: 0, FS: 0 };
   function check(group, condition, label) { if (!condition) throw new Error(group + ":" + label); passed[group]++; }
