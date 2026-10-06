@@ -1,5 +1,5 @@
     var operationalTransactionState = { authority: null, authorityStatus: "UNAVAILABLE", authorityReason: "NOT_LOADED", lines: [], order: null,
-      pending: null, inFlight: { order: false, payment: false, fulfillment: false } };
+      pending: null, pendingOpenOrdersRecovery: false, inFlight: { order: false, payment: false, fulfillment: false } };
 
     function operationalElement(id) { return document.getElementById(id); }
 
@@ -8,6 +8,7 @@
       operationalTransactionState.authority = null;
       operationalTransactionState.authorityStatus = "UNAVAILABLE";
       operationalTransactionState.authorityReason = reason;
+      operationalTransactionState.pendingOpenOrdersRecovery = false;
       ["operationalOrderError", "operationalPurchaseError", "operationalExpenseError", "operationalPaymentError"].forEach(function(id) {
         var element = operationalElement(id); if (element) element.innerText = "Transaction authority is unavailable.";
       });
@@ -35,6 +36,10 @@
         operationalTransactionState.authority = response.data;
         operationalTransactionState.authorityStatus = "READY";
         operationalTransactionState.authorityReason = null;
+        if (operationalTransactionState.pendingOpenOrdersRecovery) {
+          operationalTransactionState.pendingOpenOrdersRecovery = false;
+          listOperationalOpenOrders();
+        }
         populateOperationalSelect("operationalProduct", response.data.products, "ProductID", "Name", "Pilih item");
         populateOperationalSelect("operationalSupplier", response.data.suppliers, "SupplierID", "Name", "Pilih supplier");
         populateOperationalSelect("operationalPurchaseItem", response.data.purchaseItems, "ExpenseItemID", "label", "Pilih item");
@@ -119,7 +124,10 @@
     function showOperationalOrder(order) { if (!order) return; operationalTransactionState.order = order; operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID"; operationalElement("operationalFulfillmentFields").hidden = false; operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal); renderOperationalOrderStatus(); }
     function loadOperationalOrder(identifier) { operationalServerCall("findOperationalOrder", identifier, function(order) { if (order) { showOperationalOrder(order); persistOperationalRecovery_(); } else operationalElement("operationalOrderError").innerText = "Order tidak ditemukan."; }, function(error) { operationalElement("operationalOrderError").innerText = error.message; }, function() { operationalUnknown_(operationalElement("operationalOrderError")); }); }
     function lookupOperationalOrder() { loadOperationalOrder(operationalElement("operationalOrderLookup").value); }
-    function listOperationalOpenOrders() { operationalServerCall("listOpenOperationalOrders", {}, function(orders) { operationalElement("operationalOpenOrders").textContent = orders.length ? "Open: " + orders.map(function(order) { return order.OrderNumber; }).join(", ") : "No open orders."; }, function() {}, function() {}); }
+    function listOperationalOpenOrders() {
+      if (operationalTransactionState.authorityStatus === "LOADING") { operationalTransactionState.pendingOpenOrdersRecovery = true; return; }
+      operationalServerCall("listOpenOperationalOrders", {}, function(orders) { operationalElement("operationalOpenOrders").textContent = orders.length ? "Open: " + orders.map(function(order) { return order.OrderNumber; }).join(", ") : "No open orders."; }, function() {}, function() {});
+    }
     function renderOperationalOrderStatus()
     {
       var order = operationalTransactionState.order, lines = (order.Lines || []).map(function(line) { return (line.ProductID || line.productID) + " / " + (line.Tipe || line.tipe) + " × " + (line.Qty || line.qty) + " · " + formatEntryCurrency(line.SellingPriceSnapshot || line.sellingPriceSnapshot); }).join("; ");
