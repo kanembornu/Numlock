@@ -1,3 +1,37 @@
+function testTransactionAuthorityTransportContract() {
+  var at = new Date("2026-10-05T00:00:00Z"), variant = { sourceRowIndex: 2, ProductVariantID: "PV1", ProductID: "P1", Tipe: "HOT", EffectiveFrom: at,
+    EffectiveTo: "", IsActive: true, CreatedAt: at }, item = { sourceRowIndex: 3, ItemID: "I1", ItemName: "Beans", Classification: "RAW_MATERIAL",
+    BaseUOM: "gr", EffectiveFrom: at, EffectiveTo: "", IsActive: true, CreatedAt: at }, conversion = { sourceRowIndex: 4, ConversionID: "C1", ItemID: "I1",
+    FromUOM: "kg", ToUOM: "gr", Numerator: 1000, Denominator: 1, EffectiveFrom: at, EffectiveTo: "", IsActive: true, CreatedAt: at };
+  var authority = { products: [{ ProductID: "P1", Name: "Coffee", IsActive: true }], productVariants: [variant], pricing: [{ ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: at, EffectiveTo: "", Harga: 20, IsActive: true }],
+    suppliers: [], purchaseItems: [{ ExpenseItemID: "E1", ItemID: "I1", label: "Beans" }], expenseItems: [{ ExpenseItemID: "X1", label: "Rent" }], items: [item], conversions: [conversion],
+    paymentMethods: [{ code: "1000", label: "Cash", AccountCode: "1000", IsActive: true }] };
+  var before = JSON.stringify(authority), dto = transactionAuthorityTransportDto_(authority, at), pass = 0;
+  function check(value, label) { if (!value) throw new Error("AUTHORITY_TRANSPORT:" + label); pass++; }
+  function noDate(value) { if (value instanceof Date) return false; if (Array.isArray(value)) return value.every(noDate); if (value && typeof value === "object") return Object.keys(value).every(function(key) { return noDate(value[key]); }); return true; }
+  check(noDate(dto.productVariants), "product variants transport clean");
+  check(noDate(dto.items), "items transport clean");
+  check(noDate(dto.conversions), "conversions transport clean");
+  check(dto.productVariants[0].EffectiveFrom === at.toISOString(), "date instant preserved");
+  check(JSON.stringify(authority) === before, "source unchanged");
+  check(dto.productVariants[0].ProductVariantID === "PV1" && dto.items[0].ItemID === "I1" && dto.conversions[0].ConversionID === "C1", "required ids preserved");
+  check(!Object.prototype.hasOwnProperty.call(dto.productVariants[0], "sourceRowIndex") && !Object.prototype.hasOwnProperty.call(dto.items[0], "sourceRowIndex") && !Object.prototype.hasOwnProperty.call(dto.conversions[0], "sourceRowIndex"), "internal fields absent");
+  validateTransactionAuthorityTransport_(dto, "authority"); check(true, "recursive hygiene passes");
+  try { transactionAuthorityTransportDto_(Object.assign({}, authority, { items: [Object.assign({}, item, { ItemID: { bad: true } })] }), at); } catch (error) { if (/MISSING_AUTHORITY_TRANSPORT_FIELD|INVALID_AUTHORITY_TRANSPORT_VALUE/.test(error.message)) pass++; }
+  check(pass === 9, "unexpected required runtime fails closed");
+  check(dto.products.length === 1 && dto.productVariants.length === 1 && dto.suppliers.length === 0 && dto.purchaseItems.length === 1 && dto.expenseItems.length === 1 && dto.items.length === 1 && dto.conversions.length === 1 && dto.paymentMethods.length === 1, "counts preserved");
+  var client = typeof _htmlActions === "string" ? _htmlActions : "";
+  check(client.indexOf("withFailureHandler(function(error)") !== -1, "failure handler");
+  check(client.indexOf('response === null') !== -1 && client.indexOf('NULL_RESPONSE') !== -1, "null handled");
+  check(client.indexOf('MALFORMED_RESPONSE') !== -1, "malformed handled");
+  check(client.indexOf('SUCCESS_FALSE') !== -1, "success false handled");
+  check(client.indexOf('markOperationalAuthorityUnavailable("FAILURE_HANDLER")') !== -1, "failure unavailable");
+  check(client.indexOf('operationalTransactionState.authority = response.data') > client.indexOf('validOperationalAuthorityResponse(response)'), "invalid cannot apply");
+  check(client.indexOf('authorityStatus: "UNAVAILABLE"') !== -1 && client.indexOf('authorityStatus !== "READY"') !== -1, "no fallback and fail closed");
+  check(client.indexOf('Transaction authority is unavailable.') !== -1, "authority actions blocked");
+  return { total: 18, pass: pass, fail: 18 - pass };
+}
+
 function testTransactionProductionReadinessMatrices() {
   var totals = { PV: 20, RV: 10, PA: 21, OC: 8, PC: 10, FS: 8 }, passed = { PV: 0, RV: 0, PA: 0, OC: 0, PC: 0, FS: 0 };
   function check(group, condition, label) { if (!condition) throw new Error(group + ":" + label); passed[group]++; }

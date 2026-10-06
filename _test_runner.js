@@ -201,6 +201,7 @@ run('testInventoryPolicyEvidenceDiagnosticContracts', 'testInventoryPolicyEviden
 run('testMasterWritePolicyContracts', 'testMasterWritePolicyContracts()');
 run('testSupplierMasterContracts', 'testSupplierMasterContracts()');
 run('testTransactionOperationalFoundationContracts', 'testTransactionOperationalFoundationContracts(_htmlIndex, _htmlActions)');
+run('testTransactionAuthorityTransportContract', 'testTransactionAuthorityTransportContract()');
 run('testTransactionProductionReadinessMatrices', 'testTransactionProductionReadinessMatrices()');
 run('testTransactionCrashRecoveryExecution', 'testTransactionCrashRecoveryExecution()');
 run('testTransactionExecutorFixtures', 'testTransactionExecutorFixtures()');

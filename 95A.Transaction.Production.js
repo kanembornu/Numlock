@@ -270,18 +270,75 @@ function createDurableOperationalPayment_(orderID, payload, runtime, repository)
   transactionCommitOperation_(repository, operation, runtime.now()); return { payment: stored, order: paid, idempotent: !!existing, writeCount: existing ? 0 : 2 };
 }
 
-function getOperationalTransactionAuthority() { return transactionResponse_(function() { var a = transactionProductionAuthority_(requireNumlockProductionSpreadsheet()), now = new Date(); return {
-  products: a.products, productVariants: a.productVariants.filter(function(v) { return isCanonicalActive(v.IsActive); }).map(function(v) {
-    var prices = transactionEffectiveRows_(a.pricing, v.ProductID, transactionVariantType_(v.Tipe), now);
-    return Object.assign({}, v, { SellingPrice: prices.length === 1 ? Number(prices[0].Harga) : null });
-  }), suppliers: buildSupplierReadModel_(a.suppliers, true),
-  purchaseItems: readCanonicalTable(requireNumlockProductionSpreadsheet(), "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]).filter(function(e) {
+function transactionAuthorityTransportDate_(value, field) {
+  if (value === "" || value === null) return value;
+  var date = value instanceof Date ? value : new Date(value);
+  if (isNaN(date.getTime())) throw new Error("INVALID_AUTHORITY_TRANSPORT_DATE:" + field);
+  return date.toISOString();
+}
+function transactionAuthorityTransportRequired_(value, field) {
+  if (["string", "number", "boolean"].indexOf(typeof value) === -1 || String(value).trim() === "") throw new Error("MISSING_AUTHORITY_TRANSPORT_FIELD:" + field);
+  if (typeof value === "number" && !isFinite(value)) throw new Error("INVALID_AUTHORITY_TRANSPORT_NUMBER:" + field);
+  return value;
+}
+function transactionAuthorityTransportFinite_(value, field) {
+  var number = Number(value);
+  if (!isFinite(number)) throw new Error("INVALID_AUTHORITY_TRANSPORT_NUMBER:" + field);
+  return number;
+}
+function validateTransactionAuthorityTransport_(value, path) {
+  var type = typeof value;
+  if (value === null || type === "string" || type === "boolean") return;
+  if (type === "number") { if (!isFinite(value)) throw new Error("INVALID_AUTHORITY_TRANSPORT_VALUE:" + path); return; }
+  if (Array.isArray(value)) { value.forEach(function(item, index) { validateTransactionAuthorityTransport_(item, path + "[" + index + "]"); }); return; }
+  var prototype = type === "object" ? Object.getPrototypeOf(value) : null;
+  if (type !== "object" || value instanceof Date || prototype && (!prototype.constructor || prototype.constructor.name !== "Object")) throw new Error("INVALID_AUTHORITY_TRANSPORT_VALUE:" + path);
+  Object.keys(value).forEach(function(key) { validateTransactionAuthorityTransport_(value[key], path + "." + key); });
+}
+function transactionAuthorityTransportDto_(authority, now) {
+  var dto = {
+    products: authority.products,
+    productVariants: authority.productVariants.filter(function(row) { return isCanonicalActive(row.IsActive); }).map(function(row) {
+      var prices = transactionEffectiveRows_(authority.pricing, row.ProductID, transactionVariantType_(row.Tipe), now);
+      return { ProductVariantID: transactionAuthorityTransportRequired_(row.ProductVariantID, "ProductVariantID"),
+        ProductID: transactionAuthorityTransportRequired_(row.ProductID, "ProductID"), Tipe: transactionAuthorityTransportRequired_(row.Tipe, "Tipe"),
+        EffectiveFrom: transactionAuthorityTransportDate_(row.EffectiveFrom, "ProductVariant.EffectiveFrom"),
+        EffectiveTo: transactionAuthorityTransportDate_(row.EffectiveTo, "ProductVariant.EffectiveTo"), IsActive: isCanonicalActive(row.IsActive),
+        SellingPrice: prices.length === 1 ? transactionAuthorityTransportFinite_(prices[0].Harga, "SellingPrice") : null };
+    }),
+    suppliers: buildSupplierReadModel_(authority.suppliers, true),
+    purchaseItems: authority.purchaseItems,
+    expenseItems: authority.expenseItems,
+    items: authority.items.filter(function(row) { return isCanonicalActive(row.IsActive); }).map(function(row) {
+      return { ItemID: transactionAuthorityTransportRequired_(row.ItemID, "ItemID"), ItemName: transactionAuthorityTransportRequired_(row.ItemName, "ItemName"),
+        Classification: transactionAuthorityTransportRequired_(row.Classification, "Classification"), BaseUOM: transactionAuthorityTransportRequired_(row.BaseUOM, "BaseUOM"),
+        EffectiveFrom: transactionAuthorityTransportDate_(row.EffectiveFrom, "Item.EffectiveFrom"), EffectiveTo: transactionAuthorityTransportDate_(row.EffectiveTo, "Item.EffectiveTo"),
+        IsActive: isCanonicalActive(row.IsActive) };
+    }),
+    conversions: authority.conversions.filter(function(row) { return isCanonicalActive(row.IsActive); }).map(function(row) {
+      var purchaseUOM = row.PurchaseUOM || row.FromUOM, baseUOM = row.BaseUOM || row.ToUOM;
+      var factor = row.FactorToBase !== undefined && row.FactorToBase !== "" ? row.FactorToBase : Number(row.Numerator) / Number(row.Denominator);
+      return { ConversionID: transactionAuthorityTransportRequired_(row.ConversionID, "ConversionID"), ItemID: transactionAuthorityTransportRequired_(row.ItemID, "Conversion.ItemID"),
+        PurchaseUOM: transactionAuthorityTransportRequired_(purchaseUOM, "PurchaseUOM"), BaseUOM: transactionAuthorityTransportRequired_(baseUOM, "Conversion.BaseUOM"),
+        FactorToBase: transactionAuthorityTransportFinite_(factor, "FactorToBase"), EffectiveFrom: transactionAuthorityTransportDate_(row.EffectiveFrom, "Conversion.EffectiveFrom"),
+        EffectiveTo: transactionAuthorityTransportDate_(row.EffectiveTo, "Conversion.EffectiveTo"), IsActive: isCanonicalActive(row.IsActive) };
+    }),
+    paymentMethods: authority.paymentMethods
+  };
+  validateTransactionAuthorityTransport_(dto, "authority");
+  return dto;
+}
+function getOperationalTransactionAuthority() { return transactionResponse_(function() {
+  var ss = requireNumlockProductionSpreadsheet(), authority = transactionProductionAuthority_(ss);
+  var expenses = readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]);
+  authority.purchaseItems = expenses.filter(function(e) {
     if (!isCanonicalActive(e.IsActive)) return false; try { var route = resolveExpensePurchasePolicy_(e.ID_Ops, [e]); return expensePolicyIsPurchase_(route) && route.inventoryItemIds.length === 1; } catch (error) { return false; }
-  }).map(function(e) { var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === e.ID_Ops; })[0]; return { ExpenseItemID: e.ID_Ops, ItemID: route.inventoryItemIds[0], label: e.Item }; }),
-  expenseItems: readCanonicalTable(requireNumlockProductionSpreadsheet(), "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]).filter(function(e) {
+  }).map(function(e) { var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === e.ID_Ops; })[0]; return { ExpenseItemID: e.ID_Ops, ItemID: route.inventoryItemIds[0], label: e.Item }; });
+  authority.expenseItems = expenses.filter(function(e) {
     if (!isCanonicalActive(e.IsActive)) return false; try { return !expensePolicyIsPurchase_(resolveExpensePurchasePolicy_(e.ID_Ops, [e])); } catch (error) { return false; }
-  }).map(function(e) { return { ExpenseItemID: e.ID_Ops, label: e.Item + " · " + e.Kategori }; }),
-  items: a.items.filter(function(i) { return isCanonicalActive(i.IsActive); }), conversions: a.conversions.filter(function(c) { return isCanonicalActive(c.IsActive); }), paymentMethods: a.paymentMethods }; }); }
+  }).map(function(e) { return { ExpenseItemID: e.ID_Ops, label: e.Item + " · " + e.Kategori }; });
+  return transactionAuthorityTransportDto_(authority, new Date());
+}); }
 function submitOperationalOrder(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalOrder_(payload, transactionProductionAuthority_(r.spreadsheet), r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalFulfillment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return transitionOperationalFulfillmentWithRepository(payload.orderID, payload.next, r, r.repository).order; } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalPayment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalPayment_(payload.orderID, payload, r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }

@@ -90,6 +90,7 @@ function getBackendTestRegistry()
     { name: "testPerformanceAnalyticsVisualContract", run: testPerformanceAnalyticsVisualContract },
     { name: "testIntelligencePlanningVisualContract", run: testIntelligencePlanningVisualContract },
     { name: "testSecondaryDestinationsHighFidelityContract", run: testSecondaryDestinationsHighFidelityContract },
+    { name: "testTransactionAuthorityTransportContract", run: testTransactionAuthorityTransportContract },
     { name: "testTransactionEntryUiContract", run: testTransactionEntryUiContract },
     { name: "testTransactionLifecycleUiContract", run: testTransactionLifecycleUiContract },
     { name: "testTransactionsVisualContract", run: testTransactionsVisualContract },

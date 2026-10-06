@@ -1,12 +1,39 @@
-    var operationalTransactionState = { authority: null, lines: [], order: null };
+    var operationalTransactionState = { authority: null, authorityStatus: "UNAVAILABLE", authorityReason: "NOT_LOADED", lines: [], order: null };
 
     function operationalElement(id) { return document.getElementById(id); }
 
+    function markOperationalAuthorityUnavailable(reason)
+    {
+      operationalTransactionState.authority = null;
+      operationalTransactionState.authorityStatus = "UNAVAILABLE";
+      operationalTransactionState.authorityReason = reason;
+      ["operationalOrderError", "operationalPurchaseError", "operationalExpenseError", "operationalPaymentError"].forEach(function(id) {
+        var element = operationalElement(id); if (element) element.innerText = "Transaction authority is unavailable.";
+      });
+    }
+
+    function validOperationalAuthorityResponse(response)
+    {
+      var data = response && response.data;
+      return !!(data && Array.isArray(data.products) && Array.isArray(data.productVariants) && Array.isArray(data.suppliers) &&
+        Array.isArray(data.purchaseItems) && Array.isArray(data.expenseItems) && Array.isArray(data.items) &&
+        Array.isArray(data.conversions) && Array.isArray(data.paymentMethods));
+    }
+
     function loadOperationalTransactionAuthority()
     {
+      operationalTransactionState.authorityStatus = "LOADING";
+      operationalTransactionState.authorityReason = null;
       google.script.run.withSuccessHandler(function(response) {
-        if (!response || response.success !== true) return;
+        if (response === null) { markOperationalAuthorityUnavailable("NULL_RESPONSE"); return; }
+        if (!response || typeof response !== "object" || !Object.prototype.hasOwnProperty.call(response, "success")) {
+          markOperationalAuthorityUnavailable("MALFORMED_RESPONSE"); return;
+        }
+        if (response.success !== true) { markOperationalAuthorityUnavailable("SUCCESS_FALSE"); return; }
+        if (!validOperationalAuthorityResponse(response)) { markOperationalAuthorityUnavailable("MALFORMED_RESPONSE"); return; }
         operationalTransactionState.authority = response.data;
+        operationalTransactionState.authorityStatus = "READY";
+        operationalTransactionState.authorityReason = null;
         populateOperationalSelect("operationalProduct", response.data.products, "ProductID", "Name", "Pilih item");
         populateOperationalSelect("operationalSupplier", response.data.suppliers, "SupplierID", "Name", "Pilih supplier");
         populateOperationalSelect("operationalPurchaseItem", response.data.purchaseItems, "ExpenseItemID", "label", "Pilih item");
@@ -17,6 +44,9 @@
         var today = new Date().toISOString().slice(0, 10);
         operationalElement("operationalPurchaseDate").value = today;
         operationalElement("operationalExpenseDate").value = today;
+      }).withFailureHandler(function(error) {
+        console.error("Transaction authority failed", error && error.message ? error.message : "RPC failure");
+        markOperationalAuthorityUnavailable("FAILURE_HANDLER");
       }).getOperationalTransactionAuthority();
     }
 
@@ -67,6 +97,9 @@
 
     function operationalServerCall(method, payload, onSuccess, errorElement)
     {
+      if (operationalTransactionState.authorityStatus !== "READY" || !operationalTransactionState.authority) {
+        errorElement.innerText = "Transaction authority is unavailable."; return;
+      }
       google.script.run.withSuccessHandler(function(response) {
         if (!response || response.success !== true) { errorElement.innerText = response && response.error ? response.error.message : "Transaction could not be saved."; return; }
         errorElement.innerText = ""; onSuccess(response.data);
