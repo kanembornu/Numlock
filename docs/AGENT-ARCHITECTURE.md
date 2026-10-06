@@ -4,18 +4,27 @@ Effective local contract: 2026-09-10. OpenCode + 9router is the sole agent execu
 
 ## Routing
 
-User → OpenCode `numlock` classifier → NUMLOCK specialist → 9router on localhost:20128 → configured OpenCode model route.
+User → OpenCode `numlock` classifier/orchestrator → NUMLOCK specialist → 9router on localhost:20128 → configured OpenCode model route.
 
-| Class | Specialist | Execution |
+Routing keeps three dimensions independent: reasoning demand L1-L4,
+operational risk R1-R4, and execution state CONTINUE/ESCALATE/BLOCK.
+
+| Class | Specialist | Initial execution |
 |---|---|---|
-| Read-only | numlock-explore | Inspect and report |
-| L1/R1 | numlock-light | Trivial local edit |
-| L2/R1-R2 | numlock-medium | Bounded local implementation |
-| L3-L4/R1-R3 | numlock-heavy | Local implementation with explicit scope and meaningful validation |
-| ANY/R4 | numlock-critical | Prepare locally, then execute only the specifically authorized risky action |
-| Explicit local commit | numlock-commit | Exact named paths and message; no push/history rewrite |
+| Read-only | numlock-explore | Free; inspect and report |
+| L1 | numlock-light | Free; mechanical local work |
+| L2 | numlock-medium | Free; bounded established-pattern work |
+| L3 | numlock-heavy | Free; substantial deterministic implementation and validation |
+| Intrinsic L4 | Sol reasoning | Direct Sol when strong evidence exists; deterministic execution returns to Free |
+| ANY/R4 | numlock-critical | Free by default; prepare locally, then execute only specifically authorized risky action |
+| Explicit local commit | numlock-commit | Free; exact named paths and message; no push/history rewrite |
 
-R4 overrides complexity. Read-only financial analysis does not itself authorize financial changes. Production authority, deployment, migration, credentials and destructive actions retain their human gate. A valid explicit gate persists within its exact scope and operation count. Preserve uncertainty after a count-limited attempt.
+R4 controls permission, human gate, mutation budget, fail-closed behavior, and
+retry policy; it does not select Sol. L2+R4 remains Free + HUMAN_GATE. Read-only
+financial analysis does not authorize financial changes. Production authority,
+deployment, migration, credentials, and destructive actions retain human gate.
+Valid explicit gate persists within exact scope and operation count. Preserve
+uncertainty after count-limited attempt.
 
 ## Configuration ownership
 
@@ -28,11 +37,24 @@ R4 overrides complexity. Read-only financial analysis does not itself authorize 
 ## Backend evidence
 
 Current project configuration defines `numlock-explore-free` and `numlock-sol`.
-Primary, helper, and ordinary agents select `numlock-explore-free`; Heavy and
-Critical select `numlock-sol`. This proves configured selection only, not route
-contents, provider availability, successful usage, or future runtime behavior.
+Primary and specialists, including Heavy and Critical, initially select
+`9router/numlock-explore-free`. `9router/numlock-sol` is premium reasoning
+authority for intrinsic L4 or evidence-based escalation. This proves configured
+selection only, not route contents, provider availability, successful usage, or
+future runtime behavior.
 
-`@ai-sdk/openai-compatible` implements a compatible HTTP protocol. It does not install an OpenAI agent or establish that requests go to OpenAI. Do not switch providers or add an external premium backend silently. Missing premium route => PREMIUM_BACKEND_REQUIRED. Routing levels do not certify model quality or sufficient reasoning capability; validation and scope checks remain mandatory.
+Free escalation reasons are `AUTHORITY_CONFLICT`, `ARCHITECTURAL_AMBIGUITY`,
+`REASONING_INSUFFICIENCY`, `CROSS_SUBSYSTEM_CONTRADICTION`,
+`NOVEL_RECOVERY_REQUIRED`, `VALIDATION_CONTRADICTION`, and
+`OWNER_PREMIUM_REQUEST`. Send smallest sufficient context. Sol returns a concise
+resolution/execution contract; deterministic work returns to Free.
+
+Authentication, permission, capability, network, human-gate, and mutation-budget
+failures return their precise `BLOCKED_*` state, never Sol. One primary Free
+attempt plus at most one predefined materially different recovery is allowed;
+no loops or autonomous mutation retries.
+
+`@ai-sdk/openai-compatible` implements a compatible HTTP protocol. It does not install an OpenAI agent or establish that requests go to OpenAI. Do not switch providers or add an external premium backend silently. Missing premium route after valid Sol selection => PREMIUM_BACKEND_REQUIRED. Routing levels do not certify model quality or sufficient reasoning capability; validation and scope checks remain mandatory.
 
 ## Audit findings corrected
 

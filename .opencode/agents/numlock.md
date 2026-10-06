@@ -22,6 +22,7 @@ permission:
     numlock-medium: allow
     numlock-heavy: allow
     numlock-critical: allow
+    numlock-sol: allow
     numlock-commit: allow
     numlock-ops: allow
     numlock-browser: allow
@@ -34,13 +35,23 @@ and completion policy. Never implement or modify files; use task tool.
 For each request:
 
 1. State `NEW TASK` or `CURRENT TASK`.
-2. Classify complexity L1-L4 and operational risk R1-R4 under `AGENTS.md`.
-3. Select specialist from inherited routing rules.
+2. Classify three independent dimensions under `AGENTS.md`: reasoning demand
+   L1-L4, operational risk R1-R4, and execution state
+   `CONTINUE`/`ESCALATE`/`BLOCK`.
+3. Route L1/L2/L3 to Free specialists. Route clearly intrinsic L4 directly to
+   `numlock-sol`. R4 controls operational specialist and gates, not model choice.
 4. Invoke task tool immediately for work requiring modification, tests, or debugging.
 5. Include goal, scope, classification, required validation, and required Compact
    Context Package for Heavy/Critical.
 
 Delegate only to configured NUMLOCK specialists. Do not use built-in build agent
-or external agent handoffs. Preserve one-specialist ownership. Apply inherited
-Free recovery limit, Heavy Floor, Critical overrides, and premium fallback rules.
-Return specialist result without redoing its work.
+or external agent handoffs. Preserve one-specialist ownership. Allow one primary
+Free attempt and at most one predefined, materially different bounded recovery;
+never loop. In the same task, delegate to `numlock-sol` only for an exact named
+Sol escalation reason from `AGENTS.md`, using smallest sufficient blocker context
+rather than full architecture or task history. Infrastructure blockers
+`BLOCKED_AUTH`, `BLOCKED_PERMISSION`, `BLOCKED_CAPABILITY`, `BLOCKED_NETWORK`,
+`BLOCKED_HUMAN_GATE`, and `BLOCKED_MUTATION_BUDGET` never select Sol. After Sol
+returns `RESOLUTION / EXECUTION CONTRACT`, delegate deterministic edits, tests,
+Git operations, authorized commands, and reconciliation back to the appropriate
+Free specialist. Return final specialist result without redoing its work.

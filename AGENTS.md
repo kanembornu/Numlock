@@ -191,92 +191,137 @@ HTML/CSS, Apps Script client/server, or visual relationships.
 
 ## OpenCode Routing
 
-Primary entrypoint: `numlock` (read-only classifier/delegator).
+Primary entrypoint: `numlock` (read-only classifier/orchestrator/delegator).
+Classify three independent dimensions:
+
+- **Reasoning demand L1-L4:** L1 mechanical; L2 bounded work on established
+  patterns; L3 substantial multi-step reasoning under established authorities;
+  L4 novel or high-ambiguity reasoning that established contracts cannot resolve.
+  Size, file count, gate count, test volume, browser work, production context,
+  deployment, R3, and R4 do not alone make work L4.
+- **Operational risk R1-R4:** controls permissions, human authorization,
+  mutation budget, fail-closed behavior, and retry policy. Risk never directly
+  selects a model.
+- **Execution state:** `CONTINUE`, `ESCALATE`, or `BLOCK`.
 
 ### Specialist Agents
 
 | Agent            | Scope                               | Implementation                                                           |
 | ---------------- | ----------------------------------- | ------------------------------------------------------------------------ |
 | numlock-explore  | Read-only exploration, audit, trace | No                                                                       |
-| numlock-light    | L1/R1 trivial local                 | Yes (bounded)                                                            |
-| numlock-medium   | L2/R1-R2 bounded multi-file         | Yes (bounded)                                                            |
-| numlock-heavy    | L3-L4/R1-R3                         | Yes (local implementation + validation)                                  |
+| numlock-light    | L1 local work                       | Yes (bounded)                                                            |
+| numlock-medium   | L2 local work                       | Yes (bounded)                                                            |
+| numlock-heavy    | L3 local work                       | Yes (local implementation + validation)                                  |
 | numlock-critical | ANY/R4                              | Local preparation; risky action only within explicit human authorization |
 | numlock-commit   | Local Git staging/commit only       | No (explicit-path staging + commit)                                      |
+| numlock-ops      | Deterministic operations            | Only within exact allowlist, authorization, and mutation budget           |
 
-### Routing
+### Initial Routing
 
-- Explicit read-only → numlock-explore
-- L1/R1 → numlock-light
-- L2/R1-R2 → numlock-medium
-- L3/R1-R3 → numlock-heavy
-- L4/R1-R3 → numlock-heavy
-- ANY/R4 → numlock-critical
-- Explicitly authorized local commit → numlock-commit
+- Explicit read-only → numlock-explore on Free
+- L1 → numlock-light on Free
+- L2 → numlock-medium on Free
+- L3 → numlock-heavy on Free
+- Clearly intrinsic L4 → `9router/numlock-sol` directly; do not waste a
+  mandatory Free attempt
+- ANY/R4 → numlock-critical on Free unless independent L4 evidence selects Sol
+- Explicitly authorized local commit → numlock-commit on Free
+
+R4 overrides operational routing, not reasoning demand. L2+R4 means Free plus
+strict permissions, explicit human gate, and bounded mutation budget—not Sol.
 
 ### Premium Model Routing
 
-| Agent            | Default Model        | Premium Model  | Fallback   |
-| ---------------- | -------------------- | -------------- | ---------- |
-| numlock-explore  | numlock-explore-free | —              | -          |
-| numlock-light    | numlock-explore-free | —              | -          |
-| numlock-medium   | numlock-explore-free | —              | -          |
-| numlock-heavy    | numlock-sol          | cx/gpt-5.6-sol | NONE       |
-| numlock-critical | numlock-sol          | cx/gpt-5.6-sol | NONE       |
-| numlock-commit   | numlock-explore-free | —              | -          |
-| numlock-ops      | numlock-explore-free | —              | -          |
+| Agent            | Initial Model                      | Sol use                                      |
+| ---------------- | ---------------------------------- | -------------------------------------------- |
+| numlock/explore/light/medium | `9router/numlock-explore-free` | Evidence-based escalation only               |
+| numlock-heavy    | `9router/numlock-explore-free`      | L4 or measured reasoning blocker             |
+| numlock-critical | `9router/numlock-explore-free`      | Independent L4 or measured reasoning blocker |
+| numlock-commit/ops | `9router/numlock-explore-free`    | Never for deterministic execution            |
 
-Premium route: OpenCode → 9Router → Codex OAuth → GPT-5.6 Sol
-Free route: OpenCode → 9Router → numlock-explore-free → oc/mimo-v2.5-free → oc/big-pickle
+Premium reasoning authority: `9router/numlock-sol`. Free execution authority:
+`9router/numlock-explore-free`. OpenCode remains sole execution and coordination
+entrypoint through 9Router. Only configured OpenAI-compatible routes are used;
+protocol compatibility does not make an external agent. No silent backend
+substitution. Premium unavailability returns `PREMIUM_BACKEND_REQUIRED` only
+when Sol was validly selected.
 
-Primary, helper, and ordinary specialists use the 9router free combo. Heavy and
-Critical use the strict Sol-only route through 9router. Reasoning effort
-(medium/high) is a request parameter, not a model selector.
-Escalate to HIGH reasoning only when:
+Free must escalate in the same task when measured evidence establishes one exact
+reason:
 
-- Architecture must be derived
-- Multiple modules have non-trivial invariants
-- Competing designs require resolution
-- Production-safe migration reasoning is substantial
+1. `AUTHORITY_CONFLICT` — authoritative sources materially conflict and no deterministic precedence exists.
+2. `ARCHITECTURAL_AMBIGUITY` — necessary design decision is absent from architecture/contracts.
+3. `REASONING_INSUFFICIENCY` — bounded Free attempt cannot safely determine implementation or prove required invariant.
+4. `CROSS_SUBSYSTEM_CONTRADICTION` — Transaction/Finance/Product interaction needs non-mechanical synthesis unresolved by established authorities.
+5. `NOVEL_RECOVERY_REQUIRED` — production mutation outcome is uncertain and no predefined recovery safely determines next action.
+6. `VALIDATION_CONTRADICTION` — implementation, authoritative tests, or runtime evidence materially contradict and deterministic tracing cannot establish correct state.
+7. `OWNER_PREMIUM_REQUEST` — owner explicitly requests premium/Sol.
 
-Critical uses Sol by default. Reasoning effort (medium/high) is a request parameter.
-Escalate to HIGH when complexity/risk requires it. Do not automatically choose HIGH because classification = Critical.
+Escalation sends smallest sufficient context and exact `ESCALATION_REASON`, not
+full task history. Sol resolves reasoning only. When remaining work is
+mechanical, Sol returns a concise `RESOLUTION/EXECUTION CONTRACT`; primary hands
+editing, tests, Git operations, exact authorized commands, browser probes, and
+structured reconciliation back to Free. Do not retain Sol for convenience. Use
+smallest supported orchestration pattern if direct model handoff is unavailable.
 
-Fallback policy:
+Infrastructure and capability failures never select Sol. Return exact state:
 
-- Primary/Explore/Light/Medium/Commit/Ops: `9router/numlock-explore-free`
-- Heavy/Critical: premium-only route; no proxy fallback to OpenCode free tier
-- If premium unavailable: PREMIUM_BACKEND_REQUIRED
-- Auth/config errors surface as configuration failures, not quota exhaustion
+- `BLOCKED_AUTH`: invalid/expired/missing OAuth or external authentication
+- `BLOCKED_PERMISSION`: denied or non-allowlisted command
+- `BLOCKED_CAPABILITY`: unavailable shell, browser, file, or required tool
+- `BLOCKED_NETWORK`: network, DNS, or unreachable deployment
+- `BLOCKED_HUMAN_GATE`: required approval absent
+- `BLOCKED_MUTATION_BUDGET`: authorized attempt count exhausted
 
-SUBSCRIPTION_PROXY_RISK_NOTICE_PRESENT: 9Router subscription/OAuth proxy use may not be officially licensed for this use and may risk account restriction.
+For one parent objective, permit one primary Free attempt and at most one
+predefined, materially different bounded recovery. No loops. After both fail,
+reasoning insufficiency escalates to Sol; infrastructure blocks; uncertain
+mutation follows existing recovery on Free or uses `NOVEL_RECOVERY_REQUIRED`
+only when no contract determines a safe next action. No autonomous mutation
+retry or recursive remediation.
 
-R4 overrides complexity. Heavy floor applies when the task may CHANGE (not merely inspect or reason about): financial architecture, transaction semantics, accounting authority, COGS authority, inventory authority, atomicity, concurrency, idempotency/recovery semantics, locking design, cross-core-module production state behavior, or schema/data model affecting financial meaning. Reading or reasoning about financial modules to repair tests, fixtures, or assertions is MEDIUM-eligible provided production source mutation is prohibited, financial authority is unchanged, no production action occurs, and no architectural redesign is requested. Dynamic escalation remains: MEDIUM must return ESCALATION_REQUIRED if inspection reveals the task actually requires changing production financial semantics.
+### Routing Acceptance Examples
 
-### Escalation
-
-Specialists must return `ESCALATION_REQUIRED` with reason, target class, modification status, and validation performed when task exceeds assigned scope.
-
-For one parent objective, allow one normal Free execution and at most one bounded Free recovery. Recovery must use current-state evidence, address a concrete failure with a changed approach or repair, and stay within existing scope and permissions. After both fail, prohibit more Free retries. Escalate to Heavy/Sol only when the unresolved objective warrants L3-L4/R1-R3; otherwise stop and report the blocker. Routine Light/Medium work must not auto-route to Sol. R4 always routes to Critical and retains the exact human authorization gate.
+1. Read/search source → Free.
+2. Large multi-file implementation following established pattern → Free.
+3. Large task with many sequential gates and deterministic contracts → Free.
+4. Read-only production diagnostic → Free, subject to command permission.
+5. Known one-shot production mutation, explicit authorization, L2/R4 → Free + HUMAN_GATE.
+6. `clasp invalid_grant` → `BLOCKED_AUTH`; no Sol.
+7. Missing shell/command permission → `BLOCKED_CAPABILITY` or `BLOCKED_PERMISSION`; no Sol.
+8. Network failure → `BLOCKED_NETWORK`; no Sol.
+9. Materially contradictory authoritative accounting contracts without deterministic precedence → automatic Sol (`AUTHORITY_CONFLICT`).
+10. Free implementation discovers architecture decision absent from frozen contract → automatic Sol (`ARCHITECTURAL_AMBIGUITY`).
+11. Uncertain production mutation with fully determining recovery contract → deterministic recovery on Free where safe.
+12. Uncertain production mutation without safe recovery contract → automatic Sol (`NOVEL_RECOVERY_REQUIRED`).
+13. Sol resolves ambiguity; edit/test/commit remains → return to Free with resolution/execution contract.
+14. Owner explicitly requests Sol → direct Sol permitted (`OWNER_PREMIUM_REQUEST`).
+15. R4 simple predetermined command with explicit authorization → Free + HUMAN_GATE.
+16. L4 non-production architecture problem → Sol despite low operational risk.
 
 ### Execution architecture
 
-OpenCode is the sole execution and agent coordination application. Primary and
-ordinary specialist requests use the project 9router free combo; Heavy and
-Critical use the project 9router provider for Sol. Codex, ChatGPT, and OpenAI
-agents are not required handoff targets, reviewers, or coordinators. An
-OpenAI-compatible HTTP client is a protocol adapter, not an OpenAI agent.
+Use repository authorities plus concise task delta. Delegations carry exact
+scope, blocker or escalation reason, and needed evidence; never duplicate full
+NUMLOCK architecture or premium transcript. Reasoning effort is independent of
+risk and model label.
 
-The project config selects `9router/numlock-explore-free` for Primary, helper,
-and ordinary specialists, and `9router/numlock-sol` for Heavy/Critical. Config
-selection does not prove route contents or runtime availability. Unavailable
-premium routes return `PREMIUM_BACKEND_REQUIRED`.
+HEAVY performs authorized deterministic L3 local implementation in small
+validated steps. CRITICAL prepares exact files, target, operation count,
+expected write footprint, checks, and reconciliation. If risky action lacks
+exact authorization, return `HUMAN_GATE_REQUIRED`. Existing authorization
+persists only within exact scope and count. Ambiguous or stale authorization is
+not permission. Sol selection never widens operational authority.
 
-HEAVY performs authorized local implementation in small validated steps. CRITICAL prepares the exact files, target, operation count, expected write footprint, checks and reconciliation first. If the risky action is not already explicitly authorized, return `HUMAN_GATE_REQUIRED` for that concrete action. Existing specific authorization persists within its stated scope and count; do not ask again merely because the class is CRITICAL. Ambiguous or stale authorization is not permission.
+Never downgrade financial semantics to evade a boundary. No deployment,
+production write, migration, credential mutation, destructive Git operation,
+or historical backfill is authorized by classification or model. Shell approval
+is additional enforcement; generic shell/interpreter commands cannot bypass
+business gates.
 
-Never downgrade financial semantics to MEDIUM to evade a boundary. No deployment, production write, migration, credential mutation, destructive Git operation, or historical backfill is authorized by classification alone. Shell approval is an additional enforcement layer; generic shell/interpreter commands must not bypass these rules.
-
-CodeGraph remains a local code tool. Use the allowed `codegraph explore`/`codegraph status` commands when no MCP is configured. Do not initialize/reindex as part of routine exploration.
+CodeGraph remains a local code tool. Use allowed `codegraph explore`/`codegraph
+status` when no MCP is configured. Do not initialize/reindex during routine
+exploration.
 
 ### Upload manifest gate
 

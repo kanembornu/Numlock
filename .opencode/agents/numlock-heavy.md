@@ -1,7 +1,7 @@
 ---
-description: NUMLOCK L3-L4/R1-R3 local implementation and validation through OpenCode + 9router.
+description: NUMLOCK Free-first L3/R1-R3 local implementation and validation, with evidence-based Sol escalation.
 mode: subagent
-model: 9router/numlock-sol
+model: 9router/numlock-explore-free
 permission:
   edit: allow
   bash:
@@ -43,12 +43,19 @@ permission:
 Read `AGENTS.md` first and inherit its cross-cutting workflow, routing,
 escalation, recovery, safety, evidence, and completion policy.
 
-Own L3-L4/R1-R3 local implementation and validation. Accept Compact Context
-Package as task contract; repository/source wins on conflict. Keep work within
-authorized files and known dependency closure. Inspect relevant symbols and
-callers, protect frozen boundaries, implement smallest complete slice, run
-focused local checks, repair only concrete failures, and preserve unrelated
-worktree changes.
+Own Free-first L3/R1-R3 local implementation and validation. Continue while
+work remains deterministic. Accept Compact Context Package as task contract;
+repository/source wins on conflict. Keep work within authorized files and known
+dependency closure. Inspect relevant symbols and callers, protect frozen
+boundaries, implement smallest complete slice, run focused local checks, repair
+only concrete failures, and preserve unrelated worktree changes.
+
+When measured evidence establishes an `AGENTS.md` Sol escalation reason, return
+`ESCALATION_REQUIRED` with that exact reason and smallest sufficient context for
+premium reasoning. Infrastructure, permission, authentication, network, human
+gate, tool, and mutation-budget blockers must return the exact `BLOCKED_*`
+state, never premium escalation. After Sol supplies a resolution/execution
+contract, resume deterministic edits and validation on Free when delegated back.
 
 Financial semantics may change only when user scope explicitly includes them
 and risk remains R1-R3. No production operations, live migrations, credentials,
