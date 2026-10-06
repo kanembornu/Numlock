@@ -23,7 +23,7 @@ const { chromium } = require("playwright");
 
 const TARGET_URL = process.argv[2];
 const TIMEOUT = 60_000;
-const AUTHORITY_TIMEOUT = 20_000;
+const AUTHORITY_TIMEOUT = 90_000;
 const PRICING_TIMEOUT = 15_000;
 const POLL_MS = 200;
 const READ_ONLY_GUARANTEE =
@@ -53,6 +53,25 @@ let activeSalesPathEvidence = null;
 let operationalPathInformational = null;
 let browser;
 let blocked = null;
+let authorityObservation = {
+  probeRpc: {
+    rpcStartedAt: null,
+    rpcSettledAt: null,
+    rpcLatencyMs: null,
+    rpcOutcome: "UNSETTLED_TIMEOUT",
+    error: null,
+    products: null,
+    productVariants: null,
+    suppliers: null,
+    paymentMethods: null
+  },
+  applicationRpc: {
+    authorityPresent: false,
+    appliedAt: null,
+    latencyMs: null
+  },
+  browserLegClassification: null
+};
 
 function validTarget(value) {
   try {
@@ -100,6 +119,7 @@ function report() {
     counts: counts(),
     activeSalesPathEvidence,
     operationalPathInformational,
+    authorityObservation,
     blocked,
     readOnlyGuarantee: READ_ONLY_GUARANTEE,
     pageErrors,
@@ -140,6 +160,86 @@ function markAuthBlocked(page) {
   authWall.url = page.url();
   authWall.reason = "GOOGLE_LOGIN_REQUIRED";
   fillRemaining("FAIL", "blocked: GOOGLE_LOGIN_REQUIRED — probe never interacts with login UI");
+}
+
+async function observeApplicationAuthority(app, startedAtMs, timeoutMs) {
+  const deadline = Date.now() + timeoutMs;
+  do {
+    const present = await app.evaluate(() => Boolean(
+      typeof operationalTransactionState !== "undefined" &&
+      operationalTransactionState && operationalTransactionState.authority
+    )).catch(() => false);
+    if (present) {
+      const appliedAtMs = Date.now();
+      return {
+        authorityPresent: true,
+        appliedAt: new Date(appliedAtMs).toISOString(),
+        latencyMs: appliedAtMs - startedAtMs
+      };
+    }
+    await app.waitForTimeout(POLL_MS);
+  } while (Date.now() < deadline);
+  return { authorityPresent: false, appliedAt: null, latencyMs: null };
+}
+
+async function invokeAuthorityProbe(app, timeoutMs) {
+  return app.evaluate((timeout) => new Promise((resolve) => {
+    const startedAtMs = Date.now();
+    let settled = false;
+    function own(object, property) {
+      return Boolean(object && typeof object === "object" && Object.prototype.hasOwnProperty.call(object, property));
+    }
+    function safeValue(value, key) {
+      if (/token|credential|secret/i.test(key || "")) return "[REDACTED]";
+      if (value === undefined) return { valueType: "undefined" };
+      if (value === null || ["string", "number", "boolean"].includes(typeof value)) return value;
+      if (Array.isArray(value)) return { valueType: "array", count: value.length };
+      if (typeof value === "object") {
+        const result = {};
+        Object.keys(value).slice(0, 50).forEach((childKey) => {
+          result[childKey] = safeValue(value[childKey], childKey);
+        });
+        return result;
+      }
+      return { valueType: typeof value, value: String(value).slice(0, 500) };
+    }
+    function finish(outcome, response, failure) {
+      if (settled) return;
+      settled = true;
+      const settledAtMs = Date.now();
+      const responseObject = response !== null && typeof response === "object" && !Array.isArray(response);
+      const responseKeys = responseObject ? Object.keys(response) : [];
+      const data = outcome === "SUCCESS_TRUE" && responseObject && response.data ? response.data : null;
+      resolve({
+        rpcStartedAt: new Date(startedAtMs).toISOString(),
+        rpcSettledAt: new Date(settledAtMs).toISOString(),
+        rpcLatencyMs: settledAtMs - startedAtMs,
+        rpcOutcome: outcome,
+        responseType: response === null ? "null" : typeof response,
+        responseIsNull: response === null,
+        responseIsArray: Array.isArray(response),
+        responseKeys,
+        successPropertyPresent: own(response, "success"),
+        successValue: own(response, "success") ? safeValue(response.success, "success") : { propertyPresent: false },
+        errorPropertyPresent: own(response, "error"),
+        errorValue: own(response, "error") ? safeValue(response.error, "error") : { propertyPresent: false },
+        status: own(response, "status") ? safeValue(response.status, "status") : { propertyPresent: false },
+        code: own(response, "code") ? safeValue(response.code, "code") : { propertyPresent: false },
+        message: own(response, "message") ? safeValue(response.message, "message") : { propertyPresent: false },
+        sanitizedResponse: safeValue(response, "response"),
+        failure: failure ? safeValue({ name: failure.name, message: failure.message || String(failure) }, "failure") : null,
+        products: data && Array.isArray(data.products) ? data.products.length : null,
+        productVariants: data && Array.isArray(data.productVariants) ? data.productVariants.length : null,
+        suppliers: data && Array.isArray(data.suppliers) ? data.suppliers.length : null,
+        paymentMethods: data && Array.isArray(data.paymentMethods) ? data.paymentMethods.length : null
+      });
+    }
+    setTimeout(() => finish("UNSETTLED_TIMEOUT", undefined, null), timeout);
+    google.script.run
+      .withSuccessHandler((response) => finish(response && response.success === true ? "SUCCESS_TRUE" : "SUCCESS_FALSE", response, null))
+      .withFailureHandler((error) => finish("FAILURE_HANDLER", undefined, error))
+      .getOperationalTransactionAuthority();
+  }), timeoutMs);
 }
 
 async function pollEntryState(app, timeoutMs) {
@@ -337,8 +437,10 @@ function pricingFabricated(state) {
 
     // A. Entry load — open dialog via read-only trigger.
     const openErrorsBefore = relevant(pageErrors).length;
+    const applicationRpcStartedAtMs = Date.now();
     await app.locator("#newTransactionButton").click();
     await app.locator("#transactionEntryDialog").waitFor({ state: "visible", timeout: TIMEOUT });
+    const probeRpcPromise = invokeAuthorityProbe(app, AUTHORITY_TIMEOUT);
     const appShellReady = await inspectShell(app);
     const dialogVisible = await app.locator("#transactionEntryDialog").isVisible().catch(() => false);
     const openPageErrors = relevant(pageErrors).slice(openErrorsBefore);
@@ -349,9 +451,35 @@ function pricingFabricated(state) {
       return;
     }
 
-    // Wait for server read-only RPCs fired on open (getTransactionEntryOptions + getOperationalTransactionAuthority).
-    // AND-wait: BOTH flags required; timeout → C/D/E NOT_MEASURABLE with reason (no silent empty snapshot).
-    const entryState = await pollEntryState(app, AUTHORITY_TIMEOUT);
+    // Probe terminal non-success settles immediately; successful authority continues into application/C–E observation.
+    const probeRpc = await probeRpcPromise;
+    let entryState;
+    let applicationRpc;
+    if (probeRpc.rpcOutcome === "SUCCESS_TRUE") {
+      [entryState, applicationRpc] = await Promise.all([
+        pollEntryState(app, AUTHORITY_TIMEOUT),
+        observeApplicationAuthority(app, applicationRpcStartedAtMs, AUTHORITY_TIMEOUT)
+      ]);
+    } else {
+      entryState = await pollEntryState(app, 0);
+      const authorityPresent = Boolean(entryState && entryState.authorityLoaded);
+      applicationRpc = {
+        authorityPresent,
+        appliedAt: authorityPresent ? new Date().toISOString() : null,
+        latencyMs: authorityPresent ? Date.now() - applicationRpcStartedAtMs : null
+      };
+    }
+    authorityObservation.probeRpc = probeRpc;
+    authorityObservation.applicationRpc = applicationRpc;
+    if (probeRpc.rpcOutcome === "SUCCESS_TRUE") {
+      authorityObservation.browserLegClassification = applicationRpc.authorityPresent
+        ? "PROBE_RPC_SUCCESS_APPLICATION_APPLIED"
+        : "PROBE_RPC_SUCCESS_APPLICATION_NOT_APPLIED";
+    } else if (probeRpc.rpcOutcome === "UNSETTLED_TIMEOUT") {
+      authorityObservation.browserLegClassification = "PROBE_RPC_TIMEOUT";
+    } else {
+      authorityObservation.browserLegClassification = "PROBE_RPC_FAILURE";
+    }
     const dom = await snapshotDom(app);
 
     const authorityRpcResolved = Boolean(entryState && entryState.authorityLoaded);
