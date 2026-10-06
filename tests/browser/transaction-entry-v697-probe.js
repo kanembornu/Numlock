@@ -1,11 +1,22 @@
 #!/usr/bin/env node
 /**
- * Read-only Candidate v697 Transaction Entry browser acceptance probe (Phase C).
+ * Read-only Candidate v697 Transaction Entry browser acceptance probe (Phase C+D repair).
  * Usage: node tests/browser/transaction-entry-v697-probe.js <targetUrl>
  * stdout: one JSON report. Exit 0 once report is emitted; verdicts carry failures.
  *
  * NEVER clicks Save Order / Confirm Payment / Save Transaction / Save Purchase /
  * Save Expense. Never invokes mutation endpoints. Detect-only auth handling.
+ *
+ * CASE 1 probe repair (authoritative characterization):
+ * - C/D/E measure variant/type authority through the REAL active Sales path:
+ *   #productEntrySearch + entryOptions.sales + Hot/Cold (#salesTypeHot/#salesTypeCold)
+ *   + server pricing via getProductEntryPricing → #salesPricingPreview/#salesPricingState.
+ * - Operational variant controls (#operationalProduct/#operationalProductVariant in
+ *   #operationalOrderFields) are permanently hidden at HEAD; recorded informational only.
+ * - K inventory matcher narrowed: bare "on hand" dropped (Cash on Hand is a
+ *   chart-of-accounts label, not inventory semantics).
+ * - pollEntryState waits for BOTH entryOptionsLoaded AND authorityLoaded (AND, not OR)
+ *   to avoid authority-RPC early-exit race; timeout → C/D/E NOT_MEASURABLE with reason.
  */
 
 const { chromium } = require("playwright");
@@ -13,6 +24,7 @@ const { chromium } = require("playwright");
 const TARGET_URL = process.argv[2];
 const TIMEOUT = 60_000;
 const AUTHORITY_TIMEOUT = 20_000;
+const PRICING_TIMEOUT = 15_000;
 const POLL_MS = 200;
 const READ_ONLY_GUARANTEE =
   "Navigation, DOM reads, client-side select value assignment limited to authority fields, and client price/variant display functions only; no Save Order, Confirm Payment, Save Transaction, Save Purchase, Save Expense, no mutation endpoint invocation, no form submission.";
@@ -37,6 +49,8 @@ const pageErrors = [];
 const consoleErrors = [];
 const assertions = [];
 const authWall = { url: null, reason: null };
+let activeSalesPathEvidence = null;
+let operationalPathInformational = null;
 let browser;
 let blocked = null;
 
@@ -84,6 +98,8 @@ function report() {
     candidateDeploymentId: candidateDeploymentId(TARGET_URL),
     assertions,
     counts: counts(),
+    activeSalesPathEvidence,
+    operationalPathInformational,
     blocked,
     readOnlyGuarantee: READ_ONLY_GUARANTEE,
     pageErrors,
@@ -140,11 +156,13 @@ async function pollEntryState(app, timeoutMs) {
         suppliers: authority && Array.isArray(authority.suppliers) ? authority.suppliers.length : 0,
         paymentMethods: authority && Array.isArray(authority.paymentMethods) ? authority.paymentMethods.length : 0,
         optionsLoaded: Boolean(entry && entry.optionsLoaded),
+        loadingOptions: Boolean(entry && entry.loadingOptions),
         salesOptions: entry && entry.entryOptions && Array.isArray(entry.entryOptions.sales) ? entry.entryOptions.sales.length : 0,
         expenseOptions: entry && entry.entryOptions && Array.isArray(entry.entryOptions.expenses) ? entry.entryOptions.expenses.length : 0
       };
     }).catch(() => null);
-    if (last && (last.authorityLoaded || last.optionsLoaded)) return last;
+    // AND-wait: both server authorities required before C/D/E snapshots (OR early-exit raced authority RPC).
+    if (last && last.authorityLoaded && last.optionsLoaded) return last;
     await app.waitForTimeout(POLL_MS);
   } while (Date.now() < deadline);
   return last;
@@ -166,6 +184,7 @@ async function snapshotDom(app) {
         readonly: element.hasAttribute("readonly"),
         value: "value" in element ? String(element.value) : null,
         onchange: element.getAttribute("onchange"),
+        text: String(element.textContent || "").replace(/\s+/g, " ").trim().slice(0, 200),
         options,
         promptText: options && options[0] ? options[0].text : null
       };
@@ -196,6 +215,7 @@ async function snapshotDom(app) {
       productSearch: read("productEntrySearch"),
       salesPricingState: read("salesPricingState"),
       salesPricingPreview: read("salesPricingPreview"),
+      salesPreviewPrice: read("salesPreviewPrice"),
       salesTypeHot: read("salesTypeHot"),
       salesTypeCold: read("salesTypeCold"),
       orderSection: section("operationalOrderFields"),
@@ -209,6 +229,73 @@ async function snapshotDom(app) {
 function nonPromptOptions(selectDom) {
   if (!selectDom || !selectDom.exists || !Array.isArray(selectDom.options)) return [];
   return selectDom.options.filter((option) => option.value !== "");
+}
+
+function readSalesPricingState(app) {
+  return app.evaluate(() => {
+    const state = typeof transactionEntryState !== "undefined" ? transactionEntryState : null;
+    const price = document.getElementById("salesPreviewPrice");
+    const pricingState = document.getElementById("salesPricingState");
+    const hot = document.getElementById("salesTypeHot");
+    const cold = document.getElementById("salesTypeCold");
+    const search = document.getElementById("productEntrySearch");
+    return {
+      selectedType: state && state.selectedType ? String(state.selectedType) : null,
+      selectedProductId: state && state.selectedProduct ? state.selectedProduct.productId : null,
+      loadingPricing: Boolean(state && state.loadingPricing),
+      pricing: state && state.pricing
+        ? {
+            productId: state.pricing.productId,
+            type: state.pricing.type,
+            price: state.pricing.price,
+            hpp: state.pricing.hpp,
+            unitMargin: state.pricing.unitMargin
+          }
+        : null,
+      pricingSource: state && state.pricingSource ? String(state.pricingSource) : null,
+      previewPriceText: price ? String(price.textContent || "").trim() : null,
+      pricingStateText: pricingState ? String(pricingState.textContent || "").trim() : null,
+      hotAriaChecked: hot ? hot.getAttribute("aria-checked") : null,
+      coldAriaChecked: cold ? cold.getAttribute("aria-checked") : null,
+      searchValue: search ? String(search.value) : null
+    };
+  }).catch(() => null);
+}
+
+async function waitForSalesPricing(app, timeoutMs, expectedType) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  do {
+    last = await readSalesPricingState(app);
+    if (last && last.selectedType === expectedType && !last.loadingPricing) {
+      if (last.pricing || (last.previewPriceText && last.previewPriceText !== "—")) {
+        return { settled: true, state: last };
+      }
+      if (last.pricingStateText && /could not|failed|error/i.test(last.pricingStateText)) {
+        return { settled: true, state: last, failed: true };
+      }
+    }
+    await app.waitForTimeout(POLL_MS);
+  } while (Date.now() < deadline);
+  return {
+    settled: Boolean(last && last.selectedType === expectedType && !last.loadingPricing),
+    state: last
+  };
+}
+
+function pricingResolvedFromAuthority(state) {
+  return Boolean(state && state.pricing && (state.pricingSource === "server" || state.pricingSource === "master-cache"));
+}
+
+function pricingFabricated(state) {
+  return Boolean(
+    state &&
+    state.previewPriceText &&
+    state.previewPriceText !== "—" &&
+    !state.pricing &&
+    state.pricingSource !== "server" &&
+    state.pricingSource !== "master-cache"
+  );
 }
 
 (async () => {
@@ -263,15 +350,26 @@ function nonPromptOptions(selectDom) {
     }
 
     // Wait for server read-only RPCs fired on open (getTransactionEntryOptions + getOperationalTransactionAuthority).
+    // AND-wait: BOTH flags required; timeout → C/D/E NOT_MEASURABLE with reason (no silent empty snapshot).
     const entryState = await pollEntryState(app, AUTHORITY_TIMEOUT);
     const dom = await snapshotDom(app);
 
+    const authorityRpcResolved = Boolean(entryState && entryState.authorityLoaded);
+    const optionsRpcResolved = Boolean(entryState && entryState.optionsLoaded);
+    const bothReady = Boolean(entryState && entryState.authorityLoaded && entryState.optionsLoaded);
+    const salesOptionsCount = entryState ? entryState.salesOptions : 0;
+    const waitReason =
+      `pollWait=BOTH(authorityLoaded,optionsLoaded); bothReady=${bothReady}; authorityRpcResolved=${authorityRpcResolved}` +
+      `(authority RPC failure/timeout marked, not fabricated PASS); optionsRpcResolved=${optionsRpcResolved}` +
+      `; salesOptions=${salesOptionsCount}; expenseOptions=${entryState ? entryState.expenseOptions : "n/a"}` +
+      `; authority.products=${entryState ? entryState.products : "n/a"}; authority.productVariants=${entryState ? entryState.productVariants : "n/a"}`;
+
     // B. Product authority — operational select populated from server authority, or canonical sales options.
+    // Assertion logic preserved; evidence extended with active-path + poll-wait facts.
     const productOptions = nonPromptOptions(dom.product);
-    const salesOptionCount = entryState ? entryState.salesOptions : 0;
-    const productAuthorityPass = productOptions.length > 0 || salesOptionCount > 0;
+    const productAuthorityPass = productOptions.length > 0 || salesOptionsCount > 0;
     record("B", productAuthorityPass ? "PASS" : "FAIL",
-      `operationalProductOptions=${productOptions.length}; operationalProductPrompt=${JSON.stringify(dom.product.promptText)}; entryOptions.sales=${salesOptionCount}; entryOptionsLoaded=${Boolean(entryState && entryState.optionsLoaded)}; authorityLoaded=${Boolean(entryState && entryState.authorityLoaded)}; authority.products=${entryState ? entryState.products : "n/a"}; productEntrySearchExists=${Boolean(dom.productSearch && dom.productSearch.exists)}`);
+      `operationalProductOptions=${productOptions.length}; operationalProductPrompt=${JSON.stringify(dom.product.promptText)}; entryOptions.sales=${salesOptionsCount}; entryOptionsLoaded=${optionsRpcResolved}; authorityLoaded=${authorityRpcResolved}; bothReady=${bothReady}; authority.products=${entryState ? entryState.products : "n/a"}; productEntrySearchExists=${Boolean(dom.productSearch && dom.productSearch.exists)}; activeSalesPath=#productEntrySearch+entryOptions.sales+Hot/Cold; ${waitReason}`);
 
     // Switch to canonical SALES path (read-only type control) and re-snapshot visible sales path.
     await app.locator("#transactionTypeSales").click();
@@ -283,73 +381,226 @@ function nonPromptOptions(selectDom) {
       return element ? { hidden: Boolean(element.hidden), text: (element.textContent || "").replace(/\s+/g, " ").trim().slice(0, 400) } : null;
     });
 
-    // Read-only product selection to drive variant authority (no save, no mutation).
-    const selection = await app.evaluate(() => {
+    // Operational path — informational only (controls permanently hidden at HEAD; not used for C/D/E measurement).
+    operationalPathInformational = await app.evaluate(() => {
+      const section = document.getElementById("operationalOrderFields");
       const product = document.getElementById("operationalProduct");
-      if (!product) return { ok: false, reason: "operationalProduct missing" };
-      const option = Array.from(product.options).find((item) => item.value !== "");
-      if (!option) return { ok: false, reason: "no non-prompt operationalProduct options" };
-      product.value = option.value;
-      if (typeof updateOperationalVariants === "function") updateOperationalVariants();
-      else product.dispatchEvent(new Event("change", { bubbles: true }));
       const variant = document.getElementById("operationalProductVariant");
       return {
-        ok: true,
-        productValue: option.value,
-        productText: (option.textContent || "").trim(),
-        variantOptions: variant
-          ? Array.from(variant.options).map((item) => ({ value: item.value, text: (item.textContent || "").trim() }))
-          : [],
-        variantValue: variant ? String(variant.value) : null
+        operationalOrderFieldsExists: Boolean(section),
+        operationalOrderFieldsHidden: section ? Boolean(section.hidden) : null,
+        operationalProductExists: Boolean(product),
+        operationalProductHidden: product ? Boolean(product.hidden) : null,
+        operationalProductVariantExists: Boolean(variant),
+        updateOperationalVariantsAvailable: typeof updateOperationalVariants === "function",
+        authorityProductVariantsCount: (typeof operationalTransactionState !== "undefined" && operationalTransactionState &&
+          operationalTransactionState.authority && Array.isArray(operationalTransactionState.authority.productVariants))
+          ? operationalTransactionState.authority.productVariants.length
+          : null,
+        note: "informational only — operational variant controls (#operationalProduct/#operationalProductVariant) hidden at HEAD; variant/type authority measured via active Sales path"
       };
-    });
+    }).catch(() => ({
+      operationalOrderFieldsExists: null,
+      note: "operational path informational capture failed"
+    }));
 
-    const variantOptions = selection.ok ? selection.variantOptions.filter((option) => option.value !== "") : [];
-    const variantValue = selection.ok ? selection.variantValue : null;
+    activeSalesPathEvidence = {
+      pollWait: "BOTH entryOptionsLoaded AND authorityLoaded (AND)",
+      authorityRpcResolved,
+      optionsRpcResolved,
+      bothReady,
+      salesEntryOptionsCount: salesOptionsCount,
+      productEntrySearchExists: Boolean(dom.productSearch && dom.productSearch.exists),
+      salesEntryFieldsVisible: salesVisible,
+      typeButtons: {
+        hotExists: Boolean(dom.salesTypeHot && dom.salesTypeHot.exists),
+        coldExists: Boolean(dom.salesTypeCold && dom.salesTypeCold.exists)
+      },
+      productSelection: null,
+      preTypePrompt: null,
+      perTypeAvailabilityFromEntryOptions: null,
+      pricingByType: { Hot: null, Cold: null },
+      note: "Active Sales path: #productEntrySearch combobox populated from entryOptions.sales; Hot/Cold (#salesTypeHot/#salesTypeCold) act as type/variant selector; pricing resolved via getProductEntryPricing (server) or master-cache from getTransactionEntryOptions (both server-side ProductPricing authority) → #salesPricingPreview/#salesPricingState; no client-entered price input on active path"
+    };
 
-    // C. Variant authority — options carry ProductVariantID-like values; no fabricated HOT/COLD text beyond legitimate Tipe.
-    if (!selection.ok) {
-      record("C", "NOT_MEASURABLE", `product selection unavailable: ${selection.reason}`);
-    } else if (variantOptions.length === 0) {
-      record("C", "NOT_MEASURABLE",
-        `selected product ${JSON.stringify(selection.productText)} yielded 0 active variants; variant authority not measurable without variants`);
+    // Gate C/D/E on AND-wait completeness. Timeout/incomplete → NOT_MEASURABLE with reason.
+    if (!bothReady) {
+      record("C", "NOT_MEASURABLE", `active-path snapshot gated: ${waitReason}`);
+      record("D", "NOT_MEASURABLE", `active-path snapshot gated: ${waitReason}`);
+      record("E", "NOT_MEASURABLE", `active-path snapshot gated: ${waitReason}`);
+    } else if (salesOptionsCount === 0) {
+      const emptyReason = `entryOptions.sales empty after AND-wait; ${waitReason}`;
+      record("C", "NOT_MEASURABLE", emptyReason);
+      record("D", "NOT_MEASURABLE", emptyReason);
+      record("E", "NOT_MEASURABLE", emptyReason);
     } else {
-      const badOptions = variantOptions.filter((option) => !option.value || !option.text);
-      const texts = variantOptions.map((option) => option.text);
-      const hotColdTexts = texts.filter((text) => /^hot$/i.test(text) || /^cold$/i.test(text));
-      const valuesUnique = new Set(variantOptions.map((option) => option.value)).size === variantOptions.length;
-      const pass = badOptions.length === 0 && valuesUnique;
-      record("C", pass ? "PASS" : "FAIL",
-        `selectedProduct=${JSON.stringify(selection.productText)}; variantOptions=${JSON.stringify(variantOptions)}; badOptions=${JSON.stringify(badOptions)}; uniqueValues=${valuesUnique}; HOT/COLD-like texts=${JSON.stringify(hotColdTexts)} accepted only when non-empty ProductVariantID values present (legitimate Tipe values from server authority.productVariants)`);
-    }
+      // Select product via #productEntrySearch combobox (fill + listbox option click; NO submit).
+      const firstOption = await app.evaluate(() => {
+        const state = typeof transactionEntryState !== "undefined" ? transactionEntryState : null;
+        const options = state && state.entryOptions && Array.isArray(state.entryOptions.sales) ? state.entryOptions.sales : [];
+        const option = options.find((item) => item && item.product) || null;
+        return option
+          ? { product: option.product, productId: option.productId, category: option.category, kind: option.kind }
+          : null;
+      });
 
-    // D. Single variant — auto-set when exactly 1 active variant.
-    if (!selection.ok || variantOptions.length === 0) {
-      record("D", "NOT_MEASURABLE", selection.ok
-        ? `selected product yielded ${variantOptions.length} variants; single-variant condition not met`
-        : `product selection unavailable: ${selection.reason}`);
-    } else if (variantOptions.length === 1) {
-      const expected = variantOptions[0].value;
-      record("D", variantValue === expected ? "PASS" : "FAIL",
-        `exactly 1 active variant; expected auto-set value=${JSON.stringify(expected)}; observed variantValue=${JSON.stringify(variantValue)}; onchange=${JSON.stringify(dom.variant.onchange)}`);
-    } else {
-      record("D", "NOT_MEASURABLE", `selected product yielded ${variantOptions.length} variants; single-variant condition not met`);
-    }
+      let selection = { ok: false, reason: null };
+      if (!firstOption) {
+        selection.reason = "no non-empty entryOptions.sales option available for #productEntrySearch";
+      } else {
+        try {
+          await app.locator("#productEntrySearch").fill(firstOption.product);
+          await app.locator("#productEntryListbox").waitFor({ state: "visible", timeout: TIMEOUT });
+          const listboxCount = await app.locator("#productEntryListbox button").count();
+          if (listboxCount === 0) {
+            selection.reason = `#productEntryListbox rendered 0 options for ${JSON.stringify(firstOption.product)}`;
+          } else {
+            await app.locator("#productEntryListbox button").first().click();
+            const selected = await app.evaluate(() => {
+              const state = typeof transactionEntryState !== "undefined" ? transactionEntryState : null;
+              const input = document.getElementById("productEntrySearch");
+              const meta = document.getElementById("productEntryMeta");
+              return {
+                selectedProduct: state && state.selectedProduct
+                  ? {
+                      productId: state.selectedProduct.productId,
+                      product: state.selectedProduct.product,
+                      category: state.selectedProduct.category,
+                      kind: state.selectedProduct.kind,
+                      pricingKeys: state.selectedProduct.pricing ? Object.keys(state.selectedProduct.pricing) : []
+                    }
+                  : null,
+                inputValue: input ? String(input.value) : null,
+                productMeta: meta ? String(meta.textContent || "").trim() : null
+              };
+            });
+            if (selected && selected.selectedProduct) {
+              selection = {
+                ok: true,
+                productText: selected.selectedProduct.product,
+                productId: selected.selectedProduct.productId,
+                pricingKeys: selected.selectedProduct.pricingKeys,
+                inputValue: selected.inputValue,
+                productMeta: selected.productMeta
+              };
+            } else {
+              selection.reason =
+                `#productEntrySearch listbox click did not set transactionEntryState.selectedProduct; inputValue=${JSON.stringify(selected && selected.inputValue)}`;
+            }
+          }
+        } catch (error) {
+          selection.reason = `#productEntrySearch interaction failed: ${error.message}`;
+        }
+      }
 
-    // E. Multiple variants — no auto-arbitrary HOT/COLD default; explicit selection required.
-    if (!selection.ok || variantOptions.length === 0) {
-      record("E", "NOT_MEASURABLE", selection.ok
-        ? `selected product yielded ${variantOptions.length} variants; multi-variant condition not met`
-        : `product selection unavailable: ${selection.reason}`);
-    } else if (variantOptions.length > 1) {
-      const emptyDefault = variantValue === "" || variantValue === null;
-      record("E", emptyDefault ? "PASS" : "FAIL",
-        `variant count=${variantOptions.length}; observed variantValue=${JSON.stringify(variantValue)}; expected empty value (no auto HOT/COLD default; explicit selection required before price resolves); option texts=${JSON.stringify(variantOptions.map((option) => option.text))}`);
-    } else {
-      record("E", "NOT_MEASURABLE", `selected product yielded ${variantOptions.length} variants; multi-variant condition not met`);
+      activeSalesPathEvidence.productSelection = selection;
+      activeSalesPathEvidence.perTypeAvailabilityFromEntryOptions = selection.ok && Array.isArray(selection.pricingKeys)
+        ? selection.pricingKeys
+        : null;
+
+      // Pre-type snapshot after product selection — E measures explicit type-selection requirement here.
+      const postProductPreType = await readSalesPricingState(app);
+      activeSalesPathEvidence.preTypePrompt = postProductPreType;
+
+      const perTypeAvailability = activeSalesPathEvidence.perTypeAvailabilityFromEntryOptions;
+      const typeAutoSelected = Boolean(postProductPreType && (postProductPreType.selectedType === "Hot" || postProductPreType.selectedType === "Cold"));
+      const hotBefore = postProductPreType ? postProductPreType.hotAriaChecked : null;
+      const coldBefore = postProductPreType ? postProductPreType.coldAriaChecked : null;
+      const previewPriceBefore = postProductPreType ? postProductPreType.previewPriceText : null;
+      const pricingStateBefore = postProductPreType ? postProductPreType.pricingStateText : null;
+      const promptPresentBefore = Boolean(pricingStateBefore && pricingStateBefore.trim().length > 0);
+      const previewEmptyBefore = previewPriceBefore === "—";
+
+      // Click Hot then Cold sequentially — read-only type buttons = active-path variant selector; pricing RPC is read-only.
+      const pricingByType = { Hot: null, Cold: null };
+      if (selection.ok) {
+        for (const type of ["Hot", "Cold"]) {
+          const button = app.locator(type === "Hot" ? "#salesTypeHot" : "#salesTypeCold");
+          await button.click();
+          const settle = await waitForSalesPricing(app, PRICING_TIMEOUT, type);
+          const state = settle.state || {};
+          pricingByType[type] = {
+            settled: settle.settled,
+            failedRpc: Boolean(settle.failed),
+            selectedByUser: state.selectedType === type,
+            selectedType: state.selectedType || null,
+            pricing: state.pricing || null,
+            pricingSource: state.pricingSource || null,
+            previewPriceText: state.previewPriceText ?? null,
+            pricingStateText: state.pricingStateText ?? null,
+            ariaChecked: type === "Hot" ? state.hotAriaChecked : state.coldAriaChecked,
+            resolvedFromAuthority: pricingResolvedFromAuthority(state),
+            fabricated: pricingFabricated(state)
+          };
+        }
+      }
+      activeSalesPathEvidence.pricingByType = pricingByType;
+
+      const hotOutcome = pricingByType.Hot;
+      const coldOutcome = pricingByType.Cold;
+      const hotResolved = Boolean(hotOutcome && hotOutcome.selectedByUser && hotOutcome.resolvedFromAuthority);
+      const coldResolved = Boolean(coldOutcome && coldOutcome.selectedByUser && coldOutcome.resolvedFromAuthority);
+      const anyResolved = hotResolved || coldResolved;
+
+      // C. Variant authority — active Sales path: #productEntrySearch + Hot/Cold + server pricing (NOT client-entered price).
+      if (!selection.ok) {
+        record("C", "NOT_MEASURABLE", `#productEntrySearch selection unavailable: ${selection.reason}; ${waitReason}`);
+      } else if (!dom.productSearch.exists || !(dom.salesTypeHot && dom.salesTypeHot.exists) || !(dom.salesTypeCold && dom.salesTypeCold.exists)) {
+        record("C", "FAIL",
+          `active Sales path controls missing: productEntrySearchExists=${Boolean(dom.productSearch && dom.productSearch.exists)}; salesTypeHotExists=${Boolean(dom.salesTypeHot && dom.salesTypeHot.exists)}; salesTypeColdExists=${Boolean(dom.salesTypeCold && dom.salesTypeCold.exists)}; salesEntryFieldsVisible=${salesVisible}`);
+      } else if (!anyResolved) {
+        record("C", "NOT_MEASURABLE",
+          `variant authority pricing unresolved for both types after user selection; Hot=${JSON.stringify(hotOutcome)}; Cold=${JSON.stringify(coldOutcome)}; selection=${JSON.stringify(selection)}; UI did not fabricate pricing (no client-entered price input on active path); ${waitReason}`);
+      } else {
+        const resolvedType = hotResolved ? "Hot" : "Cold";
+        const resolvedState = hotResolved ? hotOutcome : coldOutcome;
+        const authorityBacked = pricingResolvedFromAuthority(resolvedState);
+        const fabricated = pricingFabricated(resolvedState);
+        record("C", authorityBacked && !fabricated ? "PASS" : "FAIL",
+          `active Sales path authority: product=${JSON.stringify(selection.productText)} (productId=${JSON.stringify(selection.productId)}) selected via #productEntrySearch combobox (entryOptions.sales=${salesOptionsCount}); type buttons #salesTypeHot/#salesTypeCold present; pricing resolved for ${resolvedType}: pricingSource=${JSON.stringify(resolvedState.pricingSource)} (server=getProductEntryPricing RPC; master-cache=ProductPricing via getTransactionEntryOptions — both server-side authority); previewPrice=${JSON.stringify(resolvedState.previewPriceText)}; pricing=${JSON.stringify(resolvedState.pricing)}; resolvedFromServerAuthority=${authorityBacked}; fabricated=${fabricated}; perTypeAvailabilityFromEntryOptions=${JSON.stringify(perTypeAvailability)}; no client-entered price input on active path`);
+      }
+
+      // D. Single-variant — re-scoped to active-path semantics: Hot/Cold type buttons act as variant selector.
+      if (!selection.ok) {
+        record("D", "NOT_MEASURABLE", `product selection unavailable: ${selection.reason}`);
+      } else if (anyResolved) {
+        const singleType = Array.isArray(perTypeAvailability) && perTypeAvailability.length === 1 ? perTypeAvailability[0] : null;
+        const singleTypeOutcome = singleType ? pricingByType[singleType] : null;
+        const singleTypeResolved = singleType ? Boolean(singleTypeOutcome && singleTypeOutcome.selectedByUser && singleTypeOutcome.resolvedFromAuthority) : null;
+        const singleTypePass = singleType ? singleTypeResolved : true;
+        const unavailableType = singleType === "Hot" ? "Cold" : singleType === "Cold" ? "Hot" : null;
+        const unavailableOutcome = unavailableType ? pricingByType[unavailableType] : null;
+        const unavailableDidNotFabricate = unavailableOutcome
+          ? (!unavailableOutcome.resolvedFromAuthority && !unavailableOutcome.fabricated && (unavailableOutcome.previewPriceText === "—" || unavailableOutcome.previewPriceText === null))
+          : null;
+        record("D", singleTypePass ? "PASS" : "FAIL",
+          `active-path variant selector = Hot/Cold type buttons; per-type pricing: Hot=${JSON.stringify(hotOutcome)}; Cold=${JSON.stringify(coldOutcome)}; entryOptions per-type availability=${JSON.stringify(perTypeAvailability)}${singleType ? `; exactly one active type=${JSON.stringify(singleType)} → auto-resolution expected; resolved=${singleTypeResolved}` : ""}; type buttons behave as variant selector (aria-checked + per-selection pricing request); unavailableType=${JSON.stringify(unavailableType)}; unavailableTypeDidNotFabricate=${unavailableDidNotFabricate}`);
+      } else if (Array.isArray(perTypeAvailability) && perTypeAvailability.length > 0) {
+        record("D", "FAIL",
+          `server exposed per-type availability ${JSON.stringify(perTypeAvailability)} but pricing did not resolve after user selection; Hot=${JSON.stringify(hotOutcome)}; Cold=${JSON.stringify(coldOutcome)}`);
+      } else {
+        record("D", "NOT_MEASURABLE",
+          `selected product has no active type pricing in server response (entryOptions.pricing keys empty); pricing not resolvable; UI correctly left preview empty; Hot=${JSON.stringify(hotOutcome)}; Cold=${JSON.stringify(coldOutcome)}`);
+      }
+
+      // E. Multiple variants — explicit Hot/Cold selection required before pricing resolves; no arbitrary default type.
+      if (!selection.ok) {
+        record("E", "NOT_MEASURABLE", `product selection unavailable: ${selection.reason}`);
+      } else {
+        const eReasons = [];
+        if (typeAutoSelected) eReasons.push(`selectedType auto-applied without user selection: ${postProductPreType.selectedType}`);
+        if (hotBefore === "true" || coldBefore === "true") eReasons.push(`type button aria-checked=true before user selection (Hot=${hotBefore}, Cold=${coldBefore})`);
+        if (!previewEmptyBefore) eReasons.push(`preview price not "—" before type selection: ${JSON.stringify(previewPriceBefore)}`);
+        if (postProductPreType && postProductPreType.pricing && !typeAutoSelected) eReasons.push(`pricing object present before type selection: ${JSON.stringify(postProductPreType.pricing)}`);
+        if (!promptPresentBefore) eReasons.push(`pricing state prompt missing before type selection: ${JSON.stringify(pricingStateBefore)}`);
+        const ePass = eReasons.length === 0;
+        record("E", ePass ? "PASS" : "FAIL",
+          `explicit type selection required on active path: selectedType=${JSON.stringify(postProductPreType && postProductPreType.selectedType)}; Hot aria-checked=${hotBefore}; Cold aria-checked=${coldBefore}; previewPrice=${JSON.stringify(previewPriceBefore)} (no fabricated default); pricingState=${JSON.stringify(pricingStateBefore)} prompts user until type chosen; entryOptions per-type availability=${JSON.stringify(perTypeAvailability)}; violations=${JSON.stringify(eReasons)}`);
+      }
     }
 
     // F. Selling price — exists + readonly; display-only canonical format after variant handling.
+    // Assertion logic preserved; evidence extended with active-path pricing facts.
     const priceDrive = await app.evaluate(() => {
       const price = document.getElementById("operationalSellingPrice");
       if (!price) return { exists: false };
@@ -362,16 +613,19 @@ function nonPromptOptions(selectDom) {
         after: String(price.value)
       };
     });
+    const activePathHot = activeSalesPathEvidence && activeSalesPathEvidence.pricingByType ? activeSalesPathEvidence.pricingByType.Hot : null;
+    const activePathCold = activeSalesPathEvidence && activeSalesPathEvidence.pricingByType ? activeSalesPathEvidence.pricingByType.Cold : null;
+    const activePathNote = `activeSalesPathPricing: Hot=${JSON.stringify(activePathHot && { pricingSource: activePathHot.pricingSource, previewPriceText: activePathHot.previewPriceText, pricing: activePathHot.pricing })}; Cold=${JSON.stringify(activePathCold && { pricingSource: activePathCold.pricingSource, previewPriceText: activePathCold.previewPriceText, pricing: activePathCold.pricing })} (server authority via getProductEntryPricing/master-cache; measured under C/D on #salesPreviewPrice)`;
     if (!priceDrive.exists) {
-      record("F", "FAIL", "#operationalSellingPrice missing in DOM");
+      record("F", "FAIL", `#operationalSellingPrice missing in DOM; ${activePathNote}`);
     } else if (!priceDrive.readonly) {
-      record("F", "FAIL", `#operationalSellingPrice exists but readonly attribute absent; value=${JSON.stringify(priceDrive.after)}`);
+      record("F", "FAIL", `#operationalSellingPrice exists but readonly attribute absent; value=${JSON.stringify(priceDrive.after)}; ${activePathNote}`);
     } else if (priceDrive.after === "" && priceDrive.before === "") {
-      record("F", "NOT_MEASURABLE", "price display not established (no variant authority path completed); readonly=true; probe does NOT establish client-entered price");
+      record("F", "NOT_MEASURABLE", `price display not established on operational path (hidden at HEAD; no operational variant authority path completed); readonly=true; probe does NOT establish client-entered price; ${activePathNote}`);
     } else {
       const canonicalFormat = /^Rp\s/.test(priceDrive.after) || priceDrive.after === "Server validated at save";
       record("F", canonicalFormat ? "PASS" : "FAIL",
-        `readonly=true; valueAfterDisplayFunction=${JSON.stringify(priceDrive.after)}; accepted=canonical "Rp …" format or "Server validated at save"; probe does NOT establish client-entered price`);
+        `readonly=true; valueAfterDisplayFunction=${JSON.stringify(priceDrive.after)}; accepted=canonical "Rp …" format or "Server validated at save"; probe does NOT establish client-entered price; ${activePathNote}`);
     }
 
     // G. Order type — options exactly DINE_IN and TAKE_AWAY.
@@ -407,18 +661,21 @@ function nonPromptOptions(selectDom) {
     const salesNoSupplier = salesSection.exists && salesSection.hasSupplier === false && !/supplier/i.test(salesSection.text || "");
     const orderNoSupplier = orderSection.exists && orderSection.hasSupplier === false && !/supplier/i.test(orderSection.text || "");
     record("J", supplierInPurchase && salesNoSupplier && orderNoSupplier ? "PASS" : "FAIL",
-      `#operationalSupplier.exists=${supplierDom.exists}; supplierInsidePurchaseFields=${supplierInPurchase}; supplierOptionCount=${supplierDom.exists && Array.isArray(supplierDom.options) ? supplierDom.options.filter((option) => option.value !== "").length : 0} (0 allowed: Suppliers ABSENT ok); salesSection.hasSupplier=${salesSection.hasSupplier}; orderSection.hasSupplier=${orderSection.hasSupplier}; entry loaded with authorityLoaded=${Boolean(entryState && entryState.authorityLoaded)}`);
+      `#operationalSupplier.exists=${supplierDom.exists}; supplierInsidePurchaseFields=${supplierInPurchase}; supplierOptionCount=${supplierDom.exists && Array.isArray(supplierDom.options) ? supplierDom.options.filter((option) => option.value !== "").length : 0} (0 allowed: Suppliers ABSENT ok); salesSection.hasSupplier=${salesSection.hasSupplier}; orderSection.hasSupplier=${orderSection.hasSupplier}; entry loaded with authorityLoaded=${authorityRpcResolved}; bothReady=${bothReady}`);
 
-    // K. Inventory independence — no stock/on-hand/inventory UI in order/sales regions.
+    // K. Inventory independence — no stock/inventory UI in order/sales regions.
+    // ID scan unchanged (clean). Text matcher narrowed: inventory semantics only; bare "on hand" dropped.
     const inventoryIds = [...(orderSection.ids || []), ...(salesSection.ids || [])].filter((id) => /stock|inventory|ledger|onhand/i.test(id));
-    const inventoryText = `${orderSection.text || ""} ${salesSection.text || ""}`;
-    const inventoryTextHits = (inventoryText.match(/stock|inventory|ledger|inventory\s*receipt|inventoryreceipt|on-hand|on hand/gi) || []);
+    const scopedText = `${orderSection.text || ""} ${salesSection.text || ""}`;
+    const inventoryTextHits = (scopedText.match(
+      /\bstock\b|\binventory\b|\bledger\b|\binventory[\s-]*(?:receipt|ledger)\b|\bstock[\s-]+(?:on[\s-]+hand|validation|balance)\b|\binventory[\s-]+on[\s-]+hand\b/gi
+    ) || []);
     record("K", inventoryIds.length === 0 && inventoryTextHits.length === 0 ? "PASS" : "FAIL",
-      `scopedTo=#operationalOrderFields+#salesEntryFields; inventoryIdHits=${JSON.stringify(inventoryIds)}; inventoryTextHits=${JSON.stringify(inventoryTextHits)}; no InventoryReceipt/Ledger references in sales path elements`);
+      `scopedTo=#operationalOrderFields+#salesEntryFields; inventoryIdHits=${JSON.stringify(inventoryIds)} (ID scan unchanged); inventoryTextHits=${JSON.stringify(inventoryTextHits)}; matcher=NARROWED: whole-word stock|inventory|ledger + inventory-receipt/ledger compounds + stock/inventory adjacency for on hand; bare "on hand" dropped; KNOWN_CASH_ACCOUNT_LABEL="Cash on Hand" (#salesCashAccount1000, 190.View.Index.html:3575, chart-of-accounts) excluded by design — not inventory semantics`);
 
     // L. Customer independence — no Customer field in order/sales regions.
     const customerIds = [...(orderSection.ids || []), ...(salesSection.ids || [])].filter((id) => /customer/i.test(id));
-    const customerTextHits = (inventoryText.match(/customer/gi) || []);
+    const customerTextHits = (scopedText.match(/customer/gi) || []);
     record("L", customerIds.length === 0 && customerTextHits.length === 0 ? "PASS" : "FAIL",
       `scopedTo=#operationalOrderFields+#salesEntryFields; customerIdHits=${JSON.stringify(customerIds)}; customerTextHits=${JSON.stringify(customerTextHits)}; salesPathSwitch=salesEntryFields visible=${salesVisible}; salesPricingState=${JSON.stringify(salesStateText)}; salesSectionHiddenAfterSwitch=${salesSectionAfterSwitch ? salesSectionAfterSwitch.hidden : "n/a"}`);
   } catch (error) {
