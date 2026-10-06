@@ -36,7 +36,7 @@ const ASSERTION_NAMES = {
   C: "VARIANT_AUTHORITY",
   D: "SINGLE_VARIANT",
   E: "MULTIPLE_VARIANTS",
-  F: "SELLING_PRICE",
+  F: "SELLING_PRICE_AUTHORITY",
   G: "ORDER_TYPE",
   H: "ORDER_STAGE_RECEIVE_VIA",
   I: "PAYMENT_STAGE_RECEIVE_VIA",
@@ -735,34 +735,40 @@ function pricingFabricated(state) {
       }
     }
 
-    // F. Selling price — exists + readonly; display-only canonical format after variant handling.
-    // Assertion logic preserved; evidence extended with active-path pricing facts.
-    const priceDrive = await app.evaluate(() => {
-      const price = document.getElementById("operationalSellingPrice");
-      if (!price) return { exists: false };
-      const before = String(price.value);
-      if (typeof updateOperationalOrderPrice === "function") updateOperationalOrderPrice();
+    // F. Selling-price authority — active display is non-editable, variant-derived, and server-final.
+    const priceAuthority = await app.evaluate(() => {
+      const display = document.getElementById("salesPreviewPrice");
+      const form = document.getElementById("transactionEntryForm");
+      const arbitraryPriceControl = form && form.querySelector('input[name="price"], input[name="unitPrice"], input[name="sellingPrice"], #operationalSellingPrice');
+      const submitSource = typeof submitTransactionEntry === "function" ? String(submitTransactionEntry) : "";
+      const orderSource = typeof saveOperationalOrder === "function" ? String(saveOperationalOrder) : "";
       return {
-        exists: true,
-        readonly: price.hasAttribute("readonly"),
-        before,
-        after: String(price.value)
+        displayExists: Boolean(display),
+        displayTag: display ? display.tagName : null,
+        contentEditable: display ? display.isContentEditable || display.getAttribute("contenteditable") === "true" : null,
+        arbitraryPriceControl: arbitraryPriceControl ? arbitraryPriceControl.id || arbitraryPriceControl.name || arbitraryPriceControl.tagName : null,
+        clientPayloadExcludesPrice: !/\b(unitPrice|sellingPrice|price)\s*:/.test(submitSource + "\n" + orderSource),
+        retiredControlAbsent: !document.getElementById("operationalSellingPrice")
       };
     });
     const activePathHot = activeSalesPathEvidence && activeSalesPathEvidence.pricingByType ? activeSalesPathEvidence.pricingByType.Hot : null;
     const activePathCold = activeSalesPathEvidence && activeSalesPathEvidence.pricingByType ? activeSalesPathEvidence.pricingByType.Cold : null;
-    const activePathNote = `activeSalesPathPricing: Hot=${JSON.stringify(activePathHot && { pricingSource: activePathHot.pricingSource, previewPriceText: activePathHot.previewPriceText, pricing: activePathHot.pricing })}; Cold=${JSON.stringify(activePathCold && { pricingSource: activePathCold.pricingSource, previewPriceText: activePathCold.previewPriceText, pricing: activePathCold.pricing })} (server authority via getProductEntryPricing/master-cache; measured under C/D on #salesPreviewPrice)`;
-    if (!priceDrive.exists) {
-      record("F", "FAIL", `#operationalSellingPrice missing in DOM; ${activePathNote}`);
-    } else if (!priceDrive.readonly) {
-      record("F", "FAIL", `#operationalSellingPrice exists but readonly attribute absent; value=${JSON.stringify(priceDrive.after)}; ${activePathNote}`);
-    } else if (priceDrive.after === "" && priceDrive.before === "") {
-      record("F", "NOT_MEASURABLE", `price display not established on operational path (hidden at HEAD; no operational variant authority path completed); readonly=true; probe does NOT establish client-entered price; ${activePathNote}`);
-    } else {
-      const canonicalFormat = /^Rp\s/.test(priceDrive.after) || priceDrive.after === "Server validated at save";
-      record("F", canonicalFormat ? "PASS" : "FAIL",
-        `readonly=true; valueAfterDisplayFunction=${JSON.stringify(priceDrive.after)}; accepted=canonical "Rp …" format or "Server validated at save"; probe does NOT establish client-entered price; ${activePathNote}`);
-    }
+    const resolved = [activePathHot, activePathCold].filter((outcome) => outcome && outcome.selectedByUser && outcome.resolvedFromAuthority && outcome.previewPriceText && outcome.previewPriceText !== "—");
+    const variantDeterminesPrice = resolved.length > 0;
+    const comparable = activePathHot && activePathCold && activePathHot.resolvedFromAuthority && activePathCold.resolvedFromAuthority;
+    const variantDifferenceReflected = !comparable || activePathHot.pricing.price === activePathCold.pricing.price || activePathHot.previewPriceText !== activePathCold.previewPriceText;
+    const displayOnly = priceAuthority.displayTag === "DD" && !priceAuthority.contentEditable && !priceAuthority.arbitraryPriceControl;
+    const serverFinal = resolved.every((outcome) => outcome.pricingSource === "server" || outcome.pricingSource === "master-cache");
+    const fViolations = [];
+    if (!priceAuthority.displayExists) fViolations.push("#salesPreviewPrice missing");
+    if (!displayOnly) fViolations.push(`price operator-editable=${JSON.stringify(priceAuthority)}`);
+    if (!variantDeterminesPrice) fViolations.push("selected variant/type did not establish authoritative price");
+    if (!variantDifferenceReflected) fViolations.push("variant price difference not reflected");
+    if (!priceAuthority.clientPayloadExcludesPrice) fViolations.push("client submission payload contains price authority");
+    if (!serverFinal) fViolations.push("pricing source is not server authority");
+    if (!priceAuthority.retiredControlAbsent) fViolations.push("retired #operationalSellingPrice restored");
+    record("F", fViolations.length ? "FAIL" : "PASS",
+      `active display=${JSON.stringify(priceAuthority)}; variantDeterminesPrice=${variantDeterminesPrice}; variantDifferenceReflected=${variantDifferenceReflected}; serverFinal=${serverFinal}; Hot=${JSON.stringify(activePathHot)}; Cold=${JSON.stringify(activePathCold)}; violations=${JSON.stringify(fViolations)}`);
 
     // G. Order type — options exactly DINE_IN and TAKE_AWAY.
     const orderTypeValues = dom.orderType && dom.orderType.exists && Array.isArray(dom.orderType.options)

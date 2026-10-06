@@ -54,6 +54,8 @@
     function populateOperationalSelect(id, rows, valueField, labelField, prompt)
     {
       var select = operationalElement(id);
+      if (!select && ["operationalProduct", "operationalProductVariant"].indexOf(id) !== -1) return;
+      if (!select) throw new Error("Required operational select missing: #" + id);
       select.innerHTML = '<option value="">' + prompt + '</option>';
       (rows || []).forEach(function(row) {
         var option = document.createElement("option"); option.value = row[valueField]; option.textContent = row[labelField]; select.appendChild(option);
