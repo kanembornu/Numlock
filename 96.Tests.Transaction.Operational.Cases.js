@@ -234,8 +234,22 @@ function testSalesRecognitionV2FoundationContracts() {
   var evidenceContext = { mode: "PAUSED", events: [{ OrderID: "O-27", ContractVersion: "SALES_RECOGNITION_V2", PostingStatus: "COMMITTED" }] };
   var contextBefore = JSON.stringify(evidenceContext); cohort({ OrderID: "O-27", PaymentStatus: "PAID" }, evidenceContext);
   check("F70", JSON.stringify(evidenceContext) === contextBefore);
-  check("F71", pass === 70);
-  return { total: 71, pass: pass, fail: 71 - pass };
+  var wsActive = { mode: " ACTIVE ", contractVersion: "SALES_RECOGNITION_V2", activationID: "", activatedAt: "", configVersion: 1 };
+  var wsPrepared = { mode: " PREPARED ", contractVersion: "SALES_RECOGNITION_V2", activationID: "", activatedAt: "", configVersion: 1 };
+  var wsPaused = { mode: " PAUSED ", contractVersion: "SALES_RECOGNITION_V2", activationID: "", activatedAt: "", configVersion: 1 };
+  var wsActiveMeta = { mode: " ACTIVE ", contractVersion: "SALES_RECOGNITION_V2", activationID: "ACT-1", activatedAt: "2026-11-01T00:00:00.000Z", configVersion: 1 };
+  var lowerActive = { mode: "active", contractVersion: "SALES_RECOGNITION_V2", activationID: "", activatedAt: "", configVersion: 1 };
+  check("F71", failsWith(wsActive, codes.MODE_INVALID));
+  check("F72", salesRecognitionV2RequestGate(wsActive).allowed === false && salesRecognitionV2RequestGate(wsActive).code === codes.CONFIG_INVALID);
+  check("F73", failsWith(wsPrepared, codes.MODE_INVALID));
+  check("F74", salesRecognitionV2RequestGate(wsPrepared).allowed === false && salesRecognitionV2RequestGate(wsPrepared).code === codes.CONFIG_INVALID);
+  check("F75", failsWith(wsPaused, codes.MODE_INVALID));
+  check("F76", salesRecognitionV2RequestGate(wsPaused).allowed === false && salesRecognitionV2RequestGate(wsPaused).code === codes.CONFIG_INVALID);
+  check("F77", failsWith(wsActiveMeta, codes.MODE_INVALID));
+  check("F78", salesRecognitionV2RequestGate({ mode: 123, contractVersion: "SALES_RECOGNITION_V2", activationID: "", activatedAt: "", configVersion: 1 }).allowed === false);
+  check("F79", failsWith(lowerActive, codes.MODE_INVALID) && salesRecognitionV2RequestGate(lowerActive).allowed === false);
+  check("F80", pass === 79);
+  return { total: 80, pass: pass, fail: 80 - pass };
 }
 
 function testSalesV2CutoverPeriods() {

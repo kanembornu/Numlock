@@ -120,16 +120,24 @@ Preflight: `ACCOUNT_ROW_INVALID`, `ACCOUNT_ABSENT`, `ACCOUNT_DUPLICATE`,
 `ACCOUNT_METADATA_MISMATCH`, `ACCOUNT_INACTIVE`.
 All exposed through `SALES_RECOGNITION_V2_CONTRACT.REFUSAL_CODES`.
 
-## Tests (local Node runner, `_test_runner.js`)
+## Tests (local Node runner, `node _test_runner.js`)
 
-- `testSalesRecognitionV2FoundationContracts` (71 assertions, execution-verified count guard) —
-  `96.Tests.Transaction.Operational.Cases.js`
+- `testSalesRecognitionV2FoundationContracts` (80 assertions, execution-verified count guard) —
+  `96.Tests.Transaction.Operational.Cases.js`; includes exact-mode enum regression cases
+  (whitespace `" ACTIVE "` / `" PREPARED "` / `" PAUSED "`, wrong case, non-string mode →
+  validation fail-closed AND request-gate deny)
 - `testSalesV2CutoverPeriods` (9 assertions, classifier/config portion only) — same file
 - `testSalesV2AccountPreflight` (32 assertions, per-account matrix: pass / absent / every required
   field wrong / inactive / duplicate / duplicate-inactive for 1030, 2010, 4000, plus edge rows) —
   `96.Tests.Transaction.Production.Readiness.Cases.js`
+- `testSalesV2U1MutationProof` — in-memory VM sensitivity proof (registered in `_test_runner.js`,
+  source read via `tests/browser/sales-v2-u1-mutation-proof.js`, tracked files never mutated):
+  clean Foundation run passes all 80; string-replacing strict `indexOf(mode)` back to
+  `indexOf(mode.trim())` in the VM copy must make the Foundation suite FAIL at marker
+  `SALES_V2_FOUNDATION:F71`. Proof failure fails the suite exit status.
 
-All legacy assertions preserved; runner executes 44 suites, `44 PASS, 0 FAIL` (MEASURED).
+`node _test_runner.js` executes all of the above; all legacy assertions preserved.
+MEASURED: `45 PASS, 0 FAIL` (41 legacy suites + 3 U1 case suites + 1 mutation-proof entry).
 
 ## Out of scope (U2+)
 

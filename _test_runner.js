@@ -1,5 +1,7 @@
 var fs = require('fs');
 var vm = require('vm');
+var runSalesV2U1MutationProof = require('./tests/browser/sales-v2-u1-mutation-proof.js');
+globalThis.runSalesV2U1MutationProof = runSalesV2U1MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -217,6 +219,7 @@ run('testTransactionPurchaseExpenseBehavioralFixtures', 'testTransactionPurchase
 run('testSalesRecognitionV2FoundationContracts', 'testSalesRecognitionV2FoundationContracts()');
 run('testSalesV2CutoverPeriods', 'testSalesV2CutoverPeriods()');
 run('testSalesV2AccountPreflight', 'testSalesV2AccountPreflight()');
+run('testSalesV2U1MutationProof', 'JSON.stringify(runSalesV2U1MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

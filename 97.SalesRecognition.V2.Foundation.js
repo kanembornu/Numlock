@@ -105,7 +105,7 @@ function validateSalesRecognitionV2Config(config) {
     return { status: "FAIL", errors: [salesRecognitionConfigError_("config", codes.CONFIG_INVALID)] };
   }
   var mode = config.mode;
-  if (typeof mode !== "string" || contract.MODES.indexOf(mode.trim()) === -1) {
+  if (typeof mode !== "string" || contract.MODES.indexOf(mode) === -1) {
     errors.push(salesRecognitionConfigError_("mode", codes.MODE_INVALID));
   }
   if (typeof config.contractVersion !== "string" ||
@@ -155,10 +155,11 @@ function salesRecognitionV2RequestGate(config) {
   var codes = SALES_RECOGNITION_V2_CONTRACT.REFUSAL_CODES;
   var validation = validateSalesRecognitionV2Config(config);
   if (validation.status !== "PASS") return { allowed: false, code: codes.CONFIG_INVALID };
-  var mode = String(config.mode || "").trim();
+  var mode = config.mode;
   if (mode === "PREPARED") return { allowed: false, code: codes.V2_NOT_ACTIVATED };
   if (mode === "PAUSED") return { allowed: false, code: codes.V2_MODE_PAUSED };
-  return { allowed: true, code: "" };
+  if (mode === "ACTIVE") return { allowed: true, code: "" };
+  return { allowed: false, code: codes.CONFIG_INVALID };
 }
 
 function salesRecognitionContextLists_(context) {
