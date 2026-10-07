@@ -1,0 +1,727 @@
+{
+  "manifestVersion": 1,
+  "title": "Off-repo retirement — legacy preservation and local MOE audit",
+  "preservationDate": "2026-10-07",
+  "baselineCommit": "1be6467",
+  "retirementCommit": "1be6467",
+  "frozenEvidenceStatement": "FROZEN_EVIDENCE: preserved bytes are immutable point-in-time evidence; hashes above are authoritative. Never regenerate, re-save, or rewrite these workbooks.",
+  "notRuntimeAuthorityStatement": "NOT_RUNTIME_AUTHORITY: these workbooks are historical evidence only; no runtime, migration, activation, or validation code may read them as authority. Runtime authority remains the repository source and production services per docs/evidence/off-repo-retirement.md.",
+  "sourceOfTruthStatement": "Source of truth for these two workbooks is the owner export in ~/Downloads (local); Drive copies (IDs recorded above) are pending trash under separate off-repo authorization.",
+  "legacyFiles": [
+    {
+      "canonicalFilename": "NUMLOCK — Pre Legacy Decommission Archive — 2026-08-31.xlsx",
+      "repoPath": "docs/evidence/legacy-retirement/NUMLOCK — Pre Legacy Decommission Archive — 2026-08-31.xlsx",
+      "snapshotDate": "2026-08-31",
+      "sourceDriveFolder": {
+        "name": "NUMLOCK — Pre Legacy Decommission Archive — 2026-08-31",
+        "id": "1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh"
+      },
+      "sourceDriveFileId": "1bmhRP04oxoRQPM7yXOpm6L7e2ULLAZn6kOrgc0lNtt4",
+      "bytes": 1374327,
+      "sha256": "970b6380c7abb69e1230f6214ad1a081f47ed8fcc0d7652dcfd7ada5f47d28e8",
+      "preservationDate": "2026-10-07",
+      "historicalRole": "Point-in-time legacy workbook archive captured immediately before legacy decommission (2026-08-31).",
+      "classification": "POST_MIGRATION_PRE_DECOMMISSION_ARCHIVE",
+      "worksheetCount": 20,
+      "auditCharacteristics": {
+        "expectedBytes": 1374327,
+        "bytesMatch": true,
+        "expectedWorksheets": 20,
+        "worksheetsMatch": true
+      },
+      "knownTransformationDifferences": [
+        {
+          "delta": "Qty \"x\" -> 1",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "13 cost \"-\" -> 0",
+          "status": "UNPROVEN"
+        },
+        {
+          "delta": "+14 raw transactions",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "2 Crml -> Caramel",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "9697 sales / 1811 expense match after adjustment",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "Impr/CSV no unique transactions",
+          "status": "KNOWN"
+        }
+      ],
+      "transformationDifferencesScope": "Owner-provided legacy-vs-migrated-data delta set for this preservation batch; recorded, not re-measured in stage A (workbook contents not parsed).",
+      "frozenEvidence": true,
+      "notRuntimeAuthority": true
+    },
+    {
+      "canonicalFilename": "Numlock DB Backup - Pre Schema V1 - 2026-08-13 0954.xlsx",
+      "repoPath": "docs/evidence/legacy-retirement/Numlock DB Backup - Pre Schema V1 - 2026-08-13 0954.xlsx",
+      "snapshotDate": "2026-08-13",
+      "sourceDriveFolder": {
+        "name": "Numlock DB Backup - Pre Schema V1 - 2026-08-13 0954",
+        "id": "1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS"
+      },
+      "sourceDriveFileId": "1EKR8EU4nw_kpqb-bvp9jV0AAEasWsssMwuJ7e3fBCWg",
+      "bytes": 986479,
+      "sha256": "23daa2623c0e86d68d9b29f656e202dfc31054efc4043fe0a2583e0493915a36",
+      "preservationDate": "2026-10-07",
+      "historicalRole": "Pre-Schema-V1 database backup workbook (2026-08-13 09:54) capturing data before schema V1 migration.",
+      "classification": "PRE_SCHEMA_BASELINE",
+      "worksheetCount": 8,
+      "auditCharacteristics": {
+        "expectedBytes": 986479,
+        "bytesMatch": true,
+        "expectedWorksheets": 8,
+        "worksheetsMatch": true
+      },
+      "knownTransformationDifferences": [
+        {
+          "delta": "Qty \"x\" -> 1",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "13 cost \"-\" -> 0",
+          "status": "UNPROVEN"
+        },
+        {
+          "delta": "+14 raw transactions",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "2 Crml -> Caramel",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "9697 sales / 1811 expense match after adjustment",
+          "status": "KNOWN"
+        },
+        {
+          "delta": "Impr/CSV no unique transactions",
+          "status": "KNOWN"
+        }
+      ],
+      "transformationDifferencesScope": "Owner-provided legacy-vs-migrated-data delta set for this preservation batch; recorded, not re-measured in stage A (workbook contents not parsed).",
+      "frozenEvidence": true,
+      "notRuntimeAuthority": true
+    }
+  ],
+  "legacyWorkbookParity": {
+    "archive": {
+      "status": "LEGACY_WORKBOOK_PARITY"
+    },
+    "preSchema": {
+      "status": "LEGACY_WORKBOOK_PARITY"
+    },
+    "sourceHashMatch": true,
+    "repoHashMatch": true
+  },
+  "moeAudit": {
+    "folder": "/Users/azer/Documents/GitHub/numlock-monetary-opening-evidence-publication-20261003",
+    "fileCount": 93,
+    "snapshotEvidence": {
+      "dirMtime": "2026-10-03T01:59:05Z",
+      "correspondence": "clasp project source snapshot; 78/93 files byte-identical to committed states (69 at HEAD 1be6467, 9 exact blobs at older commits); 15 files match no commit in main or release/finance-11W.2 (owner working/deployed source states of 2026-10-03 era, superseded by later commits); .clasp.json byte-identical to repository copy (scriptId redacted)"
+    },
+    "classificationCounts": {
+      "ALREADY_IN_REPO": 69,
+      "GENERATED_TRANSIENT": 1,
+      "ALREADY_IN_REPO_HISTORY": 9,
+      "OBSOLETE": 14
+    },
+    "preservationDecision": {
+      "preservedFiles": [],
+      "reason": "No acceptance-critical unique material: all acceptance artifacts for the 2026-10-03 monetary-opening publication are committed (docs/evidence/finance-phase-13moe.md plus committed harness evidence); the 15 snapshot-only files are superseded intermediate source states (OBSOLETE/GENERATED_TRANSIENT), hash-recorded below. Original snapshot folder remains untouched on disk (no deletion authorized).",
+      "verdict": "LOCAL_MOE_PARITY=COMPLETE"
+    },
+    "inventory": [
+      {
+        "path": ".clasp.json",
+        "bytes": 309,
+        "sha256": "fcfc66fc74837bbbb7e8f6c8d75dbac843ba457800b6dd66689e72352e73a19b",
+        "classification": "ALREADY_IN_REPO (byte-identical; scriptId redacted)"
+      },
+      {
+        "path": ".claspignore",
+        "bytes": 152,
+        "sha256": "5545c40b099c9c504e103be4bda14dcde87fd8ef6f4ed2bc402c03847e41a996",
+        "classification": "GENERATED_TRANSIENT"
+      },
+      {
+        "path": "00.Project.Spec.js",
+        "bytes": 1301,
+        "sha256": "029d2c6676b6e4726f32b9459e01f68e68a0695b2a5a1342596ad0c1a676c514",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "10.Config.js",
+        "bytes": 3244,
+        "sha256": "fba9e5a2549fb63da19aad01ff1ceaee798183a08b21e2781d3f7eb7f0c9a81e",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "100.Code.js",
+        "bytes": 6962,
+        "sha256": "e1918a819cccea6f4d2d718d57a829fce70eed32937cbbce09a36f2b11629b51",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "12A.Depreciation.Report.Service.js",
+        "bytes": 9439,
+        "sha256": "82d82eaae3ef51b6c4a3d39a4c72106ecd11ab07d37c1a69ff4ff31bec23b39f",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "189.View.Tailwind.html",
+        "bytes": 86943,
+        "sha256": "633b8428bdf7389bb14336ec6f24461b0551990d35c702963ad689bee98f8eb8",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "190.View.Index.html",
+        "bytes": 383615,
+        "sha256": "2ff0f33a7d6a76201f1378696f4833e98452834b108525370b2e8e399315a27f",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "191.View.Diagnostics.html",
+        "bytes": 21719,
+        "sha256": "f9b37ccbc59c9f2264850f1ba08b94dd494f1b49ad8facb8852f3ab38b5f552d",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "192.View.Transactions.State.html",
+        "bytes": 19984,
+        "sha256": "6480133f6767960d8d5dd617f84423e3e88bbe0148410c751807dabcfc0f06a2",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "193.View.Transactions.Render.html",
+        "bytes": 7602,
+        "sha256": "138c939ec3e2bf1ead4b2923ca93b61779d0511278937f3b144b7844af9bd9a2",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "194.View.Transactions.Forms.html",
+        "bytes": 35888,
+        "sha256": "37a1341e020762618049277a4cf510e3f61a0706b14f47c605e7416244c22a9e",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "195.View.Transactions.Actions.html",
+        "bytes": 72836,
+        "sha256": "7b4efe64f765c87b6cfa17867a8c460f77e368cf4e1c030a75b9332e2d6a6280",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "196.View.Dashboard.Render.html",
+        "bytes": 92821,
+        "sha256": "abace8f9941b81a99fc41954b6860f0d38532b4563affdcb009249c2bf43c537",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "197.View.Dashboard.Charts.html",
+        "bytes": 5713,
+        "sha256": "3cdd88d47d067d099c3d68ec7ad467f261cac2bf80657ed71f4c653fe3915365",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "198.View.Dashboard.Controller.html",
+        "bytes": 30634,
+        "sha256": "b40b7831886a94ad983aeee85088eef26476cbc1fb9e7ab18da59834c92b7a33",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "199.View.Finance.State.html",
+        "bytes": 652,
+        "sha256": "285dfb421badd51d71f71f2184e594525298b72bc1037dd566a9e029c102b6f1",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "20.Data.Source.js",
+        "bytes": 14511,
+        "sha256": "28039acff4f12c3677c6cf953150ad36fd5a090d993feb51e6ae46153a29fd3c",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "200.View.Finance.Render.html",
+        "bytes": 26409,
+        "sha256": "bd83999678a8809ed6d878b5fee5d6c57fb688c436d88ea94bc7952fbe84ba5b",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "201.View.Finance.Controller.html",
+        "bytes": 20248,
+        "sha256": "593d9f241b734fb4d2a59a3894e6da8da1ae28a7327071fce461d502b4e12834",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "21.Transaction.Entry.js",
+        "bytes": 22971,
+        "sha256": "9a87476c02682da2930e63529e6af9c74a371074225805784ab60c3a14187dda",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "22.Transaction.Lifecycle.js",
+        "bytes": 20334,
+        "sha256": "124a7165fc6c6de3378c1186f8a4683b6ab5a682de171f7bd0b1be45f14287d0",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "25.Data.Processor.js",
+        "bytes": 1942,
+        "sha256": "0d1bcaf243d3e4a7a6db958dda6d3c5a5fe0b850bee0ddc01f0a056441c5949e",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "30.Analytics.Aggregate.js",
+        "bytes": 10766,
+        "sha256": "ca56c3e0b50c128032e1f85929da20b93a66240819eed19e843871b491529c54",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "35.Analytics.Financial.js",
+        "bytes": 1775,
+        "sha256": "a1ff744e0dce8a59a19f89b4e218f3e2f318b37c9b29b0b714078c72b6610b77",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "36.Finance.Service.js",
+        "bytes": 31909,
+        "sha256": "d6442941334af5dde7f464d821378ce64ee342424d4bbc2fb8e50a206a1d218a",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "37.Depreciation.Service.js",
+        "bytes": 28351,
+        "sha256": "73ba7568c134209e4a38d55885eacd81418d1b864cf2e2bc94f52d958889b476",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "37.Inventory.Policy.Evidence.js",
+        "bytes": 58773,
+        "sha256": "41af9e279901fa13c3474d6261a9ae55e4d4ddbfd2bed19e02e0e2a18d344055",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "38.CapitalEquity.Service.js",
+        "bytes": 29474,
+        "sha256": "fa1aa11c109126929b7ff519a08639491ce0a752fb47483383379c8f2af0029a",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "39.Balance.Foundation.js",
+        "bytes": 160397,
+        "sha256": "be1aa7aceba1c1058f19c3514ab9aeae62b90c5a5fb90964e9a24bfc283b8b73",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "40.Analytics.Summary.js",
+        "bytes": 210,
+        "sha256": "91fac6beb07e163aa6e169f07ed69f2550a5ec82105dff48439acf4dbb6e7dc7",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "40.Cash.Foundation.js",
+        "bytes": 84854,
+        "sha256": "e90f6f80d9f8bff5b2df47f9782a01b2ee6e0b8e537db6306b509ec121bf5379",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "40.Inventory.Conversion.Population.js",
+        "bytes": 67345,
+        "sha256": "0363eb1344f7562e984224b2921f49c2378c2b7cc12b171980a6d090677de8e4",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "41.Inventory.Opening.Staging.js",
+        "bytes": 78989,
+        "sha256": "543fd3fb9ed235ddbd51a987e76aea120d3d2e67b07d4119d2c9a7f0f8c4e48e",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "42.Inventory.Receipt.Foundation.js",
+        "bytes": 21475,
+        "sha256": "2116b5fec1c72fddc41a058f0ac93ed460c1e704f4966bee9d12f15b95c6087a",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "43.Inventory.Receipt.Migration.js",
+        "bytes": 16673,
+        "sha256": "bf48b4ead90f20d311f2fde03ea5bec96423cb8e4266b476483582335fd191d1",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "44.Inventory.Receipt.Operational.js",
+        "bytes": 11382,
+        "sha256": "86f54f12649ecaae4bb1ef8df5d44309ca325961b688e6cf21e30a4c905eadc1",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "45.Analytics.Trend.js",
+        "bytes": 988,
+        "sha256": "a9045efe4d4de36993b2bec2c3de9f962c06f11bd53af3b32cf07855df824000",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "45.Inventory.Receipt.Orchestration.js",
+        "bytes": 13937,
+        "sha256": "97b4fba35a9d9b6144446cdf607a72fc9b7e9c328f3a945f4507308c93b97673",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "46.Expense.Purchase.Policy.js",
+        "bytes": 3532,
+        "sha256": "6ca8c09ec1fb99a37645de875eea3d46e4361ebbc387825601d1a4c17e576024",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "47.Purchase.Events.js",
+        "bytes": 73695,
+        "sha256": "80eba3577f6c983cea34963bafb021a4e3485f0993198991a81a3286b1c419dc",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "48.Purchase.Events.Migration.js",
+        "bytes": 10618,
+        "sha256": "23156051989e5f5617693dceb04f91ff4e9887f285cfae2a04b4a6a7bdba3337",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "50.Analytics.Product.js",
+        "bytes": 17093,
+        "sha256": "0f5665de05ff01b7706fbb370645febb3f102364dcb47c744ee9c3e04b74d51b",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "55.Analytics.Expense.js",
+        "bytes": 737,
+        "sha256": "fec3d501e529ec3538b7328b1abc9eca2161f732a4f2daf02dc472e88e2ed0f5",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "60.Intelligence.Revenue.js",
+        "bytes": 1515,
+        "sha256": "ab2481474f8a667188b22f1658c44df61c639f9fbd99b06eca9750c69fb9bc6b",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "65.Intelligence.Profit.js",
+        "bytes": 704,
+        "sha256": "73d62ebd3f9a27ee9cba97c0285988eae14599962459e4ae88e18f7d6ba2c750",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "70.Intelligence.Score.js",
+        "bytes": 7410,
+        "sha256": "b75a0c64564649e116777344f23021b73d6e2fad508f792485df920224f8ab37",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "75.Intelligence.Diagnosis.js",
+        "bytes": 5508,
+        "sha256": "0dba26678651c5d1aeca8139ffee564d43af3e91cd6f3c70eed6bb88be1a0c3b",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "80.Intelligence.Recommendation.js",
+        "bytes": 7211,
+        "sha256": "bc33e092f84cc3266505b951a9e5b4b16965292bd321151514dd0f60d0fe64a9",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "85.Intelligence.Decision.js",
+        "bytes": 14342,
+        "sha256": "fedd64bc88e1b686d915f33ea1df46159bbae3659c96055c08f638efcd92f196",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "90.Dashboard.DateRange.js",
+        "bytes": 8479,
+        "sha256": "ac79039c3edbb6c92d17ede4e7b14d672993c978867bcd71032a824d97b09d9a",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "90.Dashboard.Quality.js",
+        "bytes": 5075,
+        "sha256": "853715f906a26a32ab26db57ce2c7c5bfa0c9c8be725fd61bfe644cdb1bd44be",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "90.Dashboard.Reporting.js",
+        "bytes": 6653,
+        "sha256": "d08d893d50b609f4b9d7aca107cf54a0647418a192f36f8d47717f58255d81be",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "90.Dashboard.Service.js",
+        "bytes": 15315,
+        "sha256": "9cb94743a9057d30aed4f05e774c944f50ec34129e70c27ded0d3b0d31475c27",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "91.Transactions.Query.js",
+        "bytes": 13205,
+        "sha256": "685e6856f85c8e0ad72fbd904d735ff0dfb5d269372f7b0b43f54ddfd6c3e703",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "92.Products.Domain.js",
+        "bytes": 19884,
+        "sha256": "405831706f4cc56ac992dbef8370e95913b4ad3099654a5eebfbd7871c037b25",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "92.Tests.Analytics.Fixtures.js",
+        "bytes": 13758,
+        "sha256": "e386742180f83acc24a0ad29b4de961ffc187e9bd550d51c57fcf7833cf9be95",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "92.Tests.Dashboard.Fixtures.js",
+        "bytes": 10521,
+        "sha256": "609e5389a3a598b3dea428afe9a103d3e03f077b0644d98dd8c1f77611f73f93",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "92.Tests.Frontend.Fixtures.js",
+        "bytes": 11397,
+        "sha256": "acce73772c4a3c590218db59ac04fdf525b438a158f1f9e2e1576925eccfa1aa",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "92.Tests.Intelligence.Fixtures.js",
+        "bytes": 9709,
+        "sha256": "b3cbee8e0a26440698f841e28b36d726e30ffa5c9976872811bbf7df9ac8fb4f",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "92.Tests.Quality.Fixtures.js",
+        "bytes": 9167,
+        "sha256": "e09a05af89dc2dc675d509806cb4788aa36f287667231e1d5ef4c7c13b764068",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "94.Tests.Assertions.js",
+        "bytes": 6501,
+        "sha256": "7cf45f5bbcbdc9c0b91138052081b647179faa4a63abef1da764c12ff9f3743f",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "95.Tests.Validators.js",
+        "bytes": 1999,
+        "sha256": "eb03a55a63efa8e3233c31f217a8f52006e411ad7b329431e8579bbe2eb49852",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Balance.Foundation.Cases.js",
+        "bytes": 126219,
+        "sha256": "19c469377eec6173ca8456daf8d098fa2d69e3f5a01e55d10f4366331c1fb10d",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "96.Tests.Bounded.Read.Cases.js",
+        "bytes": 41949,
+        "sha256": "b81e35ec7ade63bd11876c24b9e1e1d1e3eb0f272d2149919f5171d8a236d907",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.CapitalEquity.Cases.js",
+        "bytes": 28259,
+        "sha256": "ea96a251c89708c71be3ec09142f976afcda6d8bdb45bc240d6783638d19b7b4",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Cash.Foundation.Cases.js",
+        "bytes": 119681,
+        "sha256": "030d2d157adf1e8e1a6f32cf443cfdd49669480ee10d055049bc97fe439512d9",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.ColdStart.Profiling.Cases.js",
+        "bytes": 17468,
+        "sha256": "41294d2e7efeceb9c6e16d756c8dfe14d3c4d72949c8a3700803e8f915ff53ed",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Dashboard.Cases.js",
+        "bytes": 131939,
+        "sha256": "a11b8167a4bfaff3101d78af9532f3cd5eb01c2fed2de757049dc647ee92457a",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Data.Cases.js",
+        "bytes": 6007,
+        "sha256": "0eaed162eee0712921af8a697dde33f86a6c72e496ed6cd88cc8be260a929a91",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Depreciation.Cases.js",
+        "bytes": 40962,
+        "sha256": "e971fe66d7ff7d2de504a51adb0eaeb159224ef4a1f5e073e27ee9ced12359b0",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Expense.Purchase.Cases.js",
+        "bytes": 161754,
+        "sha256": "9510219354135ba82dfd48b90e7f60cb1f095c67a5248af51bbb6748f4c9a4dc",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.Finance.Cases.js",
+        "bytes": 50809,
+        "sha256": "f7fb3ef7ca662c2761e5c984428a54882e73ed290e23985d3e6552f61609ca8d",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.Finance.UI.Cases.js",
+        "bytes": 83847,
+        "sha256": "804fde5603c51bf87468e1002a0e0c99d13cec33424822d1b72b094e98840859",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.Finance.WarmCache.Cases.js",
+        "bytes": 11044,
+        "sha256": "e174590567027ce8958f22de892269e6721d9f771343688a601383962c26c80e",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Frontend.Cases.js",
+        "bytes": 158490,
+        "sha256": "d9981876c3ebcdd55a9fbc395f51690337ed01f449cb6b92d65f64dca847c2e2",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.Intelligence.Cases.js",
+        "bytes": 29616,
+        "sha256": "ba23f8844f2b1dc553198fdb9fd8e38aefc42331e0ecbb298e3086de6cfe97cf",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Inventory.Opening.Staging.Cases.js",
+        "bytes": 43340,
+        "sha256": "55f496a2ad0165d90d8e119d062c8049a1c00c9db52bbd70e8362ac696698a4a",
+        "classification": "ALREADY_IN_REPO_HISTORY"
+      },
+      {
+        "path": "96.Tests.Inventory.Policy.Evidence.Cases.js",
+        "bytes": 34929,
+        "sha256": "6826affb7559ff227476a72ccaebf93ab4a5e83a0287f6b5f55c53785b0a151e",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Inventory.Receipt.Cases.js",
+        "bytes": 17244,
+        "sha256": "e6534f8b7c02b1e95f19389b0f05510d359411ff43a5a865becc5d41c3c2d926",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Inventory.Receipt.Migration.Cases.js",
+        "bytes": 5557,
+        "sha256": "c80237beacac4e95346bc26093eac57e4bc7ede3022c933677288f190ae2ad1b",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Inventory.Receipt.Operational.Cases.js",
+        "bytes": 11842,
+        "sha256": "7902a3d925a6a1cd9b6a06f3249e3fd0afcd119b917209961f2f9f37e53be779",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Inventory.Receipt.Orchestration.Cases.js",
+        "bytes": 10275,
+        "sha256": "99a136e709659e948b8d60a9cffbf24bb622f803e9e2dff5b7278569980ea9e9",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.ProductProfitability.Cases.js",
+        "bytes": 45466,
+        "sha256": "ed37fb3a4e2e9de84775ad63e9472590a8470e6e7a4c98584080d54d49359870",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Products.Domain.Cases.js",
+        "bytes": 14629,
+        "sha256": "ac33be7a3eac61c8c3b7e74532af4f6c3bf14795dc10fc95745a98976e0ae86d",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.Purchase.Events.Migration.Cases.js",
+        "bytes": 8268,
+        "sha256": "8ee273ef93e1bf40f23176a6cc43a8f9021a22a893154af99077ac4372ac902c",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "96.Tests.Quality.Cases.js",
+        "bytes": 23654,
+        "sha256": "0640f092259b508ee2fa610083c0d1c46c72a08d283546e330b4f87b142822ed",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "96.Tests.Transactions.Cases.js",
+        "bytes": 113702,
+        "sha256": "8a0b45db1e4f3308f899727f53c3a0b0e8721c00b4a6385d69eeaafc3ee65693",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "97.Inventory.Receipt.Operational.Runtime.Proof.js",
+        "bytes": 7066,
+        "sha256": "80c20e163e94039d59b86723c0acf1b2ef3392db6bc5e5e4aad54dca93fbbc9b",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "97.Inventory.Receipt.Runtime.Proof.js",
+        "bytes": 7121,
+        "sha256": "3d841785928dfff2a6e03903ba18dd5dcc77e5256a55c69c2ffc3267a79c49fd",
+        "classification": "ALREADY_IN_REPO"
+      },
+      {
+        "path": "98.Tests.Runner.js",
+        "bytes": 13625,
+        "sha256": "44644de5064a7582069c0592fa03ae493867f72b5c98e5a8c633508b86f604bd",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "_test_runner.js",
+        "bytes": 9299,
+        "sha256": "f5cbc4102c0c2b980c94c0b6db7b81c4ca9c5108e23ffe5ed31c03019d325e16",
+        "classification": "OBSOLETE"
+      },
+      {
+        "path": "appsscript.json",
+        "bytes": 548,
+        "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a",
+        "classification": "ALREADY_IN_REPO"
+      }
+    ]
+  },
+  "formCaptures": [
+    {
+      "formId": "1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s",
+      "file": "form-capture-1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s.json",
+      "provenanceFolder": "1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh",
+      "definitionCaptured": true,
+      "httpStatus": 200,
+      "responsesAccepting": true,
+      "responseCount": "UNKNOWN",
+      "linkedDestination": "UNKNOWN",
+      "recommendation": "BLOCKED_FORM_PRESERVATION"
+    },
+    {
+      "formId": "1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8",
+      "file": "form-capture-1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8.json",
+      "provenanceFolder": "1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS",
+      "definitionCaptured": true,
+      "httpStatus": 200,
+      "responsesAccepting": true,
+      "responseCount": "UNKNOWN",
+      "linkedDestination": "UNKNOWN",
+      "recommendation": "BLOCKED_FORM_PRESERVATION"
+    }
+  ]
+}

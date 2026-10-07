@@ -1,0 +1,187 @@
+{
+  "formId": "1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8",
+  "sourceProvenance": "folder \"Numlock DB Backup - Pre Schema V1 - 2026-08-13 0954\" (1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS)",
+  "captureType": "PUBLIC_VIEWFORM_DEFINITION",
+  "capturedDate": "2026-10-07",
+  "httpStatus": 200,
+  "publishedUrl": "https://docs.google.com/forms/d/e/1FAIpQLSfQONoS3O_JbZXn4tzh_0u9hIhzV7w48GJ9eBz3ehewnqLqTg/viewform",
+  "pageTitle": "Numlock Transaction",
+  "responsesAccepting": true,
+  "closedSignals": [],
+  "parse": "FULL",
+  "formDescription": null,
+  "itemCount": 11,
+  "sectionCount": 5,
+  "questionCount": 6,
+  "items": [
+    {
+      "id": 276377467,
+      "title": "Transaction Type",
+      "type_code": 2,
+      "type": "MULTIPLE_CHOICE",
+      "choices": [
+        "Sales",
+        "Purchase"
+      ]
+    },
+    {
+      "id": 999439048,
+      "title": "Sales Category",
+      "type_code": 8,
+      "type": "SECTION",
+      "choices": []
+    },
+    {
+      "id": 2024115938,
+      "title": "Type",
+      "type_code": 2,
+      "type": "MULTIPLE_CHOICE",
+      "choices": [
+        "Hot",
+        "Cold"
+      ]
+    },
+    {
+      "id": 79269876,
+      "title": "Product",
+      "type_code": 8,
+      "type": "SECTION",
+      "choices": []
+    },
+    {
+      "id": 288491036,
+      "title": "Sales",
+      "type_code": 2,
+      "type": "MULTIPLE_CHOICE",
+      "choices": [
+        "Americano",
+        "Caffe Latte",
+        "Cappuccino",
+        "Crml Macchiato",
+        "Fizzpresso",
+        "Hazelnut Latte",
+        "Japanese Iced",
+        "Kopi Hitam",
+        "Kopi Susu",
+        "Kopi Tubruk",
+        "Passionicano",
+        "V60 Pour Over",
+        "Vanilla Latte",
+        "Vietnamese Coffee",
+        "Barley Mint",
+        "Claymint Spume",
+        "Lemonade",
+        "Ocean Blue",
+        "Sour Kelpien",
+        "Venetian Red",
+        "Choco Latte",
+        "Matcha Latte",
+        "Chocolatos",
+        "Fresh Milk",
+        "Milky Zoda",
+        "White Caramel",
+        "White Hazel",
+        "White Vanilla",
+        "Lemon Tea",
+        "Lychee Tea",
+        "Mango Tea",
+        "Milk Tea",
+        "Peach Tea",
+        "Thirsty Tea"
+      ]
+    },
+    {
+      "id": 414798017,
+      "title": "Expenses",
+      "type_code": 8,
+      "type": "SECTION",
+      "choices": []
+    },
+    {
+      "id": 1230963997,
+      "title": "Purchase",
+      "type_code": 2,
+      "type": "MULTIPLE_CHOICE",
+      "choices": [
+        "Salary",
+        "Galon",
+        "Gas",
+        "Gula",
+        "Hakaes",
+        "Kelontong",
+        "Kopi Biji Ar",
+        "Kopi Biji Ro",
+        "Kopi Bubuk",
+        "Lemon",
+        "Powder Choco",
+        "Powder Matcha",
+        "Sirup Blue Citrus",
+        "Sirup Caramel",
+        "Sirup Hazelnut",
+        "Sirup Lychee",
+        "Sirup Mango",
+        "Sirup Mojito",
+        "Sirup Passion",
+        "Sirup Peach",
+        "Sirup Peppermint",
+        "Sirup Repack",
+        "Sirup Vanilla",
+        "Soda",
+        "Susu Diamond",
+        "Susu Omela",
+        "Teh Bubuk",
+        "MTain Repair",
+        "MTain Upgrade",
+        "Air & Sampah",
+        "Listrik",
+        "Sewa",
+        "WiFi",
+        "Event"
+      ]
+    },
+    {
+      "id": 1172968789,
+      "title": "Sales Amount",
+      "type_code": 8,
+      "type": "SECTION",
+      "choices": []
+    },
+    {
+      "id": 340983835,
+      "title": "Qty",
+      "type_code": 2,
+      "type": "MULTIPLE_CHOICE",
+      "choices": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ]
+    },
+    {
+      "id": 480737243,
+      "title": "Purchase Value",
+      "type_code": 8,
+      "type": "SECTION",
+      "choices": []
+    },
+    {
+      "id": 1858705779,
+      "title": "Price",
+      "type_code": 0,
+      "type": "SHORT_TEXT",
+      "choices": []
+    }
+  ],
+  "requiredFlags": "UNKNOWN_AUTHORITATIVE; public page data does not expose a verified required marker (Forms API edit access unavailable)",
+  "linkedResponseDestination": "UNKNOWN (Forms/Sheets API disabled for client project)",
+  "uniqueResponseCount": "UNKNOWN (not exposed by public viewform; no submission attempted)",
+  "pageSha256": "d2be0fa88c55c8918d8fe91d620e557951b47b29e6a7a7f2e25cd56b84231b9e",
+  "pageBytes": 91241,
+  "notes": [
+    "Metadata/definition capture only; no submission, no response access, no edit access.",
+    "Forms API disabled for client project (403 SERVICE_DISABLED, confirmed 2026-10-07).",
+    "Deterministic fields: formId/items/choices/pageSha256 for a given capture date."
+  ]
+}
