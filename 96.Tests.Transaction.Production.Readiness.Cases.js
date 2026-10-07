@@ -336,84 +336,58 @@ function testTransactionPurchaseExpenseBehavioralFixtures() {
   return { purchase: { total: 9, pass: 9, fail: 0 }, expense: { total: 5, pass: 5, fail: 0 }, total: 14, pass: pass, fail: 14 - pass };
 }
 
-function salesV2PreflightRow_(code, name, type, statement, cashFlow, normal, active) {
-  return { AccountCode: code, AccountName: name, AccountType: type, StatementGroup: statement,
-    CashFlowGroup: cashFlow, IsActive: active, CreatedAt: "", UpdatedAt: "", NormalBalance: normal };
-}
-
 function testSalesV2AccountPreflight() {
   var pass = 0, codes = SALES_RECOGNITION_V2_CONTRACT.REFUSAL_CODES, core4000 =
     BALANCE_FOUNDATION_PARTIAL_ACCOUNTS_RECOVERY.ACCOUNT_CORE["4000"];
-  function check(value, label) { if (!value) throw new Error("SALES_V2_PREFLIGHT:" + label); pass++; }
-  function hasError(report, code) {
-    return report.errors.some(function(error) { return error.code === code; });
+  function check(id, value) { if (!value) throw new Error("SALES_V2_PREFLIGHT:" + id); pass++; }
+  function row(code, name, type, statement, cashFlow, normal, active) {
+    return { AccountCode: code, AccountName: name, AccountType: type, StatementGroup: statement,
+      CashFlowGroup: cashFlow, IsActive: active, CreatedAt: "", UpdatedAt: "", NormalBalance: normal };
   }
-  var rows = [
-    salesV2PreflightRow_("1000", "Cash on Hand", "Asset", "Current Assets", "Operating", "DEBIT", true),
-    salesV2PreflightRow_("1030", "Sales Settlement Clearing", "Asset", "Current Assets", "Operating",
-      "DEBIT", true),
-    salesV2PreflightRow_("2000", "Accounts Payable", "Liability", "Current Liabilities", "Operating",
-      "CREDIT", true),
-    salesV2PreflightRow_("2010", "Customer Refund and Credit Payable", "Liability",
-      "Current Liabilities", "Operating", "CREDIT", true),
-    salesV2PreflightRow_("4000", core4000[0], core4000[1], core4000[2], core4000[3], "CREDIT", true),
-    salesV2PreflightRow_("6100", "Salary Expense", "Expense", "Personnel Expense", "Operating",
-      "DEBIT", true)
+  function hasError(report, code, accountCode) {
+    return report.errors.some(function(error) { return error.code === code && error.accountCode === accountCode; });
+  }
+  var base = [
+    row("1000", "Cash on Hand", "Asset", "Current Assets", "Operating", "DEBIT", true),
+    row("1030", "Sales Settlement Clearing", "Asset", "Current Assets", "Operating", "DEBIT", true),
+    row("2000", "Accounts Payable", "Liability", "Current Liabilities", "Operating", "CREDIT", true),
+    row("2010", "Customer Refund and Credit Payable", "Liability", "Current Liabilities", "Operating", "CREDIT", true),
+    row("4000", core4000[0], core4000[1], core4000[2], core4000[3], "CREDIT", true),
+    row("6100", "Salary Expense", "Expense", "Personnel Expense", "Operating", "DEBIT", true)
   ];
-  var before = JSON.stringify(rows), report = preflightSalesRecognitionAccounts(rows);
-  check(report.status === "PASS" && report.errors.length === 0, "exact metadata passes");
-  check(JSON.stringify(rows) === before, "zero business writes, rows untouched");
-  check(preflightSalesRecognitionAccounts(rows.filter(function(row) {
-    return row.AccountCode !== "2000";
-  })).status === "PASS", "2000 supplier AP untouched and not required");
-  check(preflightSalesRecognitionAccounts([]).status === "FAIL" &&
-    hasError(preflightSalesRecognitionAccounts([]), codes.ACCOUNT_ABSENT), "absent fails closed");
-  var missing1030 = rows.filter(function(row) { return row.AccountCode !== "1030"; });
-  report = preflightSalesRecognitionAccounts(missing1030);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_ABSENT), "missing 1030 fails closed");
-  var duplicate = rows.concat([salesV2PreflightRow_("1030", "Sales Settlement Clearing", "Asset",
-    "Current Assets", "Operating", "DEBIT", true)]);
-  report = preflightSalesRecognitionAccounts(duplicate);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_DUPLICATE), "duplicate fails closed");
-  var duplicateInactive = rows.concat([salesV2PreflightRow_("2010", "Customer Refund and Credit Payable",
-    "Liability", "Current Liabilities", "Operating", "CREDIT", false)]);
-  report = preflightSalesRecognitionAccounts(duplicateInactive);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_DUPLICATE),
-    "duplicate including inactive fails closed");
-  var wrong1030 = rows.map(function(row) {
-    return row.AccountCode === "1030" ? Object.assign({}, row, { AccountName: "Wrong Name" }) : row;
+  function without(code) { return base.filter(function(r) { return r.AccountCode !== code; }); }
+  function mutated(code, field, value) {
+    return base.map(function(r) { var patch = {}; if (r.AccountCode === code) { patch[field] = value; } return Object.assign({}, r, patch); });
+  }
+  function duplicated(code, active) {
+    return base.concat([Object.assign({}, base.filter(function(r) { return r.AccountCode === code; })[0], { IsActive: active })]);
+  }
+  var before = JSON.stringify(base), report = preflightSalesRecognitionAccounts(base);
+  check("P01", report.status === "PASS" && report.errors.length === 0);
+  check("P02", JSON.stringify(base) === before);
+  check("P03", preflightSalesRecognitionAccounts(without("2000")).status === "PASS");
+  check("P04", preflightSalesRecognitionAccounts([]).status === "FAIL" && hasError(preflightSalesRecognitionAccounts([]), codes.ACCOUNT_ABSENT, "1030"));
+  check("P05", preflightSalesRecognitionAccounts(base.concat([null])).status === "FAIL" && hasError(preflightSalesRecognitionAccounts(base.concat([null])), codes.ACCOUNT_ROW_INVALID, ""));
+  check("P06", preflightSalesRecognitionAccounts("not-an-array").status === "FAIL" && hasError(preflightSalesRecognitionAccounts("not-an-array"), codes.ACCOUNT_ABSENT, "1030"));
+  var fieldSets = {
+    "1030": ["AccountName", "AccountType", "StatementGroup", "NormalBalance"],
+    "2010": ["AccountName", "AccountType", "StatementGroup", "NormalBalance"],
+    "4000": ["AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "NormalBalance"]
+  };
+  var scenarios = [];
+  Object.keys(fieldSets).forEach(function(code) {
+    scenarios.push({ id: code + ":ABSENT", rows: without(code), expect: codes.ACCOUNT_ABSENT, code: code });
+    fieldSets[code].forEach(function(field) {
+      scenarios.push({ id: code + ":WRONG_" + field, rows: mutated(code, field, "!!WRONG!!"), expect: codes.ACCOUNT_METADATA_MISMATCH, code: code });
+    });
+    scenarios.push({ id: code + ":INACTIVE", rows: mutated(code, "IsActive", false), expect: codes.ACCOUNT_INACTIVE, code: code });
+    scenarios.push({ id: code + ":DUPLICATE", rows: duplicated(code, true), expect: codes.ACCOUNT_DUPLICATE, code: code });
+    scenarios.push({ id: code + ":DUPLICATE_INACTIVE", rows: duplicated(code, false), expect: codes.ACCOUNT_DUPLICATE, code: code });
   });
-  report = preflightSalesRecognitionAccounts(wrong1030);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_METADATA_MISMATCH),
-    "wrong 1030 metadata fails closed");
-  var wrong4000 = rows.map(function(row) {
-    return row.AccountCode === "4000" ? Object.assign({}, row, { StatementGroup: "Current Assets" }) : row;
+  scenarios.forEach(function(scenario) {
+    var result = preflightSalesRecognitionAccounts(scenario.rows);
+    check(scenario.id, result.status === "FAIL" && hasError(result, scenario.expect, scenario.code));
   });
-  report = preflightSalesRecognitionAccounts(wrong4000);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_METADATA_MISMATCH),
-    "wrong 4000 metadata fails closed against source authority");
-  var wrongNormal = rows.map(function(row) {
-    return row.AccountCode === "2010" ? Object.assign({}, row, { NormalBalance: "DEBIT" }) : row;
-  });
-  report = preflightSalesRecognitionAccounts(wrongNormal);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_METADATA_MISMATCH),
-    "wrong normal balance fails closed");
-  var inactive2010 = rows.map(function(row) {
-    return row.AccountCode === "2010" ? Object.assign({}, row, { IsActive: false }) : row;
-  });
-  report = preflightSalesRecognitionAccounts(inactive2010);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_INACTIVE),
-    "inactive 2010 fails closed");
-  var inactive4000 = rows.map(function(row) {
-    return row.AccountCode === "4000" ? Object.assign({}, row, { IsActive: "FALSE" }) : row;
-  });
-  report = preflightSalesRecognitionAccounts(inactive4000);
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_INACTIVE),
-    "inactive 4000 fails closed");
-  report = preflightSalesRecognitionAccounts(rows.concat([null]));
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_ROW_INVALID),
-    "malformed row fails closed");
-  report = preflightSalesRecognitionAccounts("not-an-array");
-  check(report.status === "FAIL" && hasError(report, codes.ACCOUNT_ABSENT), "non-array input fails closed");
-  return { total: 14, pass: pass, fail: 14 - pass };
+  check("P07", pass === 31);
+  return { total: 32, pass: pass, fail: 32 - pass };
 }

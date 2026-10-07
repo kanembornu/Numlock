@@ -132,83 +132,110 @@ function testSalesOperatorWorkflowContracts(indexSource, actionSource, productio
 
 function testSalesRecognitionV2FoundationContracts() {
   var pass = 0, contract = SALES_RECOGNITION_V2_CONTRACT, codes = contract.REFUSAL_CODES;
-  function check(value, label) { if (!value) throw new Error("SALES_V2_FOUNDATION:" + label); pass++; }
-  check(JSON.stringify(contract.HEADERS) === JSON.stringify(["RecognitionID", "ContractVersion",
-    "ActivationID", "OrderID", "RevisionID", "EventType", "RecognizedAt", "EconomicDate", "Amount",
-    "RecognitionJournalID", "JournalSignature", "PostingStatus", "OperationID", "AuditID", "OriginalID",
-    "ReversalOfRecognitionID", "ReplacementID", "Reason", "Actor", "SnapshotJSON"]), "exact header contract");
-  check(contract.HEADERS.length === 20 && contract.SHEET === "SalesRecognitionEvents", "sheet and header count");
-  check(contract.CONTRACT_VERSION === "SALES_RECOGNITION_V2", "contract version");
+  function check(id, value) { if (!value) throw new Error("SALES_V2_FOUNDATION:" + id); pass++; }
+  function failsWith(config, code) { var r = validateSalesRecognitionV2Config(config); return r.status === "FAIL" && r.errors.some(function(error) { return error.code === code; }); }
+  function cohort(order, context) { return classifySalesRecognitionCohort(order, context); }
   var config = salesRecognitionV2DefaultConfig();
-  check(config.mode === "PREPARED" && config.contractVersion === "SALES_RECOGNITION_V2", "default PREPARED");
-  check(config.activationID === "" && config.activatedAt === "" && config.configVersion === 1,
-    "default blank activation metadata");
-  check(!/\d{4}-\d{2}-\d{2}T/.test(JSON.stringify(config)), "default has no timestamp T value");
-  check(validateSalesRecognitionV2Config(config).status === "PASS", "default config validates");
-  check(validateSalesRecognitionV2Config(Object.assign({}, config, { mode: "LIVE" })).status === "FAIL",
-    "invalid mode fails");
-  check(validateSalesRecognitionV2Config(Object.assign({}, config, { contractVersion: "V1" })).status === "FAIL",
-    "wrong contract version fails");
-  check(validateSalesRecognitionV2Config(Object.assign({}, config, { mode: "ACTIVE" })).status === "FAIL",
-    "ACTIVE without activation metadata fails");
-  check(validateSalesRecognitionV2Config(Object.assign({}, config, { activationID: "ACT-1" })).status === "FAIL",
-    "PREPARED with activation metadata fails");
-  var activated = { mode: "ACTIVE", contractVersion: "SALES_RECOGNITION_V2", activationID: "ACT-1",
-    activatedAt: "2026-11-01T00:00:00.000Z", configVersion: 1 };
-  check(validateSalesRecognitionV2Config(activated).status === "PASS", "valid ACTIVE config");
-  check(validateSalesRecognitionV2Config(Object.assign({}, activated,
-    { activatedAt: contract.FORBIDDEN_ACTIVATION_TIMESTAMP })).status === "FAIL",
-    "old operational T rejected");
-  check(validateSalesRecognitionV2Config(null).status === "FAIL", "null config fails closed");
-  check(salesRecognitionV2RequestGate(config).code === codes.V2_NOT_ACTIVATED &&
-    !salesRecognitionV2RequestGate(config).allowed, "PREPARED refuses new V2");
+  var activated = { mode: "ACTIVE", contractVersion: "SALES_RECOGNITION_V2", activationID: "ACT-1", activatedAt: "2026-11-01T00:00:00.000Z", configVersion: 1 };
   var paused = Object.assign({}, activated, { mode: "PAUSED" });
-  check(validateSalesRecognitionV2Config(paused).status === "PASS", "PAUSED keeps activation metadata");
+  var legacyOrder = { OrderID: "O-2", PaymentStatus: "PAID", FulfillmentStatus: "OPEN", CreatedAt: "2026-10-05T00:00:00Z" };
+  var rawTabSal = { ID_Trx: "SAL-20261005-ABCDEF012345", Tanggal: "2026-10-05", ID_Prod: "P1", Tipe: "HOT", Qty: 1, HPP: 100, HJ: 20000, Source: "APP_ENTRY", IsActive: true };
+  var pausedLegacy = { OrderID: "O-20", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" };
+  check("F01", JSON.stringify(contract.HEADERS) === JSON.stringify(["RecognitionID", "ContractVersion", "ActivationID", "OrderID", "RevisionID", "EventType", "RecognizedAt", "EconomicDate", "Amount", "RecognitionJournalID", "JournalSignature", "PostingStatus", "OperationID", "AuditID", "OriginalID", "ReversalOfRecognitionID", "ReplacementID", "Reason", "Actor", "SnapshotJSON"]));
+  check("F02", contract.HEADERS.length === 20 && contract.SHEET === "SalesRecognitionEvents");
+  check("F03", contract.CONTRACT_VERSION === "SALES_RECOGNITION_V2");
+  check("F04", config.mode === "PREPARED" && config.contractVersion === "SALES_RECOGNITION_V2");
+  check("F05", config.activationID === "" && config.activatedAt === "" && config.configVersion === 1);
+  check("F06", !/\d{4}-\d{2}-\d{2}T/.test(JSON.stringify(config)));
+  check("F07", validateSalesRecognitionV2Config(config).status === "PASS");
+  check("F08", failsWith(Object.assign({}, config, { mode: "LIVE" }), codes.MODE_INVALID));
+  check("F09", failsWith(Object.assign({}, config, { mode: 123 }), codes.MODE_INVALID));
+  check("F10", failsWith(Object.assign({}, config, { contractVersion: "V1" }), codes.CONTRACT_VERSION_MISMATCH));
+  check("F11", failsWith(Object.assign({}, config, { contractVersion: 123 }), codes.CONTRACT_VERSION_MISMATCH));
+  check("F12", failsWith(Object.assign({}, config, { mode: "ACTIVE" }), codes.ACTIVATION_METADATA_MISSING));
+  check("F13", failsWith(Object.assign({}, config, { activationID: "ACT-1" }), codes.ACTIVATION_METADATA_PRESENT));
+  check("F14", validateSalesRecognitionV2Config(activated).status === "PASS");
+  check("F15", failsWith(Object.assign({}, activated, { activatedAt: "2026-10-06T18:50:05.328Z" }), codes.ACTIVATION_TIMESTAMP_FORBIDDEN));
+  check("F16", failsWith(Object.assign({}, activated, { activatedAt: "2026-10-06T21:50:05.328+03:00" }), codes.ACTIVATION_TIMESTAMP_FORBIDDEN));
+  check("F17", failsWith(Object.assign({}, activated, { activatedAt: "2026-10-06T18:50:05.328+00:00" }), codes.ACTIVATION_TIMESTAMP_FORBIDDEN));
+  check("F18", validateSalesRecognitionV2Config(null).status === "FAIL");
+  check("F19", failsWith(Object.assign({}, activated, { activatedAt: "garbage" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F20", failsWith(Object.assign({}, activated, { activatedAt: "2026-11-01" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F21", failsWith(Object.assign({}, activated, { activatedAt: "2026-11-01T00:00:00" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F22", failsWith(Object.assign({}, activated, { activatedAt: "2026-02-30T00:00:00Z" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F23", failsWith(Object.assign({}, activated, { activatedAt: "2026-11-01T25:00:00Z" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F24", failsWith(Object.assign({}, activated, { activatedAt: "2026-11-01T00:61:00Z" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F25", failsWith(Object.assign({}, activated, { activatedAt: "2026-11-01T00:00:61Z" }), codes.ACTIVATION_TIMESTAMP_INVALID));
+  check("F26", failsWith(Object.assign({}, activated, { activationID: 123 }), codes.ACTIVATION_METADATA_INVALID));
+  check("F27", failsWith(Object.assign({}, activated, { activationID: {} }), codes.ACTIVATION_METADATA_INVALID));
+  var missingActivationID = Object.assign({}, activated); delete missingActivationID.activationID;
+  check("F28", failsWith(missingActivationID, codes.ACTIVATION_METADATA_INVALID));
+  check("F29", failsWith(Object.assign({}, activated, { activatedAt: 20261101 }), codes.ACTIVATION_METADATA_INVALID));
+  check("F30", failsWith(Object.assign({}, activated, { activatedAt: {} }), codes.ACTIVATION_METADATA_INVALID));
+  var missingActivatedAt = Object.assign({}, activated); delete missingActivatedAt.activatedAt;
+  check("F31", failsWith(missingActivatedAt, codes.ACTIVATION_METADATA_INVALID));
+  check("F32", failsWith(Object.assign({}, config, { activationID: 123 }), codes.ACTIVATION_METADATA_INVALID));
+  var preparedMissingAt = Object.assign({}, config); delete preparedMissingAt.activatedAt;
+  check("F33", failsWith(preparedMissingAt, codes.ACTIVATION_METADATA_INVALID));
+  check("F34", failsWith(Object.assign({}, config, { activatedAt: 123 }), codes.ACTIVATION_METADATA_INVALID));
+  check("F35", failsWith(Object.assign({}, activated, { configVersion: "1" }), codes.CONFIG_VERSION_INVALID));
+  check("F36", failsWith(Object.assign({}, activated, { configVersion: 0 }), codes.CONFIG_VERSION_INVALID));
+  check("F37", failsWith(Object.assign({}, activated, { configVersion: 1.5 }), codes.CONFIG_VERSION_INVALID));
+  check("F38", validateSalesRecognitionV2Config(Object.assign({}, activated, { activatedAt: "2026-11-01T07:00:00.000+07:00" })).status === "PASS");
+  check("F39", salesRecognitionV2RequestGate(config).code === codes.V2_NOT_ACTIVATED && !salesRecognitionV2RequestGate(config).allowed);
+  check("F40", validateSalesRecognitionV2Config(paused).status === "PASS");
   var pausedGate = salesRecognitionV2RequestGate(paused);
-  check(!pausedGate.allowed && pausedGate.code === codes.V2_MODE_PAUSED,
-    "PAUSED refuses without legacy fallback");
-  check(salesRecognitionV2RequestGate(activated).allowed === true, "ACTIVE allows");
-  check(salesRecognitionV2RequestGate({}).code === codes.CONFIG_INVALID, "invalid config refuses");
+  check("F41", !pausedGate.allowed && pausedGate.code === codes.V2_MODE_PAUSED);
+  check("F42", salesRecognitionV2RequestGate(activated).allowed === true);
+  check("F43", salesRecognitionV2RequestGate({}).code === codes.CONFIG_INVALID);
   var legacyTabsal = { OrderID: "O-1", sourceSheet: "tabsal" };
-  var legacyOrder = { OrderID: "O-2", PaymentStatus: "PAID", FulfillmentStatus: "OPEN",
-    CreatedAt: "2026-10-05T00:00:00Z" };
   var pendingIntent = { OrderID: "O-3", ContractVersion: "SALES_RECOGNITION_V2", State: "IN_PROGRESS" };
   var legacyThenPending = { OrderID: "O-3", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" };
   var committedEvent = { OrderID: "O-4", ContractVersion: "SALES_RECOGNITION_V2", PostingStatus: "COMMITTED" };
-  check(classifySalesRecognitionCohort(legacyTabsal, {}).cohort === contract.COHORTS.TABSAL_LEGACY,
-    "TabSal legacy classified");
-  check(classifySalesRecognitionCohort(legacyOrder, {}).cohort === contract.COHORTS.PRE_V2_ORDER &&
-    classifySalesRecognitionCohort(legacyOrder, {}).status === contract.STATUS.OK,
-    "pre-V2 order classified despite dates");
-  var pending = classifySalesRecognitionCohort(legacyThenPending, { intents: [pendingIntent] });
-  check(pending.cohort === contract.COHORTS.V2_PENDING && pending.status === contract.STATUS.OK,
-    "pending V2 never legacy");
-  var pausedPending = classifySalesRecognitionCohort(legacyThenPending,
-    { intents: [pendingIntent], mode: "PAUSED", config: paused });
-  check(pausedPending.cohort === contract.COHORTS.V2_PENDING, "PAUSED never falls back to legacy");
-  check(classifySalesRecognitionCohort({ OrderID: "O-4" },
-    { events: [committedEvent] }).cohort === contract.COHORTS.V2_COMMITTED, "committed V2 classified");
-  var dateOnly = classifySalesRecognitionCohort({ OrderID: "O-5", CreatedAt: "2026-10-07T00:00:00Z" },
-    { config: activated });
-  check(dateOnly.cohort === contract.COHORTS.INCONSISTENT && dateOnly.status === contract.STATUS.UNKNOWN &&
-    dateOnly.code === codes.DATE_ONLY_NO_PERSISTED_EVIDENCE, "date-only ambiguity is inconsistent");
-  check(classifySalesRecognitionCohort({ OrderID: "O-6" }, {}).status === contract.STATUS.UNKNOWN &&
-    classifySalesRecognitionCohort({ OrderID: "O-6" }, {}).cohort === contract.COHORTS.UNKNOWN,
-    "no evidence stays UNKNOWN");
-  check(classifySalesRecognitionCohort({ OrderID: "O-7", ContractVersion: "SALES_RECOGNITION_V1" },
-    {}).status === contract.STATUS.RECOVERY_REQUIRED &&
-    classifySalesRecognitionCohort({ OrderID: "O-7", ContractVersion: "SALES_RECOGNITION_V1" },
-      {}).cohort === contract.COHORTS.INCONSISTENT, "unknown contract version never legacy");
-  var conflict = classifySalesRecognitionCohort({ OrderID: "O-8" },
-    { intents: [{ OrderID: "O-8", ContractVersion: "SALES_RECOGNITION_V2" }],
-      operations: [{ OrderID: "O-8", ContractVersion: "OTHER_V1" }] });
-  check(conflict.status === contract.STATUS.RECOVERY_REQUIRED && conflict.code === codes.IDENTITY_CONFLICT,
-    "conflicting persisted versions recover");
-  check(classifySalesRecognitionCohort(null, {}).status === contract.STATUS.UNKNOWN, "blank input UNKNOWN");
-  var datesNeverFlip = classifySalesRecognitionCohort(legacyOrder, { config: activated });
-  check(datesNeverFlip.cohort === contract.COHORTS.PRE_V2_ORDER,
-    "activation dates alone never classify");
-  return { total: 30, pass: pass, fail: 30 - pass };
+  check("F44", cohort(legacyTabsal, {}).cohort === contract.COHORTS.TABSAL_LEGACY);
+  check("F45", cohort(legacyOrder, {}).cohort === contract.COHORTS.PRE_V2_ORDER && cohort(legacyOrder, {}).status === contract.STATUS.OK);
+  var pending = cohort(legacyThenPending, { intents: [pendingIntent] });
+  check("F46", pending.cohort === contract.COHORTS.V2_PENDING && pending.status === contract.STATUS.OK);
+  var pausedPending = cohort(legacyThenPending, { intents: [pendingIntent], mode: "PAUSED", config: paused });
+  check("F47", pausedPending.cohort === contract.COHORTS.V2_PENDING);
+  check("F48", cohort({ OrderID: "O-4" }, { events: [committedEvent] }).cohort === contract.COHORTS.V2_COMMITTED);
+  var dateOnly = cohort({ OrderID: "O-5", CreatedAt: "2026-10-07T00:00:00Z" }, { config: activated });
+  check("F49", dateOnly.cohort === contract.COHORTS.INCONSISTENT && dateOnly.status === contract.STATUS.UNKNOWN && dateOnly.code === codes.DATE_ONLY_NO_PERSISTED_EVIDENCE);
+  check("F50", cohort({ OrderID: "O-6" }, {}).status === contract.STATUS.UNKNOWN && cohort({ OrderID: "O-6" }, {}).cohort === contract.COHORTS.UNKNOWN);
+  var unknownVersion = cohort({ OrderID: "O-7", ContractVersion: "SALES_RECOGNITION_V1" }, {});
+  check("F51", unknownVersion.status === contract.STATUS.RECOVERY_REQUIRED && unknownVersion.cohort === contract.COHORTS.INCONSISTENT);
+  var conflict = cohort({ OrderID: "O-8" }, { intents: [{ OrderID: "O-8", ContractVersion: "SALES_RECOGNITION_V2" }], operations: [{ OrderID: "O-8", ContractVersion: "OTHER_V1" }] });
+  check("F52", conflict.status === contract.STATUS.RECOVERY_REQUIRED && conflict.code === codes.IDENTITY_CONFLICT);
+  check("F53", cohort(null, {}).status === contract.STATUS.UNKNOWN);
+  check("F54", cohort(legacyOrder, { config: activated }).cohort === contract.COHORTS.PRE_V2_ORDER);
+  check("F55", cohort(rawTabSal, {}).cohort === contract.COHORTS.TABSAL_LEGACY && cohort(rawTabSal, {}).status === contract.STATUS.OK);
+  check("F56", cohort({ ID_Trx: "TRX-77", Tanggal: "2026-01-01", ID_Prod: "P1" }, {}).cohort === contract.COHORTS.TABSAL_LEGACY);
+  var unknownTrx = cohort({ ID_Trx: "XYZ" }, {});
+  check("F57", unknownTrx.cohort === contract.COHORTS.UNKNOWN && unknownTrx.status === contract.STATUS.UNKNOWN);
+  var rawBefore = JSON.stringify(rawTabSal); cohort(rawTabSal, { events: [{ OrderID: "OTHER", ContractVersion: "SALES_RECOGNITION_V2" }] });
+  check("F58", JSON.stringify(rawTabSal) === rawBefore);
+  var missingContract = cohort(pausedLegacy, { mode: "PAUSED", config: paused, events: [{ OrderID: "O-20", PostingStatus: "PENDING" }] });
+  check("F59", missingContract.cohort === contract.COHORTS.INCONSISTENT && missingContract.status === contract.STATUS.RECOVERY_REQUIRED && missingContract.code === codes.EVIDENCE_CONTRACT_INVALID && missingContract.cohort !== contract.COHORTS.PRE_V2_ORDER);
+  var unknownContract = cohort(pausedLegacy, { mode: "PAUSED", config: paused, events: [{ OrderID: "O-20", ContractVersion: "LEGACY_V1", PostingStatus: "PENDING" }] });
+  check("F60", unknownContract.cohort === contract.COHORTS.INCONSISTENT && unknownContract.status === contract.STATUS.RECOVERY_REQUIRED && unknownContract.code === codes.IDENTITY_CONFLICT && unknownContract.cohort !== contract.COHORTS.PRE_V2_ORDER);
+  var activationConflict = cohort({ OrderID: "O-21", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" }, { mode: "PAUSED", config: paused, intents: [{ OrderID: "O-21", ContractVersion: "SALES_RECOGNITION_V2", ActivationID: "ACT-A" }], events: [{ OrderID: "O-21", ContractVersion: "SALES_RECOGNITION_V2", ActivationID: "ACT-B", PostingStatus: "PENDING" }] });
+  check("F61", activationConflict.cohort === contract.COHORTS.INCONSISTENT && activationConflict.status === contract.STATUS.RECOVERY_REQUIRED && activationConflict.code === codes.IDENTITY_CONFLICT && activationConflict.cohort !== contract.COHORTS.PRE_V2_ORDER);
+  var orderActivationMismatch = cohort({ OrderID: "O-22", ContractVersion: "SALES_RECOGNITION_V2", ActivationID: "ACT-1" }, { events: [{ OrderID: "O-22", ContractVersion: "SALES_RECOGNITION_V2", ActivationID: "ACT-2", PostingStatus: "PENDING" }] });
+  check("F62", orderActivationMismatch.cohort === contract.COHORTS.INCONSISTENT && orderActivationMismatch.status === contract.STATUS.RECOVERY_REQUIRED && orderActivationMismatch.code === codes.IDENTITY_CONFLICT);
+  var otherOrderIgnored = cohort({ OrderID: "O-23", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" }, { mode: "PAUSED", config: paused, events: [{ OrderID: "O-999", ContractVersion: "SALES_RECOGNITION_V2", PostingStatus: "COMMITTED" }] });
+  check("F63", otherOrderIgnored.cohort === contract.COHORTS.PRE_V2_ORDER && otherOrderIgnored.status === contract.STATUS.OK);
+  var unboundEvidence = cohort({ OrderID: "O-24", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" }, { mode: "PAUSED", config: paused, events: [{ ContractVersion: "SALES_RECOGNITION_V2", PostingStatus: "PENDING" }] });
+  check("F64", unboundEvidence.cohort === contract.COHORTS.INCONSISTENT && unboundEvidence.status === contract.STATUS.RECOVERY_REQUIRED && unboundEvidence.code === codes.EVIDENCE_UNBOUND && unboundEvidence.cohort !== contract.COHORTS.PRE_V2_ORDER);
+  check("F65", cohort({ OrderID: "O-25" }, { intents: {} }).status === contract.STATUS.RECOVERY_REQUIRED && cohort({ OrderID: "O-25" }, { intents: {} }).code === codes.EVIDENCE_MALFORMED);
+  check("F66", cohort({ OrderID: "O-25" }, { events: "not-an-array" }).status === contract.STATUS.RECOVERY_REQUIRED && cohort({ OrderID: "O-25" }, { events: "not-an-array" }).code === codes.EVIDENCE_MALFORMED);
+  check("F67", cohort({ OrderID: "O-25" }, { operations: [null] }).status === contract.STATUS.RECOVERY_REQUIRED && cohort({ OrderID: "O-25" }, { operations: [null] }).code === codes.EVIDENCE_MALFORMED);
+  check("F68", cohort({ OrderID: "O-25" }, "junk").status === contract.STATUS.RECOVERY_REQUIRED && cohort({ OrderID: "O-25" }, "junk").code === codes.EVIDENCE_MALFORMED);
+  check("F69", cohort({ ContractVersion: "SALES_RECOGNITION_V2" }, {}).status === contract.STATUS.RECOVERY_REQUIRED && cohort({ ContractVersion: "SALES_RECOGNITION_V2" }, {}).code === codes.EVIDENCE_UNBOUND);
+  var evidenceContext = { mode: "PAUSED", events: [{ OrderID: "O-27", ContractVersion: "SALES_RECOGNITION_V2", PostingStatus: "COMMITTED" }] };
+  var contextBefore = JSON.stringify(evidenceContext); cohort({ OrderID: "O-27", PaymentStatus: "PAID" }, evidenceContext);
+  check("F70", JSON.stringify(evidenceContext) === contextBefore);
+  check("F71", pass === 70);
+  return { total: 71, pass: pass, fail: 71 - pass };
 }
 
 function testSalesV2CutoverPeriods() {
