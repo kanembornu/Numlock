@@ -2,6 +2,8 @@ var fs = require('fs');
 var vm = require('vm');
 var runSalesV2U1MutationProof = require('./tests/browser/sales-v2-u1-mutation-proof.js');
 globalThis.runSalesV2U1MutationProof = runSalesV2U1MutationProof;
+var runSalesV2U2MutationProof = require('./tests/browser/sales-v2-u2-mutation-proof.js');
+globalThis.runSalesV2U2MutationProof = runSalesV2U2MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -74,8 +76,10 @@ var files = [
   '95.Transaction.Operational.js',
   '95A.Transaction.Production.js',
   '97.SalesRecognition.V2.Foundation.js',
+  '97A.SalesRecognition.V2.Save.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
+  '96.Tests.SalesRecognition.V2.Save.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -220,6 +224,12 @@ run('testSalesRecognitionV2FoundationContracts', 'testSalesRecognitionV2Foundati
 run('testSalesV2CutoverPeriods', 'testSalesV2CutoverPeriods()');
 run('testSalesV2AccountPreflight', 'testSalesV2AccountPreflight()');
 run('testSalesV2U1MutationProof', 'JSON.stringify(runSalesV2U1MutationProof())');
+
+// SALES_RECOGNITION_V2 U2 durable save core (fixture-local suites + proof).
+run('testSalesRecognitionV2SaveCore', 'testSalesRecognitionV2SaveCore()');
+run('testSalesRecognitionV2SaveRecovery', 'testSalesRecognitionV2SaveRecovery()');
+run('testSalesRecognitionV2SaveGates', 'testSalesRecognitionV2SaveGates()');
+run('testSalesV2U2MutationProof', 'JSON.stringify(runSalesV2U2MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
