@@ -27,10 +27,10 @@ Classification vocabulary: `DUPLICATED_IN_REPO` (bytes/identity preserved reposi
 | 21 × CONV-ATT-ING manifest .txt | see `40.Inventory.Conversion.Population.js:10-30` pins | `1Un69xog…` | text/plain | DUPLICATED_IN_REPO (21/21 ID+size parity) | `docs/evidence/finance-phase-11n8/manifests/` | none; `GDRIVE:` refs remain provenance strings |
 | MANIFEST-MOS-ING-018-V01.manifest (Drive copy) | `1Gyv4scq6wm-VpEKcxcQg3iVxeHmmIiKV` | `1zQItP3g…` | text/plain | DUPLICATED_IN_REPO (size 2,382 == repo) | `docs/evidence/finance-phase-11u1/MANIFEST-MOS-ING-018-V01.manifest` | none |
 | NUMLOCK Finance Evidence (folder) | `1zQItP3ggR7eli7U0RGgpXeWSsM3WBzhT` | My Drive `0AB2LJ6X…` | folder | CONTAINER (retire with children) | n/a | none once children removed |
-| Pre Legacy Decommission Archive folder/sheet/form | `1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh`, `1bmhRP04oxoRQPM7yXOpm6L7e2ULLAZn6kOrgc0lNtt4`, `1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s` | `1yNsL8bVK…` | folder/sheet/form | Sheet **PRESERVED** as `legacy-retirement/` workbook (970b6380…, 20 sheets); form definition captured (`form-capture-1xc…json`), responses UNKNOWN → **BLOCKED_FORM_PRESERVATION** | `docs/evidence/legacy-retirement/` | folder/form deletion loses only uncaptured form responses (count UNKNOWN) |
-| Numlock DB Backup Pre Schema V1 folder/sheet/form | `1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS`, `1EKR8EU4nw_kpqb-bvp9jV0AAEasWsssMwuJ7e3fBCWg`, `1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8` | `1yNsL8bVK…` | folder/sheet/form | Sheet **PRESERVED** as `legacy-retirement/` workbook (23daa262…, 8 sheets); form definition captured (`form-capture-1EDN…json`), responses UNKNOWN → **BLOCKED_FORM_PRESERVATION** | `docs/evidence/legacy-retirement/` | folder/form deletion loses only uncaptured form responses (count UNKNOWN) |
+| Pre Legacy Decommission Archive folder/sheet/form | `1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh`, `1bmhRP04oxoRQPM7yXOpm6L7e2ULLAZn6kOrgc0lNtt4`, `1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s` | `1yNsL8bVK…` | folder/sheet/form | Sheet **PRESERVED** as `legacy-retirement/` workbook (970b6380…, 20 sheets); form definition captured (`form-capture-1xc…json`), responses UNKNOWN → **BLOCKED_FORM_PRESERVATION** *(HISTORICAL — resolved by owner; see Final state record)* | `docs/evidence/legacy-retirement/` | folder/form deletion loses only uncaptured form responses (count UNKNOWN) *(HISTORICAL)* |
+| Numlock DB Backup Pre Schema V1 folder/sheet/form | `1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS`, `1EKR8EU4nw_kpqb-bvp9jV0AAEasWsssMwuJ7e3fBCWg`, `1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8` | `1yNsL8bVK…` | folder/sheet/form | Sheet **PRESERVED** as `legacy-retirement/` workbook (23daa262…, 8 sheets); form definition captured (`form-capture-1EDN…json`), responses UNKNOWN → **BLOCKED_FORM_PRESERVATION** *(HISTORICAL — resolved by owner; see Final state record)* | `docs/evidence/legacy-retirement/` | folder/form deletion loses only uncaptured form responses (count UNKNOWN) *(HISTORICAL)* |
 | Numlock Transaction (production sheet) | `1ubfWtRVdrToBYZIxewgT9H-scIeszZHDUHDrLd64e9M` | `1yNsL8bVK…` | sheet | **PRODUCTION_AUTHORITY — KEEP** | `36.Finance.Service.js`, `37.Inventory.Policy.Evidence.js` | destroys live production data — not a deletion candidate |
-| Numlock Transaction (production form) | `1JoBrrcocWbNOxKTbtpBmsRH10L7vOKDZqz6WSdHFdIc` | `1yNsL8bVK…` | form | **PRODUCTION_AUTHORITY — KEEP** (linkage UNKNOWN) | production sheet above (presumed destination) | live respondent capture loss |
+| Numlock Transaction (production form) | `1JoBrrcocWbNOxKTbtpBmsRH10L7vOKDZqz6WSdHFdIc` | `1yNsL8bVK…` | form | **PRODUCTION_AUTHORITY — KEEP** (linkage UNKNOWN) *(HISTORICAL classification — retirement subsequently confirmed intentional by owner; see Final state record: `INTENTIONALLY_RETIRED`, do not restore)* | production sheet above (presumed destination) | live respondent capture loss |
 | NUMLOCK Database (folder) | `1yNsL8bVK_scNkJZL6tXeSASnAXUjEEfF` | My Drive | folder | CONTAINER — KEEP | n/a | holds production assets |
 | `Mac  Backup` folder + `Theme 5 - Numlock Mac Final1 - Dash.xlsm` + 2 CSV exports | `1yq3VxBgHgFsYJ4RhBEUh46fODxOsSur5`, `1bJVvxEv6…`, `17KcX1ft…`, `1CBAYiup…` | My Drive | folder/xlsx/csv | PROVENANCE_ONLY (xlsm named by `scripts/phase3-historical-ledger-migration.js:23`) | migration script (local `.local/migration/` path) | source-system backup loss; not runtime-bound |
 | Numlock Datasets Training.xlsx | `1nuhYfFA97i63rT5ANptTsT1kp0x1FGbb` | `1yNsL8bVK…` | xlsx, **trashed=true** | SAFE_TO_DELETE (trash purge) | none | none |
@@ -75,9 +75,46 @@ Post-deletion verification state recorded at HEAD `46c01b7` (worktree clean befo
   - Manifest revalidation post-deletion: PASS (bytes + SHA256 + worksheetCount, both files).
 - **Local MOE publication directory:** `/Users/azer/Documents/GitHub/numlock-monetary-opening-evidence-publication-20261003` — hash parity was **COMPLETE** pre-delete (93/93 files, `LOCAL_MOE_PARITY=COMPLETE`, 0 REQUIRED_TO_PRESERVE); directory now **DELETED** (verified absent at closure verification).
 - **Finance Evidence folder `1zQItP3ggR7eli7U0RGgpXeWSsM3WBzhT` + children (11N.9 folder `1Un69xog…`, xlsx copy `1898Qe_Ma…`, MOS manifest copy `1Gyv4scq…`, 21 CONV manifest copies): TRASHED** — observed externally via metadata GET (`trashed=true`); repository bytes authoritative since `1be6467`. **Agent mutation count: 0.**
-- **Legacy spreadsheets `1bmhRP04oxoRQPM7yXOpm6L7e2ULLAZn6kOrgc0lNtt4` and `1EKR8EU4nw_kpqb-bvp9jV0AAEasWsssMwuJ7e3fBCWg`: SAFE_TO_DELETE_MANUALLY** — `trashed=false` observed; pending owner trash (OAuth token still lacks Drive write scope; no agent write path).
-- **Copy forms `1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s` and `1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8`: BLOCKED_FORM_PRESERVATION** — definition JSON preserved (`legacy-retirement/form-capture-*.json`); responses unknown; Forms API disabled (`SERVICE_DISABLED`); deletion blocked until owner verifies/exports responses.
-- **Folders `1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh` and `1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS`: KEPT** pending form resolution (blocked child). **NUMLOCK Database `1yNsL8bVK_scNkJZL6tXeSASnAXUjEEfF`: KEEP.**
-- **Anomaly:** production form `1JoBrrcocWbNOxKTbtpBmsRH10L7vOKDZqz6WSdHFdIc` observed `trashed=true` — **not agent-caused; owner confirmation / untrash decision required. Agent mutation count: 0.**
+- **Legacy spreadsheets `1bmhRP04oxoRQPM7yXOpm6L7e2ULLAZn6kOrgc0lNtt4` and `1EKR8EU4nw_kpqb-bvp9jV0AAEasWsssMwuJ7e3fBCWg`: SAFE_TO_DELETE_MANUALLY** — `trashed=false` observed; pending owner trash (OAuth token still lacks Drive write scope; no agent write path). *(HISTORICAL — owner subsequently retired both; see Final state record.)*
+- **Copy forms `1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s` and `1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8`: BLOCKED_FORM_PRESERVATION** — definition JSON preserved (`legacy-retirement/form-capture-*.json`); responses unknown; Forms API disabled (`SERVICE_DISABLED`); deletion blocked until owner verifies/exports responses. *(HISTORICAL — owner verified and retired; see Final state record. The UNKNOWN finding was correct at that time.)*
+- **Folders `1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh` and `1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS`: KEPT** pending form resolution (blocked child). **NUMLOCK Database `1yNsL8bVK_scNkJZL6tXeSASnAXUjEEfF`: KEEP.** *(HISTORICAL — folders owner-retired after form resolution; NUMLOCK Database KEEP reconfirmed.)*
+- **Anomaly:** production form `1JoBrrcocWbNOxKTbtpBmsRH10L7vOKDZqz6WSdHFdIc` observed `trashed=true` — **not agent-caused; owner confirmation / untrash decision required. Agent mutation count: 0.** *(RESOLVED — owner confirmed retirement intentional; do not restore.)*
 - **Closure verification (MEASURED):** `node _test_runner.js` 41 PASS / 0 FAIL; staging vm harness 61 scenarios PASS; conversion vm harness 54 scenarios PASS; `git diff --check` clean; reference sweep spot-check RUNTIME_REFERENCE=0, OPERATIONAL_REFERENCE=0 for all candidate IDs including legacy IDs; `INVENTORY_RECEIPT_ACTIVATION.enabled=false` unchanged (no source diff since `46c01b7`); no untracked non-ignored files (all stray paths are pre-existing gitignored artifacts: `.DS_Store`, `.codegraph/`, `.opencode/`, `.local/`, documented excluded snapshots).
-- **State result: `NUMLOCK_OFF_REPO_RETIREMENT_PARTIAL`** — external trash of Finance evidence observed, legacy sheets and blocked forms plus the production-form anomaly remain open owner actions.
+- **State result at that date: `NUMLOCK_OFF_REPO_RETIREMENT_PARTIAL` — HISTORICAL, superseded by the Final state record below.** *(Then-current open items: external trash of Finance evidence observed, legacy sheets and blocked forms plus the production-form anomaly pending owner actions — all since resolved.)*
+
+## Final state record (owner-confirmed, 2026-10-07)
+
+### Resolution chronology (truthful order — do not rewrite)
+
+1. The automated audit could not verify Form response state (Forms API `SERVICE_DISABLED`; no response access) → recorded UNKNOWN/BLOCKED at the time.
+2. Both Form definitions were preserved as public-viewform JSON captures under `docs/evidence/legacy-retirement/`.
+3. Owner manually inspected both Forms in the Google Forms UI.
+4. Owner confirmed both Forms contained responses.
+5. Owner confirmed those responses had already been migrated — the Forms carried no unique unpreserved authority.
+6. Owner retired the Forms, both legacy spreadsheets, and both legacy parent folders (trashed).
+
+The prior UNKNOWN finding was correct for its time; owner inspection later resolved it. No automated audit ever proved response state.
+
+### Final state (current, unambiguous)
+
+- `FORM_COPY_1_RESPONSES`: **PRESENT — owner confirmed already migrated**
+- `FORM_COPY_1_FINAL` (`1xc-7bITf4UnVVsBDMRjUnXP8qxexCs25HDK4aTVQ56s`): **SAFE_TO_DELETE → OWNER_RETIRED**
+- `FORM_COPY_2_RESPONSES`: **PRESENT — owner confirmed already migrated**
+- `FORM_COPY_2_FINAL` (`1EDN9R177P4hQlg4NaFQADwV1P66ZASVNQbBiCb_kfC8`): **SAFE_TO_DELETE → OWNER_RETIRED**
+- `PRODUCTION_FORM_FINAL` (`1JoBrrcocWbNOxKTbtpBmsRH10L7vOKDZqz6WSdHFdIc`): **INTENTIONALLY_RETIRED** (may remain trashed; do NOT restore)
+- `LEGACY_ARCHIVE_FOLDER_FINAL` (`1bfrHipWW4eA0359cVlRh1WlFxiAS1KBh`): **OWNER_RETIRED**
+- `LEGACY_PRE_SCHEMA_FOLDER_FINAL` (`1OOu5L5BTH25hkTEaxO799xxWiJhjOSZS`): **OWNER_RETIRED**
+- `FINANCE_EVIDENCE_FINAL` (`1zQItP3ggR7eli7U0RGgpXeWSsM3WBzhT` + 11N.9/xlsx/MOS/21 CONV children): **RETIRED**
+- `LOCAL_MOE_FINAL` (`~/Documents/GitHub/numlock-monetary-opening-evidence-publication-20261003`): **RETIRED** (deleted after `LOCAL_MOE_PARITY=COMPLETE`)
+- `NUMLOCK_DATABASE_PARENT_FINAL` (`1yNsL8bVK_scNkJZL6tXeSASnAXUjEEfF`): **KEEP — ACTIVE/OPERATIONAL CONTAINER**
+
+### State result
+
+- **CURRENT FINAL STATE: `NUMLOCK_OFF_REPO_RETIREMENT_COMPLETE`**
+- `NUMLOCK_OFF_REPO_RETIREMENT_PARTIAL`: **HISTORICAL ONLY** (superseded by the record above).
+
+### Durable-evidence policy (exact semantics)
+
+GitHub is the sole durable source/evidence authority for retired project artifacts. Explicitly required active operational data may remain in Google Drive — e.g. the `NUMLOCK Database` container (`1yNsL8bVK…`), whose presence does not violate this policy (operational data ≠ backup/evidence authority). This claim does **not** assert that Drive is empty or that NUMLOCK has no operational Drive dependency.
+
+*Note: `legacy-retirement/manifest.json` keeps its capture-time `recommendation: BLOCKED_FORM_PRESERVATION` field as a historical record of the automated audit; it is superseded by this Final state record and was intentionally not rewritten (frozen evidence file).*
