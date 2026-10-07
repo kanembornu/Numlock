@@ -41,9 +41,14 @@ function salesV2SaveTable_(headers, rows) {
   }));
 }
 
+// In-memory operations repository mirroring the spreadsheet repository:
+// findOperation returns a FRESH copy (realistic sheet readback, so a commit
+// mutation without a successful update never leaks into stored state) while
+// updateOperation writes onto the stored row. rows() exposes stored references
+// so tests can tamper persisted state directly.
 function salesV2SaveOpsRepository_() {
   var operations = [];
-  function find(type, key) {
+  function findStored(type, key) {
     var matches = operations.filter(function(row) {
       return row.OperationType === type && row.RequestKey === key;
     });
@@ -51,17 +56,20 @@ function salesV2SaveOpsRepository_() {
     return matches[0] || null;
   }
   return {
-    findOperation: find,
+    findOperation: function(type, key) {
+      var stored = findStored(type, key);
+      return stored ? Object.assign({}, stored) : null;
+    },
     createOperation: function(row) {
-      if (find(row.OperationType, row.RequestKey)) throw new Error("DUPLICATE_OPERATION");
+      if (findStored(row.OperationType, row.RequestKey)) throw new Error("DUPLICATE_OPERATION");
       operations.push(Object.assign({}, row));
       return row;
     },
     updateOperation: function(row) {
-      var found = find(row.OperationType, row.RequestKey);
-      if (!found || found.OperationID !== row.OperationID) throw new Error("OPERATION_NOT_FOUND");
-      Object.assign(found, row);
-      return found;
+      var stored = findStored(row.OperationType, row.RequestKey);
+      if (!stored || stored.OperationID !== row.OperationID) throw new Error("OPERATION_NOT_FOUND");
+      Object.assign(stored, row);
+      return stored;
     },
     rows: function() { return operations.slice(); }
   };
@@ -369,32 +377,86 @@ function testSalesRecognitionV2SaveCore() {
   check("A23", tracedResult.status === "DONE" && trace[0] === "lookup" &&
     trace.indexOf("lookup") < trace.indexOf("authority") &&
     trace.indexOf("lookup") < trace.indexOf("create"));
-  return { total: 23, pass: pass, fail: 23 - pass };
+  // Exact normalized payload persisted verbatim + canonical plan integrity
+  // digest + shape invariants all verify on the persisted plan.
+  var expectedNormalized = { requestKey: "u2-key-1", orderType: "DINE_IN",
+    lines: [{ productID: "P1", productVariantID: "PV1", qty: 1 },
+      { productID: "P1", productVariantID: "PV1", qty: 2 }] };
+  check("A24", JSON.stringify(plan.normalizedPayload) === JSON.stringify(expectedNormalized) &&
+    typeof plan.planDigest === "string" && plan.planDigest.length > 0 &&
+    salesRecognitionV2SaveVerifyPlan_(plan).ok === true);
+  // Complete analytical recipe/cost authority snapshot: components + UOM +
+  // conversions + standard-cost authority + effective metadata reconstruct HPP.
+  var auth0 = plan.lineAuthority[0];
+  check("A25", Array.isArray(plan.lineAuthority) && plan.lineAuthority.length === 2 &&
+    auth0.variant.ProductVariantID === "PV1" && auth0.variant.EffectiveFrom === "2026-01-01" &&
+    auth0.recipe.RecipeVersionID === "RV1" && auth0.recipe.EffectiveTo === "" &&
+    Array.isArray(auth0.components) && auth0.components.length === 1 &&
+    auth0.components[0].ItemID === "I1" && auth0.components[0].BaseUOM === "gr" &&
+    Array.isArray(auth0.components[0].conversions) &&
+    auth0.components[0].item.BaseUOM === "gr" && auth0.components[0].item.ItemName === "Beans" &&
+    auth0.components[0].standardCost.StandardCost === 2 &&
+    auth0.components[0].standardCost.EffectiveFrom === "2026-01-01" &&
+    Math.abs(auth0.components[0].QtyBase * auth0.components[0].standardCost.StandardCost -
+      Number(lines[0].UnitHppSnapshot)) < 1e-9 &&
+    auth0.price.Harga === 20000 && auth0.price.EffectiveFrom === "2026-01-01" &&
+    Array.isArray(JSON.parse(events[0].SnapshotJSON).authority) &&
+    JSON.parse(events[0].SnapshotJSON).authority.length === 2);
+  // Ten-field operation readback helper: Date-safe equality (Date vs ISO).
+  var opHeaders = t.OPERATIONS.HEADERS;
+  var opRow = repository.rows()[0];
+  var opAsIso = Object.assign({}, opRow,
+    { CreatedAt: opRow.CreatedAt.toISOString(), UpdatedAt: opRow.UpdatedAt.toISOString() });
+  check("A26", opHeaders.length === 10 &&
+    salesRecognitionV2SaveFieldsExact_(opRow, opAsIso, opHeaders) === true &&
+    salesRecognitionV2SaveFieldsExact_(null, opRow, opHeaders) === false &&
+    salesRecognitionV2SaveFieldsExact_(opRow, null, opHeaders) === false);
+  // Every one of the ten operation fields participates in exact readback.
+  var everyFieldParticipates = opHeaders.every(function(header) {
+    var clone = Object.assign({}, opRow);
+    var value = clone[header];
+    if (value instanceof Date) clone[header] = new Date(value.getTime() + 60000);
+    else if (typeof value === "number") clone[header] = value + 1;
+    else clone[header] = String(value) + "-TAMPERED";
+    return salesRecognitionV2SaveFieldsExact_(clone, opRow, opHeaders) === false;
+  });
+  check("A27", everyFieldParticipates);
+  return { total: 27, pass: pass, fail: 27 - pass };
 }
 function testSalesRecognitionV2SaveRecovery() {
   var pass = 0;
   function check(id, value) { if (!value) throw new Error("SALES_V2_SAVE_RECOVERY:" + id); pass++; }
   var contract = SALES_RECOGNITION_V2_CONTRACT, t = TRANSACTION_PRODUCTION_CONTRACT,
     ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
-  // Crash at every boundary, then resume with the same key.
-  ["V2_AFTER_INTENT", "V2_AFTER_BATCH", "V2_BEFORE_COMMIT"].forEach(function(point, index) {
-    var id = "B" + (index + 1);
+  // Crash at every durability boundary, then resume with the same key.
+  // Boundaries: before persist / after persist-before-readback / after intent /
+  // batch / readback / before commit / after commit (response lost).
+  [{ point: "V2_BEFORE_INTENT", ops: 0, state: "", artifacts: 0, write: 7, replay: false },
+   { point: "V2_AFTER_INTENT_PERSIST", ops: 1, state: "IN_PROGRESS", artifacts: 0, write: 7, replay: false },
+   { point: "V2_AFTER_INTENT", ops: 1, state: "IN_PROGRESS", artifacts: 0, write: 7, replay: false },
+   { point: "V2_AFTER_BATCH", ops: 1, state: "IN_PROGRESS", artifacts: 1, write: 0, replay: true },
+   { point: "V2_AFTER_READBACK", ops: 1, state: "IN_PROGRESS", artifacts: 1, write: 0, replay: true },
+   { point: "V2_BEFORE_COMMIT", ops: 1, state: "IN_PROGRESS", artifacts: 1, write: 0, replay: true },
+   { point: "V2_AFTER_COMMIT", ops: 1, state: "COMMITTED", artifacts: 1, write: 0, replay: true }
+  ].forEach(function(scenario, index) {
+    var point = scenario.point, id = "BC" + (index + 1);
     var runtime = salesV2SaveRuntime_({ crash: point });
     var fixture = runtime.spreadsheet, repository = runtime.repository;
     var threw = null;
     try { salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("crash-" + point), runtime); }
     catch (error) { threw = error; }
     check(id + "a", !!threw && threw.message === "CRASH:" + point);
-    check(id + "b", repository.rows().length === 1 && repository.rows()[0].State === "IN_PROGRESS");
-    var intentOnly = point === "V2_AFTER_INTENT";
-    check(id + "c", fixture.getSheetByName("Orders").getLastRow() === (intentOnly ? 1 : 2) &&
-      fixture.getSheetByName("SalesRecognitionEvents").getLastRow() === (intentOnly ? 1 : 2) &&
-      fixture.getSheetByName("BalanceLedger").getLastRow() === (intentOnly ? 1 : 3));
+    var opsAfterCrash = repository.rows();
+    check(id + "b", opsAfterCrash.length === scenario.ops &&
+      (scenario.ops === 0 || opsAfterCrash[0].State === scenario.state));
+    check(id + "c", fixture.getSheetByName("Orders").getLastRow() === (scenario.artifacts ? 2 : 1) &&
+      fixture.getSheetByName("SalesRecognitionEvents").getLastRow() === (scenario.artifacts ? 2 : 1) &&
+      fixture.getSheetByName("BalanceLedger").getLastRow() === (scenario.artifacts ? 3 : 1));
     var resume = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("crash-" + point),
       salesV2SaveRuntime_({ fixture: fixture, repository: repository }));
-    check(id + "d", resume.status === "DONE" && resume.writeCount === (intentOnly ? 7 : 0) &&
-      resume.replay === !intentOnly);
-    check(id + "e", repository.rows()[0].State === "COMMITTED");
+    check(id + "d", resume.status === "DONE" && resume.writeCount === scenario.write &&
+      resume.replay === scenario.replay && resume.requestKey === "crash-" + point);
+    check(id + "e", repository.rows().length === 1 && repository.rows()[0].State === "COMMITTED");
     check(id + "f", fixture.getSheetByName("Orders").getLastRow() === 2 &&
       fixture.getSheetByName("OrderLines").getLastRow() === 3 &&
       fixture.getSheetByName("SalesRecognitionEvents").getLastRow() === 2 &&
@@ -536,7 +598,174 @@ function testSalesRecognitionV2SaveRecovery() {
     { events: events14, config: salesRecognitionV2DefaultConfig() });
   check("B14d", verdictPrepared.cohort === "V2_COMMITTED" &&
     verdictPrepared.cohort !== "PRE_V2_ORDER" && verdictPrepared.cohort !== "TABSAL_LEGACY");
-  return { total: 47, pass: pass, fail: 47 - pass };
+  // Duplicate operation identities: lookup and create collisions fail closed
+  // as DUPLICATE_OPERATION_EVIDENCE with zero business writes.
+  var dupInner = salesV2SaveOpsRepository_();
+  var dupFindRepo = {
+    findOperation: function() { throw new Error("DUPLICATE_OPERATION"); },
+    createOperation: function(row) { return dupInner.createOperation(row); },
+    updateOperation: function(row) { return dupInner.updateOperation(row); },
+    rows: function() { return dupInner.rows(); } };
+  var rtDup1 = salesV2SaveRuntime_({ repository: dupFindRepo });
+  var resDup1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("dup-find-1"), rtDup1);
+  check("B15a", resDup1.status === "RECOVERY_REQUIRED" &&
+    resDup1.code === "DUPLICATE_OPERATION_EVIDENCE" && resDup1.requestKey === "dup-find-1" &&
+    rtDup1.events.batches.length === 0 && dupInner.rows().length === 0);
+  var dupCreateRepo = {
+    findOperation: function(type, key) { return dupInner.findOperation(type, key); },
+    createOperation: function() { throw new Error("DUPLICATE_OPERATION"); },
+    updateOperation: function(row) { return dupInner.updateOperation(row); },
+    rows: function() { return dupInner.rows(); } };
+  var rtDup2 = salesV2SaveRuntime_({ repository: dupCreateRepo });
+  var resDup2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("dup-create-1"), rtDup2);
+  check("B15b", resDup2.status === "RECOVERY_REQUIRED" &&
+    resDup2.code === "DUPLICATE_OPERATION_EVIDENCE" && resDup2.requestKey === "dup-create-1" &&
+    rtDup2.events.batches.length === 0 && dupInner.rows().length === 0 &&
+    rtDup2.spreadsheet.getSheetByName("Orders").getLastRow() === 1);
+  // Commit update succeeds in memory but the row update fails: UNKNOWN with
+  // identities preserved, stored state untouched; next retry verifies+commits.
+  var commitInner = salesV2SaveOpsRepository_();
+  var commitState = { failUpdate: true };
+  var flakyRepo = {
+    findOperation: function(type, key) { return commitInner.findOperation(type, key); },
+    createOperation: function(row) { return commitInner.createOperation(row); },
+    updateOperation: function(row) {
+      if (commitState.failUpdate) throw new Error("UPDATE_TRANSPORT_FAILED");
+      return commitInner.updateOperation(row);
+    },
+    rows: function() { return commitInner.rows(); } };
+  var rtCommit = salesV2SaveRuntime_({ repository: flakyRepo });
+  var resCommit1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("commit-flaky-1"), rtCommit);
+  check("B16a", resCommit1.status === "UNKNOWN" && resCommit1.code === "COMMIT_OUTCOME_UNKNOWN" &&
+    resCommit1.requestKey === "commit-flaky-1" && resCommit1.operationID !== "" &&
+    commitInner.rows()[0].State === "IN_PROGRESS" &&
+    rtCommit.spreadsheet.getSheetByName("SalesRecognitionEvents").getLastRow() === 2);
+  commitState.failUpdate = false;
+  var resCommit2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("commit-flaky-1"),
+    salesV2SaveRuntime_({ fixture: rtCommit.spreadsheet, repository: flakyRepo }));
+  check("B16b", resCommit2.status === "DONE" && resCommit2.writeCount === 0 &&
+    commitInner.rows()[0].State === "COMMITTED");
+  // Tampered PENDING plan (digest broken): fail closed with ZERO writes.
+  var rtTamper = salesV2SaveRuntime_({ crash: "V2_AFTER_INTENT" });
+  try { salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("tampered-plan-1"), rtTamper); }
+  catch (error) {}
+  var storedTamper = rtTamper.repository.rows()[0];
+  var tamperedPlan = JSON.parse(storedTamper.OperationPlan);
+  tamperedPlan.actor = "evil@intruder.test";
+  storedTamper.OperationPlan = JSON.stringify(tamperedPlan);
+  var countsTamper = JSON.stringify(salesV2SaveRowCounts_(rtTamper.spreadsheet));
+  var resumeTamper = salesV2SaveRuntime_({ fixture: rtTamper.spreadsheet,
+    repository: rtTamper.repository });
+  var resTamper = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("tampered-plan-1"),
+    resumeTamper);
+  check("B17a", resTamper.status === "RECOVERY_REQUIRED" && resTamper.code === "IDENTITY_CONFLICT" &&
+    resTamper.detail.indexOf("PLAN_DIGEST_MISMATCH") !== -1 &&
+    resTamper.requestKey === "tampered-plan-1" && resTamper.operationID !== "");
+  check("B17b", rtTamper.repository.rows()[0].State === "IN_PROGRESS" &&
+    JSON.stringify(salesV2SaveRowCounts_(rtTamper.spreadsheet)) === countsTamper &&
+    resumeTamper.events.batches.length === 0 && resumeTamper.events.authorityReads === 0);
+  // Invalid persisted State is rejected, never committed.
+  var rtState = salesV2SaveRuntime_({ crash: "V2_AFTER_INTENT" });
+  try { salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("bad-state-1"), rtState); }
+  catch (error) {}
+  rtState.repository.rows()[0].State = "BOGUS";
+  var countsState = JSON.stringify(salesV2SaveRowCounts_(rtState.spreadsheet));
+  var resumeState = salesV2SaveRuntime_({ fixture: rtState.spreadsheet, repository: rtState.repository });
+  var resState = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("bad-state-1"), resumeState);
+  check("B18a", resState.status === "RECOVERY_REQUIRED" &&
+    resState.code === "INVALID_OPERATION_STATE" && resState.detail === "STATE:BOGUS" &&
+    resState.requestKey === "bad-state-1" && resState.operationID !== "");
+  check("B18b", rtState.repository.rows()[0].State === "BOGUS" &&
+    JSON.stringify(salesV2SaveRowCounts_(rtState.spreadsheet)) === countsState &&
+    resumeState.events.batches.length === 0 && resumeState.events.authorityReads === 0);
+  // Planned OrderLineID under a different OrderID -> IDENTITY_CONFLICT.
+  var rtXLine = salesV2SaveRuntime_();
+  var resXLine1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xowner-line-1"), rtXLine);
+  var planXLine = JSON.parse(rtXLine.repository.rows()[0].OperationPlan);
+  var foreignLine = Object.assign({}, planXLine.lineRows[0], { OrderID: "ORD-FOREIGN-99" });
+  rtXLine.spreadsheet.getSheetByName("OrderLines").getRange(4, 1, 1, t.ORDER_LINES.HEADERS.length)
+    .setValues([t.ORDER_LINES.HEADERS.map(function(header) { return foreignLine[header]; })]);
+  var countsXLine = JSON.stringify(salesV2SaveRowCounts_(rtXLine.spreadsheet));
+  var resXLine2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xowner-line-1"),
+    salesV2SaveRuntime_({ fixture: rtXLine.spreadsheet, repository: rtXLine.repository }));
+  check("B19a", resXLine1.status === "DONE" && resXLine2.status === "RECOVERY_REQUIRED" &&
+    resXLine2.code === "IDENTITY_CONFLICT" &&
+    resXLine2.detail.indexOf("ORDER_LINE_CROSS_OWNER") !== -1);
+  check("B19b", JSON.stringify(salesV2SaveRowCounts_(rtXLine.spreadsheet)) === countsXLine &&
+    rtXLine.repository.rows()[0].State === "COMMITTED");
+  // Journal LineID collision / cross-owner record -> IDENTITY_CONFLICT.
+  var rtXJournal = salesV2SaveRuntime_();
+  var resXJournal1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xowner-journal-1"), rtXJournal);
+  var planXJournal = JSON.parse(rtXJournal.repository.rows()[0].OperationPlan);
+  var foreignJournal = Object.assign({}, planXJournal.journalRows[0],
+    { JournalID: "FOREIGN-J", SourceID: "FOREIGN-S" });
+  rtXJournal.spreadsheet.getSheetByName("BalanceLedger").getRange(4, 1, 1, ledgerHeaders.length)
+    .setValues([ledgerHeaders.map(function(header) { return foreignJournal[header]; })]);
+  var resXJournal2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xowner-journal-1"),
+    salesV2SaveRuntime_({ fixture: rtXJournal.spreadsheet, repository: rtXJournal.repository }));
+  check("B20a", resXJournal1.status === "DONE" && resXJournal2.status === "RECOVERY_REQUIRED" &&
+    resXJournal2.code === "IDENTITY_CONFLICT" &&
+    resXJournal2.detail.indexOf("JOURNAL_LINE_CROSS_OWNER") !== -1);
+  // Source-set vs ID-set mismatch with EQUAL counts (2 vs 2, different rows).
+  var rtXSet = salesV2SaveRuntime_();
+  var resXSet1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xover-journal-1"), rtXSet);
+  rtXSet.spreadsheet.getSheetByName("BalanceLedger").values[1][0] = "FOREIGN-J";
+  rtXSet.spreadsheet.getSheetByName("BalanceLedger").values[2][8] = "FOREIGN-S";
+  var resXSet2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xover-journal-1"),
+    salesV2SaveRuntime_({ fixture: rtXSet.spreadsheet, repository: rtXSet.repository }));
+  check("B21a", resXSet1.status === "DONE" && resXSet2.status === "RECOVERY_REQUIRED" &&
+    resXSet2.code === "IDENTITY_CONFLICT" &&
+    resXSet2.detail.indexOf("JOURNAL_IDENTITY_CROSSOVER") !== -1);
+  // Audit ID-set vs operation-set mismatch with EQUAL counts (1 vs 1 rows).
+  var rtXAudit = salesV2SaveRuntime_();
+  var resXAudit1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xover-audit-1"), rtXAudit);
+  var planXAudit = JSON.parse(rtXAudit.repository.rows()[0].OperationPlan);
+  rtXAudit.spreadsheet.getSheetByName("SalesRecognitionAudits").values[1][2] = "TXOP-FOREIGN-AUDIT";
+  var foreignAudit = Object.assign({}, planXAudit.auditRow, { AuditID: "SRA-FOREIGN-AUDIT" });
+  rtXAudit.spreadsheet.getSheetByName("SalesRecognitionAudits")
+    .getRange(3, 1, 1, SALES_RECOGNITION_V2_SAVE.AUDIT_HEADERS.length)
+    .setValues([SALES_RECOGNITION_V2_SAVE.AUDIT_HEADERS.map(function(header) {
+      return foreignAudit[header]; })]);
+  var resXAudit2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xover-audit-1"),
+    salesV2SaveRuntime_({ fixture: rtXAudit.spreadsheet, repository: rtXAudit.repository }));
+  check("B22a", resXAudit1.status === "DONE" && resXAudit2.status === "RECOVERY_REQUIRED" &&
+    resXAudit2.code === "IDENTITY_CONFLICT" &&
+    resXAudit2.detail.indexOf("AUDIT_IDENTITY_CROSSOVER") !== -1);
+  // OrderNumber and RecognitionID crossovers under foreign owners.
+  var rtXOrder = salesV2SaveRuntime_();
+  var resXOrder1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xowner-order-1"), rtXOrder);
+  var planXOrder = JSON.parse(rtXOrder.repository.rows()[0].OperationPlan);
+  var foreignOrder = Object.assign({}, planXOrder.orderRow,
+    { OrderID: "ORD-FOREIGN-77", OrderNumber: planXOrder.orderNumber });
+  rtXOrder.spreadsheet.getSheetByName("Orders").getRange(3, 1, 1, t.ORDERS.HEADERS.length)
+    .setValues([t.ORDERS.HEADERS.map(function(header) { return foreignOrder[header]; })]);
+  var foreignEvent = Object.assign({}, planXOrder.eventRow, { OrderID: "ORD-FOREIGN-77" });
+  rtXOrder.spreadsheet.getSheetByName("SalesRecognitionEvents")
+    .getRange(3, 1, 1, contract.HEADERS.length)
+    .setValues([contract.HEADERS.map(function(header) { return foreignEvent[header]; })]);
+  var resXOrder2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("xowner-order-1"),
+    salesV2SaveRuntime_({ fixture: rtXOrder.spreadsheet, repository: rtXOrder.repository }));
+  check("B23a", resXOrder1.status === "DONE" && resXOrder2.status === "RECOVERY_REQUIRED" &&
+    resXOrder2.code === "IDENTITY_CONFLICT" &&
+    resXOrder2.detail.indexOf("ORDER_NUMBER_CROSS_OWNER") !== -1);
+  check("B23b", resXOrder2.detail.indexOf("RECOGNITION_IDENTITY_CROSSOVER") !== -1 &&
+    resXOrder2.detail.indexOf("EVENT_OPERATION_CROSS_OWNER") !== -1);
+  // COMMITTED with the ENTIRE artifact set missing -> fail closed, no re-append.
+  var rtGone = salesV2SaveRuntime_();
+  var resGone1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("committed-gone-1"), rtGone);
+  SALES_RECOGNITION_V2_SAVE.WRITE_SURFACES.forEach(function(name) {
+    rtGone.spreadsheet.getSheetByName(name).values.splice(1);
+  });
+  var countsGone = JSON.stringify(salesV2SaveRowCounts_(rtGone.spreadsheet));
+  var resumeGone = salesV2SaveRuntime_({ fixture: rtGone.spreadsheet, repository: rtGone.repository });
+  var resGone2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("committed-gone-1"), resumeGone);
+  check("B24a", resGone1.status === "DONE" && resGone2.status === "RECOVERY_REQUIRED" &&
+    resGone2.code === "ARTIFACTS_INCOMPLETE" && resGone2.requestKey === "committed-gone-1" &&
+    resGone2.operationID !== "");
+  check("B24b", rtGone.repository.rows()[0].State === "COMMITTED" &&
+    JSON.stringify(salesV2SaveRowCounts_(rtGone.spreadsheet)) === countsGone &&
+    resumeGone.events.batches.length === 0 && resumeGone.events.authorityReads === 0);
+  return { total: 88, pass: pass, fail: 88 - pass };
 }
 function testSalesRecognitionV2SaveGates() {
   var pass = 0;
@@ -675,10 +904,13 @@ function testSalesRecognitionV2SaveGates() {
     JSON.stringify(ranges.map(function(range) { return range.values.length; })) ===
       JSON.stringify([1, 2, 1, 2, 1]));
   var rangeSource = salesRecognitionV2SaveValueRanges_.toString();
-  var transportSource = salesRecognitionV2SaveBatchRequest_.toString();
+  var transportSource = salesRecognitionV2SaveBatchRequest_.toString() +
+    salesRecognitionV2SaveBatchBody_.toString() + salesRecognitionV2SaveSheetIdsRequest_.toString();
   check("C11b", ["Settlements", "Payments", "InventoryLedger", "Cash", "Fulfillment"].every(
     function(token) { return rangeSource.indexOf(token) === -1; }) &&
-    transportSource.indexOf("values:batchAppend") !== -1 &&
+    transportSource.indexOf(":batchUpdate") !== -1 &&
+    transportSource.indexOf("appendCells") !== -1 &&
+    transportSource.indexOf("batchAppend") === -1 &&
     transportSource.indexOf("inventoryReceiptMigrationRequest_") !== -1);
   // Forbidden artifacts: no extra sheets, no rows outside the five surfaces.
   check("C12", !rt11.spreadsheet.getSheetByName("Payments") &&
@@ -722,5 +954,258 @@ function testSalesRecognitionV2SaveGates() {
   check("C17", JSON.stringify(JSON.parse(JSON.stringify(plan17))) ===
     JSON.stringify(plan17) && plan17.operationType === save.OPERATION_TYPE &&
     plan17.accounts.settlement === "1030" && plan17.accounts.revenue === "4000");
-  return { total: 22, pass: pass, fail: 22 - pass };
+  // ---- Mocked-real-transport: ONE spreadsheets.batchUpdate through the
+  // sanitized transport (43 signature). URL/method/body/sheetIds/RAW cells/no
+  // forbidden requests asserted against the actual transport code path.
+  var ranges18 = salesRecognitionV2SaveValueRanges_(plan17);
+  var idToName = { 101: "Orders", 102: "OrderLines", 103: "SalesRecognitionEvents",
+    104: "BalanceLedger", 105: "SalesRecognitionAudits" };
+  function metaSheet(sheetId, title) { return { properties: { sheetId: sheetId, title: title } }; }
+  var metaFull = [metaSheet(101, "Orders"), metaSheet(102, "OrderLines"),
+    metaSheet(103, "SalesRecognitionEvents"), metaSheet(104, "BalanceLedger"),
+    metaSheet(105, "SalesRecognitionAudits"), metaSheet(999, "Payments")];
+  var metaNoAudit = [metaSheet(101, "Orders"), metaSheet(102, "OrderLines"),
+    metaSheet(103, "SalesRecognitionEvents"), metaSheet(104, "BalanceLedger"),
+    metaSheet(999, "Payments")];
+  var base18 = "https://sheets.googleapis.com/v4/spreadsheets/" +
+    NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID;
+  var recorded18 = [], postBody18 = null, postStatus18 = 200, postMode18 = "healthy";
+  var applyTarget18 = salesV2SaveFixture_(salesV2SaveBaseSheets_());
+  function applyTransportBody18(fixture, body) {
+    body.requests.forEach(function(request) {
+      var append = request.appendCells;
+      var values = append.rows.map(function(row) {
+        return row.values.map(function(cell) {
+          var data = cell.userEnteredValue;
+          if (data.stringValue !== undefined) return data.stringValue;
+          if (data.numberValue !== undefined) return data.numberValue;
+          if (data.boolValue !== undefined) return data.boolValue;
+          return null;
+        });
+      });
+      var sheet = fixture.getSheetByName(idToName[append.sheetId]);
+      sheet.getRange(sheet.getLastRow() + 1, 1, values.length, values[0].length).setValues(values);
+    });
+  }
+  var hadScriptApp = Object.prototype.hasOwnProperty.call(globalThis, "ScriptApp");
+  var hadUrlFetchApp = Object.prototype.hasOwnProperty.call(globalThis, "UrlFetchApp");
+  var oldScriptApp = globalThis.ScriptApp, oldUrlFetchApp = globalThis.UrlFetchApp;
+  try {
+    globalThis.ScriptApp = { getOAuthToken: function() { return "local-test-token-000"; } };
+    globalThis.UrlFetchApp = { fetch: function(url, options) {
+      recorded18.push({ url: String(url), method: options.method });
+      if (String(url).indexOf("?fields=") !== -1) {
+        var meta = { spreadsheetId: NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID,
+          sheets: postMode18 === "missing-audit" ? metaNoAudit : metaFull };
+        return { getResponseCode: function() { return 200; },
+          getContentText: function() { return JSON.stringify(meta); } };
+      }
+      if (postMode18 === "timeout") throw new Error("ETIMEDOUT");
+      postBody18 = JSON.parse(options.payload);
+      if (postStatus18 !== 200) {
+        return { getResponseCode: function() { return postStatus18; },
+          getContentText: function() { return JSON.stringify({ error: { code: postStatus18,
+            status: "INVALID_ARGUMENT", message: "batch rejected",
+            errors: [{ reason: "INVALID", domain: "global", message: "batch rejected" }] } }); } };
+      }
+      applyTransportBody18(applyTarget18, postBody18);
+      return { getResponseCode: function() { return 200; },
+        getContentText: function() { return JSON.stringify({ responses: [] }); } };
+    } };
+    // C18a: URL + method of the metadata GET and the single batchUpdate POST.
+    recorded18 = [];
+    salesRecognitionV2SaveBatchRequest_(ranges18);
+    check("C18a", recorded18.length === 2 && recorded18[0].method === "get" &&
+      recorded18[0].url.indexOf(base18 + "?fields=") === 0 &&
+      recorded18[1].method === "post" && recorded18[1].url === base18 + ":batchUpdate");
+    // C18b: five appendCells subrequests, correct sheetIds, RAW fields, counts.
+    var reqs18 = postBody18.requests;
+    check("C18b", reqs18.length === 5 &&
+      JSON.stringify(reqs18.map(function(r) { return r.appendCells.sheetId; })) ===
+        JSON.stringify([101, 102, 103, 104, 105]) &&
+      JSON.stringify(reqs18.map(function(r) { return r.appendCells.rows.length; })) ===
+        JSON.stringify([1, 2, 1, 2, 1]) &&
+      reqs18.every(function(r) { return r.appendCells.fields === "userEnteredValue"; }));
+    // C18c: safe RAW CellData only (no formulaValue), correct cell payloads.
+    var hasFormula = false;
+    reqs18.forEach(function(r) {
+      r.appendCells.rows.forEach(function(row) {
+        row.values.forEach(function(cell) {
+          if (cell.userEnteredValue && cell.userEnteredValue.formulaValue !== undefined) hasFormula = true;
+        });
+      });
+    });
+    var orderCells18 = reqs18[0].appendCells.rows[0].values;
+    var ledgerCells18 = reqs18[3].appendCells.rows[0].values;
+    check("C18c", !hasFormula &&
+      orderCells18[0].userEnteredValue.stringValue === plan17.orderID &&
+      orderCells18[3].userEnteredValue.stringValue === "UNPAID" &&
+      ledgerCells18[4].userEnteredValue.numberValue === 60000 &&
+      ledgerCells18[11].userEnteredValue.boolValue === true &&
+      typeof orderCells18[5].userEnteredValue.numberValue === "number");
+    // C18d: no forbidden surfaces/endpoints; exactly two requests, no retries.
+    var bodyText18 = JSON.stringify(postBody18);
+    check("C18d", ["Payments", "Settlements", "InventoryLedger", "batchAppend"].every(
+      function(token) { return bodyText18.indexOf(token) === -1; }) &&
+      recorded18.every(function(entry) { return entry.url.indexOf("/v4/spreadsheets/") !== -1; }) &&
+      recorded18.length === 2);
+    // C18e: atomic rejection — a missing sheetId throws BEFORE any POST.
+    postMode18 = "missing-audit";
+    recorded18 = [];
+    postBody18 = null;
+    var atomicError = null;
+    try { salesRecognitionV2SaveBatchRequest_(ranges18); } catch (error) { atomicError = error; }
+    check("C18e", !!atomicError &&
+      atomicError.message.indexOf("SHEET_ID_UNAVAILABLE") !== -1 &&
+      recorded18.length === 1 && postBody18 === null);
+    // C18f: server-side atomic rejection — single POST attempt, no retry.
+    postMode18 = "healthy";
+    postStatus18 = 400;
+    recorded18 = [];
+    var rejectError = null;
+    try { salesRecognitionV2SaveBatchRequest_(ranges18); } catch (error) { rejectError = error; }
+    check("C18f", !!rejectError && rejectError.message.indexOf("RECEIPT_SHEETS_HTTP_400") !== -1 &&
+      recorded18.length === 2 && postBody18.requests.length === 5);
+    postStatus18 = 200;
+    // C18g: save-level timeout through the REAL transport -> UNKNOWN, identity
+    // kept, no artifacts; C18h: recovery on the same key -> DONE.
+    var transportFixture = salesV2SaveFixture_(salesV2SaveBaseSheets_());
+    applyTarget18 = transportFixture;
+    var rtTransport = salesV2SaveRuntime_({ fixture: transportFixture });
+    rtTransport.batch = function(ranges) { return salesRecognitionV2SaveBatchRequest_(ranges); };
+    postMode18 = "timeout";
+    recorded18 = [];
+    var resTransport1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("transport-1"), rtTransport);
+    check("C18g", resTransport1.status === "UNKNOWN" &&
+      resTransport1.code === "BATCH_OUTCOME_UNKNOWN" &&
+      resTransport1.requestKey === "transport-1" && resTransport1.operationID !== "" &&
+      rtTransport.repository.rows()[0].State === "IN_PROGRESS" &&
+      transportFixture.getSheetByName("Orders").getLastRow() === 1);
+    postMode18 = "healthy";
+    var resTransport2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("transport-1"),
+      salesV2SaveRuntime_({ fixture: transportFixture, repository: rtTransport.repository }));
+    check("C18h", resTransport2.status === "DONE" && resTransport2.writeCount === 7 &&
+      rtTransport.repository.rows()[0].State === "COMMITTED" &&
+      transportFixture.getSheetByName("SalesRecognitionEvents").getLastRow() === 2);
+  } finally {
+    if (hadScriptApp) globalThis.ScriptApp = oldScriptApp; else delete globalThis.ScriptApp;
+    if (hadUrlFetchApp) globalThis.UrlFetchApp = oldUrlFetchApp; else delete globalThis.UrlFetchApp;
+  }
+  // ---- Cell-string safety bound: 50000-char Sheets cell refused conservatively
+  // BEFORE any write (OperationPlan/SnapshotJSON covered by the same bound).
+  var hugeKey = "u2-key-cell-" + new Array(46001).join("k");
+  var rt19 = salesV2SaveRuntime_();
+  var snap19 = snapshot(rt19.spreadsheet);
+  var res19 = salesRecognitionV2SaveWithRuntime_(
+    { requestKey: hugeKey, orderType: "DINE_IN",
+      lines: [{ productID: "P1", productVariantID: "PV1", qty: 1 }] }, rt19);
+  check("C19a", res19.status === "REFUSED" && res19.code === "BATCH_BOUNDS_EXCEEDED" &&
+    res19.detail.indexOf("UNSAFE_CELL_CHARS") !== -1);
+  check("C19b", rt19.repository.rows().length === 0 && rt19.events.batches.length === 0 &&
+    snapshot(rt19.spreadsheet) === snap19 && save.MAX_CELL_CHARS === 45000 &&
+    save.REQUEST_OVERHEAD_BYTES === 4096 &&
+    salesRecognitionV2SaveUtf8Bytes_("é") === 2 && salesRecognitionV2SaveUtf8Bytes_("😀") === 4);
+  // ---- Resume re-checks schema + stored bounds BEFORE the batch, with zero
+  // authority (master) recomputation.
+  var rt20 = salesV2SaveRuntime_({ crash: "V2_AFTER_INTENT" });
+  try { salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("resume-schema-1"), rt20); }
+  catch (error) {}
+  rt20.spreadsheet.getSheetByName("Orders").values[0][1] = "CorruptedHeader";
+  var counts20 = JSON.stringify(salesV2SaveRowCounts_(rt20.spreadsheet));
+  var resume20 = salesV2SaveRuntime_({ fixture: rt20.spreadsheet, repository: rt20.repository });
+  var res20 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("resume-schema-1"), resume20);
+  check("C20a", res20.status === "RECOVERY_REQUIRED" && res20.code === "SALES_V2_SCHEMA_NOT_READY" &&
+    res20.detail.indexOf("Orders") !== -1 && rt20.repository.rows()[0].State === "IN_PROGRESS" &&
+    JSON.stringify(salesV2SaveRowCounts_(rt20.spreadsheet)) === counts20 &&
+    resume20.events.batches.length === 0 && resume20.events.authorityReads === 0);
+  var resumeSource = salesRecognitionV2SaveResume_.toString();
+  check("C20b", resumeSource.indexOf("salesRecognitionV2SaveSchemaGate_") !== -1 &&
+    resumeSource.indexOf("salesRecognitionV2SaveBounds_") !== -1 &&
+    resumeSource.indexOf("salesRecognitionV2SaveVerifyPlan_") !== -1 &&
+    resumeSource.indexOf("readAuthority") === -1 &&
+    resumeSource.indexOf("transactionProductionAuthority_") === -1);
+  // ---- Injected wrapper: outer lock BEFORE normalize/lookup, released exactly
+  // once; pre-intent lock/runtime failure is a definite REFUSED.
+  var lockTrace = [], lockMode = "ok";
+  var innerWrapperRepo = salesV2SaveOpsRepository_();
+  var wrapperRepo = {
+    findOperation: function(type, key) { lockTrace.push("lookup");
+      return innerWrapperRepo.findOperation(type, key); },
+    createOperation: function(row) { lockTrace.push("create");
+      return innerWrapperRepo.createOperation(row); },
+    updateOperation: function(row) { lockTrace.push("update");
+      return innerWrapperRepo.updateOperation(row); },
+    rows: function() { return innerWrapperRepo.rows(); } };
+  var wrapperFixture = salesV2SaveFixture_(salesV2SaveBaseSheets_());
+  var originalFactory = salesRecognitionV2SaveRuntime_;
+  try {
+    salesRecognitionV2SaveRuntime_ = function() {
+      var inner = salesV2SaveRuntime_({ fixture: wrapperFixture, repository: wrapperRepo });
+      return { spreadsheet: inner.spreadsheet, repository: inner.repository, now: inner.now,
+        actor: inner.actor, config: inner.config, batch: inner.batch, events: inner.events,
+        lock: { waitLock: function() { lockTrace.push("lock");
+            if (lockMode === "fail") throw new Error("LOCK_BUSY"); },
+          releaseLock: function() { lockTrace.push("release"); } } };
+    };
+    var lockOk = salesRecognitionV2DurableSave(salesV2SavePayload_("lock-ok-1"));
+    check("C21a", lockOk.status === "DONE" && lockTrace[0] === "lock" &&
+      lockTrace.indexOf("lookup") > 0 && lockTrace[lockTrace.length - 1] === "release");
+    var rowsBeforeLockFail = innerWrapperRepo.rows().length;
+    lockMode = "fail";
+    lockTrace = [];
+    var lockFail = salesRecognitionV2DurableSave(salesV2SavePayload_("lock-fail-1"));
+    check("C21b", lockFail.status === "REFUSED" &&
+      lockFail.code === "OUTER_LOCK_UNAVAILABLE" && lockFail.requestKey === "lock-fail-1" &&
+      JSON.stringify(lockTrace) === JSON.stringify(["lock"]) &&
+      innerWrapperRepo.rows().length === rowsBeforeLockFail);
+    salesRecognitionV2SaveRuntime_ = function() { throw new Error("RUNTIME_OPEN_FAILED"); };
+    lockTrace = [];
+    var runtimeFail = salesRecognitionV2DurableSave(salesV2SavePayload_("runtime-fail-1"));
+    check("C21c", runtimeFail.status === "REFUSED" &&
+      runtimeFail.code === "SAVE_RUNTIME_UNAVAILABLE" &&
+      runtimeFail.requestKey === "runtime-fail-1" && lockTrace.length === 0);
+    salesRecognitionV2SaveRuntime_ = function() {
+      var inner = salesV2SaveRuntime_({ fixture: wrapperFixture, repository: wrapperRepo });
+      return { spreadsheet: inner.spreadsheet, repository: inner.repository, now: inner.now,
+        actor: inner.actor, config: inner.config, batch: inner.batch, events: inner.events,
+        lock: { waitLock: function() { lockTrace.push("lock"); },
+          releaseLock: function() { lockTrace.push("release"); } } };
+    };
+    lockMode = "ok";
+    lockTrace = [];
+    var normalizeRefusal = salesRecognitionV2DurableSave({});
+    check("C21d", normalizeRefusal.status === "REFUSED" &&
+      normalizeRefusal.code === "REQUEST_KEY_REQUIRED" &&
+      JSON.stringify(lockTrace) === JSON.stringify(["lock", "release"]));
+  } finally {
+    salesRecognitionV2SaveRuntime_ = originalFactory;
+  }
+  // ---- Authority effective-window gate: malformed nonblank end and reversed
+  // windows fail closed with zero writes (freeze never reached).
+  var sheetsW1 = salesV2SaveBaseSheets_();
+  sheetsW1.ProductPricing = salesV2SaveTable_(PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS, [
+    { ID_Prod: "P1", Tipe: "Hot", EffectiveFrom: "2026-01-01", EffectiveTo: "not-a-date",
+      HPP: 2, Harga: 20000, IsActive: true }]);
+  var rtW1 = salesV2SaveRuntime_({ fixture: salesV2SaveFixture_(sheetsW1) });
+  var snapW1 = snapshot(rtW1.spreadsheet);
+  var resW1 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("window-bad-end"), rtW1);
+  check("C22a", resW1.status === "REFUSED" && resW1.code === "AUTHORITY_WINDOW_INVALID" &&
+    resW1.detail.indexOf("PRODUCT_PRICING") !== -1 &&
+    resW1.detail.indexOf("EFFECTIVE_TO_INVALID") !== -1 &&
+    rtW1.repository.rows().length === 0 && rtW1.events.batches.length === 0 &&
+    rtW1.events.authorityReads === 1 && snapshot(rtW1.spreadsheet) === snapW1);
+  var sheetsW2 = salesV2SaveBaseSheets_();
+  sheetsW2.RecipeVersions = salesV2SaveTable_(t.RECIPE_VERSIONS.HEADERS, [
+    { RecipeVersionID: "RV1", ProductVariantID: "PV1", EffectiveFrom: "2026-06-01",
+      EffectiveTo: "2026-01-01", IsActive: true, CreatedAt: "", CreatedBy: "",
+      UpdatedAt: "", UpdatedBy: "" }]);
+  var rtW2 = salesV2SaveRuntime_({ fixture: salesV2SaveFixture_(sheetsW2) });
+  var snapW2 = snapshot(rtW2.spreadsheet);
+  var resW2 = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("window-reversed"), rtW2);
+  check("C22b", resW2.status === "REFUSED" && resW2.code === "AUTHORITY_WINDOW_INVALID" &&
+    resW2.detail.indexOf("RECIPE_VERSION") !== -1 &&
+    resW2.detail.indexOf("EFFECTIVE_WINDOW_REVERSED") !== -1 &&
+    rtW2.repository.rows().length === 0 && rtW2.events.batches.length === 0 &&
+    snapshot(rtW2.spreadsheet) === snapW2);
+  return { total: 40, pass: pass, fail: 40 - pass };
 }
