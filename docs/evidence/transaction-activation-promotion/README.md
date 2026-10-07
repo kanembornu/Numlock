@@ -185,3 +185,39 @@ Status: ACCEPTED. Recorded 2026-10-06. This append-only segment preserves all ea
 - `TRANSACTION_ACTIVATION=COMPLETE`
 - Historical period: start `2026-10-05`; end `2026-10-07 01:50:05.328 +07:00`; `OPTION_C_RECONCILED`; `OPEN_PAPER_ORDERS=0`; `REMAINING_UNRECORDED_REAL_SALES=0`. Source date 2026-10-05 remains provenance; owner recognition is 2026-10-07. No backfill or transferred-Sales modification occurred.
 - **MEASURED cleanup:** the single temporary @704 candidate was deleted once. Final deployment inventory is canonical @704 plus @HEAD; temporary and unexpected deployments are zero.
+
+---
+
+## POST-ACTIVATION MAINTENANCE — Open Orders transport repair @705
+
+Status: ACCEPTED. Recorded 2026-10-07. APPEND-ONLY maintenance entry; it does not rewrite, reorder, or alter any activation chronology above. `TRANSACTION_ACTIVATION=COMPLETE` and `SALES_GO_LIVE_READY=TRUE` remained true throughout; neither status was reopened.
+
+### Defect and repair
+
+- **MEASURED — post-activation risk:** After activation, Open Orders carried a non-empty transport risk: a non-empty response could fail browser transport the same way the earlier Find Order lookup did.
+- **STATIC — non-empty proof:** Repository source proved the non-empty transport path statically before any production mutation.
+- **MEASURED + STATIC — ROOT CAUSE:** raw-Date transport defect CONFIRMED for the Open Orders list response.
+- **Repair commit:** `ef8c4b56e1166b707e71dc4a9ed0718b7a73e86c`, reusing the existing `transactionOperationalOrderTransportDto_` via `listOpenOperationalOrders()` (reuse of the already-established transport DTO; no new DTO introduced).
+
+### Local validation
+
+- **FROZEN local evidence:** focused suite 10/10 PASS; Open Orders suite 8/8 PASS; relevant regression 41/41 PASS.
+
+### Delivery and candidate acceptance
+
+- **MEASURED delivery:** `clasp push` 1/1 success; Apps Script version 705 created; candidate `AKfycbxy1fB1jkpoJr7kTQkK5Aqg1gERAMOTUUVQWyxZJ1ZoBvyV6qBcnvqdKmUHveSznLdf` pinned @705.
+- **MEASURED — HARNESS SEQUENCING DEFECT (not a product defect):** initial candidate browser acceptance stopped at `HARNESS_SEQUENCING_DEFECT`; the harness targeted `#operationalOrderLookup` while the control was hidden. No product defect was established by that stop.
+- **Corrected operator entry flow:** Transactions → New Transaction → Sales → authority READY gate → Continue existing order / Find Order.
+- **MEASURED — candidate acceptance PASS:** with the corrected flow — lookup visible and enabled; handler, RPC, and success dispatch observed; Order `ORD-D0D68C09-ORDERCREATEO` rendered PAID + COMPLETED; `PAGE_ERRORS=[]`; `CONSOLE_ERRORS=[]`; harness exit code 0.
+
+### Promotion and canonical acceptance
+
+- **MEASURED promotion:** canonical deployment `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` moved @704 → @705. Same object, 1 mutation; description preserved; no replacement canonical deployment created.
+- **MEASURED — canonical post-acceptance PASS:** same corrected operator flow; PAID + COMPLETED rendered; 0 errors.
+
+### Cleanup, inventory, and invariants
+
+- **MEASURED cleanup:** candidate cleanup = 1 deletion. Final deployment inventory: canonical @705 plus @HEAD; `TEMPORARY=0`; `UNEXPECTED=0`.
+- **MEASURED:** zero production business mutations in this maintenance entry — orders created 0, orders edited 0, payments 0, fulfillment transitions 0, finance 0, supplier 0, inventory 0.
+- `TRANSACTION_ACTIVATION=COMPLETE` (not reopened).
+- `SALES_GO_LIVE_READY=TRUE` (not reopened).
