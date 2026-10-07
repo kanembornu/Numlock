@@ -294,24 +294,31 @@ posting-gate outcomes, production fingerprint preservation, and verified disposa
 ## Finance Phase 11N.10 inactive conversion candidate population
 
 `runInventoryConversionCandidatePopulation()` is the only production entry point for the frozen 21-row Phase 11N.9
-candidate set. It rereads and hashes each immutable Drive manifest, validates the exact 24-column candidates against
+candidate set. Since off-repo retirement (see `docs/evidence/off-repo-retirement.md`) manifest evidence bytes are
+repository-authoritative (`docs/evidence/finance-phase-11n8/manifests/`), which Apps Script cannot read: the wrapper
+and `runInventoryConversionCandidateDisposableRuntimeProof()` now fail closed before any manifest read with the
+deterministic status `REFUSED`/`OFF_REPO_EVIDENCE_RETIRED` (`detail: REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED`),
+zero writes, and no Drive call. The retained executor below still validates the exact 24-column candidates against
 the 22 authoritative InventoryItems, requires header-only conversion and ledger storage plus unchanged Account 1100,
-and writes one deterministic 21-by-24 range under ScriptLock. Every populated row remains
-`SINGLE_OPERATOR_APPROVED` and inactive, so readiness remains `NEEDS_EVIDENCE` and the posting gate remains closed.
-Its exact post-image is idempotent as `ALREADY_POPULATED`; recovery accepts only the unchanged owned post-image.
-`runInventoryConversionCandidateDisposableRuntimeProof()` proves the write, idempotency, refusal, recovery,
-production-fingerprint, posting-gate, and cleanup contracts before the separately authorized one-time production run.
+and would write one deterministic 21-by-24 range under ScriptLock when driven by an injected repository-byte runtime;
+historical acceptance required every populated row to remain `SINGLE_OPERATOR_APPROVED` and inactive, so readiness
+remains `NEEDS_EVIDENCE` and the posting gate remains closed, the exact post-image idempotent as `ALREADY_POPULATED`,
+and recovery limited to the unchanged owned post-image. Recovery wrappers remain record-gated and do not read
+evidence bytes. Future population or activation requires a separately authorized design.
 
 ## Finance Phase 11N.11 prospective conversion activation
 
 `runInventoryConversionActivation()` is the separately gated production activation entry point for the exact frozen
-21-row candidate post-image. Under ScriptLock it requires a fresh semantic match to every Phase 11N.9 identity,
+21-row candidate post-image. Since off-repo retirement it fails closed before any manifest read with
+`REFUSED`/`OFF_REPO_EVIDENCE_RETIRED` and zero writes; `runInventoryConversionActivationDisposableRuntimeProof()`
+fails closed the same way. The retained executor, when driven by an injected repository-byte runtime under a
+separately authorized design, requires under ScriptLock a fresh semantic match to every Phase 11N.9 identity,
 evidence reference, ratio, UOM, package, approval, and inactive state, then writes only the single `IsActive` column
 from false to true in one logical write. The operation is idempotent only for the exact valid active post-image.
 Effective authority remains prospective from 2026-10-01: posting before that date refuses, while posting on or after
 that date accepts only rows that still validate as `SINGLE_OPERATOR_VERIFIED`.
 
-`runInventoryConversionActivationDisposableRuntimeProof()` proves activation, idempotency, exact semantic post-image,
+The retained activation proof contract covers activation, idempotency, exact semantic post-image,
 all required drift and evidence refusals, the prospective posting boundary, guarded recovery, refusal to recover after
 a dependent InventoryLedger movement, production-fingerprint preservation, and verified disposable cleanup. It does
 not call the production activation wrapper. Production activation remains prohibited until separately authorized.
@@ -352,8 +359,9 @@ mixed, drifted, or duplicate rows. Recovery clears only the exact owned candidat
 InventoryLedger or BalanceLedger dependency exists.
 
 The checked-in Phase 11R workbook remains the blank operator intake template, not a completed reviewed artifact.
-Accordingly, the production wrapper is deliberately fail-closed as `FROZEN_REVIEWED_ARTIFACT_NOT_CONFIGURED`.
-Local fixtures prove the pipeline without supplying business evidence or authorizing a production write. No
+Accordingly, the production wrapper fails closed at the off-repo evidence gate as
+`REFUSED`/`OFF_REPO_EVIDENCE_RETIRED`, with `FINAL_OPENING_EVIDENCE_NOT_CONFIGURED` retained as the second gate for
+any future separately authorized evidence configuration. Local fixtures prove the pipeline without supplying business evidence or authorizing a production write. No
 InventoryOpenings population, InventoryLedger or BalanceLedger row, Account 1100 recognition, Account 3210 creation,
 upload, runtime execution, deployment, or Git operation is part of this phase.
 
@@ -682,7 +690,8 @@ Bag-to-weight conversion requires an explicitly governed purchase/receipt rule i
 
 Conversion eligibility does not expand the frozen 21-item InventoryOpenings intake or supply
 count, valuation, economic-origin, or accounting approval evidence. The 21 conversion manifests
-and population/activation code remain unchanged. No historical reconstruction, openings,
+are unchanged; since off-repo retirement the population/activation wrappers fail closed with
+`OFF_REPO_EVIDENCE_RETIRED` and no longer consume external evidence bytes. No historical reconstruction, openings,
 InventoryLedger movements, Account 1100 posting, or recipe auto-consumption is enabled.
 Local focused regressions and syntax checks are separate from Apps Script runtime acceptance.
 

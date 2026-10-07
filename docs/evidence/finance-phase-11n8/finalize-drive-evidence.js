@@ -1,7 +1,25 @@
-const fs = require("fs");
-const path = require("path");
+// OFF-REPO RETIREMENT — operational use neutralized.
+//
+// This script used to regenerate manifest-index.csv, candidate-rows.json/csv, and
+// drive-evidence-map.json with fresh external claims ("StoredByteVerification": "PASS",
+// Drive URLs). The referenced external Drive folder and files are off-repo deletion
+// candidates and repository bytes are authoritative
+// (docs/evidence/finance-phase-11n8/manifests/). Regenerating those records after
+// retirement would fabricate liveness claims, so this script now fails closed and
+// writes nothing. The historical records below are retained as PROVENANCE_REFERENCE
+// only; see docs/evidence/off-repo-retirement.md for the inventory, parity evidence,
+// and retention decisions.
 
-const ROOT = __dirname;
+"use strict";
+
+const OFF_REPO_EVIDENCE_RETIRED = {
+  status: "REFUSED",
+  reason: "OFF_REPO_EVIDENCE_RETIRED",
+  detail: "REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED",
+  writesPerformed: 0
+};
+
+// Retained provenance pins (identity only; never contacted by this script).
 const driveFolder = {
   id: "1Un69xogJ5s64xO6iRM7PBXLTJ-GMlynu",
   url: "https://drive.google.com/drive/folders/1Un69xogJ5s64xO6iRM7PBXLTJ-GMlynu"
@@ -30,51 +48,9 @@ const fileIds = {
   "ING-034": "1HUeaime2QohkAzCZSULnTx7XWCHnzLDB"
 };
 
-function csv(value) {
-  const text = String(value == null ? "" : value);
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+if (require.main === module) {
+  console.log(JSON.stringify(OFF_REPO_EVIDENCE_RETIRED));
+  process.exit(1);
 }
 
-const indexPath = path.join(ROOT, "manifest-index.csv");
-const lines = fs.readFileSync(indexPath, "utf8").trim().split("\n");
-const headers = lines.shift().split(",");
-const index = lines.map(line => Object.fromEntries(line.split(",").map((value, i) => [headers[i], value])));
-for (const entry of index) {
-  const fileId = fileIds[entry.ItemID];
-  if (!fileId) throw new Error(`Missing Drive file ID for ${entry.ItemID}`);
-  entry.ImmutableStorage = "VERIFIED";
-  entry.EvidenceRef = `GDRIVE:${fileId}:V01:SHA256:${entry.SHA256}`;
-  entry.RequiredEvidenceRef = entry.EvidenceRef;
-}
-fs.writeFileSync(indexPath, [headers.join(","), ...index.map(entry => headers.map(key => csv(entry[key])).join(","))].join("\n") + "\n");
-
-const rowsPath = path.join(ROOT, "candidate-rows.json");
-const rows = JSON.parse(fs.readFileSync(rowsPath, "utf8"));
-for (const row of rows) {
-  const entry = index.find(value => value.ItemID === row.ItemID);
-  row.EvidenceRef = entry.EvidenceRef;
-  row.ApprovalStatus = "SINGLE_OPERATOR_APPROVED";
-}
-fs.writeFileSync(rowsPath, JSON.stringify(rows, null, 2) + "\n");
-const rowHeaders = Object.keys(rows[0]);
-fs.writeFileSync(path.join(ROOT, "candidate-rows.csv"),
-  [rowHeaders.join(","), ...rows.map(row => rowHeaders.map(key => csv(row[key])).join(","))].join("\n") + "\n");
-
-const evidenceMap = index.map(entry => ({
-  ManifestID: entry.ManifestID,
-  ConversionID: entry.ConversionID,
-  ItemID: entry.ItemID,
-  DriveFileID: fileIds[entry.ItemID],
-  DriveFileName: `${entry.ConversionID}-manifest-V01.txt`,
-  DriveURL: `https://drive.google.com/file/d/${fileIds[entry.ItemID]}/view`,
-  MIMEType: "text/plain",
-  SHA256: entry.SHA256,
-  StoredByteVerification: "PASS",
-  EvidenceRef: entry.EvidenceRef
-}));
-fs.writeFileSync(path.join(ROOT, "drive-evidence-map.json"), JSON.stringify({
-  DriveFolder: driveFolder,
-  ArtifactCount: evidenceMap.length,
-  ExactByteMatches: evidenceMap.length,
-  Artifacts: evidenceMap
-}, null, 2) + "\n");
+module.exports = { OFF_REPO_EVIDENCE_RETIRED: OFF_REPO_EVIDENCE_RETIRED, driveFolder: driveFolder, fileIds: fileIds };

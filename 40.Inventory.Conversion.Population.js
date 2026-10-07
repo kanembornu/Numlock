@@ -1,3 +1,6 @@
+// Off-repo retirement: DriveFileID entries below are provenance/identity pins only; they are
+// never consumed by live Drive calls. Evidence bytes are repository-authoritative
+// (docs/evidence/finance-phase-11n8/manifests). See docs/evidence/off-repo-retirement.md.
 var INVENTORY_CONVERSION_CANDIDATE_POPULATION = Object.freeze({
   VERSION: "11N.10",
   MIGRATION_ID: "INVENTORY-CONVERSION-CANDIDATES-20260904",
@@ -297,17 +300,27 @@ function executeInventoryConversionCandidateDisposableRuntimeProofWithRuntime(ru
 }
 
 function runInventoryConversionCandidateDisposableRuntimeProof() {
-  var result = executeInventoryConversionCandidateDisposableRuntimeProofWithRuntime({
-    storage: { openById: function(id) { return SpreadsheetApp.openById(id); } },
-    createToken: function() { return new Date().getTime() + "-" + Utilities.getUuid(); },
-    createSpreadsheet: function(name, rows, columns) { return SpreadsheetApp.create(name, rows, columns); },
-    openById: function(id) { return SpreadsheetApp.openById(id); }, flush: function() { SpreadsheetApp.flush(); },
-    readManifestBytes: function(id) { return DriveApp.getFileById(id).getBlob().getBytes(); },
-    sha256: function(bytes) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes); },
-    bytesToString: function(bytes) { return Utilities.newBlob(bytes).getDataAsString("UTF-8"); },
-    trashOwnedSpreadsheet: function(ownership) { DriveApp.getFileById(ownership.spreadsheetId).setTrashed(true); },
-    isOwnedSpreadsheetTrashed: function(ownership) { return DriveApp.getFileById(ownership.spreadsheetId).isTrashed(); }
-  });
+  // Off-repo retirement: manifest evidence bytes are repository-authoritative and Apps Script
+  // cannot read the repository, so this proof fails closed with a deterministic status.
+  // Future activation requires a separately authorized design (docs/evidence/off-repo-retirement.md).
+  var result;
+  try {
+    result = executeInventoryConversionCandidateDisposableRuntimeProofWithRuntime({
+      storage: { openById: function(id) { return SpreadsheetApp.openById(id); } },
+      createToken: function() { return new Date().getTime() + "-" + Utilities.getUuid(); },
+      createSpreadsheet: function(name, rows, columns) { return SpreadsheetApp.create(name, rows, columns); },
+      openById: function(id) { return SpreadsheetApp.openById(id); }, flush: function() { SpreadsheetApp.flush(); },
+      readManifestBytes: function() { throw new Error("OFF_REPO_EVIDENCE_RETIRED"); },
+      sha256: function(bytes) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes); },
+      bytesToString: function(bytes) { return Utilities.newBlob(bytes).getDataAsString("UTF-8"); },
+      trashOwnedSpreadsheet: function(ownership) { DriveApp.getFileById(ownership.spreadsheetId).setTrashed(true); },
+      isOwnedSpreadsheetTrashed: function(ownership) { return DriveApp.getFileById(ownership.spreadsheetId).isTrashed(); }
+    });
+  } catch (error) {
+    if (String(error && error.message) !== "OFF_REPO_EVIDENCE_RETIRED") throw error;
+    result = { status: "REFUSED", reason: "OFF_REPO_EVIDENCE_RETIRED",
+      detail: "REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED", writeCount: 0, productionMutation: false };
+  }
   Logger.log(JSON.stringify(result)); return result;
 }
 
@@ -339,7 +352,9 @@ function inventoryConversionCandidateProductionRuntime(spreadsheet) {
   return { mode: INVENTORY_SCHEMA_RUNTIME.PRODUCTION_MODE, spreadsheet: spreadsheet,
     freshSpreadsheet: function() { return resolveNumlockProductionSpreadsheetWithRuntime({ openById: function(id) { return SpreadsheetApp.openById(id); } }); },
     flush: function() { SpreadsheetApp.flush(); },
-    readManifestBytes: function(id) { return DriveApp.getFileById(id).getBlob().getBytes(); },
+    // Off-repo retirement: repository-authoritative evidence; no live Drive manifest read.
+    // Callers fail closed with deterministic OFF_REPO_EVIDENCE_RETIRED status.
+    readManifestBytes: function() { throw new Error("OFF_REPO_EVIDENCE_RETIRED"); },
     sha256: function(bytes) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes); },
     bytesToString: function(bytes) { return Utilities.newBlob(bytes).getDataAsString("UTF-8"); } };
 }
@@ -634,17 +649,27 @@ function executeInventoryConversionActivationDisposableRuntimeProofWithRuntime(r
 }
 
 function runInventoryConversionActivationDisposableRuntimeProof() {
-  var result = executeInventoryConversionActivationDisposableRuntimeProofWithRuntime({
-    storage: { openById: function(id) { return SpreadsheetApp.openById(id); } },
-    createToken: function() { return new Date().getTime() + "-" + Utilities.getUuid(); },
-    createSpreadsheet: function(name, rows, columns) { return SpreadsheetApp.create(name, rows, columns); },
-    openById: function(id) { return SpreadsheetApp.openById(id); }, flush: function() { SpreadsheetApp.flush(); },
-    readManifestBytes: function(id) { return DriveApp.getFileById(id).getBlob().getBytes(); },
-    sha256: function(bytes) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes); },
-    bytesToString: function(bytes) { return Utilities.newBlob(bytes).getDataAsString("UTF-8"); },
-    trashOwnedSpreadsheet: function(ownership) { DriveApp.getFileById(ownership.spreadsheetId).setTrashed(true); },
-    isOwnedSpreadsheetTrashed: function(ownership) { return DriveApp.getFileById(ownership.spreadsheetId).isTrashed(); }
-  });
+  // Off-repo retirement: manifest evidence bytes are repository-authoritative and Apps Script
+  // cannot read the repository, so this proof fails closed with a deterministic status.
+  // Future activation requires a separately authorized design (docs/evidence/off-repo-retirement.md).
+  var result;
+  try {
+    result = executeInventoryConversionActivationDisposableRuntimeProofWithRuntime({
+      storage: { openById: function(id) { return SpreadsheetApp.openById(id); } },
+      createToken: function() { return new Date().getTime() + "-" + Utilities.getUuid(); },
+      createSpreadsheet: function(name, rows, columns) { return SpreadsheetApp.create(name, rows, columns); },
+      openById: function(id) { return SpreadsheetApp.openById(id); }, flush: function() { SpreadsheetApp.flush(); },
+      readManifestBytes: function() { throw new Error("OFF_REPO_EVIDENCE_RETIRED"); },
+      sha256: function(bytes) { return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes); },
+      bytesToString: function(bytes) { return Utilities.newBlob(bytes).getDataAsString("UTF-8"); },
+      trashOwnedSpreadsheet: function(ownership) { DriveApp.getFileById(ownership.spreadsheetId).setTrashed(true); },
+      isOwnedSpreadsheetTrashed: function(ownership) { return DriveApp.getFileById(ownership.spreadsheetId).isTrashed(); }
+    });
+  } catch (error) {
+    if (String(error && error.message) !== "OFF_REPO_EVIDENCE_RETIRED") throw error;
+    result = { status: "REFUSED", reason: "OFF_REPO_EVIDENCE_RETIRED",
+      detail: "REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED", writeCount: 0, productionMutation: false };
+  }
   Logger.log(JSON.stringify(result)); return result;
 }
 
@@ -671,6 +696,10 @@ function runInventoryConversionActivationRecovery(record) {
 }
 
 // Phase 11U.2A: additive Lemon authority. The frozen 21-row executors above are unchanged.
+// Off-repo retirement: FILE_ID is a provenance/identity pin only and is never fetched by live
+// Drive calls; evidence bytes are repository-authoritative
+// (docs/evidence/finance-phase-11u1/MANIFEST-MOS-ING-018-V01.manifest). Wrappers below fail
+// closed with OFF_REPO_EVIDENCE_RETIRED until a separately authorized activation design exists.
 var INVENTORY_LEMON_PRODUCTION = Object.freeze({
   VERSION: "11U.2A", FILE_ID: "1Gyv4scq6wm-VpEKcxcQg3iVxeHmmIiKV", EVIDENCE_VERSION: "V01",
   SHA256: "7f3bf64c2678c0436beeadd317f1dbe0f638b3ee9aeedab6fe1d146f4f4b9ed0",

@@ -29,6 +29,10 @@ var INVENTORY_OPENING_REVIEW_POLICY = Object.freeze({
   ARTIFACT_FILE: "inventory-opening-evidence-intake.xlsx",
   ARTIFACT_VERSION: "V01",
   FROZEN_ARTIFACT_SHA256: "c7335b1d155cb8ee7cce10983b0fa2986efd950d502514038d13bfe124296dd9",
+  // Off-repo retirement: the two IDs below are labeled provenance/identity pins only.
+  // They are never consumed by live Drive calls; evidence bytes are repository-authoritative
+  // (docs/evidence/finance-phase-11r/inventory-opening-evidence-intake.xlsx). See
+  // docs/evidence/off-repo-retirement.md.
   FROZEN_ARTIFACT_DRIVE_FILE_ID: "1898Qe_MaTR6JMVOLnQN9z9Us1cwxOgX2",
   DRIVE_FOLDER_ID: "1Un69xogJ5s64xO6iRM7PBXLTJ-GMlynu",
   ARTIFACT_MIME: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -210,14 +214,9 @@ function parseExcelSerialDate(serial) {
 }
 
 function runInventoryOpeningTemplateParserDiagnostic() {
-  var verification = verifyFrozenArtifactDriveBytes();
-  if (!verification.verified) return verification;
-  var bytes = DriveApp.getFileById(INVENTORY_OPENING_REVIEW_POLICY.FROZEN_ARTIFACT_DRIVE_FILE_ID).getBlob().getBytes();
-  var workbook = parseFrozenOpeningWorkbook(bytes);
-  var rows = decodeFrozenOpeningIntakeRows(workbook.worksheetXml, workbook.sharedStrings);
-  return { status: "PASS", intakeWorksheetPath: workbook.intakeWorksheetPath, sheetCount: workbook.sheets.length,
-    rowCount: rows.length, headerCount: FROZEN_OPENING_INTAKE_HEADER.length,
-    fingerprint: computeTemplateSourceRowsFingerprint(rows), productionMutation: false };
+  // Off-repo retirement: workbook bytes are repository-authoritative; no Drive byte fetch.
+  // Returns the deterministic fail-closed refusal from verifyFrozenArtifactDriveBytes().
+  return verifyFrozenArtifactDriveBytes();
 }
 
 function validateFrozenArtifactBase64Payload(payload) {
@@ -256,167 +255,34 @@ function computeSha256Hex(bytes) {
 var FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY = "INVENTORY_OPENING_ARTIFACT_PUBLICATION_AUTH";
 
 function authorizeFrozenOpeningArtifactPublication() {
-  var policy = INVENTORY_OPENING_REVIEW_POLICY;
-  var lock = LockService.getScriptLock();
-  var acquired = false;
-  try {
-    lock.waitLock(30000); acquired = true;
-    var props = PropertiesService.getScriptProperties();
-    var existing = props.getProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
-    if (existing) {
-      try {
-        var parsed = JSON.parse(existing);
-        if (parsed && parsed.state === "AUTHORIZED" && parsed.artifactSha256 === policy.FROZEN_ARTIFACT_SHA256) {
-          return { status: "REFUSED", reason: "AUTHORIZATION_ALREADY_ACTIVE", productionMutation: false };
-        }
-      } catch (e) { /* fall through to fail-closed */ }
-      return { status: "REFUSED", reason: "MALFORMED_EXISTING_AUTHORIZATION", productionMutation: false };
-    }
-    var record = {
-      state: "AUTHORIZED",
-      artifactSha256: policy.FROZEN_ARTIFACT_SHA256,
-      driveFolderId: policy.DRIVE_FOLDER_ID,
-      filename: policy.ARTIFACT_FILE,
-      mime: policy.ARTIFACT_MIME,
-      authorizedAt: new Date().toISOString()
-    };
-    props.setProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY, JSON.stringify(record));
-    return { status: "AUTHORIZED", productionMutation: false };
-  } finally { if (acquired) lock.releaseLock(); }
+  // Off-repo retirement: publication to the retired external folder is permanently
+  // refused; repository is authoritative. Future publication requires a separately
+  // authorized design (see docs/evidence/off-repo-retirement.md).
+  return { status: "REFUSED", reason: "OFF_REPO_EVIDENCE_RETIRED",
+    detail: "REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED", productionMutation: false };
 }
 
 function publishFrozenOpeningArtifact(base64Payload) {
-  var policy = INVENTORY_OPENING_REVIEW_POLICY;
-  var writes = 0;
-  if (!policy.FROZEN_ARTIFACT_SHA256 || !policy.DRIVE_FOLDER_ID ||
-      !policy.ARTIFACT_FILE || !policy.ARTIFACT_MIME) {
-    return { status: "REFUSED", reason: "FROZEN_ARTIFACT_POLICY_INCOMPLETE",
-      writeCount: 0, productionMutation: false };
-  }
-  var payloadResult = validateFrozenArtifactBase64Payload(base64Payload);
-  if (!payloadResult.valid) {
-    return { status: "REFUSED", reason: payloadResult.reason,
-      writeCount: 0, productionMutation: false };
-  }
-  var bytes = payloadResult.decoded;
-  if (!validateXlsxSignature(bytes)) {
-    return { status: "REFUSED", reason: "INVALID_XLSX_SIGNATURE",
-      writeCount: 0, productionMutation: false };
-  }
-  var preUploadSha = computeSha256Hex(bytes);
-  if (preUploadSha !== policy.FROZEN_ARTIFACT_SHA256.toLowerCase()) {
-    return { status: "REFUSED", reason: "SHA256_MISMATCH",
-      preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
-  }
-  // Pure validation passed. Now acquire lock for authorization + mutation boundary.
-  var lock = LockService.getScriptLock();
-  var acquired = false;
-  try {
-    lock.waitLock(30000); acquired = true;
-    var props = PropertiesService.getScriptProperties();
-    var authRaw = props.getProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
-    if (!authRaw) {
-      return { status: "REFUSED", reason: "FROZEN_ARTIFACT_PUBLICATION_NOT_AUTHORIZED",
-        preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
-    }
-    var auth;
-    try { auth = JSON.parse(authRaw); } catch (e) {
-      return { status: "REFUSED", reason: "MALFORMED_AUTHORIZATION_RECORD",
-        preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
-    }
-    if (!auth || auth.state !== "AUTHORIZED" ||
-        auth.artifactSha256 !== policy.FROZEN_ARTIFACT_SHA256 ||
-        auth.driveFolderId !== policy.DRIVE_FOLDER_ID ||
-        auth.filename !== policy.ARTIFACT_FILE ||
-        auth.mime !== policy.ARTIFACT_MIME) {
-      return { status: "REFUSED", reason: "AUTHORIZATION_IDENTITY_MISMATCH",
-        preUploadSha256: preUploadSha, writeCount: 0, productionMutation: false };
-    }
-    // Authorization valid. Check collision.
-    var folder = DriveApp.getFolderById(policy.DRIVE_FOLDER_ID);
-    var existing = folder.getFilesByName(policy.ARTIFACT_FILE);
-    if (existing.hasNext()) {
-      var collision = existing.next();
-      // Consume authorization on collision.
-      props.deleteProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
-      return { status: "REFUSED", reason: "FROZEN_ARTIFACT_ALREADY_EXISTS",
-        existingFileId: collision.getId(), preUploadSha256: preUploadSha,
-        writeCount: 0, authorizationConsumed: true, productionMutation: false };
-    }
-    // No collision. Consume authorization BEFORE createFile.
-    props.deleteProperty(FROZEN_ARTIFACT_PUBLICATION_AUTH_KEY);
-    var blob = Utilities.newBlob(bytes, policy.ARTIFACT_MIME, policy.ARTIFACT_FILE);
-    var created = folder.createFile(blob);
-    writes = 1;
-    var postBytes = created.getBlob().getBytes();
-    var postUploadSha = computeSha256Hex(postBytes);
-    var byteIdentityMatch = postUploadSha === preUploadSha &&
-      postUploadSha === policy.FROZEN_ARTIFACT_SHA256.toLowerCase();
-    return {
-      status: byteIdentityMatch ? "PUBLISHED_AND_VERIFIED" : "PUBLISHED_BUT_HASH_MISMATCH",
-      fileId: created.getId(),
-      fileName: policy.ARTIFACT_FILE,
-      mimeType: policy.ARTIFACT_MIME,
-      size: bytes.length,
-      preUploadSha256: preUploadSha,
-      postUploadSha256: postUploadSha,
-      byteIdentityMatch: byteIdentityMatch,
-      canonicalDesignation: byteIdentityMatch ? "ELIGIBLE" : "REJECTED",
-      writeCount: writes,
-      authorizationConsumed: true,
-      productionMutation: false
-    };
-  } catch (error) {
-    return { status: "FAILED", reason: error.message,
-      preUploadSha256: preUploadSha, writeCount: writes,
-      authorizationConsumed: true, productionMutation: false };
-  } finally { if (acquired) lock.releaseLock(); }
+  // Off-repo retirement: deterministic fail-closed refusal for every payload; no
+  // authorization, lock, or Drive interaction remains on this path. Frozen SHA-256
+  // identity stays pinned above as provenance and is verified repository-side.
+  return { status: "REFUSED", reason: "OFF_REPO_EVIDENCE_RETIRED",
+    detail: "REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED",
+    writeCount: 0, authorizationConsumed: false, productionMutation: false };
 }
 
 function verifyFrozenArtifactDriveBytes() {
+  // Off-repo retirement: the external Drive artifact is a deletion candidate and Drive is
+  // not a durable authority (GOOGLE_DRIVE_IS_NOT_DURABLE_AUTHORITY). Deterministic
+  // fail-closed refusal; repository docs/evidence/finance-phase-11r bytes + SHA-256 pin
+  // are authoritative. Retained IDs/SHA are provenance labels, never fetched.
   var policy = INVENTORY_OPENING_REVIEW_POLICY;
-  if (!policy.FROZEN_ARTIFACT_DRIVE_FILE_ID) {
-    return { status: "FROZEN_ARTIFACT_FILE_NOT_CONFIGURED", verified: false, productionMutation: false };
-  }
-  var file;
-  try {
-    file = DriveApp.getFileById(policy.FROZEN_ARTIFACT_DRIVE_FILE_ID);
-  } catch (e) {
-    return { status: "FROZEN_ARTIFACT_UNREADABLE", verified: false, productionMutation: false };
-  }
-  var blob = file.getBlob();
-  var bytes = blob.getBytes();
-  if (!bytes || bytes.length === 0) {
-    return { status: "FROZEN_ARTIFACT_EMPTY", verified: false, productionMutation: false };
-  }
-  if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4B || bytes[2] !== 0x03 || bytes[3] !== 0x04) {
-    return { status: "FROZEN_ARTIFACT_INVALID_SIGNATURE", verified: false, productionMutation: false };
-  }
-  var hash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, bytes);
-  var hex = "";
-  for (var i = 0; i < hash.length; i++) {
-    var b = hash[i] & 0xFF;
-    hex += ("0" + b.toString(16)).slice(-2);
-  }
-  var actualSha = hex.toLowerCase();
-  var expectedSha = policy.FROZEN_ARTIFACT_SHA256.toLowerCase();
-  if (actualSha !== expectedSha) {
-    return { status: "FROZEN_ARTIFACT_HASH_MISMATCH", verified: false,
-      fileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID, actualSha256: actualSha,
-      expectedSha256: expectedSha, productionMutation: false };
-  }
-  var fileName = file.getName();
-  var mimeType = blob.getContentType();
-  var size = bytes.length;
-  if (fileName !== policy.ARTIFACT_FILE || mimeType !== policy.ARTIFACT_MIME || size !== 28029) {
-    return { status: "FROZEN_ARTIFACT_METADATA_MISMATCH", verified: false,
-      fileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID, actualSha256: actualSha,
-      expectedSha256: expectedSha, actualFileName: fileName, actualMime: mimeType,
-      actualSize: size, productionMutation: false };
-  }
-  return { status: "FROZEN_ARTIFACT_VERIFIED", verified: true,
-    fileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID, actualSha256: actualSha,
-    expectedSha256: expectedSha, byteIdentityMatch: true, productionMutation: false };
+  return { status: "REFUSED", reason: "OFF_REPO_EVIDENCE_RETIRED",
+    detail: "REPOSITORY_AUTHORITATIVE_EVIDENCE_REQUIRED",
+    provenanceFileId: policy.FROZEN_ARTIFACT_DRIVE_FILE_ID,
+    provenanceFolderId: policy.DRIVE_FOLDER_ID,
+    expectedSha256: policy.FROZEN_ARTIFACT_SHA256,
+    verified: false, writeCount: 0, productionMutation: false };
 }
 
 function runInventoryOpeningArtifactIntegrityDiagnostic() {
@@ -947,9 +813,9 @@ function executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime(runtime)
       "downstream dependency recovery refusal");
     var disabled = runInventoryOpeningPopulation();
     inventoryDisposableRuntimeProofRequire(disabled.status === "REFUSED" &&
-      disabled.reason === "FINAL_OPENING_EVIDENCE_NOT_CONFIGURED" && disabled.writeCount === 0 &&
+      disabled.reason === "OFF_REPO_EVIDENCE_RETIRED" && disabled.writeCount === 0 &&
       disabled.productionMutation === false,
-      "real production executor requires completed cutoff evidence");
+      "real production executor refuses retired off-repo evidence");
     inventoryDisposableRuntimeProofRequire(inventoryOpeningStagingFingerprint(readInventoryOpeningStagingMigrationState(
       runtime.openCanonical())) === productionBefore, "production fingerprint preserved");
     result = { status: "PASS", reviewedRows: 21, exactColumns: 27, readinessStates: 6,
