@@ -129,3 +129,117 @@ function testSalesOperatorWorkflowContracts(indexSource, actionSource, productio
   ].forEach(function(test) { check(test[0], test[1]); });
   return { total: 30, pass: pass, fail: 30 - pass };
 }
+
+function testSalesRecognitionV2FoundationContracts() {
+  var pass = 0, contract = SALES_RECOGNITION_V2_CONTRACT, codes = contract.REFUSAL_CODES;
+  function check(value, label) { if (!value) throw new Error("SALES_V2_FOUNDATION:" + label); pass++; }
+  check(JSON.stringify(contract.HEADERS) === JSON.stringify(["RecognitionID", "ContractVersion",
+    "ActivationID", "OrderID", "RevisionID", "EventType", "RecognizedAt", "EconomicDate", "Amount",
+    "RecognitionJournalID", "JournalSignature", "PostingStatus", "OperationID", "AuditID", "OriginalID",
+    "ReversalOfRecognitionID", "ReplacementID", "Reason", "Actor", "SnapshotJSON"]), "exact header contract");
+  check(contract.HEADERS.length === 20 && contract.SHEET === "SalesRecognitionEvents", "sheet and header count");
+  check(contract.CONTRACT_VERSION === "SALES_RECOGNITION_V2", "contract version");
+  var config = salesRecognitionV2DefaultConfig();
+  check(config.mode === "PREPARED" && config.contractVersion === "SALES_RECOGNITION_V2", "default PREPARED");
+  check(config.activationID === "" && config.activatedAt === "" && config.configVersion === 1,
+    "default blank activation metadata");
+  check(!/\d{4}-\d{2}-\d{2}T/.test(JSON.stringify(config)), "default has no timestamp T value");
+  check(validateSalesRecognitionV2Config(config).status === "PASS", "default config validates");
+  check(validateSalesRecognitionV2Config(Object.assign({}, config, { mode: "LIVE" })).status === "FAIL",
+    "invalid mode fails");
+  check(validateSalesRecognitionV2Config(Object.assign({}, config, { contractVersion: "V1" })).status === "FAIL",
+    "wrong contract version fails");
+  check(validateSalesRecognitionV2Config(Object.assign({}, config, { mode: "ACTIVE" })).status === "FAIL",
+    "ACTIVE without activation metadata fails");
+  check(validateSalesRecognitionV2Config(Object.assign({}, config, { activationID: "ACT-1" })).status === "FAIL",
+    "PREPARED with activation metadata fails");
+  var activated = { mode: "ACTIVE", contractVersion: "SALES_RECOGNITION_V2", activationID: "ACT-1",
+    activatedAt: "2026-11-01T00:00:00.000Z", configVersion: 1 };
+  check(validateSalesRecognitionV2Config(activated).status === "PASS", "valid ACTIVE config");
+  check(validateSalesRecognitionV2Config(Object.assign({}, activated,
+    { activatedAt: contract.FORBIDDEN_ACTIVATION_TIMESTAMP })).status === "FAIL",
+    "old operational T rejected");
+  check(validateSalesRecognitionV2Config(null).status === "FAIL", "null config fails closed");
+  check(salesRecognitionV2RequestGate(config).code === codes.V2_NOT_ACTIVATED &&
+    !salesRecognitionV2RequestGate(config).allowed, "PREPARED refuses new V2");
+  var paused = Object.assign({}, activated, { mode: "PAUSED" });
+  check(validateSalesRecognitionV2Config(paused).status === "PASS", "PAUSED keeps activation metadata");
+  var pausedGate = salesRecognitionV2RequestGate(paused);
+  check(!pausedGate.allowed && pausedGate.code === codes.V2_MODE_PAUSED,
+    "PAUSED refuses without legacy fallback");
+  check(salesRecognitionV2RequestGate(activated).allowed === true, "ACTIVE allows");
+  check(salesRecognitionV2RequestGate({}).code === codes.CONFIG_INVALID, "invalid config refuses");
+  var legacyTabsal = { OrderID: "O-1", sourceSheet: "tabsal" };
+  var legacyOrder = { OrderID: "O-2", PaymentStatus: "PAID", FulfillmentStatus: "OPEN",
+    CreatedAt: "2026-10-05T00:00:00Z" };
+  var pendingIntent = { OrderID: "O-3", ContractVersion: "SALES_RECOGNITION_V2", State: "IN_PROGRESS" };
+  var legacyThenPending = { OrderID: "O-3", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" };
+  var committedEvent = { OrderID: "O-4", ContractVersion: "SALES_RECOGNITION_V2", PostingStatus: "COMMITTED" };
+  check(classifySalesRecognitionCohort(legacyTabsal, {}).cohort === contract.COHORTS.TABSAL_LEGACY,
+    "TabSal legacy classified");
+  check(classifySalesRecognitionCohort(legacyOrder, {}).cohort === contract.COHORTS.PRE_V2_ORDER &&
+    classifySalesRecognitionCohort(legacyOrder, {}).status === contract.STATUS.OK,
+    "pre-V2 order classified despite dates");
+  var pending = classifySalesRecognitionCohort(legacyThenPending, { intents: [pendingIntent] });
+  check(pending.cohort === contract.COHORTS.V2_PENDING && pending.status === contract.STATUS.OK,
+    "pending V2 never legacy");
+  var pausedPending = classifySalesRecognitionCohort(legacyThenPending,
+    { intents: [pendingIntent], mode: "PAUSED", config: paused });
+  check(pausedPending.cohort === contract.COHORTS.V2_PENDING, "PAUSED never falls back to legacy");
+  check(classifySalesRecognitionCohort({ OrderID: "O-4" },
+    { events: [committedEvent] }).cohort === contract.COHORTS.V2_COMMITTED, "committed V2 classified");
+  var dateOnly = classifySalesRecognitionCohort({ OrderID: "O-5", CreatedAt: "2026-10-07T00:00:00Z" },
+    { config: activated });
+  check(dateOnly.cohort === contract.COHORTS.INCONSISTENT && dateOnly.status === contract.STATUS.UNKNOWN &&
+    dateOnly.code === codes.DATE_ONLY_NO_PERSISTED_EVIDENCE, "date-only ambiguity is inconsistent");
+  check(classifySalesRecognitionCohort({ OrderID: "O-6" }, {}).status === contract.STATUS.UNKNOWN &&
+    classifySalesRecognitionCohort({ OrderID: "O-6" }, {}).cohort === contract.COHORTS.UNKNOWN,
+    "no evidence stays UNKNOWN");
+  check(classifySalesRecognitionCohort({ OrderID: "O-7", ContractVersion: "SALES_RECOGNITION_V1" },
+    {}).status === contract.STATUS.RECOVERY_REQUIRED &&
+    classifySalesRecognitionCohort({ OrderID: "O-7", ContractVersion: "SALES_RECOGNITION_V1" },
+      {}).cohort === contract.COHORTS.INCONSISTENT, "unknown contract version never legacy");
+  var conflict = classifySalesRecognitionCohort({ OrderID: "O-8" },
+    { intents: [{ OrderID: "O-8", ContractVersion: "SALES_RECOGNITION_V2" }],
+      operations: [{ OrderID: "O-8", ContractVersion: "OTHER_V1" }] });
+  check(conflict.status === contract.STATUS.RECOVERY_REQUIRED && conflict.code === codes.IDENTITY_CONFLICT,
+    "conflicting persisted versions recover");
+  check(classifySalesRecognitionCohort(null, {}).status === contract.STATUS.UNKNOWN, "blank input UNKNOWN");
+  var datesNeverFlip = classifySalesRecognitionCohort(legacyOrder, { config: activated });
+  check(datesNeverFlip.cohort === contract.COHORTS.PRE_V2_ORDER,
+    "activation dates alone never classify");
+  return { total: 30, pass: pass, fail: 30 - pass };
+}
+
+function testSalesV2CutoverPeriods() {
+  var pass = 0, contract = SALES_RECOGNITION_V2_CONTRACT, codes = contract.REFUSAL_CODES;
+  function check(value, label) { if (!value) throw new Error("SALES_V2_CUTOVER:" + label); pass++; }
+  var prepared = salesRecognitionV2DefaultConfig();
+  check(prepared.mode === "PREPARED" && prepared.activationID === "" && prepared.activatedAt === "",
+    "pre-activation default disabled");
+  var activated = { mode: "ACTIVE", contractVersion: "SALES_RECOGNITION_V2", activationID: "ACT-1",
+    activatedAt: "2026-11-01T00:00:00.000Z", configVersion: 1 };
+  var paused = Object.assign({}, activated, { mode: "PAUSED" });
+  check(paused.activationID === activated.activationID && paused.activatedAt === activated.activatedAt,
+    "pause does not change T");
+  check(salesRecognitionV2RequestGate(paused).code === codes.V2_MODE_PAUSED,
+    "PAUSED rejects new Sales");
+  var pendingOrder = { OrderID: "O-10", PaymentStatus: "UNPAID", FulfillmentStatus: "OPEN" };
+  var intents = [{ OrderID: "O-10", ContractVersion: "SALES_RECOGNITION_V2", State: "IN_PROGRESS" }];
+  check(classifySalesRecognitionCohort(pendingOrder, { intents: intents, config: prepared }).cohort ===
+    contract.COHORTS.V2_PENDING, "pre-T V2 intent retries stay V2");
+  check(classifySalesRecognitionCohort(pendingOrder, { intents: intents, config: paused }).cohort ===
+    contract.COHORTS.V2_PENDING, "paused retry stays V2");
+  check(classifySalesRecognitionCohort(pendingOrder, { intents: intents, config: activated }).cohort ===
+    contract.COHORTS.V2_PENDING, "sticky pending classification across mode changes");
+  check(classifySalesRecognitionCohort(pendingOrder, { intents: intents, mode: "PAUSED" }).cohort !==
+    contract.COHORTS.PRE_V2_ORDER && classifySalesRecognitionCohort(pendingOrder,
+      { intents: intents, mode: "PAUSED" }).cohort !== contract.COHORTS.TABSAL_LEGACY,
+    "no legacy cohort under pause");
+  var resumed = Object.assign({}, activated, { mode: "ACTIVE" });
+  check(salesRecognitionV2RequestGate(resumed).allowed && resumed.activatedAt === activated.activatedAt,
+    "resume keeps contract and T");
+  check(validateSalesRecognitionV2Config(resumed).status === "PASS" &&
+    validateSalesRecognitionV2Config(paused).status === "PASS", "resume/pause configs valid");
+  return { total: 9, pass: pass, fail: 9 - pass };
+}

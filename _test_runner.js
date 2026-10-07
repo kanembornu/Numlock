@@ -71,6 +71,7 @@ var files = [
   '94.Supplier.Master.js',
   '95.Transaction.Operational.js',
   '95A.Transaction.Production.js',
+  '97.SalesRecognition.V2.Foundation.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
@@ -211,6 +212,11 @@ run('testTransactionProductionReadinessMatrices', 'testTransactionProductionRead
 run('testTransactionCrashRecoveryExecution', 'testTransactionCrashRecoveryExecution()');
 run('testTransactionExecutorFixtures', 'testTransactionExecutorFixtures()');
 run('testTransactionPurchaseExpenseBehavioralFixtures', 'testTransactionPurchaseExpenseBehavioralFixtures()');
+
+// SALES_RECOGNITION_V2 U1 foundation (pure contract/config/classifier/preflight).
+run('testSalesRecognitionV2FoundationContracts', 'testSalesRecognitionV2FoundationContracts()');
+run('testSalesV2CutoverPeriods', 'testSalesV2CutoverPeriods()');
+run('testSalesV2AccountPreflight', 'testSalesV2AccountPreflight()');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
