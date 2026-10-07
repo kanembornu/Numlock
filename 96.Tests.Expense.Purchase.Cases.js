@@ -2709,5 +2709,24 @@ function testPurchaseUIContracts() {
   // U132: column widths sum to exactly 100%
   check(colWidths[7] + colWidths[6] + colWidths[5] + colWidths[4] + colWidths[3] + colWidths[2] + colWidths[1] + colWidths[0] === 100, 'U132: final allocation sums to 100%');
 
+  // === P-1: Purchase payment-status UI → backend handoff regression ===
+  // U137: live receipt payload construction (195 submitReceiptEntry) sends explicit paymentStatus "PAID".
+  check(_htmlActions.indexOf('cashAccountCode: cashAccountCode, paymentStatus: "PAID" }') !== -1,
+    'U137: receipt payload sends explicit paymentStatus PAID');
+  // U138 POSITIVE: UI-shaped payload (exact live fields from 195 receipt payload) passes the strict write normalizer.
+  var uiPayload = { transactionType: 'EXPENSE', expenseItemId: 'OSR04',
+    requestKey: 'receipt-0123456789abcdef0123456789abcdef',
+    input: { ExpenseDate: '2026-10-01', PurchaseQty: '1', PurchaseUOM: 'kg', AcquisitionValue: '20000',
+      SupplierSource: 'TEST', ExternalRef: '', ExternalDocumentStatus: 'EXTERNAL_DOCUMENT_UNAVAILABLE', Attested: true },
+    cashAccountCode: '1000', paymentStatus: 'PAID' };
+  var uiNormalized = normalizePurchaseEventRequest_(clone(uiPayload));
+  check(uiNormalized.paymentStatus === 'PAID' && uiNormalized.cashAccountCode === '1000',
+    'U138: UI-shaped payload accepted with explicit paymentStatus PAID');
+  // U139 NEGATIVE: identical payload without paymentStatus must keep failing closed.
+  var omittedPayload = clone(uiPayload); delete omittedPayload.paymentStatus;
+  var omittedRefused = false;
+  try { normalizePurchaseEventRequest_(omittedPayload); } catch (error) { omittedRefused = error.message === 'INVALID_PAYMENT_STATUS'; }
+  check(omittedRefused, 'U139: payload without paymentStatus still refused INVALID_PAYMENT_STATUS');
+
   return { status: 'PASS', assertions: count };
 }

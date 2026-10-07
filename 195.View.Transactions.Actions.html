@@ -716,7 +716,7 @@
         var cashAccountCode = cashAccountSelect ? cashAccountSelect.value : "";
         state.cashAccountCode = cashAccountCode;
         if (!state.receiptKey) state.receiptKey = "receipt-" + Array.from(crypto.getRandomValues(new Uint8Array(16)), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
-        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input, cashAccountCode: cashAccountCode };
+        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input, cashAccountCode: cashAccountCode, paymentStatus: "PAID" };
       }
       try {
         window.sessionStorage.setItem("numlock.receipt.pending", JSON.stringify({ payload: state.receiptPayload,
