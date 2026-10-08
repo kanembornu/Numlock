@@ -1356,5 +1356,114 @@ function testSalesRecognitionV2SaveGates() {
     resW2.detail.indexOf("EFFECTIVE_WINDOW_REVERSED") !== -1 &&
     rtW2.repository.rows().length === 0 && rtW2.events.batches.length === 0 &&
     snapshot(rtW2.spreadsheet) === snapW2);
-  return { total: 40, pass: pass, fail: 40 - pass };
+  // ---- Authority-sheet schema gate (Products/ProductPricing): required
+  // columns present exactly once with compatible meaning; additive columns are
+  // safe; missing/renamed/duplicated/reordered authority fails closed.
+  function authorityGateSheets_(productHeaders, pricingHeaders) {
+    var sheets = salesV2SaveBaseSheets_();
+    sheets.Products = [productHeaders].concat(sheets.Products.slice(1).map(function(row) {
+      return productHeaders.map(function(header) {
+        var index = sheets.Products[0].indexOf(header);
+        return index === -1 ? "" : row[index];
+      });
+    }));
+    sheets.ProductPricing = [pricingHeaders].concat(sheets.ProductPricing.slice(1).map(function(row) {
+      return pricingHeaders.map(function(header) {
+        var index = sheets.ProductPricing[0].indexOf(header);
+        return index === -1 ? "" : row[index];
+      });
+    }));
+    return sheets;
+  }
+  var prodProductHeaders = PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS
+    .concat(["CreatedAt", "UpdatedAt", "Notes"]);
+  var prodPricingHeaders = ["ID_Price"]
+    .concat(PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS.slice(0, 6), ["Source"],
+      PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS.slice(6), ["CreatedAt", "UpdatedAt"]);
+  // C23: minimal exact 7/7 authority headers pass.
+  check("C23", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(salesV2SaveBaseSheets_()))
+    .status === "PASS");
+  // C24: production-shaped 10-column Products (required prefix + trailing
+  // CreatedAt/UpdatedAt/Notes) passes.
+  check("C24", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(
+    authorityGateSheets_(prodProductHeaders, PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS)))
+    .status === "PASS");
+  // C25: production-shaped 11-column ProductPricing (ID_Price leading +
+  // Source interleaved + CreatedAt/UpdatedAt trailing) passes.
+  check("C25", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(
+    authorityGateSheets_(PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS, prodPricingHeaders)))
+    .status === "PASS");
+  // C26: harmless additive extras pass on both sheets.
+  check("C26", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(authorityGateSheets_(
+    prodProductHeaders.concat(["ExtraFlag"]), prodPricingHeaders.concat(["ExtraFlag"]))))
+    .status === "PASS");
+  // C27: missing required column fails (ProductPricing without Harga).
+  var gateC27 = salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(authorityGateSheets_(
+    PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS,
+    PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS.filter(function(h) { return h !== "Harga"; }))));
+  check("C27", gateC27.status === "FAIL" && gateC27.badSheets.indexOf("ProductPricing") !== -1 &&
+    gateC27.badSheets.indexOf("Products") === -1);
+  // C28: duplicate required column fails (Products with a trailing IsActive
+  // duplicate; last-wins name indexing must never be reachable).
+  check("C28", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(authorityGateSheets_(
+    prodProductHeaders.concat(["IsActive"]), PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS)))
+    .status === "FAIL");
+  // C29: renamed authority column fails (Products Produk -> ProductName).
+  check("C29", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(authorityGateSheets_(
+    PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS.map(function(h) {
+      return h === "Produk" ? "ProductName" : h; }),
+    PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS)))
+    .status === "FAIL");
+  // C30: wrong semantic authority fails (required Products columns present but
+  // reordered -> positional authority violated).
+  check("C30", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(authorityGateSheets_(
+    ["Produk", "ID_Prod"].concat(PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS.slice(2)),
+    PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS)))
+    .status === "FAIL");
+  // C31: wrong semantic authority fails (ProductPricing Harga renamed to a
+  // non-authoritative price name).
+  check("C31", salesRecognitionV2SaveSchemaGate_(salesV2SaveFixture_(authorityGateSheets_(
+    PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS,
+    PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS.map(function(h) {
+      return h === "Harga" ? "HargaIDR" : h; }))))
+    .status === "FAIL");
+  // C32: historical master reads unchanged — name-based canonical reads over
+  // the additive production-shaped fixtures return the same required-field
+  // values as the minimal exact fixtures.
+  var additiveFixtureC32 = salesV2SaveFixture_(authorityGateSheets_(prodProductHeaders, prodPricingHeaders));
+  var minimalFixtureC32 = salesV2SaveFixture_(salesV2SaveBaseSheets_());
+  var minProductsC32 = readCanonicalTable(minimalFixtureC32, "Products",
+    PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS);
+  var addProductsC32 = readCanonicalTable(additiveFixtureC32, "Products",
+    PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS);
+  var minPricingC32 = readCanonicalTable(minimalFixtureC32, "ProductPricing",
+    PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS);
+  var addPricingC32 = readCanonicalTable(additiveFixtureC32, "ProductPricing",
+    PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS);
+  check("C32", minProductsC32.length === addProductsC32.length && minProductsC32.length > 0 &&
+    minProductsC32.every(function(row, index) {
+      return PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS.every(function(header) {
+        return String(row[header]) === String(addProductsC32[index][header]); });
+    }) &&
+    minPricingC32.length === addPricingC32.length && minPricingC32.length > 0 &&
+    minPricingC32.every(function(row, index) {
+      return PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS.every(function(header) {
+        return String(row[header]) === String(addPricingC32[index][header]); });
+    }));
+  // C33: U2 Save snapshot deterministic under additive production-shaped
+  // authority headers — identical identities and identical frozen plan.
+  var rtC33Base = salesV2SaveRuntime_({ fixture: salesV2SaveFixture_(salesV2SaveBaseSheets_()) });
+  var rtC33Add = salesV2SaveRuntime_({ fixture: salesV2SaveFixture_(
+    authorityGateSheets_(prodProductHeaders, prodPricingHeaders)) });
+  var resC33Base = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("auth-snap-1"), rtC33Base);
+  var resC33Add = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("auth-snap-1"), rtC33Add);
+  check("C33", resC33Base.status === "DONE" && resC33Add.status === "DONE" &&
+    resC33Base.orderID === resC33Add.orderID &&
+    resC33Base.recognitionID === resC33Add.recognitionID &&
+    resC33Base.journalID === resC33Add.journalID &&
+    resC33Base.auditID === resC33Add.auditID &&
+    rtC33Base.events.appliedRows === rtC33Add.events.appliedRows &&
+    JSON.stringify(rtC33Base.repository.rows()[0].OperationPlan) ===
+      JSON.stringify(rtC33Add.repository.rows()[0].OperationPlan));
+  return { total: 51, pass: pass, fail: 51 - pass };
 }

@@ -150,6 +150,35 @@ function salesRecognitionV2SaveFieldsExact_(actual, expected, headers) {
   });
 }
 
+// Read-only authority sheet check for the master tables the Save only reads
+// (never writes): every required column must exist exactly once by name so a
+// renamed or duplicated authority column fails closed; additive columns are
+// tolerated. Products additionally keeps the frozen seven-column prefix in
+// order because getCanonicalTransactionData reads those columns positionally
+// (bounded read); extras are allowed only after the required prefix.
+// ponytail: ProductPricing enforces presence-once only (no positional
+// requirement) because every pricing read path is header-name based; upgrade
+// to a shared master-schema contract if a positional pricing reader is added.
+function salesRecognitionV2SaveAuthoritySheetOk_(sheet, required, requirePrefix) {
+  if (!sheet) return false;
+  var lastColumn = sheet.getLastColumn();
+  if (lastColumn < required.length) return false;
+  var actual = sheet.getRange(1, 1, 1, lastColumn).getValues()[0].map(function(value) {
+    return String(value).trim();
+  });
+  var seen = {};
+  for (var i = 0; i < actual.length; i++) {
+    if (required.indexOf(actual[i]) === -1) continue;
+    if (seen[actual[i]]) return false;
+    seen[actual[i]] = true;
+  }
+  for (var j = 0; j < required.length; j++) if (!seen[required[j]]) return false;
+  if (requirePrefix) {
+    for (var k = 0; k < required.length; k++) if (actual[k] !== required[k]) return false;
+  }
+  return true;
+}
+
 // Zero-write schema gate: every sheet the save reads or writes must exist with
 // exact canonical headers before anything else is attempted. Header reads only;
 // never recomputes mutable master rows. Also re-run on resume (stored plan) so a
@@ -165,8 +194,8 @@ function salesRecognitionV2SaveSchemaGate_(ss) {
     [save.AUDIT_SHEET, save.AUDIT_HEADERS],
     ["BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS],
     ["Accounts", CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS],
-    ["Products", PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS],
-    ["ProductPricing", PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS],
+    ["Products", PRODUCTS_DOMAIN_CONTRACT.PRODUCT_HEADERS, "PREFIX_AUTHORITY"],
+    ["ProductPricing", PRODUCTS_DOMAIN_CONTRACT.PRICING_HEADERS, "NAME_AUTHORITY"],
     [t.PRODUCT_VARIANTS.SHEET, t.PRODUCT_VARIANTS.HEADERS],
     [t.RECIPE_VERSIONS.SHEET, t.RECIPE_VERSIONS.HEADERS],
     [t.RECIPE_VERSION_LINES.SHEET, t.RECIPE_VERSION_LINES.HEADERS],
@@ -178,7 +207,16 @@ function salesRecognitionV2SaveSchemaGate_(ss) {
   required.forEach(function(entry) {
     var sheet = ss.getSheetByName(entry[0]);
     if (!sheet) { bad.push(entry[0]); return; }
-    try { requireCanonicalHeaders(sheet, entry[1]); } catch (error) { bad.push(entry[0]); }
+    try {
+      if (entry[2] === "PREFIX_AUTHORITY" || entry[2] === "NAME_AUTHORITY") {
+        if (!salesRecognitionV2SaveAuthoritySheetOk_(sheet, entry[1],
+            entry[2] === "PREFIX_AUTHORITY")) {
+          throw new Error("SALES_V2_AUTHORITY_SCHEMA_NOT_READY");
+        }
+      } else {
+        requireCanonicalHeaders(sheet, entry[1]);
+      }
+    } catch (error) { bad.push(entry[0]); }
   });
   return { status: bad.length ? "FAIL" : "PASS", badSheets: bad };
 }

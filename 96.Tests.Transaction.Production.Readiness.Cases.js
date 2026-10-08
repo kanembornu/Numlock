@@ -388,6 +388,17 @@ function testSalesV2AccountPreflight() {
     var result = preflightSalesRecognitionAccounts(scenario.rows);
     check(scenario.id, result.status === "FAIL" && hasError(result, scenario.expect, scenario.code));
   });
-  check("P07", pass === 31);
-  return { total: 32, pass: pass, fail: 32 - pass };
+  // Legacy proven blank NormalBalance: tolerated ONLY for 4000 (frozen
+  // migrations never persist NormalBalance for 4000; ACCOUNT_CORE["4000"] has
+  // no NormalBalance element). Wrong explicit balances, blank 1030/2010, and
+  // every other required field stay fail-closed.
+  check("P08", preflightSalesRecognitionAccounts(mutated("4000", "NormalBalance", "")).status === "PASS");
+  var p09 = preflightSalesRecognitionAccounts(mutated("4000", "NormalBalance", "DEBIT"));
+  check("P09", p09.status === "FAIL" && hasError(p09, codes.ACCOUNT_METADATA_MISMATCH, "4000"));
+  var p10 = preflightSalesRecognitionAccounts(mutated("1030", "NormalBalance", ""));
+  check("P10", p10.status === "FAIL" && hasError(p10, codes.ACCOUNT_METADATA_MISMATCH, "1030"));
+  var p11 = preflightSalesRecognitionAccounts(mutated("2010", "NormalBalance", ""));
+  check("P11", p11.status === "FAIL" && hasError(p11, codes.ACCOUNT_METADATA_MISMATCH, "2010"));
+  check("P07", pass === 35);
+  return { total: 36, pass: pass, fail: 36 - pass };
 }

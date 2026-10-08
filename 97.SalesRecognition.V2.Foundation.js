@@ -341,8 +341,17 @@ function salesRecognitionAccountExpectations_() {
 function salesRecognitionAccountFieldMismatch_(row, expected) {
   return Object.keys(expected).some(function(field) {
     if (field === "AccountCode") return false;
-    return String(row[field] === undefined || row[field] === null ? "" : row[field]).trim() !==
-      String(expected[field]);
+    var actual = String(row[field] === undefined || row[field] === null ? "" : row[field]).trim();
+    // 4000 legacy blank NormalBalance is the proven production convention: the
+    // frozen Accounts migrations never persist NormalBalance for 4000 and
+    // BALANCE_FOUNDATION_PARTIAL_ACCOUNTS_RECOVERY.ACCOUNT_CORE["4000"] carries
+    // no NormalBalance element. Blank means "no claim" (derivable: Revenue =>
+    // CREDIT); any non-blank value must still match the required authority
+    // exactly, and every other required field stays fail-closed.
+    if (field === "NormalBalance" && expected.AccountCode === "4000" && actual === "") {
+      return false;
+    }
+    return actual !== String(expected[field]);
   });
 }
 
