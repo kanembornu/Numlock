@@ -10,6 +10,8 @@ var runSalesV2U4MutationProof = require('./tests/browser/sales-v2-u4-mutation-pr
 globalThis.runSalesV2U4MutationProof = runSalesV2U4MutationProof;
 var runSalesV2U5MutationProof = require('./tests/browser/sales-v2-u5-mutation-proof.js');
 globalThis.runSalesV2U5MutationProof = runSalesV2U5MutationProof;
+var runSalesV2U6MutationProof = require('./tests/browser/sales-v2-u6-mutation-proof.js');
+globalThis.runSalesV2U6MutationProof = runSalesV2U6MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -85,12 +87,14 @@ var files = [
   '97.SalesRecognition.V2.Foundation.js',
   '97A.SalesRecognition.V2.Save.js',
   '97B.SalesRecognition.V2.Projection.js',
+  '97C.SalesRecognition.V2.Correction.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
   '96.Tests.SalesRecognition.V2.Projection.Cases.js',
   '96.Tests.SalesRecognition.V2.U4.Cases.js',
   '96.Tests.SalesRecognition.V2.U5.Cases.js',
+  '96.Tests.SalesRecognition.V2.U6.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -270,6 +274,23 @@ run('testSalesRecognitionV2U5LifecyclePeriods', 'testSalesRecognitionV2U5Lifecyc
 run('testSalesRecognitionV2U5PolicyCQuality', 'testSalesRecognitionV2U5PolicyCQuality()');
 run('testSalesRecognitionV2U5Parity', 'testSalesRecognitionV2U5Parity()');
 run('testSalesV2U5MutationProof', 'JSON.stringify(runSalesV2U5MutationProof())');
+
+// SALES_RECOGNITION_V2 U6 durable Correct/Void mutations: durability,
+// idempotency, recovery, integrity, lifecycle/concurrency, cross-layer
+// (U3/U4/U5), Policy C, legacy cross-rejection, transport, 29-item source
+// audit + sensitivity proof.
+run('testSalesRecognitionV2U6VoidCore', 'testSalesRecognitionV2U6VoidCore()');
+run('testSalesRecognitionV2U6VoidRecovery', 'testSalesRecognitionV2U6VoidRecovery()');
+run('testSalesRecognitionV2U6VoidIntegrity', 'testSalesRecognitionV2U6VoidIntegrity()');
+run('testSalesRecognitionV2U6CorrectCore', 'testSalesRecognitionV2U6CorrectCore()');
+run('testSalesRecognitionV2U6CorrectRecovery', 'testSalesRecognitionV2U6CorrectRecovery()');
+run('testSalesRecognitionV2U6Lifecycle', 'testSalesRecognitionV2U6Lifecycle()');
+run('testSalesRecognitionV2U6CrossLayer', 'testSalesRecognitionV2U6CrossLayer()');
+run('testSalesRecognitionV2U6PolicyC', 'testSalesRecognitionV2U6PolicyC()');
+run('testSalesRecognitionV2U6Legacy', 'testSalesRecognitionV2U6Legacy()');
+run('testSalesRecognitionV2U6Transport', 'testSalesRecognitionV2U6Transport()');
+run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit()');
+run('testSalesV2U6MutationProof', 'JSON.stringify(runSalesV2U6MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

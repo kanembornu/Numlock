@@ -243,6 +243,25 @@ function salesRecognitionActiveEventIndex_(projection) {
   return index;
 }
 
+// U6 voided-chain display authority: a V2 chain with NO active-view event is
+// shown as Voided only when its recognized history is exactly one
+// RECOGNITION plus at least one REVERSAL (the U6 append-only Void or the
+// reversal half of a Correct). Any other shape stays fail-closed.
+function salesRecognitionVoidedChainEvent_(projection, orderKey, header) {
+  if (!header || String(header.status) !== "RECOGNIZED") return null;
+  var chainEvents = (projection.events || []).filter(function(event) {
+    return event.chainKey === orderKey && event.status === "RECOGNIZED";
+  });
+  var recognitions = chainEvents.filter(function(event) {
+    return event.eventType === "RECOGNITION";
+  });
+  var reversals = chainEvents.filter(function(event) {
+    return event.eventType === "REVERSAL";
+  });
+  if (recognitions.length !== 1 || reversals.length < 1) return null;
+  return recognitions[0];
+}
+
 function salesRecognitionQualityIndex_(projection) {
   var index = {};
   function bucket(identity) {
@@ -336,7 +355,7 @@ function salesRecognitionCollectProductIdentities_(projection, orderId) {
   return { productIds: productIds, variantIds: variantIds, display: identities.join(", ") };
 }
 
-function buildTransactionSalesOrderRow_(header, activeEvent, projection, qualityIndex) {
+function buildTransactionSalesOrderRow_(header, activeEvent, projection, qualityIndex, view) {
   var orderId = String(header.headerId || "");
   var identity = String(header.sourceIdentity || "");
   var lines = salesRecognitionDetailLines_(projection, header, activeEvent);
@@ -344,6 +363,7 @@ function buildTransactionSalesOrderRow_(header, activeEvent, projection, quality
   var qty = 0;
   lines.forEach(function(line) { qty += line.qty; });
   var label = salesRecognitionSourceLabel_(header.cohort);
+  var active = !view || view.isActive !== false;
   return {
     id: identity,
     date: activeEvent.dateKey,
@@ -357,7 +377,7 @@ function buildTransactionSalesOrderRow_(header, activeEvent, projection, quality
     revenue: activeEvent.signedAmount,
     expense: 0,
     source: label,
-    isActive: true,
+    isActive: active,
     salesIdentity: identity,
     salesSourceLabel: label,
     salesCohort: header.cohort,
@@ -428,7 +448,17 @@ function buildTransactionSalesReadRows_(ss, range, lifecycleSalesRows) {
     // active event, never become rows, and never fall back to legacy
     // TabSal/Order/Payment economics.
     var activeEvent = activeEvents[orderKey];
-    if (!activeEvent) return;
+    if (!activeEvent) {
+      // U6: a reversed-only V2 chain is a VOIDED row (visible only in the
+      // voided/all lifecycle views through its isActive=false value).
+      var voidedEvent = salesRecognitionVoidedChainEvent_(projection, orderKey, header);
+      if (!voidedEvent) return;
+      claimed[orderKey] = true;
+      if (!withinRange(voidedEvent.dateKey)) return;
+      rows.push(buildTransactionSalesOrderRow_(header, voidedEvent, projection,
+        qualityIndex, { isActive: false, status: "VOIDED" }));
+      return;
+    }
     claimed[orderKey] = true;
     if (!withinRange(activeEvent.dateKey)) return;
     rows.push(buildTransactionSalesOrderRow_(header, activeEvent, projection, qualityIndex));
@@ -476,11 +506,18 @@ function buildSalesRecognitionOrderDetail_(identity, projection) {
     throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
   }
   var orderId = String(header.headerId || "");
-  var activeEvent = salesRecognitionActiveEventIndex_(projection)["ORDER:" + orderId];
-  if (!activeEvent) {
+  var orderKey = "ORDER:" + orderId;
+  var activeEvent = salesRecognitionActiveEventIndex_(projection)[orderKey];
+  // U6: a reversed-only chain reads as a VOIDED detail (original amount and
+  // lineage preserved, never active); every other shape stays fail-closed.
+  var voidedEvent = activeEvent ? null :
+    salesRecognitionVoidedChainEvent_(projection, orderKey, header);
+  if (!activeEvent && !voidedEvent) {
     throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
   }
-  var lines = salesRecognitionDetailLines_(projection, header, activeEvent);
+  var voided = !activeEvent;
+  var displayEvent = activeEvent || voidedEvent;
+  var lines = salesRecognitionDetailLines_(projection, header, displayEvent);
   var identities = salesRecognitionCollectProductIdentities_(projection, orderId);
   var qualityIndex = salesRecognitionQualityIndex_(projection);
   var quality = qualityIndex[identity] || { issues: [], excluded: [] };
@@ -504,27 +541,28 @@ function buildSalesRecognitionOrderDetail_(identity, projection) {
       originalId: event.originalId || null,
       reversalOfRecognitionId: event.reversalOfRecognitionId || null,
       replacementId: event.replacementId || null,
-      active: event === activeEvent
+      active: !voided && event === activeEvent
     };
   });
   var label = salesRecognitionSourceLabel_(header.cohort);
   var detail = {
     id: identity,
     transactionType: "Sales",
-    date: activeEvent.dateKey,
+    date: displayEvent.dateKey,
     source: label,
-    isActive: true,
-    status: "ACTIVE",
-    // U6 owns V2/Pre-V2 Correct+Void. Fail closed until then.
+    isActive: !voided,
+    status: voided ? "VOIDED" : "ACTIVE",
+    // U6 owns the durable V2 Correct+Void core; the operator dispatch seam
+    // stays closed until U7, so actions remain fail-closed either way.
     canCorrect: false, canVoid: false,
-    immutableReason: "SALES_RECOGNITION_ACTION_UNSUPPORTED",
+    immutableReason: voided ? "ALREADY_VOIDED" : "SALES_RECOGNITION_ACTION_UNSUPPORTED",
     salesIdentity: identity,
     salesSourceLabel: label,
     salesCohort: header.cohort,
     orderId: orderId,
     salesId: null,
-    revisionId: activeEvent.revisionId || header.revisionId || null,
-    recognitionId: activeEvent.recognitionId || header.recognitionId || null,
+    revisionId: displayEvent.revisionId || header.revisionId || null,
+    recognitionId: displayEvent.recognitionId || header.recognitionId || null,
     recognitionStatus: header.status,
     contractVersion: projection.contract,
     orderType: String(header.orderType || ""),
@@ -533,22 +571,22 @@ function buildSalesRecognitionOrderDetail_(identity, projection) {
     product: identities.display,
     type: (lines[0] && lines[0].tipe) || String(header.orderType || ""),
     qty: qty,
-    revenue: activeEvent.signedAmount,
-    amount: activeEvent.signedAmount,
+    revenue: displayEvent.signedAmount,
+    amount: displayEvent.signedAmount,
     expense: 0,
     // Analytical HPP only: never a journal line, never a COGS posting.
-    hppAnalytical: activeEvent.snapshot && activeEvent.snapshot.hppTotalSnapshot !== undefined ?
-      salesRecognitionNumber_(activeEvent.snapshot.hppTotalSnapshot) : header.hppTotalSnapshot,
+    hppAnalytical: displayEvent.snapshot && displayEvent.snapshot.hppTotalSnapshot !== undefined ?
+      salesRecognitionNumber_(displayEvent.snapshot.hppTotalSnapshot) : header.hppTotalSnapshot,
     hppAnalyticalLines: hasLineHpp ? lineHpp : null,
     paymentStatus: header.paymentStatus || null,
     fulfillmentStatus: header.fulfillmentStatus || null,
-    originalId: activeEvent.originalId || null,
-    replacementId: activeEvent.replacementId || null,
+    originalId: displayEvent.originalId || null,
+    replacementId: displayEvent.replacementId || null,
     lineage: lineage,
     lines: lines,
     quality: { issues: quality.issues, excluded: quality.excluded,
       recoveryIssues: quality.issues.filter(function(issue) { return issue.recovery === true; }) },
-    createdAt: activeEvent.recognizedAt || null,
+    createdAt: displayEvent.recognizedAt || null,
     createdBy: "",
     updatedAt: null,
     updatedBy: ""

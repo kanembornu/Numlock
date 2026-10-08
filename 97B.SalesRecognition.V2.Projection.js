@@ -74,6 +74,19 @@ function salesProjectionIssue_(code, sourceIdentity, cohort, detail, recovery) {
     recovery: recovery === true };
 }
 
+// U6 operation linkage sets. A RECOGNITION event may only be authored by the
+// U2 Save operation or the U6 Correct operation (the replacement keeps the
+// correction OperationID and its own new OrderID as BusinessID); a REVERSAL
+// event may only be authored by the U6 Void or U6 Correct operation. Reversal
+// write-side verification activates only when the persisted event actually
+// carries OperationID/AuditID linkage (U6 artifacts do; read-side fixtures
+// without linkage keep the frozen U3 behavior).
+var SALES_RECOGNITION_V2_RECOGNITION_OPERATION_TYPES = Object.freeze([
+  "SALES_RECOGNITION_V2_SAVE", "SALES_V2_CORRECT"]);
+var SALES_RECOGNITION_V2_MUTATION_OPERATION_TYPES = Object.freeze([
+  "SALES_V2_VOID", "SALES_V2_CORRECT"]);
+
+
 function salesProjectionNumber_(value) {
   var number = Number(value);
   return isFinite(number) ? number : 0;
@@ -348,7 +361,8 @@ function salesProjectionVerifyV2Event_(row, context) {
       "operation count=" + operations.length, true) };
   }
   var operation = operations[0];
-  if (String(operation.OperationType || "") !== save.OPERATION_TYPE ||
+  if (SALES_RECOGNITION_V2_RECOGNITION_OPERATION_TYPES.indexOf(
+        String(operation.OperationType || "")) === -1 ||
       String(operation.BusinessID || "") !== String(row.OrderID || "")) {
     return { status: "INTEGRITY_CONFLICT", issue: salesProjectionIssue_(
       iss.INCOMPLETE_V2_RECOGNITION, identity, "V2", "operation linkage mismatch", false) };
@@ -434,6 +448,45 @@ function salesProjectionVerifyV2Reversal_(row, context) {
   if (!context.orderIds[String(row.OrderID || "")]) {
     return { status: "EXCLUDED_INCOMPLETE", issue: salesProjectionIssue_(
       iss.RECOGNITION_OWNER_MISSING, identity, "V2", "owner order missing", false) };
+  }
+  // U6 write-side linkage, only when persisted: OperationID must resolve to
+  // exactly one COMMITTED Void/Correct operation (pending -> recovery), and
+  // AuditID must resolve to exactly one audit bound to this reversal.
+  var operationID = String(row.OperationID || "");
+  if (operationID) {
+    var mutationOperations = (context.sources.rows.TransactionOperations || [])
+      .filter(function(op) { return String(op.OperationID || "") === operationID; });
+    if (mutationOperations.length !== 1) {
+      return { status: "RECOVERY_REQUIRED", issue: salesProjectionIssue_(
+        iss.RECOVERY_REQUIRED_V2, identity, "V2",
+        "reversal operation count=" + mutationOperations.length, true) };
+    }
+    var mutationOperation = mutationOperations[0];
+    if (SALES_RECOGNITION_V2_MUTATION_OPERATION_TYPES.indexOf(
+          String(mutationOperation.OperationType || "")) === -1) {
+      return { status: "INTEGRITY_CONFLICT", issue: salesProjectionIssue_(
+        iss.INVALID_REVERSAL_LINEAGE, identity, "V2",
+        "reversal operation type=" + String(mutationOperation.OperationType || ""), false) };
+    }
+    if (String(mutationOperation.State || "").trim() !== "COMMITTED") {
+      return { status: "RECOVERY_REQUIRED", issue: salesProjectionIssue_(
+        iss.RECOVERY_REQUIRED_V2, identity, "V2",
+        "reversal operation State=" + String(mutationOperation.State || ""), true) };
+    }
+  }
+  var auditID = String(row.AuditID || "");
+  if (auditID) {
+    var mutationAudits = (context.sources.rows.SalesRecognitionAudits || [])
+      .filter(function(audit) { return String(audit.AuditID || "") === auditID; });
+    if (mutationAudits.length !== 1 ||
+        String(mutationAudits[0].RecognitionID || "") !== String(row.RecognitionID || "") ||
+        String(mutationAudits[0].OperationID || "") !== operationID ||
+        String(mutationAudits[0].OrderID || "") !== String(row.OrderID || "") ||
+        String(mutationAudits[0].JournalID || "") !== String(row.RecognitionJournalID || "")) {
+      return { status: "EXCLUDED_INCOMPLETE", issue: salesProjectionIssue_(
+        iss.INCOMPLETE_V2_RECOGNITION, identity, "V2", "reversal audit linkage mismatch",
+        false) };
+    }
   }
   var journal = (context.sources.rows.BalanceLedger || []).filter(function(journalRow) {
     return isCanonicalActive(journalRow.IsActive) &&
@@ -618,8 +671,13 @@ function salesProjectionBuildV2_(orders, context) {
     });
   });
   // COMMITTED SAVE operation with no recognition event -> recovery issue.
+  // U6 mutation intents are surfaced with the same rules: a stalled Void or
+  // Correct intent whose target order does not exist yet becomes recovery
+  // evidence instead of disappearing.
   (context.sources.rows.TransactionOperations || []).forEach(function(operation) {
-    if (String(operation.OperationType || "") !== SALES_RECOGNITION_V2_SAVE.OPERATION_TYPE) return;
+    var operationType = String(operation.OperationType || "");
+    if (operationType !== SALES_RECOGNITION_V2_SAVE.OPERATION_TYPE &&
+        SALES_RECOGNITION_V2_MUTATION_OPERATION_TYPES.indexOf(operationType) === -1) return;
     var businessID = String(operation.BusinessID || "");
     if (String(operation.State || "").trim() !== "COMMITTED") {
       // Persisted but uncommitted SAVE intent: recovery evidence surfaced even
@@ -781,11 +839,25 @@ function buildRecognizedSalesProjection_(sources) {
   });
   totals.ledgerRevenueCredits = ledgerCredits;
   // Active view: latest RECOGNIZED event per chain (ReadModel ordering);
-  // economic history stays immutable.
-  var byChain = {}, chainOrder = [];
+  // economic history stays immutable. U6 lifecycle rule: a chain carrying a
+  // REVERSAL has no active event (Voided / superseded) UNLESS the same chain
+  // also carries the replacement recognition via OriginalID lineage, in which
+  // case the latest RECOGNITION of that chain stays active.
+  var byChain = {}, chainOrder = [], chainReversed = {}, chainReplaced = {};
   var economicEvents = events;
   economicEvents.forEach(function(event) {
     if (event.status !== "RECOGNIZED") return;
+    if (event.eventType === "REVERSAL") chainReversed[event.chainKey] = true;
+    if (event.eventType === "RECOGNITION" && String(event.originalId || "") !== "") {
+      chainReplaced[event.chainKey] = true;
+    }
+  });
+  economicEvents.forEach(function(event) {
+    if (event.status !== "RECOGNIZED") return;
+    var reversed = chainReversed[event.chainKey] === true;
+    var replaced = chainReplaced[event.chainKey] === true;
+    if (reversed && !replaced) return;
+    if (replaced && event.eventType !== "RECOGNITION") return;
     if (!Object.prototype.hasOwnProperty.call(byChain, event.chainKey)) {
       byChain[event.chainKey] = event;
       chainOrder.push(event.chainKey);
