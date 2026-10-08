@@ -46,6 +46,11 @@
 !95A.Transaction.Production.js
 !97.Inventory.Receipt.Runtime.Proof.js
 !97.Inventory.Receipt.Operational.Runtime.Proof.js
+!97.SalesRecognition.V2.Foundation.js
+!97A.SalesRecognition.V2.Save.js
+!97B.SalesRecognition.V2.Projection.js
+!97C.SalesRecognition.V2.Correction.js
+!97D.SalesRecognition.V2.OperatorGuard.js
 !98.Tests.Runner.js
 !100.Code.js
 !189.View.Tailwind.html

@@ -106,14 +106,19 @@ function runSalesV2U8ReleaseAudit() {
     "TEST_ONLY_OVERRIDE");
   record("no test-only account/schema override in production", "PASS");
 
-  // ---- 2. Upload manifest state (informational; registration is U9 scope) ----
+  // ---- 2. Upload manifest state (U9 resolved the U8 registration deferral) ----
   var claspignore = read_(".claspignore");
-  var v2Registered = /^!97\.SalesRecognition/m.test(claspignore);
+  var v2Files = ["97.SalesRecognition.V2.Foundation.js", "97A.SalesRecognition.V2.Save.js",
+    "97B.SalesRecognition.V2.Projection.js", "97C.SalesRecognition.V2.Correction.js",
+    "97D.SalesRecognition.V2.OperatorGuard.js"];
+  var v2Registered = v2Files.every(function(file) {
+    return claspignore.indexOf("\n!" + file + "\n") !== -1 || claspignore.startsWith("!" + file + "\n");
+  });
   var testsRegistered = /^!96\.Tests\./m.test(claspignore);
-  if (v2Registered) fail_("V2_FILES_ALREADY_REGISTERED",
-    "V2 registration belongs to the authorized activation/upload task");
+  if (!v2Registered) fail_("V2_FILES_NOT_REGISTERED",
+    "All five 97/97A-97D runtime files must be registered (U9 upload manifest gate)");
   if (testsRegistered) fail_("TESTS_REGISTERED_FOR_UPLOAD");
-  record("V2 files deferred from upload manifest; tests excluded", "DEFERRED_BY_DESIGN(U9)");
+  record("V2 runtime files registered; tests excluded", "REGISTERED_BY_U9");
 
   // ---- 3. Secret/env hygiene over clasp-allowlisted + U8 files ----
   var allowlisted = claspignore.split("\n")
