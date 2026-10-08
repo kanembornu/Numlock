@@ -6,6 +6,8 @@ var runSalesV2U2MutationProof = require('./tests/browser/sales-v2-u2-mutation-pr
 globalThis.runSalesV2U2MutationProof = runSalesV2U2MutationProof;
 var runSalesV2U3MutationProof = require('./tests/browser/sales-v2-u3-mutation-proof.js');
 globalThis.runSalesV2U3MutationProof = runSalesV2U3MutationProof;
+var runSalesV2U4MutationProof = require('./tests/browser/sales-v2-u4-mutation-proof.js');
+globalThis.runSalesV2U4MutationProof = runSalesV2U4MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -67,6 +69,7 @@ var files = [
   '48.Purchase.Events.Migration.js',
   '21.Transaction.Entry.js',
   '90.Dashboard.DateRange.js',
+  '90.Dashboard.Service.js',
   '36.Finance.Service.js',
   '37.Depreciation.Service.js',
   '12A.Depreciation.Report.Service.js',
@@ -84,6 +87,7 @@ var files = [
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
   '96.Tests.SalesRecognition.V2.Projection.Cases.js',
+  '96.Tests.SalesRecognition.V2.U4.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -107,6 +111,11 @@ files.forEach(function(f) {
     process.exit(1);
   }
 });
+
+// 90.Dashboard.Service.js declares these two names; the local harness stubs
+// stay authoritative (no PropertiesService in the local runner).
+globalThis.invalidateDashboardCache = function() {};
+globalThis.getDashboardCacheRevision = function() { return 'LOCAL_FIXTURE'; };
 
 // Authority fixtures: ING-018 (lemon) item + management-operational-standard conversion
 // needed for DIRECT_HPP_COMPONENT receipt posting in orchestration/dispatcher/wiring tests.
@@ -241,6 +250,14 @@ run('testSalesRecognitionV2ProjectionCore', 'testSalesRecognitionV2ProjectionCor
 run('testSalesRecognitionV2ProjectionLineage', 'testSalesRecognitionV2ProjectionLineage()');
 run('testSalesRecognitionV2ProjectionParity', 'testSalesRecognitionV2ProjectionParity()');
 run('testSalesV2U3MutationProof', 'JSON.stringify(runSalesV2U3MutationProof())');
+
+// SALES_RECOGNITION_V2 U4 Transaction reader integration: Sales list/detail/
+// query resolve from the shared U3 projection (cohorts, list/query parity,
+// detail model) + sensitivity proof.
+run('testSalesRecognitionV2U4ReaderCohorts', 'testSalesRecognitionV2U4ReaderCohorts()');
+run('testSalesRecognitionV2U4ReaderList', 'testSalesRecognitionV2U4ReaderList()');
+run('testSalesRecognitionV2U4ReaderDetail', 'testSalesRecognitionV2U4ReaderDetail()');
+run('testSalesV2U4MutationProof', 'JSON.stringify(runSalesV2U4MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

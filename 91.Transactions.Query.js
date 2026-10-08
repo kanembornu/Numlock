@@ -26,6 +26,9 @@ function getTransactionsPage(request) {
     });
   }
   response.cacheHit = periodResult.cacheHit;
+  // U4: structured U3 sales-recognition quality survives into the read DTO
+  // (additive; no UI contract change).
+  response.salesRecognition = periodResult.salesRecognition || null;
   response.cacheRevision = getDashboardCacheRevision();
   response.executionMs = Date.now() - startedAt;
   var lifecycleState = normalizeTransactionsLifecycleState(safeRequest);
@@ -155,7 +158,8 @@ function getTransactionsPeriodRows(range) {
       if (keys.every(function(key) { return Boolean(cachedChunks[key]); })) {
         var cachedRows = [];
         keys.forEach(function(key) { cachedRows = cachedRows.concat(JSON.parse(cachedChunks[key])); });
-        return { rows: cachedRows, cacheHit: true };
+        return { rows: cachedRows, cacheHit: true,
+          salesRecognition: meta.salesRecognition || null };
       }
     } catch (cacheReadError) {
       Logger.log("Transactions period cache read skipped: " + String(cacheReadError && cacheReadError.message || cacheReadError));
@@ -164,13 +168,27 @@ function getTransactionsPeriodRows(range) {
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var canonicalData = getCanonicalTransactionData(ss);
-  var periodRows = buildLifecycleTransactionRows(
-    filterTransactionsByDateRange(canonicalData.lifecycleRecords || [], range).slice().reverse()
-  );
+  var lifecycleRecords = filterTransactionsByDateRange(canonicalData.lifecycleRecords || [], range);
+  var lifecycleSales = [];
+  var lifecycleNonSales = lifecycleRecords.filter(function(record) {
+    if (record.transactionType === "Sales") { lifecycleSales.push(record); return false; }
+    return true;
+  });
+  var periodRows = buildLifecycleTransactionRows(lifecycleNonSales.slice().reverse());
+  // U4: Sales rows come from the ONE shared U3 Recognized Sales Projection.
+  // Expense/Purchase/Inventory sources are unchanged.
+  var salesResult = buildTransactionSalesReadRows_(ss, range, lifecycleSales);
+  var salesRecognition = salesRecognitionReadSummary_(salesResult.projection);
   var purchases = readPurchaseEventTransactionRows_(ss);
-  periodRows = periodRows.concat(purchases.concat(readInventoryReceiptTransactionRows_(ss, purchases)).filter(function(row) {
-    return row.date >= range.startDate && row.date <= range.endDate;
-  })).sort(function(a, b) { return String(b.date).localeCompare(String(a.date)); });
+  periodRows = periodRows.concat(salesResult.rows,
+    purchases.concat(readInventoryReceiptTransactionRows_(ss, purchases)).filter(function(row) {
+      return row.date >= range.startDate && row.date <= range.endDate;
+    })
+  ).sort(function(a, b) {
+    // Deterministic: date desc, then stable identity tie-breaker.
+    return String(b.date).localeCompare(String(a.date)) ||
+      String(b.id).localeCompare(String(a.id));
+  });
   var chunkSize = 100;
   var chunkCount = Math.ceil(periodRows.length / chunkSize);
   var cacheEntries = {};
@@ -179,11 +197,400 @@ function getTransactionsPeriodRows(range) {
   }
   try {
     if (chunkCount) cache.putAll(cacheEntries, DASHBOARD_CACHE.TTL_SECONDS);
-    cache.put(metaKey, JSON.stringify({ chunks: chunkCount }), DASHBOARD_CACHE.TTL_SECONDS);
+    cache.put(metaKey, JSON.stringify({ chunks: chunkCount, salesRecognition: salesRecognition }),
+      DASHBOARD_CACHE.TTL_SECONDS);
   } catch (cacheWriteError) {
     Logger.log("Transactions period cache write skipped: " + String(cacheWriteError && cacheWriteError.message || cacheWriteError));
   }
-  return { rows: periodRows, cacheHit: false };
+  return { rows: periodRows, cacheHit: false, salesRecognition: salesRecognition };
+}
+
+// ---------------------------------------------------------------------------
+// SALES_RECOGNITION_V2 U4 read authority.
+// Transaction Sales rows and Sales detail resolve from the ONE shared U3
+// Recognized Sales Projection (`buildRecognizedSalesProjection_`). Sales are
+// NEVER reconstructed from TabSal / Orders / Payments / BalanceLedger /
+// OrderLines inside a reader: those remain U3 inputs only. Additive DTO
+// fields only; no writer, no P&L, no schema change.
+// ---------------------------------------------------------------------------
+var SALES_RECOGNITION_SOURCE_LABELS = Object.freeze({
+  TABSAL_LEGACY: "LEGACY_SALE",
+  PRE_V2_ORDER: "PRE_V2_ORDER",
+  V2_COMMITTED: "SALES_RECOGNITION_V2",
+  V2_PENDING: "SALES_RECOGNITION_V2",
+  INCONSISTENT: "SALES_RECOGNITION_V2",
+  UNKNOWN: "SALES_RECOGNITION_V2"
+});
+
+function salesRecognitionSourceLabel_(cohort) {
+  return SALES_RECOGNITION_SOURCE_LABELS[String(cohort || "")] || "SALES_RECOGNITION_V2";
+}
+
+function isSalesRecognitionOrderIdentity_(value) {
+  return String(value || "").indexOf("ORDER:") === 0;
+}
+
+function salesRecognitionNumber_(value) {
+  var number = Number(value);
+  return isFinite(number) ? number : 0;
+}
+
+function salesRecognitionActiveEventIndex_(projection) {
+  var index = {};
+  ((projection && projection.activeView && projection.activeView.events) || []).forEach(function(event) {
+    index[event.chainKey] = event;
+  });
+  return index;
+}
+
+function salesRecognitionQualityIndex_(projection) {
+  var index = {};
+  function bucket(identity) {
+    var key = String(identity || "");
+    if (!key) return null;
+    if (!index[key]) index[key] = { issues: [], excluded: [] };
+    return index[key];
+  }
+  (projection.quality.issues || []).forEach(function(issue) {
+    var target = bucket(issue.sourceIdentity);
+    if (target) target.issues.push(issue);
+  });
+  (projection.quality.excluded || []).forEach(function(entry) {
+    var target = bucket(entry.sourceIdentity);
+    if (target) target.excluded.push(entry);
+  });
+  return index;
+}
+
+function salesRecognitionReadSummary_(projection) {
+  return {
+    contract: projection.contract,
+    reader: projection.reader,
+    authority: "SALES_RECOGNITION_V2_PROJECTION",
+    activeChains: projection.activeView.events.length,
+    issues: projection.quality.issues,
+    recoveryIssues: projection.quality.recoveryIssues,
+    excluded: projection.quality.excluded
+  };
+}
+
+// Analytical detail lines only — the header amount is authoritative. Committed
+// V2 lines come from the persisted SnapshotJSON (immutable); pre-V2/legacy
+// lines come from the projection's already-read OrderLines/legacy rows.
+function salesRecognitionDetailLines_(projection, header, activeEvent) {
+  var orderId = String(header.headerId || "");
+  var snapshotLines = activeEvent && activeEvent.snapshot &&
+    Array.isArray(activeEvent.snapshot.lines) ? activeEvent.snapshot.lines : [];
+  if (snapshotLines.length) {
+    return snapshotLines.map(function(line, index) {
+      return {
+        lineId: String(line.OrderLineID || (activeEvent.namespace || orderId) + ":" + (index + 1)),
+        productId: String(line.ProductID || ""),
+        productVariantId: String(line.ProductVariantID || ""),
+        tipe: String(line.Tipe || ""),
+        qty: salesRecognitionNumber_(line.Qty),
+        unitPrice: salesRecognitionNumber_(line.SellingPriceSnapshot),
+        lineAmount: salesRecognitionNumber_(line.LineTotal),
+        unitHpp: salesRecognitionNumber_(line.UnitHppSnapshot),
+        lineHpp: salesRecognitionNumber_(line.LineHpp),
+        recipeVersionId: String(line.RecipeVersionID || ""),
+        fromSnapshot: true
+      };
+    });
+  }
+  var chain = "ORDER:" + orderId;
+  return (projection.lines || []).filter(function(line) {
+    return line.sourceIdentity === chain || line.sourceIdentity.indexOf(chain + ":") === 0;
+  }).map(function(line) {
+    return {
+      lineId: String(line.lineId || ""),
+      productId: String(line.productId || ""),
+      productVariantId: String(line.productVariantId || ""),
+      tipe: String(line.tipe || ""),
+      qty: salesRecognitionNumber_(line.qty),
+      unitPrice: salesRecognitionNumber_(line.sellingPrice),
+      lineAmount: salesRecognitionNumber_(line.amount),
+      unitHpp: salesRecognitionNumber_(line.unitHpp),
+      lineHpp: null,
+      recipeVersionId: String(line.recipeVersionId || ""),
+      fromSnapshot: false
+    };
+  });
+}
+
+function salesRecognitionCollectProductIdentities_(projection, orderId) {
+  var chain = "ORDER:" + orderId, productIds = [], variantIds = [];
+  function collect(productId, variantId) {
+    var pid = String(productId || ""), vid = String(variantId || "");
+    if (pid && productIds.indexOf(pid) === -1) productIds.push(pid);
+    if (vid && variantIds.indexOf(vid) === -1) variantIds.push(vid);
+  }
+  (projection.lines || []).forEach(function(line) {
+    if (line.sourceIdentity !== chain && line.sourceIdentity.indexOf(chain + ":") !== 0) return;
+    collect(line.productId, line.productVariantId);
+  });
+  var identities = productIds.slice();
+  variantIds.forEach(function(variantId) {
+    if (identities.indexOf(variantId) === -1) identities.push(variantId);
+  });
+  return { productIds: productIds, variantIds: variantIds, display: identities.join(", ") };
+}
+
+function buildTransactionSalesOrderRow_(header, activeEvent, projection, qualityIndex) {
+  var orderId = String(header.headerId || "");
+  var identity = String(header.sourceIdentity || "");
+  var lines = salesRecognitionDetailLines_(projection, header, activeEvent);
+  var identities = salesRecognitionCollectProductIdentities_(projection, orderId);
+  var qty = 0;
+  lines.forEach(function(line) { qty += line.qty; });
+  var label = salesRecognitionSourceLabel_(header.cohort);
+  return {
+    id: identity,
+    date: activeEvent.dateKey,
+    transactionType: "Sales",
+    canonicalTransactionType: "Sales",
+    product: identities.display,
+    productId: identities.productIds.join(", "),
+    productVariantId: identities.variantIds.join(", "),
+    purchaseCategory: "",
+    qty: qty,
+    revenue: activeEvent.signedAmount,
+    expense: 0,
+    source: label,
+    isActive: true,
+    salesIdentity: identity,
+    salesSourceLabel: label,
+    salesCohort: header.cohort,
+    recognitionId: activeEvent.recognitionId || header.recognitionId || null,
+    revisionId: activeEvent.revisionId || header.revisionId || null,
+    recognitionStatus: header.status,
+    orderType: String(header.orderType || ""),
+    salesQuality: qualityIndex[identity] || { issues: [], excluded: [] }
+  };
+}
+
+// One header row per recognized Sales source record. Unpaid / pending /
+// UNKNOWN / integrity-conflicted V2 never become rows and never fall back to
+// legacy treatment; voided/corrected legacy rows keep their lifecycle in the
+// voided/all views only.
+function buildTransactionSalesReadRows_(ss, range, lifecycleSalesRows) {
+  var projection = buildRecognizedSalesProjectionFromSpreadsheet_(ss);
+  var activeEvents = salesRecognitionActiveEventIndex_(projection);
+  var qualityIndex = salesRecognitionQualityIndex_(projection);
+  var lifecycleById = {};
+  (lifecycleSalesRows || []).forEach(function(record) {
+    lifecycleById[String(record.id)] = record;
+  });
+  var rows = [], claimed = {};
+  function withinRange(dateKey) {
+    return Boolean(dateKey) && dateKey >= range.startDate && dateKey <= range.endDate;
+  }
+  projection.transactions.forEach(function(header) {
+    if (header.kind === "LEGACY_SALE") {
+      var legacyId = String(header.headerId || "");
+      var legacyKey = "LEGACY:" + legacyId;
+      var record = lifecycleById[legacyId];
+      if (!legacyId || claimed[legacyKey] || !record) return;
+      var legacyEvent = activeEvents[header.sourceIdentity];
+      if (!legacyEvent) return;
+      claimed[legacyKey] = true;
+      if (!withinRange(legacyEvent.dateKey)) return;
+      rows.push({
+        id: legacyId,
+        date: legacyEvent.dateKey,
+        transactionType: "Sales",
+        canonicalTransactionType: "Sales",
+        product: record.product,
+        productId: String(record.productId || ""),
+        productVariantId: "",
+        purchaseCategory: "",
+        qty: record.qty,
+        revenue: legacyEvent.signedAmount,
+        expense: 0,
+        source: record.source,
+        isActive: true,
+        salesIdentity: header.sourceIdentity,
+        salesSourceLabel: salesRecognitionSourceLabel_(header.cohort),
+        salesCohort: header.cohort,
+        recognitionId: header.recognitionId || null,
+        revisionId: header.revisionId || null,
+        recognitionStatus: header.status,
+        salesQuality: qualityIndex[header.sourceIdentity] || { issues: [], excluded: [] }
+      });
+      return;
+    }
+    if (header.kind !== "ORDER") return;
+    var orderId = String(header.headerId || "");
+    var orderKey = "ORDER:" + orderId;
+    if (!orderId || claimed[orderKey]) return;
+    // Recognition gate: only an order with a RECOGNIZED active-view event is a
+    // Sale. Unpaid / pending / UNKNOWN / integrity-conflicted orders have no
+    // active event, never become rows, and never fall back to legacy
+    // TabSal/Order/Payment economics.
+    var activeEvent = activeEvents[orderKey];
+    if (!activeEvent) return;
+    claimed[orderKey] = true;
+    if (!withinRange(activeEvent.dateKey)) return;
+    rows.push(buildTransactionSalesOrderRow_(header, activeEvent, projection, qualityIndex));
+  });
+  Object.keys(lifecycleById).forEach(function(id) {
+    var record = lifecycleById[id];
+    var legacyKey = "LEGACY:" + id;
+    if (claimed[legacyKey] || !record || record.isActive !== false) return;
+    claimed[legacyKey] = true;
+    if (!withinRange(record.dateKey)) return;
+    rows.push({
+      id: id,
+      date: record.dateKey,
+      transactionType: "Sales",
+      canonicalTransactionType: "Sales",
+      product: record.product,
+      productId: String(record.productId || ""),
+      productVariantId: "",
+      purchaseCategory: "",
+      qty: record.qty,
+      revenue: record.revenue,
+      expense: 0,
+      source: record.source,
+      isActive: false,
+      salesIdentity: legacyKey,
+      salesSourceLabel: salesRecognitionSourceLabel_("TABSAL_LEGACY"),
+      salesCohort: "TABSAL_LEGACY",
+      recognitionId: null,
+      revisionId: null,
+      recognitionStatus: "NOT_RECOGNIZED",
+      salesQuality: qualityIndex[legacyKey] || { issues: [], excluded: [] }
+    });
+  });
+  return { rows: rows, projection: projection };
+}
+
+// Canonical Sales detail identity for an order-backed Sale (`ORDER:<OrderID>`).
+// Fail closed: an order that U3 does not recognize is not a readable Sale.
+function buildSalesRecognitionOrderDetail_(identity, projection) {
+  var header = null;
+  (projection.transactions || []).forEach(function(entry) {
+    if (entry.kind === "ORDER" && String(entry.sourceIdentity) === identity) header = entry;
+  });
+  if (!header || header.status !== "RECOGNIZED") {
+    throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
+  }
+  var orderId = String(header.headerId || "");
+  var activeEvent = salesRecognitionActiveEventIndex_(projection)["ORDER:" + orderId];
+  if (!activeEvent) {
+    throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
+  }
+  var lines = salesRecognitionDetailLines_(projection, header, activeEvent);
+  var identities = salesRecognitionCollectProductIdentities_(projection, orderId);
+  var qualityIndex = salesRecognitionQualityIndex_(projection);
+  var quality = qualityIndex[identity] || { issues: [], excluded: [] };
+  var qty = 0, lineHpp = 0, hasLineHpp = false;
+  lines.forEach(function(line) {
+    qty += line.qty;
+    if (line.lineHpp !== null && line.lineHpp !== undefined) { lineHpp += line.lineHpp; hasLineHpp = true; }
+  });
+  var chain = "ORDER:" + orderId;
+  var lineage = (projection.events || []).filter(function(event) {
+    return event.chainKey === chain;
+  }).map(function(event) {
+    return {
+      recognitionId: event.recognitionId || null,
+      revisionId: event.revisionId || null,
+      eventType: event.eventType || null,
+      dateKey: event.dateKey || null,
+      signedAmount: event.signedAmount,
+      status: event.status,
+      recognizedAt: event.recognizedAt || null,
+      originalId: event.originalId || null,
+      reversalOfRecognitionId: event.reversalOfRecognitionId || null,
+      replacementId: event.replacementId || null,
+      active: event === activeEvent
+    };
+  });
+  var label = salesRecognitionSourceLabel_(header.cohort);
+  var detail = {
+    id: identity,
+    transactionType: "Sales",
+    date: activeEvent.dateKey,
+    source: label,
+    isActive: true,
+    status: "ACTIVE",
+    // U6 owns V2/Pre-V2 Correct+Void. Fail closed until then.
+    canCorrect: false, canVoid: false,
+    immutableReason: "SALES_RECOGNITION_ACTION_UNSUPPORTED",
+    salesIdentity: identity,
+    salesSourceLabel: label,
+    salesCohort: header.cohort,
+    orderId: orderId,
+    salesId: null,
+    revisionId: activeEvent.revisionId || header.revisionId || null,
+    recognitionId: activeEvent.recognitionId || header.recognitionId || null,
+    recognitionStatus: header.status,
+    contractVersion: projection.contract,
+    orderType: String(header.orderType || ""),
+    productId: identities.productIds.join(", "),
+    productVariantId: identities.variantIds.join(", "),
+    product: identities.display,
+    type: (lines[0] && lines[0].tipe) || String(header.orderType || ""),
+    qty: qty,
+    revenue: activeEvent.signedAmount,
+    amount: activeEvent.signedAmount,
+    expense: 0,
+    // Analytical HPP only: never a journal line, never a COGS posting.
+    hppAnalytical: activeEvent.snapshot && activeEvent.snapshot.hppTotalSnapshot !== undefined ?
+      salesRecognitionNumber_(activeEvent.snapshot.hppTotalSnapshot) : header.hppTotalSnapshot,
+    hppAnalyticalLines: hasLineHpp ? lineHpp : null,
+    paymentStatus: header.paymentStatus || null,
+    fulfillmentStatus: header.fulfillmentStatus || null,
+    originalId: activeEvent.originalId || null,
+    replacementId: activeEvent.replacementId || null,
+    lineage: lineage,
+    lines: lines,
+    quality: { issues: quality.issues, excluded: quality.excluded,
+      recoveryIssues: quality.issues.filter(function(issue) { return issue.recovery === true; }) },
+    createdAt: activeEvent.recognizedAt || null,
+    createdBy: "",
+    updatedAt: null,
+    updatedBy: ""
+  };
+  return detail;
+}
+
+// Additive recognition metadata for a legacy canonical Sales detail. Identity,
+// date, amount, lifecycle and mutability stay on the canonical lifecycle path
+// (U3's own legacy source); only recognition state/quality is attached.
+function attachSalesRecognitionLegacyMetadata_(detail, projection) {
+  var header = null;
+  (projection.transactions || []).forEach(function(entry) {
+    if (entry.kind === "LEGACY_SALE" && String(entry.headerId) === String(detail.id)) header = entry;
+  });
+  var identity = header ? String(header.sourceIdentity) : "LEGACY:" + String(detail.id || "");
+  var quality = salesRecognitionQualityIndex_(projection)[identity] || { issues: [], excluded: [] };
+  detail.salesIdentity = identity;
+  detail.salesSourceLabel = salesRecognitionSourceLabel_("TABSAL_LEGACY");
+  detail.salesCohort = "TABSAL_LEGACY";
+  detail.orderId = null;
+  detail.recognitionId = header ? header.recognitionId || null : null;
+  detail.revisionId = header ? header.revisionId || null : null;
+  detail.recognitionStatus = header ? header.status : "NOT_RECOGNIZED";
+  detail.contractVersion = projection.contract;
+  detail.productVariantId = "";
+  detail.lines = [{
+    lineId: identity + ":1",
+    productId: String(detail.productId || ""),
+    productVariantId: "",
+    tipe: String(detail.type || ""),
+    qty: salesRecognitionNumber_(detail.qty),
+    unitPrice: salesRecognitionNumber_(detail.unitPrice),
+    lineAmount: salesRecognitionNumber_(detail.revenue),
+    unitHpp: salesRecognitionNumber_(detail.unitHPP),
+    lineHpp: salesRecognitionNumber_(detail.cogs),
+    recipeVersionId: "",
+    fromSnapshot: false
+  }];
+  detail.quality = { issues: quality.issues, excluded: quality.excluded,
+    recoveryIssues: quality.issues.filter(function(issue) { return issue.recovery === true; }) };
+  return detail;
 }
 
 // Read-only UI adapter over the frozen receipt authority.

@@ -169,9 +169,13 @@ function salesProjectionBuildLegacy_(sources, context) {
     var dateKey = salesProjectionDateKey_(record.dateKey);
     transactions.push({ sourceIdentity: identity, cohort: "TABSAL_LEGACY", kind: "LEGACY_SALE",
       headerId: id, economicDateKey: dateKey, amount: record.amount,
-      status: "RECOGNIZED", recognitionStatus: "RECOGNIZED" });
+      status: "RECOGNIZED", recognitionStatus: "RECOGNIZED",
+      recognitionId: identity + ":R0", revisionId: "R0" });
     lines.push({ sourceIdentity: identity, cohort: "TABSAL_LEGACY",
       lineId: identity + ":1", dateKey: dateKey, productId: record.productId,
+      productVariantId: "", tipe: String(record.type || ""),
+      sellingPrice: salesProjectionNumber_(record.price),
+      unitHpp: salesProjectionNumber_(record.hpp), recipeVersionId: "",
       qty: record.qty, amount: record.amount });
     context.events.push({ recognitionId: identity + ":R0",
       namespace: identity + ":R0", chainKey: identity,
@@ -280,7 +284,13 @@ function salesProjectionBuildPreV2_(order, context) {
   }).forEach(function(line) {
     context.lines.push({ sourceIdentity: identity, cohort: "PRE_V2_ORDER",
       lineId: String(line.OrderLineID || ""), dateKey: dateKey,
-      productId: String(line.ProductID || ""), qty: salesProjectionNumber_(line.Qty),
+      productId: String(line.ProductID || ""),
+      productVariantId: String(line.ProductVariantID || ""),
+      tipe: String(line.Tipe || ""),
+      sellingPrice: salesProjectionNumber_(line.SellingPriceSnapshot),
+      unitHpp: salesProjectionNumber_(line.UnitHppSnapshot),
+      recipeVersionId: String(line.RecipeVersionID || ""),
+      qty: salesProjectionNumber_(line.Qty),
       amount: salesProjectionNumber_(line.LineTotal) });
   });
   context.events.push({ recognitionId: identity,
@@ -573,16 +583,36 @@ function salesProjectionBuildV2_(orders, context) {
       var snapshotLines = result.snapshot && Array.isArray(result.snapshot.lines) ?
         result.snapshot.lines : [];
       snapshotLines.forEach(function(line, index) {
+        var orderLineId = String(line.OrderLineID || "");
+        // ProductID/Tipe live on the persisted OrderLines row, not inside
+        // SnapshotJSON; join by OrderLineID so analytical product identity
+        // survives without re-reading masters.
+        var orderLine = null;
+        (context.sources.rows.OrderLines || []).some(function(candidate) {
+          if (String(candidate.OrderLineID || "") !== orderLineId || !orderLineId) return false;
+          orderLine = candidate;
+          return true;
+        });
         context.lines.push({ sourceIdentity: eventIdentity, cohort: "V2_COMMITTED",
-          lineId: String(line.OrderLineID || eventIdentity + ":L" + (index + 1)),
-          dateKey: result.dateKey, productId: String(line.ProductVariantID || ""),
-          qty: salesProjectionNumber_(line.Qty), amount: salesProjectionNumber_(line.LineTotal) });
+          lineId: orderLineId || eventIdentity + ":L" + (index + 1),
+          dateKey: result.dateKey,
+          productId: orderLine ? String(orderLine.ProductID || "") : "",
+          productVariantId: String(line.ProductVariantID || ""),
+          tipe: orderLine ? String(orderLine.Tipe || "") : "",
+          sellingPrice: salesProjectionNumber_(line.SellingPriceSnapshot),
+          unitHpp: salesProjectionNumber_(line.UnitHppSnapshot),
+          recipeVersionId: String(line.RecipeVersionID || ""),
+          qty: salesProjectionNumber_(line.Qty),
+          amount: salesProjectionNumber_(line.LineTotal) });
       });
       context.events.push({ recognitionId: String(row.RecognitionID || ""),
         namespace: eventIdentity, chainKey: "ORDER:" + String(row.OrderID || ""),
         cohort: "V2_COMMITTED", eventType: String(row.EventType || ""),
         signedAmount: signedAmount, amount: result.amount, dateKey: result.dateKey,
         revisionId: String(row.RevisionID || ""), sourceIdentity: eventIdentity,
+        originalId: String(row.OriginalID || ""),
+        reversalOfRecognitionId: String(row.ReversalOfRecognitionID || ""),
+        replacementId: String(row.ReplacementID || ""),
         status: "RECOGNIZED", recognizedAt: String(row.RecognizedAt || ""),
         snapshot: result.snapshot, posted: true, recovery: false });
     });
@@ -671,6 +701,10 @@ function buildRecognizedSalesProjection_(sources) {
         economicDateKey: recognizedEvent ? recognizedEvent.dateKey :
           salesProjectionDateKey_(order.CreatedAt),
         amount: salesProjectionNumber_(order.OrderTotal),
+        hppTotalSnapshot: salesProjectionNumber_(order.HppTotalSnapshot),
+        orderType: String(order.OrderType || ""),
+        recognitionId: recognizedEvent ? recognizedEvent.recognitionId : "",
+        revisionId: recognizedEvent ? recognizedEvent.revisionId : "",
         paymentStatus: order.PaymentStatus, fulfillmentStatus: order.FulfillmentStatus,
         status: recognizedEvent ? "RECOGNIZED" : "NOT_RECOGNIZED",
         recognitionStatus: recognizedEvent ? "RECOGNIZED" : "NOT_RECOGNIZED" });
@@ -684,7 +718,13 @@ function buildRecognizedSalesProjection_(sources) {
       lines.push({ sourceIdentity: "ORDER:" + order.OrderID, cohort: cohort,
         lineId: String(line.OrderLineID || ""),
         dateKey: salesProjectionDateKey_(order.CreatedAt),
-        productId: String(line.ProductID || ""), qty: salesProjectionNumber_(line.Qty),
+        productId: String(line.ProductID || ""),
+        productVariantId: String(line.ProductVariantID || ""),
+        tipe: String(line.Tipe || ""),
+        sellingPrice: salesProjectionNumber_(line.SellingPriceSnapshot),
+        unitHpp: salesProjectionNumber_(line.UnitHppSnapshot),
+        recipeVersionId: String(line.RecipeVersionID || ""),
+        qty: salesProjectionNumber_(line.Qty),
         amount: salesProjectionNumber_(line.LineTotal) });
     });
   });

@@ -118,7 +118,18 @@ function canonicalLifecycleSuccess(data) {
 function getCanonicalTransactionDetail(transactionId) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    return canonicalLifecycleSuccess(normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, transactionId), ss));
+    var id = String(transactionId || "").trim();
+    var detail;
+    if (isSalesRecognitionOrderIdentity_(id)) {
+      // U4: order-backed Sales resolve from the shared U3 projection only.
+      detail = buildSalesRecognitionOrderDetail_(id, buildRecognizedSalesProjectionFromSpreadsheet_(ss));
+    } else {
+      detail = normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, id), ss);
+      if (id.indexOf("SAL-") === 0) {
+        attachSalesRecognitionLegacyMetadata_(detail, buildRecognizedSalesProjectionFromSpreadsheet_(ss));
+      }
+    }
+    return canonicalLifecycleSuccess(detail);
   } catch (error) { return canonicalEntryFailure(error); }
 }
 
@@ -129,7 +140,7 @@ function getCanonicalTransactionDetails(transactionIds) {
     ids.forEach(function(id) {
       var value = String(id || "").trim();
       if (!value || unique[value]) return;
-      canonicalLifecycleLedgerSpec(value);
+      if (!isSalesRecognitionOrderIdentity_(value)) canonicalLifecycleLedgerSpec(value);
       unique[value] = true;
       ordered.push(value);
     });
@@ -157,7 +168,14 @@ function getCanonicalTransactionDetails(transactionIds) {
       if (metadata.originalId) relations[id].originalId = String(metadata.originalId);
       if (metadata.replacementId) relations[id].replacementId = String(metadata.replacementId);
     });
+    // ONE projection per batch request (no per-row source reread).
+    var projection = ordered.some(function(id) {
+      return id.indexOf("SAL-") === 0 || isSalesRecognitionOrderIdentity_(id);
+    }) ? buildRecognizedSalesProjectionFromSpreadsheet_(ss) : null;
     var details = ordered.map(function(id) {
+      if (isSalesRecognitionOrderIdentity_(id)) {
+        return buildSalesRecognitionOrderDetail_(id, projection);
+      }
       var row = ledgers[id];
       if (!row) throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
       var sales = id.indexOf("SAL-") === 0;
@@ -186,6 +204,7 @@ function getCanonicalTransactionDetails(transactionIds) {
       var relation = relations[id] || { originalId: null, replacementId: null };
       detail.originalId = relation.originalId;
       detail.replacementId = relation.replacementId;
+      if (projection && id.indexOf("SAL-") === 0) attachSalesRecognitionLegacyMetadata_(detail, projection);
       return detail;
     });
     return canonicalLifecycleSuccess({ revision: typeof getDashboardCacheRevision === "function" ? getDashboardCacheRevision() : "0", details: details });
