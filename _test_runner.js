@@ -22,6 +22,8 @@ var runSalesV2U8ReleaseAudit = require('./tests/browser/sales-v2-u8-release-audi
 globalThis.runSalesV2U8ReleaseAudit = runSalesV2U8ReleaseAudit;
 var runSalesV2U10ActivationMutationProof = require('./tests/browser/sales-v2-u10-activation-mutation-proof.js');
 globalThis.runSalesV2U10ActivationMutationProof = runSalesV2U10ActivationMutationProof;
+var runSalesV2U10BOperatorSurface = require('./tests/browser/sales-v2-u10b-operator-surface.js');
+globalThis.runSalesV2U10BOperatorSurface = runSalesV2U10BOperatorSurface;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -338,6 +340,11 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testSalesRecognitionV2ActivationFailClosed', 'testSalesRecognitionV2ActivationFailClosed()');
   run('testSalesRecognitionV2ActivationSourceAudit', 'testSalesRecognitionV2ActivationSourceAudit()');
   run('testSalesV2U10ActivationMutationProof', 'JSON.stringify(runSalesV2U10ActivationMutationProof())');
+
+  // SALES_RECOGNITION_V2 U10B operator-surface reproduction: owner-observed
+  // legacy controls + disabled Save Transaction reproduced from HEAD source,
+  // mode-blind client proof, operable Save Order -> server mode dispatcher.
+  run('testSalesV2U10BOperatorSurface', 'JSON.stringify(runSalesV2U10BOperatorSurface())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

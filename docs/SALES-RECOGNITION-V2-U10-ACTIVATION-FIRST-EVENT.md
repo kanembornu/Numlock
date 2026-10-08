@@ -389,3 +389,196 @@ rewrite, no version-706 cleanup, no Git push is implied by either option.
   `docs/SALES-RECOGNITION-V2-U9-*.md`, live workbook + script-project reads;
   files modified: this document only (+ temporary `tests/tmp/u10_probe.mjs`,
   deleted). No secrets, no scriptId, no tokens recorded.
+
+---
+
+## Operator Surface Mismatch (U10B-UI-DIAGNOSIS-01, 2026-10-09)
+
+TASK U10B-UI-DIAGNOSIS-01 · L3/R2 read-only production diagnosis · local
+tests/docs only. Repo HEAD `ea980c9`, worktree clean at baseline. Status:
+`U10_FIRST_EVENT_ACCEPTANCE = BLOCKED_OPERATOR_SURFACE`. Production writes
+this task: 0. First V2 Sale: 0. No deploy, no push, no PAUSE, no Sale.
+
+### B1. Owner-observed UI (authoritative observation)
+
+Production web app `/macros/s/.../exec` → New Transaction → Sales showed the
+legacy lifecycle surface: `Order review`, `Order tidak ditemukan.`,
+`Save Order`, `Continue existing order`, `Order number`, `Find Order`,
+`No open orders.`, and **Save Transaction disabled** despite valid product/
+type/qty/price/HPP preview and `Entry options ready`.
+
+### B2. Served deployment identity
+
+- Production entry `index.html` (repo root) redirects/links to canonical
+  deployment `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q`
+  = `docs/RELEASE.md` production deployment ID. Owner URL string was elided
+  in the task; direct API confirmation (`clasp deployments` /
+  `clasp status` / deployments REST) was **attempted once and denied
+  (`BLOCKED_PERMISSION`)** this session — no retry.
+- Recorded MEASURED state (U10A §0.5, after the single U10A push):
+  deployments = exactly 2 — head deployment + canonical pinned **version
+  705**; the push did NOT move the canonical pin.
+- Conclusion: the canonical production `/exec` serves **immutable version
+  705**. `clasp push --force` updates only the head deployment; pinned
+  deployments keep serving their version snapshot. Residual UNKNOWN: exact
+  owner URL string (if the owner used the head-deployment URL instead, served
+  code would be current; documentary evidence points to canonical).
+
+### B3. HEAD vs served artifact
+
+Git ancestry: version-705 source = push at `ef8c4b5` ("sales: harden open
+orders transport"); `ef8c4b5` is an ancestor of `294cbc9` (sales-v2 U1) and
+of `ccf42c6` (U7). Therefore v705 contains **zero** sales-v2 code.
+
+| Artifact | Project HEAD `ea980c9` | served canonical `/exec` @705 |
+| --- | --- | --- |
+| `97D` OperatorGuard (mode routing, guards) | present | **absent** |
+| `97E` Activation writer | present | **absent** |
+| `97`/`97A`–`97C` V2 save/projection/correction | present | **absent** |
+| `193` Render U7 `salesV2Row` Correct/Void gate | present | pre-U7 |
+| `195` Actions U7 (`salesV2OperatorVisibleOrder_`, V2 mutation routing, order transport DTO) | present | pre-U7 |
+| `194` `var validSales = false;` (Save Transaction dead for Sales, since `37df7ee` 2026-10-06) | present | **same** |
+| `190` dialog legacy controls (all 8 observed strings, since `37df7ee`) | present | **same** |
+| ACTIVE UI routing | server-side, per call (97D) | **none — config never read** |
+
+Divergence range: commits `294cbc9`..`ea980c9` (U1–U10A) absent from v705.
+
+### B4. Legacy element source mapping
+
+| element | source | PREPARED @HEAD | ACTIVE @HEAD | observed | match HEAD? |
+| --- | --- | --- | --- | --- | --- |
+| Order review | `190` `#operationalOrderHeading`; section unhidden by `setTransactionEntryType('SALES')` (`194:189`) | visible on Sales | visible on Sales (client mode-blind) | visible | yes |
+| Save Order | `190` `#operationalSaveOrder` → `saveOperationalOrder()` (`195:119`) | visible/enabled; routes legacy | visible/enabled; routes **V2 via server** | visible | yes |
+| Continue existing order / Order number / Find Order | `190:3505` → `lookupOperationalOrder()` | visible | visible | visible | yes |
+| Order tidak ditemukan. | `195:133` (Find Order miss) | reachable | reachable | shown | yes |
+| No open orders. | `195:137` (`listOpenOperationalOrders` empty) | reachable | reachable | shown | yes |
+| Save Transaction | `190:3676` disabled attr + `194` `updateTransactionEntrySubmitState()` | **always disabled for Sales** | **always disabled for Sales** | disabled | yes |
+
+All eight observed elements are reproducible from HEAD source — UI appearance
+alone does NOT discriminate the served deployment (MEASURED by new harness
+below).
+
+### B5. Mode propagation trace (all 10 questions)
+
+Client is mode-blind **by design** (`docs/SALES-RECOGNITION-V2-U7.md` §9):
+1. mode embedded at initial load? **No** (no config/mode tokens in
+   `190`/`193`/`194`/`195` — harness S2).
+2. New Transaction fetches mode? **No** (loads entry options + operational
+   authority only; neither carries config).
+3. mode cached client-side? **No** — no client mode variable exists.
+4. PREPARED embedded at HTML render? **No.**
+5. default-PREPARED client fallback? **None client-side.** Server (≥U7):
+   absent property → U1 default PREPARED; present-invalid → `REJECT`
+   fail-closed, never legacy.
+6. config-fetch failure silently selects legacy? **No** in ≥U7 source
+   (`salesV2OperatorConfigState_` unresolved → `REJECT`). Served v705:
+   config never consulted → legacy always, by **absence of code**.
+7. client routes ACTIVE through U7? Client never routes by mode; server
+   `submitOperationalOrder` → `salesV2OperatorModeCreateOrder_` → U2 save;
+   client only adapts to response cohort (hides payment/fulfillment, renders
+   "Recognized").
+8. browser refresh obtains new mode? Mode re-resolved server-side on every
+   call (≥U7); refresh is irrelevant to mode. On served v705 a refresh
+   re-fetches the same stale artifact.
+9. already-open tab retains pre-activation state? Client holds no mode, so no
+   tab-stale mode state; on v705 every tab serves stale code regardless.
+10. ACTIVE backend coexist with PREPARED-like client/server? **Yes — this is
+    the measured current production state** (Script Property ACTIVE +
+    served pre-mode artifact).
+
+### B6. Save-disabled root cause (exact condition)
+
+`194.View.Transactions.Forms.html` → `updateTransactionEntrySubmitState()`:
+`var validSales = false;` (line 39) is **never reassigned** (exactly two
+`validSales` occurrences in the file). For `transactionType === "SALES"`:
+`validSales=false`, `validExpense=false`, `INVENTORY_RECEIPT` false ⇒
+`!(false || false || false)` ⇒ `entry.submit.disabled = true`
+**unconditionally**. Introduced by `37df7ee` (2026-10-06, ancestor of v705);
+identical in HEAD and served artifact. Not Add Line, not OrderID, not
+open-order, not payment state, not mode flag. Add Line gates only `Save
+Order` (empty lines ⇒ "Pilih item." refusal, button stays enabled).
+
+### B7. Browser/cache finding
+
+`STALE_BROWSER_STATE_NOT_ROOT_CAUSE`. The canonical deployment pins an
+immutable version: reload / hard reload / new tab / cache-bust all re-fetch
+version-705 HTML+JS from the same URL. No client-side action can obtain
+U7/U10A code from that deployment. (No owner "clear data" advice.)
+
+### B8. Backend guard safety (source + local tests; zero production tests)
+
+- **HEAD-served code: SAFE (MEASURED locally, part of 96/0).** ACTIVE →
+  `salesV2OperatorLegacySalesGuard_` refuses canonical SALES pre-lock;
+  `salesV2OperatorModeCreateOrder_` routes Save Order to U2 only, V2 failure
+  never falls back to legacy; PAUSED/REJECT refuse before writes; payment/
+  fulfillment guards refuse on V2 evidence (U7 suites T3a–T3i, G1–G3).
+- **Served v705: NOT SAFE.** The artifact contains none of these guards and
+  never reads `SALES_RECOGNITION_V2_CONFIG`; a Save Order against the served
+  deployment would create a **legacy Order despite ACTIVE config**. No such
+  mutation occurred (owner did not save; Save Transaction disabled; baseline
+  Orders=1 / V2 ops=0 not re-measured this session, see B9).
+- PAUSE would NOT contain the stale artifact (it ignores config entirely);
+  effective containment = deployment remediation + owner not saving. No
+  immediate containment action taken; PAUSE not used.
+
+### B9. Production re-verification (read-only attempts, MEASURED denial)
+
+Config/Sheets/Execution reads this session: `clasp status` → denied,
+`clasp deployments` → denied, allowlisted deployments REST curl → denied —
+**exact state `BLOCKED_PERMISSION`** (single attempt each, no retry). Last
+MEASURED production state remains U10A §0.6–0.7 (2026-10-08): mode ACTIVE,
+ActivationID `b4791011-120e-4985-92da-a61c6311060c`,
+T `2026-10-08T18:59:50.540Z`, Events 0, Audits 0, v2Ops 0, Orders 1. This
+task invoked zero production endpoints and performed zero writes; state is
+presumed unchanged but **not re-measured this session**.
+
+### B10. Local harness (MEASURED)
+
+New suite `tests/browser/sales-v2-u10b-operator-surface.js` (registered in
+`_test_runner.js`): loads real `194`+`195` into the in-memory DOM/`google.
+script.run` harness; S1 all 8 observed strings present at HEAD; S2 client
+mode-blind (no config/mode tokens in any view file); S3 `validSales`
+constant-false; S4 **reproduces the observed disabled Save Transaction from
+HEAD source with fully valid Sales input** + EXPENSE control enables; S5 Save
+Order refuses empty lines and becomes eligible after a valid line state,
+routing to `submitOperationalOrder`; S6 mode-routing + activation symbols
+exist only in `97D`/`97E`. `node _test_runner.js` → **96 PASS / 0 FAIL**
+(MEASURED after final source modification); `node --check` new/changed JS →
+PASS.
+
+### B11. Root-cause classification
+
+**Primary: A `SERVED_WEBAPP_DEPLOYMENT_STALE`.** Production entry serves
+canonical deployment pinned at **version 705**, whose tree predates all
+sales-v2/U7/U10A code; activation changed only the Script Property
+(deployment-independent), so the operator's web app runs a pre-mode legacy
+artifact that can neither render/route the V2 flow nor produce a first V2
+Sale, and lacks every ACTIVE guard. First-event acceptance is therefore
+blocked at the served artifact, not at the browser.
+
+Recorded contributing design factors (do not change the primary class):
+- U7 deliberate limitation: client surface is legacy-shaped and mode-blind in
+  ALL modes even at HEAD — after deployment remediation the owner will still
+  see `Order review`/`Save Order`/`Find Order`; the operable V2 save control
+  is `Save Order` (server-routed), not `Save Transaction`.
+- `Save Transaction` is permanently disabled for Sales at HEAD (B6) —
+  pre-existing since `37df7ee`, present in v705 too.
+Not B (no client mode propagation exists to defect), not C (U7 routing works
+locally, 96/0), not D (browser state cannot change a pinned artifact), not F.
+
+### B12. Minimum remediation (DO NOT EXECUTE here)
+
+- **Deployment (required):** move the canonical production deployment off
+  version 705 onto a version containing the post-U10A code (e.g.
+  `clasp update-deployment <canonical-id> -V <new-version>` after creating
+  that version from the already-pushed HEAD tree; verify manifest first).
+  This is a **deployment mutation → `NEW OWNER AUTHORIZATION REQUIRED`**; a
+  third `clasp push` would also require new authorization (prior push
+  authorization is not consumed/reused; Rule 7).
+- **Source (optional, separate task):** additive client-visible mode signal
+  per U7 §9 upgrade path + explicit decision on Sales `Save Transaction`
+  enablement — only if the owner wants a visibly distinct V2 surface.
+- **Browser-only action: NOT sufficient** (B7).
+- Verification after authorized remediation: deployment version readback +
+  fresh-session production page shows current artifact + operator performs
+  the first genuine V2 Sale; then U10 first-event acceptance.
