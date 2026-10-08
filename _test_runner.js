@@ -16,6 +16,10 @@ var runSalesV2U7Controller = require('./tests/browser/sales-v2-u7-controller.js'
 globalThis.runSalesV2U7Controller = runSalesV2U7Controller;
 var runSalesV2U7MutationProof = require('./tests/browser/sales-v2-u7-mutation-proof.js');
 globalThis.runSalesV2U7MutationProof = runSalesV2U7MutationProof;
+var runSalesV2U8MutationProof = require('./tests/browser/sales-v2-u8-mutation-proof.js');
+globalThis.runSalesV2U8MutationProof = runSalesV2U8MutationProof;
+var runSalesV2U8ReleaseAudit = require('./tests/browser/sales-v2-u8-release-audit.js');
+globalThis.runSalesV2U8ReleaseAudit = runSalesV2U8ReleaseAudit;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -101,6 +105,7 @@ var files = [
   '96.Tests.SalesRecognition.V2.U5.Cases.js',
   '96.Tests.SalesRecognition.V2.U6.Cases.js',
   '96.Tests.SalesRecognition.V2.U7.Cases.js',
+  '96.Tests.SalesRecognition.V2.U8.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -309,6 +314,19 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testSalesRecognitionV2U7SourceAudit', 'testSalesRecognitionV2U7SourceAudit()');
   run('testSalesV2U7Controller', 'JSON.stringify(runSalesV2U7Controller())');
   run('testSalesV2U7MutationProof', 'JSON.stringify(runSalesV2U7MutationProof())');
+
+  // SALES_RECOGNITION_V2 U8 integration/release evidence: cross-module
+  // composition (A-R), transport contract, identity/write-surface matrices,
+  // preflights, controller composition + 26-item source audit.
+  run('testSalesRecognitionV2U8EndToEnd', 'testSalesRecognitionV2U8EndToEnd()');
+  run('testSalesRecognitionV2U8Lifecycle', 'testSalesRecognitionV2U8Lifecycle()');
+  run('testSalesRecognitionV2U8Cohorts', 'testSalesRecognitionV2U8Cohorts()');
+  run('testSalesRecognitionV2U8PolicyModes', 'testSalesRecognitionV2U8PolicyModes()');
+  run('testSalesRecognitionV2U8GuardsIntegrity', 'testSalesRecognitionV2U8GuardsIntegrity()');
+  run('testSalesRecognitionV2U8Preflight', 'testSalesRecognitionV2U8Preflight()');
+  run('testSalesRecognitionV2U8ReleaseEvidence', 'testSalesRecognitionV2U8ReleaseEvidence()');
+  run('testSalesV2U8MutationProof', 'JSON.stringify(runSalesV2U8MutationProof())');
+  run('testSalesV2U8ReleaseAudit', 'JSON.stringify(runSalesV2U8ReleaseAudit())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
