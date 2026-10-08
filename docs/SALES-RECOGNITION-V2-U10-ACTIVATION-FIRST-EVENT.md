@@ -3,26 +3,9 @@
 TASK_ID: U10A-ACTIVATION-CLOSURE-01 (successor to U10-ACTIVATION-FIRST-EVENT-01) · Complexity L3 · Operational risk R4 · Reasoning high
 Backend/model `9router/numlock-explore-free` (numlock-critical, executed in-session).
 
-**STATUS: `IN_PROGRESS` — Option A activation-writer closure. Production state
-at last local measurement: `PREPARED / disabled` (pre-push).**
-
-## 0. Predecessor + Option A authorization
-
-Predecessor task U10-ACTIVATION-FIRST-EVENT-01 (HEAD `dc7db0e`/`11c35b0`
-evidence) returned `BLOCKED_CAPABILITY`: deployed runtime had no authorized
-mutation primitive for `PREPARED → ACTIVE`. Full predecessor measurement is
-retained unchanged in §1–§8 below.
-
-Owner Option A (this task) explicitly authorizes exactly:
-1. minimal production activation writer implementation;
-2. local tests;
-3. **ONE** additional `clasp push --force` (explicit one-time Rule 7 exception);
-4. invoke the writer **exactly once** to activate;
-5. previously authorized U10 first-genuine-event acceptance.
-
-No other deployment, no manual Script Property edit, no Treasury, no 2010,
-no fake Sale, no Correct/Void test, no second Sale, no version-706 cleanup,
-no Git push, no historical rewrite.
+**STATUS: `ACTIVATED_WAITING_FOR_FIRST_REAL_EVENT` — production
+`SALES_RECOGNITION_V2` is `PRODUCTION_ACTIVE` (activation accepted); first
+genuine Sale not yet available.**
 
 ### 0.1 Activation-writer closure (implementation)
 
@@ -77,9 +60,113 @@ New file `97E.SalesRecognition.V2.Activation.js` (registered in
   allowlist and V2 upload-registration list (otherwise U8 audit fails closed).
 - `_test_runner.js`: load 97E + activation cases + U10 proof; register 4 runs.
 
+### 0.4 Deployment candidate + authorized second push (MEASURED)
+
+- Deployment candidate commit: **`56df101`** (`56df101c6b87f7779a476b19264eacef6fe50b9a`)
+  — capability, tests, U8 audit allowlist, runner, upload-manifest, this doc.
+- Worktree clean before push ✓. Explicit-path staging only ✓. No Git push.
+- Fresh pre-push production (Execution API + Sheets REST, identity
+  `numlock-run`): mode=`PREPARED`, T empty, ActivationID empty,
+  contractVersion exact, configVersion=1; Events dataRows=0 (sha
+  `68b0170fb583d752`); Audits dataRows=0 (sha `d166256b8be8f1d3`);
+  TransactionOperations 2 legacy rows, **v2Ops=0** (sha `f6a36c66d8810257`);
+  Accounts 22 rows, 1030/2010/4000 exact+unique+active (sha
+  `f97cbe167e6a9364`); Orders 1; BalanceLedger 6. Deployed
+  `salesRecognitionV2Activate` → `FUNCTION_NOT_FOUND` before push.
+- `clasp status` tracked manifest: **68** files (includes 97E) ✓.
+- Deployments before push: still 2 (head + 705).
+- **Exactly ONE** `clasp push --force` executed by the agent (Rule 7 exception
+  for this task only): **PUSHED 68 files**. No third push performed or
+  permitted.
+- Unintended side effect (recorded, not repaired): a exploratory
+  `clasp version` invocation created inert version **707** (no deployment
+  references it). Not deleted (destructive op not authorized); not used.
+
+### 0.5 Post-push verification (MEASURED)
+
+- `projects.getContent` (Execution API identity): **68 files**; 97E present as
+  `97E.SalesRecognition.V2.Activation`; source **byte-match** local candidate
+  (sha256 prefix `fcbd3404cadd756e` both sides).
+- Deployed source contains `function salesRecognitionV2Activate(`.
+- Config after push, before activation invocation:
+  **`PREPARED / "" / "" / 1`** ✓ (deployment itself did not activate).
+- Deployments still 2 (head + pinned 705).
+
+### 0.6 Activation invocation (EXACTLY ONCE, MEASURED)
+
+- Entry: Execution API `POST /v1/scripts/{id}:run` →
+  `salesRecognitionV2Activate` (zero parameters). Identity `numlock-run`.
+- Result HTTP 200:
+  `{status:"ACTIVATED", code:"", config:{mode:"ACTIVE",
+  contractVersion:"SALES_RECOGNITION_V2",
+  activationID:"b4791011-120e-4985-92da-a61c6311060c",
+  activatedAt:"2026-10-08T18:59:50.540Z", configVersion:1}}`
+- **ActivationID** = `b4791011-120e-4985-92da-a61c6311060c` (server UUID).
+- **T** = `2026-10-08T18:59:50.540Z` (server `new Date().toISOString()` at
+  activation instant; ≠ forbidden `2026-10-06T18:50:05.328Z`; ≠ commit/deploy/
+  U9-prep time; not client-supplied).
+- No manual Script Property edit. No second invocation.
+
+### 0.7 Post-activation hard gate (MEASURED) — ACCEPTED
+
+- Three independent `salesRecognitionV2OperatorConfig` reads: field-canonical
+  identity **stable**:
+  `ACTIVE|SALES_RECOGNITION_V2|1|b4791011-…|2026-10-08T18:59:50.540Z`.
+- `salesRecognitionV2DefaultConfig` still PREPARED (U1 default unchanged).
+- Surfaces (Sheets REST, immediate post-activation):
+  Events 0 (sha `68b0170fb583d752`); Audits 0 (sha `d166256b8be8f1d3`);
+  TransactionOperations 2 / v2Ops 0 (sha `f6a36c66d8810257`); Orders 1 (sha
+  `a9d6312610aa6ac7`); OrderLines 1; BalanceLedger 6 (sha
+  `adb94c73ee03e9fd`); Payments 1; Settlements 2; InventoryLedger 0;
+  Accounts 22. **No business artifact delta from activation.**
+- `POST_ACTIVATION_ACCEPTED: true`.
+
+### 0.8 First real event — WAITING
+
+No genuine customer Sale was available to the operator in this session.
+Per frozen U10 contract: **no dummy/test Sale created**. Status =
+`ACTIVATED_WAITING_FOR_FIRST_REAL_EVENT`. Production remains ACTIVE with the
+ActivationID/T above. Next step is a real operator flow
+`Create → OrderType → ProductVariant line(s) → Save → Done` (no payment/
+fulfillment continuation), then U10 acceptance (identity chain, Dr1030/Cr4000,
+U3/U4/U5 parity, protected delta).
+
+### 0.9 Confirmations
+
+Exactly one additional `clasp push --force` · no third push · no manual
+property edit · no Treasury · no 2010 posting · no fake Sale · no Correct/Void
+test · no historical rewrite · no version-706 cleanup (707 created
+accidentally inert, not cleaned) · no Git push.
+
+### 0.10 Validation + telemetry
+
+- Local: `node _test_runner.js` **95 PASS / 0 FAIL** MEASURED; `node --check`
+  new/changed JS PASS; `git diff --check` clean.
+- Production: 1 activation invocation (success); 0 economic events; 1
+  authorized push; 0 Git push.
+- Agent numlock-critical (in-session); backend/model
+  `9router/numlock-explore-free`; reasoning high; fallback not used;
+  delegation none.
+
 ---
 
 ## Predecessor evidence (U10-ACTIVATION-FIRST-EVENT-01, preserved)
+
+Predecessor task U10-ACTIVATION-FIRST-EVENT-01 (HEAD `dc7db0e`/`11c35b0`
+evidence) returned `BLOCKED_CAPABILITY`: deployed runtime had no authorized
+mutation primitive for `PREPARED → ACTIVE`. Full predecessor measurement is
+retained unchanged in §1–§8 below.
+
+Owner Option A (this task) explicitly authorizes exactly:
+1. minimal production activation writer implementation;
+2. local tests;
+3. **ONE** additional `clasp push --force` (explicit one-time Rule 7 exception);
+4. invoke the writer **exactly once** to activate;
+5. previously authorized U10 first-genuine-event acceptance.
+
+No other deployment, no manual Script Property edit, no Treasury, no 2010,
+no fake Sale, no Correct/Void test, no second Sale, no version-706 cleanup,
+no Git push, no historical rewrite.
 
 **STATUS at predecessor completion: `BLOCKED` — exact code `BLOCKED_CAPABILITY`.
 Production state: `PREPARED / disabled`.**
