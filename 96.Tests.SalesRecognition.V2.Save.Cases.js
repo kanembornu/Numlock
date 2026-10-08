@@ -765,7 +765,156 @@ function testSalesRecognitionV2SaveRecovery() {
   check("B24b", rtGone.repository.rows()[0].State === "COMMITTED" &&
     JSON.stringify(salesV2SaveRowCounts_(rtGone.spreadsheet)) === countsGone &&
     resumeGone.events.batches.length === 0 && resumeGone.events.authorityReads === 0);
-  return { total: 88, pass: pass, fail: 88 - pass };
+  // ---- Extended artifact-integrity matrix: reordered/mutated/duplicate/
+  // missing/tampered artifacts, corrupted committed plan, and artifact-readback
+  // IO failure all fail closed with zero repair writes (no blind append/delete/
+  // repair/reconstruction); UNKNOWN readback preserves identity and recovers.
+  function u2FreshSaved_(key) {
+    var rt = salesV2SaveRuntime_();
+    var res = salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_(key), rt);
+    if (res.status !== "DONE") throw new Error("U2_FIXTURE_SAVE_FAILED:" + key);
+    return rt;
+  }
+  function u2ResumeRun_(rt, key) {
+    return salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_(key),
+      salesV2SaveRuntime_({ fixture: rt.spreadsheet, repository: rt.repository }));
+  }
+  // B25: reordered line rows -> deterministic conflict, no repair.
+  var rt25 = u2FreshSaved_("int-reorder-1");
+  var ol25 = rt25.spreadsheet.getSheetByName("OrderLines").values;
+  var swap25 = ol25[1]; ol25[1] = ol25[2]; ol25[2] = swap25;
+  var counts25 = JSON.stringify(salesV2SaveRowCounts_(rt25.spreadsheet));
+  var res25 = u2ResumeRun_(rt25, "int-reorder-1");
+  check("B25a", res25.status === "RECOVERY_REQUIRED" && res25.code === "IDENTITY_CONFLICT" &&
+    res25.detail.indexOf("ORDER_LINE_ORDER") !== -1 && res25.requestKey === "int-reorder-1");
+  check("B25b", JSON.stringify(salesV2SaveRowCounts_(rt25.spreadsheet)) === counts25 &&
+    rt25.repository.rows()[0].State === "COMMITTED");
+  // B26: mutated line quantity -> ORDER_LINE_TAMPERED, no repair.
+  var rt26 = u2FreshSaved_("int-mutate-line-1");
+  rt26.spreadsheet.getSheetByName("OrderLines").values[1][t.ORDER_LINES.HEADERS.indexOf("Qty")] = 5;
+  var counts26 = JSON.stringify(salesV2SaveRowCounts_(rt26.spreadsheet));
+  var res26 = u2ResumeRun_(rt26, "int-mutate-line-1");
+  check("B26a", res26.status === "RECOVERY_REQUIRED" && res26.code === "IDENTITY_CONFLICT" &&
+    res26.detail.indexOf("ORDER_LINE_TAMPERED") !== -1);
+  check("B26b", JSON.stringify(salesV2SaveRowCounts_(rt26.spreadsheet)) === counts26 &&
+    rt26.repository.rows()[0].State === "COMMITTED");
+  // B27: duplicate RecognitionID (identical event row appended) -> fail closed.
+  var rt27 = u2FreshSaved_("int-dupe-event-1");
+  var ev27 = rt27.spreadsheet.getSheetByName("SalesRecognitionEvents");
+  ev27.getRange(3, 1, 1, contract.HEADERS.length).setValues([ev27.values[1].slice()]);
+  var counts27 = JSON.stringify(salesV2SaveRowCounts_(rt27.spreadsheet));
+  var res27 = u2ResumeRun_(rt27, "int-dupe-event-1");
+  check("B27a", res27.status === "RECOVERY_REQUIRED" && res27.code === "IDENTITY_CONFLICT" &&
+    res27.detail.indexOf("EVENT_DUPLICATE") !== -1);
+  check("B27b", JSON.stringify(salesV2SaveRowCounts_(rt27.spreadsheet)) === counts27 &&
+    rt27.repository.rows()[0].State === "COMMITTED");
+  // B28: missing Order with every other artifact present -> PARTIAL, no append.
+  var rt28 = u2FreshSaved_("int-missing-order-1");
+  rt28.spreadsheet.getSheetByName("Orders").values.pop();
+  var counts28 = JSON.stringify(salesV2SaveRowCounts_(rt28.spreadsheet));
+  var res28 = u2ResumeRun_(rt28, "int-missing-order-1");
+  check("B28a", res28.status === "RECOVERY_REQUIRED" && res28.code === "ARTIFACTS_INCOMPLETE" &&
+    res28.detail === "ORDER");
+  check("B28b", JSON.stringify(salesV2SaveRowCounts_(rt28.spreadsheet)) === counts28 &&
+    rt28.repository.rows()[0].State === "COMMITTED");
+  // B29: missing Save audit -> PARTIAL, no append.
+  var rt29 = u2FreshSaved_("int-missing-audit-1");
+  rt29.spreadsheet.getSheetByName("SalesRecognitionAudits").values.pop();
+  var counts29 = JSON.stringify(salesV2SaveRowCounts_(rt29.spreadsheet));
+  var res29 = u2ResumeRun_(rt29, "int-missing-audit-1");
+  check("B29a", res29.status === "RECOVERY_REQUIRED" && res29.code === "ARTIFACTS_INCOMPLETE" &&
+    res29.detail === "AUDIT");
+  check("B29b", JSON.stringify(salesV2SaveRowCounts_(rt29.spreadsheet)) === counts29 &&
+    rt29.repository.rows()[0].State === "COMMITTED");
+  // B30: one of the two journal lines missing -> PARTIAL, no append.
+  var rt30 = u2FreshSaved_("int-missing-journal-1");
+  rt30.spreadsheet.getSheetByName("BalanceLedger").values.pop();
+  var counts30 = JSON.stringify(salesV2SaveRowCounts_(rt30.spreadsheet));
+  var res30 = u2ResumeRun_(rt30, "int-missing-journal-1");
+  check("B30a", res30.status === "RECOVERY_REQUIRED" && res30.code === "ARTIFACTS_INCOMPLETE" &&
+    res30.detail === "JOURNAL_LINE");
+  check("B30b", JSON.stringify(salesV2SaveRowCounts_(rt30.spreadsheet)) === counts30 &&
+    rt30.repository.rows()[0].State === "COMMITTED");
+  // B31: wrong journal account inside the artifact -> tampered, no repair.
+  var rt31 = u2FreshSaved_("int-journal-account-1");
+  rt31.spreadsheet.getSheetByName("BalanceLedger").values[1][ledgerHeaders.indexOf("AccountCode")] = "1100";
+  var counts31 = JSON.stringify(salesV2SaveRowCounts_(rt31.spreadsheet));
+  var res31 = u2ResumeRun_(rt31, "int-journal-account-1");
+  check("B31a", res31.status === "RECOVERY_REQUIRED" && res31.code === "IDENTITY_CONFLICT" &&
+    res31.detail.indexOf("JOURNAL_TAMPERED") !== -1);
+  check("B31b", JSON.stringify(salesV2SaveRowCounts_(rt31.spreadsheet)) === counts31 &&
+    rt31.repository.rows()[0].State === "COMMITTED");
+  // B32: wrong journal amount inside the artifact -> tampered, no repair.
+  var rt32 = u2FreshSaved_("int-journal-amount-1");
+  rt32.spreadsheet.getSheetByName("BalanceLedger").values[1][ledgerHeaders.indexOf("Debit")] = 1;
+  var counts32 = JSON.stringify(salesV2SaveRowCounts_(rt32.spreadsheet));
+  var res32 = u2ResumeRun_(rt32, "int-journal-amount-1");
+  check("B32a", res32.status === "RECOVERY_REQUIRED" && res32.code === "IDENTITY_CONFLICT" &&
+    res32.detail.indexOf("JOURNAL_TAMPERED") !== -1);
+  check("B32b", JSON.stringify(salesV2SaveRowCounts_(rt32.spreadsheet)) === counts32 &&
+    rt32.repository.rows()[0].State === "COMMITTED");
+  // B33: tampered Save audit -> tampered, no repair.
+  var rt33 = u2FreshSaved_("int-audit-tamper-1");
+  rt33.spreadsheet.getSheetByName("SalesRecognitionAudits").values[1]
+    [SALES_RECOGNITION_V2_SAVE.AUDIT_HEADERS.indexOf("Actor")] = "evil@intruder.test";
+  var counts33 = JSON.stringify(salesV2SaveRowCounts_(rt33.spreadsheet));
+  var res33 = u2ResumeRun_(rt33, "int-audit-tamper-1");
+  check("B33a", res33.status === "RECOVERY_REQUIRED" && res33.code === "IDENTITY_CONFLICT" &&
+    res33.detail.indexOf("AUDIT_TAMPERED") !== -1);
+  check("B33b", JSON.stringify(salesV2SaveRowCounts_(rt33.spreadsheet)) === counts33 &&
+    rt33.repository.rows()[0].State === "COMMITTED");
+  // B34: corrupted persisted plan on a COMMITTED operation -> fail closed with
+  // zero writes; never replay Done from status alone.
+  var rt34 = u2FreshSaved_("int-committed-plan-1");
+  var stored34 = rt34.repository.rows()[0];
+  var plan34 = JSON.parse(stored34.OperationPlan);
+  plan34.actor = "evil@intruder.test";
+  stored34.OperationPlan = JSON.stringify(plan34);
+  var counts34 = JSON.stringify(salesV2SaveRowCounts_(rt34.spreadsheet));
+  var res34 = u2ResumeRun_(rt34, "int-committed-plan-1");
+  check("B34a", res34.status === "RECOVERY_REQUIRED" && res34.code === "IDENTITY_CONFLICT" &&
+    res34.detail.indexOf("PLAN_DIGEST_MISMATCH") !== -1 && res34.requestKey === "int-committed-plan-1");
+  check("B34b", JSON.stringify(salesV2SaveRowCounts_(rt34.spreadsheet)) === counts34 &&
+    rt34.repository.rows()[0].State === "COMMITTED" &&
+    stored34.OperationPlan.indexOf("evil@intruder.test") !== -1);
+  // B35: artifact-readback IO failure while IN_PROGRESS -> explicit UNKNOWN /
+  // READBACK_UNKNOWN with identity kept and ZERO writes; once the readback
+  // works again the exact plan resumes and finishes with one batch.
+  var rt35 = salesV2SaveRuntime_({ crash: "V2_AFTER_INTENT" });
+  try { salesRecognitionV2SaveWithRuntime_(salesV2SavePayload_("int-readback-pending-1"), rt35); }
+  catch (ignoredInt35) {}
+  var ev35 = rt35.spreadsheet.getSheetByName("SalesRecognitionEvents");
+  var origGet35 = ev35.getDataRange;
+  ev35.getDataRange = function() { throw new Error("SIMULATED_READBACK_IO"); };
+  var counts35 = JSON.stringify(salesV2SaveRowCounts_(rt35.spreadsheet));
+  var res35 = u2ResumeRun_(rt35, "int-readback-pending-1");
+  check("B35a", res35.status === "UNKNOWN" && res35.code === "READBACK_UNKNOWN" &&
+    res35.requestKey === "int-readback-pending-1" && res35.operationID !== "" &&
+    !("success" in res35) && rt35.repository.rows()[0].State === "IN_PROGRESS" &&
+    JSON.stringify(salesV2SaveRowCounts_(rt35.spreadsheet)) === counts35);
+  ev35.getDataRange = origGet35;
+  var res35b = u2ResumeRun_(rt35, "int-readback-pending-1");
+  check("B35b", res35b.status === "DONE" && res35b.writeCount === 7 &&
+    rt35.repository.rows().length === 1 && rt35.repository.rows()[0].State === "COMMITTED" &&
+    rt35.spreadsheet.getSheetByName("SalesRecognitionEvents").getLastRow() === 2);
+  // B36: readback IO failure while COMMITTED -> UNKNOWN (never Done from status
+  // alone); restored readback replays DONE with zero duplicate writes.
+  var rt36 = u2FreshSaved_("int-readback-committed-1");
+  var ev36 = rt36.spreadsheet.getSheetByName("SalesRecognitionEvents");
+  var origGet36 = ev36.getDataRange;
+  ev36.getDataRange = function() { throw new Error("SIMULATED_READBACK_IO"); };
+  var counts36 = JSON.stringify(salesV2SaveRowCounts_(rt36.spreadsheet));
+  var res36 = u2ResumeRun_(rt36, "int-readback-committed-1");
+  check("B36a", res36.status === "UNKNOWN" && res36.code === "READBACK_UNKNOWN" &&
+    res36.requestKey === "int-readback-committed-1" && res36.operationID !== "" &&
+    rt36.repository.rows()[0].State === "COMMITTED" &&
+    JSON.stringify(salesV2SaveRowCounts_(rt36.spreadsheet)) === counts36);
+  ev36.getDataRange = origGet36;
+  var res36b = u2ResumeRun_(rt36, "int-readback-committed-1");
+  check("B36b", res36b.status === "DONE" && res36b.replay === true && res36b.writeCount === 0 &&
+    JSON.stringify(salesV2SaveRowCounts_(rt36.spreadsheet)) === counts36 &&
+    rt36.repository.rows().length === 1);
+  return { total: 112, pass: pass, fail: 112 - pass };
 }
 function testSalesRecognitionV2SaveGates() {
   var pass = 0;

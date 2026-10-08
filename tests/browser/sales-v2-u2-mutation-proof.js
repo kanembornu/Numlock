@@ -3,8 +3,8 @@
 // contract bug at a time into a VM copy ONLY, and asserts all three U2 suites
 // pass clean and FAIL at the exact expected marker under each injected bug.
 // Covers: forbidden journal account, batchUpdate transport endpoint, cell-char
-// bound, plan integrity digest, and cross-owner line detection. Never mutates
-// tracked files.
+// bound, plan integrity digest, cross-owner line detection, and bypass of exact
+// event artifact verification. Never mutates tracked files.
 var fs = require("fs");
 var vm = require("vm");
 
@@ -40,7 +40,10 @@ var MUTATIONS = [
   { anchor: "transactionPayloadHash_(copy) !== plan.planDigest", bug: "false",
     marker: "SALES_V2_SAVE_RECOVERY:B17a" },
   { anchor: "plannedLineIds[row.OrderLineID] && row.OrderID !== plan.orderID", bug: "false",
-    marker: "SALES_V2_SAVE_RECOVERY:B19a" }
+    marker: "SALES_V2_SAVE_RECOVERY:B19a" },
+  { anchor: "salesRecognitionV2SaveRowExact_(eventMatches[0], plan.eventRow, contract.HEADERS)",
+    bug: "true",
+    marker: "SALES_V2_SAVE_RECOVERY:B9a" }
 ];
 
 function runU2Suites_(domainSource) {

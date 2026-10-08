@@ -205,7 +205,7 @@ resumes and classifies `V2_COMMITTED`/`V2_PENDING`, never legacy.
   tokens, lookup-before-authority ordering, exact `normalizedPayload` +
   `planDigest` + `VerifyPlan`, complete `lineAuthority` HPP reconstruction,
   Date-safe ten-field readback helper + all-ten-fields sensitivity.
-- `testSalesRecognitionV2SaveRecovery` (88 assertions) — crashes at all seven
+- `testSalesRecognitionV2SaveRecovery` (112 assertions) — crashes at all seven
   boundaries (`V2_BEFORE_INTENT`, `V2_AFTER_INTENT_PERSIST`, `V2_AFTER_INTENT`,
   `V2_AFTER_BATCH`, `V2_AFTER_READBACK`, `V2_BEFORE_COMMIT`, `V2_AFTER_COMMIT`),
   batch timeout (no artifacts → UNKNOWN; applied → commit), committed response
@@ -215,7 +215,12 @@ resumes and classifies `V2_COMMITTED`/`V2_PENDING`, never legacy.
   identities, commit-update failure → UNKNOWN → retry, tampered pending plan,
   invalid State, cross-owner OrderLineID/journal LineID, source-set vs ID-set
   equal-count crossover, audit set equal-count crossover,
-  orderNumber/RecognitionID crossovers, COMMITTED with all artifacts missing.
+  orderNumber/RecognitionID crossovers, COMMITTED with all artifacts missing,
+  extended integrity matrix (reordered line, mutated line quantity, duplicate
+  RecognitionID, missing Order / Save audit / journal line, wrong journal
+  account, wrong journal amount, tampered audit, corrupted COMMITTED plan),
+  artifact-readback IO failure → `UNKNOWN`/`READBACK_UNKNOWN` (IN_PROGRESS and
+  COMMITTED) → deterministic recovery with zero duplicate writes.
 - `testSalesRecognitionV2SaveGates` (40 assertions) — schema/account/config/
   cohort zero-write gates, line/cell/byte bounds refused before any write,
   exact five-range batch shape, forbidden-surface token checks, seam defaults,
@@ -230,20 +235,21 @@ resumes and classifies `V2_COMMITTED`/`V2_PENDING`, never legacy.
   lock phase tests (lock before lookup/normalize, definite pre-intent
   refusals, single release), authority effective-window gate (malformed
   nonblank end and reversed window → `AUTHORITY_WINDOW_INVALID`, zero writes).
-- `testSalesV2U2MutationProof` — in-memory VM sensitivity proof, 5 injected
+- `testSalesV2U2MutationProof` — in-memory VM sensitivity proof, 6 injected
   bugs, tracked files never mutated; clean run passes all three U2 suites, each
   mutation must FAIL at its exact marker: forbidden revenue account
   (`REVENUE: "4000"` → `"1100"`) → `SALES_V2_SAVE_CORE:A9`; transport endpoint
   (`":batchUpdate"` → `":batchAppend"`) → `SALES_V2_SAVE_GATES:C11b`;
   cell bound (`MAX_CELL_CHARS: 45000` → `99999`) → `SALES_V2_SAVE_GATES:C19a`;
   plan digest check disabled → `SALES_V2_SAVE_RECOVERY:B17a`; cross-owner line
-  check disabled → `SALES_V2_SAVE_RECOVERY:B19a`.
+  check disabled → `SALES_V2_SAVE_RECOVERY:B19a`; exact event artifact
+  verification bypassed → `SALES_V2_SAVE_RECOVERY:B9a`.
 
 `node _test_runner.js` executes all of the above; all legacy + U1 assertions
 preserved.
 MEASURED: `49 PASS, 0 FAIL` (41 legacy suites + 3 U1 case suites + 1 U1
-mutation proof + 3 U2 case suites (155 assertions) + 1 U2 mutation proof
-(5 mutations)).
+mutation proof + 3 U2 case suites (179 assertions) + 1 U2 mutation proof
+(6 mutations)).
 
 ## Out of scope (U3+)
 
