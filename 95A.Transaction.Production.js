@@ -240,6 +240,9 @@ function transactionFinanceSettlementExists_(ss, paymentID) {
   return readCanonicalTable(ss, CASH_SCHEMA_MIGRATION.SETTLEMENTS_SHEET, CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS).filter(function(row) { return row.SettlementID === "CSH-SAL-" + paymentID && row.SourceID === paymentID && row.Status === "POSTED" && isCanonicalActive(row.IsActive); }).length === 1;
 }
 function createDurableOperationalPayment_(orderID, payload, runtime, repository) {
+  // U7: V2 cohort orders are refused before the first write (payment intent,
+  // Receive Via, settlement and PAID transition are retired for V2 sales).
+  salesV2OperatorPaymentGuard_(orderID, repository, runtime && runtime.spreadsheet);
   var requestKey = transactionOperationalText_(payload && payload.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"), hash = transactionPayloadHash_({ orderID: orderID, receiveVia: payload.receiveVia, amount: payload.amount });
   var paymentID = transactionStableBusinessID_("PAY-", "PAYMENT", requestKey), plan = { orderID: orderID, paymentID: paymentID, requestKey: requestKey,
     receiveVia: payload.receiveVia, amount: payload.amount }, operation = transactionResolveOperation_(repository, "PAYMENT", requestKey, hash, paymentID, plan, runtime.now());
@@ -355,10 +358,24 @@ function getOperationalTransactionAuthority() { return transactionResponse_(func
   }).map(function(e) { return { ExpenseItemID: e.ID_Ops, label: e.Item + " · " + e.Kategori }; });
   return transactionAuthorityTransportDto_(authority, new Date());
 }); }
-function submitOperationalOrder(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalOrder_(payload, transactionProductionAuthority_(r.spreadsheet), r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }
-function findOperationalOrder(identifier) { return transactionResponse_(function() { var id = transactionOperationalText_(identifier, "ORDER_IDENTIFIER_REQUIRED", "identifier"); return transactionOperationalOrderTransportDto_(transactionProductionRuntime_().repository.findOrder(id)); }); }
+function submitOperationalOrder(payload) {
+  // U7: config-aware routing for NEW Sales orders. PREPARED keeps the exact
+  // legacy durable order writer; ACTIVE routes to the V2 durable Save only;
+  // PAUSED/invalid refuse with no legacy fallback.
+  var route = salesV2OperatorResolvedRoute_();
+  if (route.mode !== "PREPARED") return salesV2OperatorModeCreateOrder_(payload, route);
+  return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalOrder_(payload, transactionProductionAuthority_(r.spreadsheet), r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } });
+}
+function findOperationalOrder(identifier) { return transactionResponse_(function() { var id = transactionOperationalText_(identifier, "ORDER_IDENTIFIER_REQUIRED", "identifier"); var r = transactionProductionRuntime_(); var dto = transactionOperationalOrderTransportDto_(r.repository.findOrder(id)); return salesV2OperatorAnnotateOrder_(dto, r.repository, r.spreadsheet); }); }
 function listOpenOperationalOrders() { return transactionResponse_(function() { return transactionProductionRuntime_().repository.listOpenOrders().map(transactionOperationalOrderTransportDto_); }); }
-function findOperationalOperation(payload) { return transactionResponse_(function() { var p = payload || {}, type = transactionOperationalText_(p.operationType, "OPERATION_TYPE_REQUIRED", "operationType"), key = transactionOperationalText_(p.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"), r = transactionProductionRuntime_(), operation = r.repository.findOperation(type, key); return { operation: operation, order: operation && operation.BusinessID ? r.repository.findOrder(operation.BusinessID) : null, payment: type === "PAYMENT" ? r.repository.findPaymentByRequest(key) : null }; }); }
+function findOperationalOperation(payload) { return transactionResponse_(function() { var p = payload || {}, type = transactionOperationalText_(p.operationType, "OPERATION_TYPE_REQUIRED", "operationType"), key = transactionOperationalText_(p.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"), r = transactionProductionRuntime_(), operation = r.repository.findOperation(type, key);
+  // U7: RequestKey identity is stable across mode routing — the same key may
+  // be persisted under the routed V2 operation type; an exact single match is
+  // authoritative, an ambiguous match fails closed (null below).
+  if (!operation) operation = salesV2OperatorFindOperationByRequestKey_(r.repository, key);
+  var order = operation && operation.BusinessID ? r.repository.findOrder(operation.BusinessID) : null;
+  if (order) salesV2OperatorAnnotateOrder_(order, r.repository, r.spreadsheet);
+  return { operation: operation, order: order, payment: type === "PAYMENT" || operation && operation.OperationType === "PAYMENT" ? r.repository.findPaymentByRequest(key) : null }; }); }
 function submitOperationalFulfillment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return transitionOperationalFulfillmentWithRepository(payload.orderID, payload.next, r, r.repository).order; } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalPayment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalPayment_(payload.orderID, payload, r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalPurchase(payload) { return transactionResponse_(function() {
@@ -522,10 +539,17 @@ function runRecipeVersionProductionBootstrap() {
 
 function recoverTransactionOperationWithRuntime_(operationID, r) {
   var id = transactionOperationalText_(operationID, "OPERATION_ID_REQUIRED", "operationID");
-  var matches = r.repository.readRows("OPERATIONS").filter(function(row) { return row.OperationID === id; });
+  var stored = salesV2OperatorOperationRows_(r.repository) || [];
+  var matches = stored.filter(function(row) { return row.OperationID === id; });
   if (matches.length !== 1) throw transactionOperationalError_("OPERATION_NOT_FOUND", "operationID");
   var operation = matches[0];
   if (operation.State === "COMMITTED") return operation;
+  // U7: persisted V2 operations recover ONLY through the V2 cores (resume
+  // from the frozen plan). The legacy dispatcher never reinterprets them as
+  // ORDER_CREATE/PAYMENT work and never rewrites them into legacy results.
+  if (salesV2OperatorIsRecoveryOperation_(operation.OperationType)) {
+    return salesV2OperatorRecoverWithRuntime_(operation, r);
+  }
   if (operation.OperationType === "ORDER_CREATE") {
     var orderPlan = JSON.parse(operation.OperationPlan); r.repository.createOrder(orderPlan);
     var order = r.repository.findOrder(operation.BusinessID);

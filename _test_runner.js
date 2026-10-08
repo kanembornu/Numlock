@@ -12,6 +12,10 @@ var runSalesV2U5MutationProof = require('./tests/browser/sales-v2-u5-mutation-pr
 globalThis.runSalesV2U5MutationProof = runSalesV2U5MutationProof;
 var runSalesV2U6MutationProof = require('./tests/browser/sales-v2-u6-mutation-proof.js');
 globalThis.runSalesV2U6MutationProof = runSalesV2U6MutationProof;
+var runSalesV2U7Controller = require('./tests/browser/sales-v2-u7-controller.js');
+globalThis.runSalesV2U7Controller = runSalesV2U7Controller;
+var runSalesV2U7MutationProof = require('./tests/browser/sales-v2-u7-mutation-proof.js');
+globalThis.runSalesV2U7MutationProof = runSalesV2U7MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -88,6 +92,7 @@ var files = [
   '97A.SalesRecognition.V2.Save.js',
   '97B.SalesRecognition.V2.Projection.js',
   '97C.SalesRecognition.V2.Correction.js',
+  '97D.SalesRecognition.V2.OperatorGuard.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -95,6 +100,7 @@ var files = [
   '96.Tests.SalesRecognition.V2.U4.Cases.js',
   '96.Tests.SalesRecognition.V2.U5.Cases.js',
   '96.Tests.SalesRecognition.V2.U6.Cases.js',
+  '96.Tests.SalesRecognition.V2.U7.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -290,7 +296,19 @@ run('testSalesRecognitionV2U6PolicyC', 'testSalesRecognitionV2U6PolicyC()');
 run('testSalesRecognitionV2U6Legacy', 'testSalesRecognitionV2U6Legacy()');
 run('testSalesRecognitionV2U6Transport', 'testSalesRecognitionV2U6Transport()');
 run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit()');
-run('testSalesV2U6MutationProof', 'JSON.stringify(runSalesV2U6MutationProof())');
+  run('testSalesV2U6MutationProof', 'JSON.stringify(runSalesV2U6MutationProof())');
+
+  // SALES_RECOGNITION_V2 U7 operator flow + legacy-routing guards: mode
+  // routing, V2 retirements, request identity, Correct/Void routing, UI
+  // contracts, 28-item source audit, controller fixture + sensitivity proof.
+  run('testSalesRecognitionV2U7OperatorFlow', 'testSalesRecognitionV2U7OperatorFlow()');
+  run('testSalesRecognitionV2U7RetirementGuards', 'testSalesRecognitionV2U7RetirementGuards()');
+  run('testSalesRecognitionV2U7RequestIdentity', 'testSalesRecognitionV2U7RequestIdentity()');
+  run('testSalesRecognitionV2U7CorrectVoidRouting', 'testSalesRecognitionV2U7CorrectVoidRouting()');
+  run('testSalesRecognitionV2U7UiContracts', 'testSalesRecognitionV2U7UiContracts()');
+  run('testSalesRecognitionV2U7SourceAudit', 'testSalesRecognitionV2U7SourceAudit()');
+  run('testSalesV2U7Controller', 'JSON.stringify(runSalesV2U7Controller())');
+  run('testSalesV2U7MutationProof', 'JSON.stringify(runSalesV2U7MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

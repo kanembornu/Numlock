@@ -92,6 +92,10 @@
     function addSelectedSalesOrderLine()
     {
       var state = transactionEntryState, authority = operationalTransactionState.authority || {};
+      // U7: the payload is immutable under one RequestKey while a save is in
+      // durable processing. Line changes require a definitively resolved
+      // outcome; a new intent then receives a new identity.
+      if (operationalTransactionState.pending) { operationalElement("operationalOrderError").innerText = "Selesaikan atau batalkan penyimpanan yang sedang berjalan sebelum mengubah baris."; return; }
       if (!state.selectedProduct || !state.selectedType || !state.pricing || !(state.qty > 0)) { operationalElement("operationalOrderError").innerText = "Pilih product, variant, dan qty."; return; }
       var variant = (authority.productVariants || []).filter(function(row) { return row.ProductID === state.selectedProduct.productId && String(row.Tipe).toUpperCase() === state.selectedType.toUpperCase(); })[0];
       if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant yang tersedia."; return; }
@@ -109,7 +113,7 @@
     function operationalServerCall(method, payload, onSuccess, onRefusal, onUnknown)
     {
       if (operationalTransactionState.authorityStatus !== "READY" || !operationalTransactionState.authority) { onRefusal({ code: "AUTHORITY_UNAVAILABLE", message: "Transaction authority is unavailable." }); return; }
-      google.script.run.withSuccessHandler(function(response) { if (!response || typeof response !== "object") { onUnknown(); return; } if (response.success !== true) { onRefusal(response.error || { code: "DEFINITE_REFUSAL", message: "Transaction refused." }); return; } onSuccess(response.data); })
+      google.script.run.withSuccessHandler(function(response) { if (!response || typeof response !== "object") { onUnknown(); return; } if (response.unknown === true) { onUnknown(); return; } if (response.success !== true) { onRefusal(response.error || { code: "DEFINITE_REFUSAL", message: "Transaction refused." }); return; } onSuccess(response.data); })
         .withFailureHandler(function() { onUnknown(); })[method](payload);
     }
     function saveOperationalOrder()
@@ -121,7 +125,11 @@
       pending.state = "SUBMITTING"; persistOperationalRecovery_(); setOperationalInFlight_("order", true);
       operationalServerCall("submitOperationalOrder", Object.assign({ requestKey: pending.requestKey }, pending.payload), function(order) { pending.state = "CONFIRMED"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); showOperationalOrder(order); persistOperationalRecovery_(); }, function(error) { pending.state = "DEFINITE_FAILURE"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); operationalElement("operationalOrderError").innerText = error.message; persistOperationalRecovery_(); }, function() { setOperationalInFlight_("order", false); operationalUnknown_(operationalElement("operationalOrderError")); });
     }
-    function showOperationalOrder(order) { if (!order) return; operationalTransactionState.order = order; operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID"; operationalElement("operationalFulfillmentFields").hidden = false; operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal); renderOperationalOrderStatus(); }
+    // U7: a V2 sale renders recognition/lineage status only — Payment Method,
+    // Receive Via, Paid/Unpaid and fulfillment progression are never its
+    // lifecycle. Cohort arrives from the server's persisted-evidence check.
+    function salesV2OperatorVisibleOrder_(order) { return !!(order && (order.salesCohort === "V2_COMMITTED" || order.salesCohort === "V2_PENDING")); }
+    function showOperationalOrder(order) { if (!order) return; operationalTransactionState.order = order; if (salesV2OperatorVisibleOrder_(order)) { operationalElement("operationalPaymentFields").hidden = true; operationalElement("operationalFulfillmentFields").hidden = true; renderOperationalOrderStatus(); return; } operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID"; operationalElement("operationalFulfillmentFields").hidden = false; operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal); renderOperationalOrderStatus(); }
     function loadOperationalOrder(identifier) { operationalServerCall("findOperationalOrder", identifier, function(order) { if (order) { showOperationalOrder(order); persistOperationalRecovery_(); } else operationalElement("operationalOrderError").innerText = "Order tidak ditemukan."; }, function(error) { operationalElement("operationalOrderError").innerText = error.message; }, function() { operationalUnknown_(operationalElement("operationalOrderError")); }); }
     function lookupOperationalOrder() { loadOperationalOrder(operationalElement("operationalOrderLookup").value); }
     function listOperationalOpenOrders() {
@@ -131,6 +139,15 @@
     function renderOperationalOrderStatus()
     {
       var order = operationalTransactionState.order, lines = (order.Lines || []).map(function(line) { return (line.ProductID || line.productID) + " / " + (line.Tipe || line.tipe) + " × " + (line.Qty || line.qty) + " · " + formatEntryCurrency(line.SellingPriceSnapshot || line.sellingPriceSnapshot); }).join("; ");
+      if (salesV2OperatorVisibleOrder_(order)) {
+        // V2 operator status = recognition/lineage semantics, never a payment
+        // or fulfillment status, never a fabricated payment method.
+        operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.OrderType + " · " + lines + " · " + formatEntryCurrency(order.OrderTotal) + " · Recognized";
+        operationalElement("operationalPaymentFields").hidden = true;
+        operationalElement("operationalFulfillmentFields").hidden = true;
+        operationalElement("operationalFulfillmentNext").hidden = true;
+        return;
+      }
       operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.OrderType + " · " + lines + " · " + formatEntryCurrency(order.OrderTotal) + " · " + order.PaymentStatus + " · " + order.FulfillmentStatus;
       operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID";
       var actions = { OPEN: ["Start Preparing", "PREPARING"], PREPARING: ["Mark Ready", "READY"], READY: ["Complete", "COMPLETED"] }, next = actions[order.FulfillmentStatus], button = operationalElement("operationalFulfillmentNext"); button.hidden = !next; if (next) { button.textContent = next[0]; button.dataset.next = next[1]; }
@@ -442,6 +459,142 @@
       return merged;
     }
 
+    // === U7: V2 Correct / Void operator dispatch ===
+    // Cohort routing only: V2 identities resolve to salesRecognitionV2DurableVoid /
+    // salesRecognitionV2DurableCorrect (SALES_V2_VOID / SALES_V2_CORRECT, reason
+    // required); legacy identities never enter these functions. Exception
+    // actions, not a normal continuation of the save flow.
+    var salesV2MutationState = { requestKey: "", orderID: "", orderType: "", lines: [], mode: "", submitting: false };
+
+    function isSalesV2MutationTarget_(detail)
+    {
+      return String((detail && detail.id) || "").indexOf("ORDER:") === 0 ||
+        !!(detail && (detail.salesCohort === "V2_COMMITTED" || detail.salesCohort === "V2_PENDING"));
+    }
+
+    function salesV2MutationKey_(mode) { return (mode === "correct" ? "v2corr-" : "v2void-") + String(Date.now()) + "-" + Math.random().toString(36).slice(2); }
+
+    function persistSalesV2MutationRecovery_() { try { if (salesV2MutationState.requestKey) localStorage.setItem("numlock.sales.v2pending", JSON.stringify(salesV2MutationState)); else localStorage.removeItem("numlock.sales.v2pending"); } catch (error) {} }
+
+    function salesV2MutationOperationType_() { return salesV2MutationState.mode === "correct" ? "SALES_V2_CORRECT" : "SALES_V2_VOID"; }
+
+    function openSalesV2MutationDialog(detail, mode)
+    {
+      // One stable RequestKey per intent. The key survives unknown outcomes,
+      // retries and reloads; only a definitively resolved intent may rotate it.
+      salesV2MutationState = { requestKey: salesV2MutationKey_(mode),
+        orderID: String(detail.orderId || String(detail.id).replace(/^ORDER:/, "")),
+        orderType: String(detail.orderType || "DINE_IN"),
+        lines: (detail.lines || []).map(function(line) { return { productID: String(line.productId || ""), productVariantID: String(line.productVariantID || ""), qty: Number(line.qty) }; }),
+        mode: mode, submitting: false };
+      persistSalesV2MutationRecovery_();
+      openTransactionLifecycleDialog(mode === "void" ? "void" : "detail");
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.title.innerText = mode === "void" ? "Void Sale" : "Correct Sale";
+      lifecycle.description.innerText = detail.id + " · Sales Recognition V2 · " + salesV2MutationOperationType_();
+      lifecycle.state.innerText = "";
+      var linesHtml = "";
+      if (mode === "correct") {
+        linesHtml = salesV2MutationState.lines.map(function(line, index) {
+          return '<div class="transaction-entry-control"><label for="salesV2LineQty' + index + '">' + escapeUiHtml(line.productID) + " / " + escapeUiHtml(line.productVariantID) + ' Qty</label><input id="salesV2LineQty' + index + '" type="number" min="1" step="1" value="' + line.qty + '" oninput="updateSalesV2MutationAction()"></div>';
+        }).join("");
+      }
+      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Reason</h3><div class="transaction-entry-control"><label for="salesV2MutationReason">Reason</label><input id="salesV2MutationReason" type="text" maxlength="500" placeholder="Enter a meaningful reason (min 3 characters)" oninput="updateSalesV2MutationAction()"><p id="salesV2MutationReasonError" class="transaction-entry-error" role="alert"></p></div>' + linesHtml + '</section>';
+      lifecycle.voidRegion.hidden = true;
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary' + (mode === "void" ? ' transaction-action-destructive' : '') + '" onclick="submitSalesV2Mutation()" disabled>' + (mode === "void" ? "Void Sale" : "Submit Correction") + '</button>';
+      if (typeof completeTransactionActionDiagnostic === "function") completeTransactionActionDiagnostic(mode, detail.id);
+    }
+
+    function salesV2MutationPayload_()
+    {
+      var reason = String((document.getElementById("salesV2MutationReason") || {}).value || "").trim();
+      var payload = { requestKey: salesV2MutationState.requestKey, orderID: salesV2MutationState.orderID, reason: reason };
+      if (salesV2MutationState.mode === "correct") {
+        payload.orderType = salesV2MutationState.orderType;
+        payload.lines = salesV2MutationState.lines.map(function(line, index) {
+          var input = document.getElementById("salesV2LineQty" + index);
+          return { productID: line.productID, productVariantID: line.productVariantID, qty: Number(input ? input.value : line.qty) };
+        });
+      }
+      return payload;
+    }
+
+    function salesV2MutationValid_()
+    {
+      var reason = String((document.getElementById("salesV2MutationReason") || {}).value || "").trim();
+      if (reason.length < 3) return false;
+      if (salesV2MutationState.mode === "correct") {
+        return salesV2MutationState.lines.every(function(line, index) {
+          var input = document.getElementById("salesV2LineQty" + index);
+          var qty = Number(input ? input.value : line.qty);
+          return isFinite(qty) && qty >= 1 && Math.floor(qty) === qty;
+        });
+      }
+      return true;
+    }
+
+    function updateSalesV2MutationAction()
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      var label = salesV2MutationState.mode === "void" ? "Void Sale" : "Submit Correction";
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary' + (salesV2MutationState.mode === "void" ? ' transaction-action-destructive' : '') + '" onclick="submitSalesV2Mutation()" ' + (salesV2MutationValid_() ? "" : "disabled") + '>' + label + '</button>';
+    }
+
+    function salesV2MutationOutcomeSuccess_(result)
+    {
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      var replacement = result && result.orderID ? String(result.orderID) : "";
+      lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>' + (salesV2MutationState.mode === "void" ? "Sale voided" : "Sale corrected") + '</h3><p class="ui-theme-secondary">' + escapeUiHtml(salesV2MutationState.orderID) + (replacement && replacement !== salesV2MutationState.orderID ? " · Replacement: " + escapeUiHtml(replacement) : "") + '</p></section>';
+      lifecycle.state.innerText = salesV2MutationState.mode === "void" ? "Void recorded." : "Correction recorded.";
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+      salesV2MutationState.requestKey = ""; persistSalesV2MutationRecovery_();
+      invalidateTransactionsClientCaches();
+      refreshTransactionEntryAfterSuccess();
+    }
+
+    function submitSalesV2Mutation()
+    {
+      if (salesV2MutationState.submitting || !salesV2MutationState.requestKey) return;
+      if (!salesV2MutationValid_()) return;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      salesV2MutationState.submitting = true;
+      persistSalesV2MutationRecovery_();
+      lifecycle.state.innerText = salesV2MutationState.mode === "void" ? "Voiding sale…" : "Submitting correction…";
+      var payload = salesV2MutationPayload_();
+      var method = salesV2MutationState.mode === "correct" ? "salesRecognitionV2DurableCorrect" : "salesRecognitionV2DurableVoid";
+      google.script.run.withSuccessHandler(function(response) {
+        salesV2MutationState.submitting = false;
+        if (!response || typeof response !== "object") { salesV2MutationUnknown_(lifecycle); return; }
+        if (response.status === "DONE") { salesV2MutationOutcomeSuccess_(response); return; }
+        if (response.status === "UNKNOWN" || response.status === "RECOVERY_REQUIRED") { salesV2MutationUnknown_(lifecycle); return; }
+        lifecycle.state.innerText = "Request " + salesV2MutationState.requestKey + " refused (" + String(response.code || "REFUSED") + "). Review the sale and try again.";
+      }).withFailureHandler(function() { salesV2MutationState.submitting = false; salesV2MutationUnknown_(lifecycle); })[method](payload);
+    }
+
+    function salesV2MutationUnknown_(lifecycle)
+    {
+      // Possible-write outcome: keep the SAME RequestKey, never a new identity,
+      // never a definite failure, never an automatic second mutation.
+      salesV2MutationState.submitting = false;
+      persistSalesV2MutationRecovery_();
+      lifecycle.state.innerText = "Result belum dapat dipastikan. Sistem akan memeriksa transaksi yang sama (RequestKey " + salesV2MutationState.requestKey + "); jangan membuat transaksi baru.";
+      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="reconcileSalesV2Mutation()">Check Status</button>';
+    }
+
+    function reconcileSalesV2Mutation()
+    {
+      if (!salesV2MutationState.requestKey) return;
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      lifecycle.state.innerText = "Checking the same request…";
+      operationalServerCall("findOperationalOperation", { operationType: salesV2MutationOperationType_(), requestKey: salesV2MutationState.requestKey },
+        function(result) {
+          if (result && result.operation && result.operation.State === "COMMITTED") { salesV2MutationOutcomeSuccess_({ orderID: result.operation.BusinessID || salesV2MutationState.orderID }); return; }
+          salesV2MutationUnknown_(lifecycle);
+        },
+        function() { salesV2MutationUnknown_(lifecycle); },
+        function() { salesV2MutationUnknown_(lifecycle); });
+    }
+
     function loadTransactionForMutation(transactionId, mode)
     {
       var requestToken = ++transactionLifecycleRequestSequence;
@@ -449,6 +602,10 @@
       loadCanonicalTransactionDetail(transactionId, function(detail) {
         if (requestToken !== transactionLifecycleRequestSequence) return;
         transactionLifecycleState.detail = detail;
+        // Cohort routing: V2 goes to U6 only; legacy keeps its own handler.
+        if (mode === "correct" || mode === "void") {
+          if (isSalesV2MutationTarget_(detail)) { openSalesV2MutationDialog(detail, mode); return; }
+        }
         if (mode === "correct") openTransactionCorrection(detail);
         else renderTransactionVoidConfirmation(detail);
       }, function(error) {

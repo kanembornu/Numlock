@@ -235,6 +235,16 @@ function buildCashPostingCandidate(settlement, context) {
     ];
   } else if (direction === "INFLOW") {
     var relatedSaleType = String(settlement.RelatedTransactionType || "").trim();
+    // U7: a V2 sale can never produce a cash posting candidate. Evidence is
+    // the persisted V2 operation/recognition rows bound to this exact related
+    // transaction; settlements for pre-V2/legacy sales are untouched.
+    if ((relatedSaleType === "Order" || relatedSaleType === "Sales") &&
+        typeof salesV2OperatorCashPostBlocked_ === "function" &&
+        salesV2OperatorCashPostBlocked_(transactionId, context)) {
+      // Mirrors SALES_V2_OPERATOR.CASH_POST_CODE without a load-order coupling.
+      return { status: "REFUSED", reason: "SALES_V2_NO_CASH_POST",
+        readOnly: true, writeCount: 0 };
+    }
     var canonicalOrder = relatedSaleType === "Order" ? context.order : null;
     var sale = canonicalOrder || cashTransactionById(context.transactions, transactionId, "Sales");
     var authoritativeSaleAmount = Number(canonicalOrder ? canonicalOrder.OrderTotal : sale && sale.amount);
@@ -448,7 +458,9 @@ function cashSettle(request, context) {
     transactions: context.transactions || [],
     purchaseEvents: context.purchaseEvents || [],
     balanceLedgerRows: context.balanceLedgerRows || [],
-    settlements: settlements
+    settlements: settlements,
+    salesRecognitionOperations: context.salesRecognitionOperations || [],
+    salesRecognitionEvents: context.salesRecognitionEvents || []
   });
 }
 
@@ -494,7 +506,9 @@ function cashSettleAndPersist(request, runtime) {
       settlements: state.settlements || [],
       balanceLedgerRows: state.balanceLedger || [],
       transactions: state.transactions || [],
-      purchaseEvents: state.purchaseEvents || []
+      purchaseEvents: state.purchaseEvents || [],
+      salesRecognitionOperations: state.salesRecognitionOperations || [],
+      salesRecognitionEvents: state.salesRecognitionEvents || []
     };
     var result = cashSettle(request, context);
     var settlement = request.settlement;
@@ -538,7 +552,9 @@ function cashSettleAndPersist(request, runtime) {
           transactions: context.transactions,
           purchaseEvents: context.purchaseEvents,
           balanceLedgerRows: context.balanceLedgerRows,
-          settlements: context.settlements
+          settlements: context.settlements,
+          salesRecognitionOperations: context.salesRecognitionOperations,
+          salesRecognitionEvents: context.salesRecognitionEvents
         });
       }
       if (recoveryCandidate.status !== "READY") {
@@ -1080,7 +1096,12 @@ function createCashProductionRuntimeWithSpreadsheet(spreadsheet, options) {
         settlements: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(sSheet)),
         balanceLedger: balanceFoundationRowsFromValues(balanceFoundationSheetSnapshot(lSheet)),
         transactions: cashBridgeCanonicalTransactions(spreadsheet, CASH_FOUNDATION_POLICY.CUTOVER_DATE),
-        purchaseEvents: cashBridgeCanonicalPurchaseEvents(spreadsheet, CASH_FOUNDATION_POLICY.CUTOVER_DATE)
+        purchaseEvents: cashBridgeCanonicalPurchaseEvents(spreadsheet, CASH_FOUNDATION_POLICY.CUTOVER_DATE),
+        // U7: persisted V2 evidence so a V2 sale can never reach a cash post.
+        salesRecognitionOperations: typeof salesV2OperatorOptionalOperationRows_ === "function" ?
+          salesV2OperatorOptionalOperationRows_(spreadsheet) : [],
+        salesRecognitionEvents: typeof salesV2OperatorOptionalEventRows_ === "function" ?
+          salesV2OperatorOptionalEventRows_(spreadsheet) : []
       };
     },
     writeSettlement: function(row) {

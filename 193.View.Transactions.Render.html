@@ -45,10 +45,13 @@
             {
               var purchase = r.transactionType === "PurchaseEvent";
               var receipt = r.transactionType === "InventoryReceipt" || purchase;
+              // U7: V2 recognized sales expose Correct/Void as exception
+              // actions; the detail controller routes them to U6 only.
+              var salesV2Row = r.transactionType === "Sales" && (r.salesCohort === "V2_COMMITTED");
               var amount = receipt ? Number(r.acquisitionValue) : r.revenue || r.expense || 0;
               var status = purchase ? (r.isActive === false ? (r.canVoid === false && r.canEdit === false ? "Corrected" : "Voided") : (r.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "Resolved" : "Evidence pending")) : receipt ? "Receipt captured" : r.isActive === false ? "Voided" : "Active";
               var statusBadgeClass = purchase ? (r.isActive === false ? (r.canVoid === false && r.canEdit === false ? "corrected" : "voided") : (r.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "resolved" : "pending")) : r.isActive === false ? "voided" : "active";
-              var canMutate = purchase ? (r.canVoid || r.canCorrect) : (!receipt && r.source === "APP_ENTRY" && r.isActive !== false);
+              var canMutate = purchase ? (r.canVoid || r.canCorrect) : (!receipt && (r.source === "APP_ENTRY" || salesV2Row) && r.isActive !== false);
               var actions = '<button type="button" class="transactions-row-action transactions-row-action--view" onclick="runTransactionRowAction(\'detail\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-eye" aria-hidden="true"></i><span>View</span></button>';
               if (purchase) {
                 if (r.canResolveEvidence) actions += '<button type="button" class="transactions-row-action transactions-row-action--resolve" onclick="runTransactionRowAction(\'purchase-resolve\',\'' + escapeUiHtml(r.id) + '\',event.currentTarget)"><i class="fas fa-check-circle" aria-hidden="true"></i><span>Resolve</span></button>';

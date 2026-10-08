@@ -251,6 +251,9 @@ function createOperationalOrderWithRepository(payload, authority, runtime, repos
 }
 
 function transitionOperationalFulfillmentWithRepository(orderID, next, runtime, repository) {
+  // U7: V2 cohort orders reject fulfillment transitions (Start Preparing /
+  // Mark Ready / Complete, i.e. CLOSED lifecycle mutation) before any write.
+  salesV2OperatorFulfillmentGuard_(orderID, repository, runtime && runtime.spreadsheet);
   var order = repository.findOrder(orderID);
   if (!order) throw transactionOperationalError_("ORDER_NOT_FOUND", "OrderID");
   var updated = transitionOperationalFulfillment(order, next, runtime);
@@ -259,6 +262,9 @@ function transitionOperationalFulfillmentWithRepository(orderID, next, runtime, 
 }
 
 function payOperationalOrderWithRepository(orderID, payload, runtime, repository) {
+  // U7: V2 cohort orders reject payment submission / Receive Via / settlement
+  // before any write; pre-V2 and legacy orders keep their historical contract.
+  salesV2OperatorPaymentGuard_(orderID, repository, runtime && runtime.spreadsheet);
   var snapshot = repository.read(), order = repository.findOrder(orderID);
   if (!order) throw transactionOperationalError_("ORDER_NOT_FOUND", "OrderID");
   var result = payOperationalOrder(order, payload, snapshot, runtime);

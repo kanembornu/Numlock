@@ -1287,7 +1287,9 @@ function salesRecognitionV2SaveRuntime_() {
     lock: LockService.getScriptLock(),
     now: function() { return new Date(); },
     actor: function() { return Session.getActiveUser().getEmail() || CANONICAL_ENTRY.USER; },
-    config: salesRecognitionV2DefaultConfig(),
+    // U7: operator config resolver (fail-closed to the PREPARED default until
+    // a future authorized activation records T + ActivationID).
+    config: salesRecognitionV2OperatorConfig(salesRecognitionV2DefaultConfig()),
     batch: function(valueRanges) { return salesRecognitionV2SaveBatchRequest_(valueRanges); }
   };
   Object.defineProperty(runtime, "repository", { configurable: true, enumerable: true, get: function() {

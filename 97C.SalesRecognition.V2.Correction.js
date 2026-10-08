@@ -1783,7 +1783,8 @@ function salesRecognitionV2MutationRuntime_() {
     lock: LockService.getScriptLock(),
     now: function() { return new Date(); },
     actor: function() { return Session.getActiveUser().getEmail() || CANONICAL_ENTRY.USER; },
-    config: salesRecognitionV2DefaultConfig(),
+    // U7: operator config resolver (fail-closed to the PREPARED default).
+    config: salesRecognitionV2OperatorConfig(salesRecognitionV2DefaultConfig()),
     batch: function(valueRanges, operationType) {
       return salesRecognitionV2MutationBatchRequest_(operationType, valueRanges);
     }

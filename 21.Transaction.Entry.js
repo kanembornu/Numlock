@@ -262,6 +262,17 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
       "Transaction type must be SALES, EXPENSE or INVENTORY_RECEIPT.", "transactionType"));
     refused.status = "REFUSED"; refused.writeCount = 0; return refused;
   }
+  // U7: config-aware routing for NEW Sales (server enforced, pre-lock, zero
+  // writes). PREPARED keeps this legacy writer byte-for-byte; ACTIVE routes
+  // new sales to Sales Recognition V2; PAUSED/invalid fail closed. Never a
+  // legacy fallback, never a silent fall-through.
+  if (type === "SALES") {
+    var saleRouteRefusal = salesV2OperatorLegacySalesGuard_();
+    if (saleRouteRefusal) {
+      saleRouteRefusal.status = "REFUSED"; saleRouteRefusal.writeCount = 0;
+      return saleRouteRefusal;
+    }
+  }
   if (type === "INVENTORY_RECEIPT") {
     try { validateInventoryReceiptRequest_(payload); }
     catch (error) { return inventoryReceiptOrchestrationResult_("NOT_STARTED", error.message, payload && payload.requestKey, null, 0); }
