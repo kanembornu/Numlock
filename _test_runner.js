@@ -4,6 +4,8 @@ var runSalesV2U1MutationProof = require('./tests/browser/sales-v2-u1-mutation-pr
 globalThis.runSalesV2U1MutationProof = runSalesV2U1MutationProof;
 var runSalesV2U2MutationProof = require('./tests/browser/sales-v2-u2-mutation-proof.js');
 globalThis.runSalesV2U2MutationProof = runSalesV2U2MutationProof;
+var runSalesV2U3MutationProof = require('./tests/browser/sales-v2-u3-mutation-proof.js');
+globalThis.runSalesV2U3MutationProof = runSalesV2U3MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -77,9 +79,11 @@ var files = [
   '95A.Transaction.Production.js',
   '97.SalesRecognition.V2.Foundation.js',
   '97A.SalesRecognition.V2.Save.js',
+  '97B.SalesRecognition.V2.Projection.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
+  '96.Tests.SalesRecognition.V2.Projection.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -230,6 +234,13 @@ run('testSalesRecognitionV2SaveCore', 'testSalesRecognitionV2SaveCore()');
 run('testSalesRecognitionV2SaveRecovery', 'testSalesRecognitionV2SaveRecovery()');
 run('testSalesRecognitionV2SaveGates', 'testSalesRecognitionV2SaveGates()');
 run('testSalesV2U2MutationProof', 'JSON.stringify(runSalesV2U2MutationProof())');
+
+// SALES_RECOGNITION_V2 U3 shared read-only projection (cohorts, signed
+// events, lineage, cross-cohort parity + sensitivity proof).
+run('testSalesRecognitionV2ProjectionCore', 'testSalesRecognitionV2ProjectionCore()');
+run('testSalesRecognitionV2ProjectionLineage', 'testSalesRecognitionV2ProjectionLineage()');
+run('testSalesRecognitionV2ProjectionParity', 'testSalesRecognitionV2ProjectionParity()');
+run('testSalesV2U3MutationProof', 'JSON.stringify(runSalesV2U3MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
