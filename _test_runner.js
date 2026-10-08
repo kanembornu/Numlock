@@ -20,6 +20,8 @@ var runSalesV2U8MutationProof = require('./tests/browser/sales-v2-u8-mutation-pr
 globalThis.runSalesV2U8MutationProof = runSalesV2U8MutationProof;
 var runSalesV2U8ReleaseAudit = require('./tests/browser/sales-v2-u8-release-audit.js');
 globalThis.runSalesV2U8ReleaseAudit = runSalesV2U8ReleaseAudit;
+var runSalesV2U10ActivationMutationProof = require('./tests/browser/sales-v2-u10-activation-mutation-proof.js');
+globalThis.runSalesV2U10ActivationMutationProof = runSalesV2U10ActivationMutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -97,6 +99,7 @@ var files = [
   '97B.SalesRecognition.V2.Projection.js',
   '97C.SalesRecognition.V2.Correction.js',
   '97D.SalesRecognition.V2.OperatorGuard.js',
+  '97E.SalesRecognition.V2.Activation.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -106,6 +109,7 @@ var files = [
   '96.Tests.SalesRecognition.V2.U6.Cases.js',
   '96.Tests.SalesRecognition.V2.U7.Cases.js',
   '96.Tests.SalesRecognition.V2.U8.Cases.js',
+  '96.Tests.SalesRecognition.V2.Activation.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -327,6 +331,13 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testSalesRecognitionV2U8ReleaseEvidence', 'testSalesRecognitionV2U8ReleaseEvidence()');
   run('testSalesV2U8MutationProof', 'JSON.stringify(runSalesV2U8MutationProof())');
   run('testSalesV2U8ReleaseAudit', 'JSON.stringify(runSalesV2U8ReleaseAudit())');
+
+  // SALES_RECOGNITION_V2 U10 activation capability (PREPARED -> ACTIVE writer):
+  // happy path, fail-closed matrix, source audit + sensitivity proof.
+  run('testSalesRecognitionV2ActivationCore', 'testSalesRecognitionV2ActivationCore()');
+  run('testSalesRecognitionV2ActivationFailClosed', 'testSalesRecognitionV2ActivationFailClosed()');
+  run('testSalesRecognitionV2ActivationSourceAudit', 'testSalesRecognitionV2ActivationSourceAudit()');
+  run('testSalesV2U10ActivationMutationProof', 'JSON.stringify(runSalesV2U10ActivationMutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

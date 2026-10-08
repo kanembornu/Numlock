@@ -1,10 +1,88 @@
 # SALES_RECOGNITION_V2 — U10 Activation + First Event Evidence
 
-TASK_ID: U10-ACTIVATION-FIRST-EVENT-01 · Complexity L3 · Operational risk R4 · Reasoning high
+TASK_ID: U10A-ACTIVATION-CLOSURE-01 (successor to U10-ACTIVATION-FIRST-EVENT-01) · Complexity L3 · Operational risk R4 · Reasoning high
 Backend/model `9router/numlock-explore-free` (numlock-critical, executed in-session).
 
-**STATUS: `BLOCKED` — exact code `BLOCKED_CAPABILITY`. Production state:
-`PREPARED / disabled`.**
+**STATUS: `IN_PROGRESS` — Option A activation-writer closure. Production state
+at last local measurement: `PREPARED / disabled` (pre-push).**
+
+## 0. Predecessor + Option A authorization
+
+Predecessor task U10-ACTIVATION-FIRST-EVENT-01 (HEAD `dc7db0e`/`11c35b0`
+evidence) returned `BLOCKED_CAPABILITY`: deployed runtime had no authorized
+mutation primitive for `PREPARED → ACTIVE`. Full predecessor measurement is
+retained unchanged in §1–§8 below.
+
+Owner Option A (this task) explicitly authorizes exactly:
+1. minimal production activation writer implementation;
+2. local tests;
+3. **ONE** additional `clasp push --force` (explicit one-time Rule 7 exception);
+4. invoke the writer **exactly once** to activate;
+5. previously authorized U10 first-genuine-event acceptance.
+
+No other deployment, no manual Script Property edit, no Treasury, no 2010,
+no fake Sale, no Correct/Void test, no second Sale, no version-706 cleanup,
+no Git push, no historical rewrite.
+
+### 0.1 Activation-writer closure (implementation)
+
+New file `97E.SalesRecognition.V2.Activation.js` (registered in
+`.claspignore` upload manifest):
+
+- Public entry `salesRecognitionV2Activate()` — zero parameters; acquires
+  `LockService.getScriptLock()` before any read/write; releases once.
+- Core `salesRecognitionV2ActivateWithRuntime_(runtime)` — fixture-injectable;
+  never locks (outer owns lock).
+- Exactly one logical Script Properties mutation:
+  `setProperty("SALES_RECOGNITION_V2_CONFIG", JSON.stringify(activated))`.
+- Preconditions (fail closed, no write): valid PREPARED (absent property → U1
+  default); empty T; empty ActivationID; exact contractVersion; U2 schema gate
+  (`salesRecognitionV2SaveSchemaGate_`); U1 account preflight
+  (`preflightSalesRecognitionAccounts` on 1030/2010/4000); Events rows=0;
+  Audits rows=0; 0 V2 operation rows.
+- Server identity only: ActivationID from `runtime.uuid()` (`Utilities.getUuid`
+  in production); T from `runtime.now()` (`new Date()` in production,
+  `toISOString()`); never client-supplied; never version 706/commit/Order.
+- Forbidden instant `2026-10-06T18:50:05.328Z` still rejected by U1 validator
+  before write.
+- Immediate readback + exact five-field equality; mismatch →
+  `ACTIVATION_READBACK_MISMATCH`, no repair.
+- Idempotent reinvocation after exact activation → `ALREADY_ACTIVE`, same
+  identity, **zero** additional writes.
+- Conflicting/malformed PAUSED/ACTIVE/PREPARED-with-metadata/wrong-contract →
+  fail closed.
+- No Sales/Order/journal/Payment/Settlement/InventoryLedger side effects.
+- No generic config editor; no pause/resume/disable API. 97D reader path
+  unchanged (still never calls `setProperty`).
+
+### 0.2 Local tests + mutation proof (MEASURED)
+
+- Suites: `testSalesRecognitionV2ActivationCore` (A1/A2/A3/A11/A12),
+  `testSalesRecognitionV2ActivationFailClosed` (A4–A10 + PAUSED + forbidden T),
+  `testSalesRecognitionV2ActivationSourceAudit` (15 items + pub-entry).
+- Mutation proof `tests/browser/sales-v2-u10-activation-mutation-proof.js`:
+  8/8 SENSITIVITY_PROVEN (M1 client ID, M2 client T, M3 regenerate ID,
+  M4 regenerate T, M5 write before/without clean write-count, M6 skip account
+  preflight, M7 skip schema preflight, M8 activation writes recognition event).
+- Full local harness: **95 PASS / 0 FAIL** (`node _test_runner.js`),
+  MEASURED after final source modification. Baseline ≥91 preserved; +4 new
+  suites (3 activation + 1 proof).
+- `node --check` on all new/changed JS: PASS.
+- `git diff --check`: clean.
+
+### 0.3 Upload-manifest edits (related only)
+
+- `.claspignore`: `!97E.SalesRecognition.V2.Activation.js` registered.
+- `tests/browser/sales-v2-u8-release-audit.js`: 97E added to ACTIVE-mode
+  allowlist and V2 upload-registration list (otherwise U8 audit fails closed).
+- `_test_runner.js`: load 97E + activation cases + U10 proof; register 4 runs.
+
+---
+
+## Predecessor evidence (U10-ACTIVATION-FIRST-EVENT-01, preserved)
+
+**STATUS at predecessor completion: `BLOCKED` — exact code `BLOCKED_CAPABILITY`.
+Production state: `PREPARED / disabled`.**
 
 Activation could not be executed: the deployed production package contains **no
 code path that can write the authoritative config Script Property**

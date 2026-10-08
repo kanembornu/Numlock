@@ -79,7 +79,8 @@ function runSalesV2U8ReleaseAudit() {
   });
   var productionJs = productionFiles.filter(function(file) { return /\.js$/.test(file); });
   // ACTIVE literal only inside the mode routing table / tests / proofs.
-  var activeAllowlist = ["97D.SalesRecognition.V2.OperatorGuard.js"];
+  var activeAllowlist = ["97D.SalesRecognition.V2.OperatorGuard.js",
+    "97E.SalesRecognition.V2.Activation.js"];
   listRootCode_().concat(listTreeCode_("tests")).forEach(function(file) {
     if (!/\.(js|html)$/.test(file)) return;
     var text = read_(file);
@@ -110,7 +111,7 @@ function runSalesV2U8ReleaseAudit() {
   var claspignore = read_(".claspignore");
   var v2Files = ["97.SalesRecognition.V2.Foundation.js", "97A.SalesRecognition.V2.Save.js",
     "97B.SalesRecognition.V2.Projection.js", "97C.SalesRecognition.V2.Correction.js",
-    "97D.SalesRecognition.V2.OperatorGuard.js"];
+    "97D.SalesRecognition.V2.OperatorGuard.js", "97E.SalesRecognition.V2.Activation.js"];
   var v2Registered = v2Files.every(function(file) {
     return claspignore.indexOf("\n!" + file + "\n") !== -1 || claspignore.startsWith("!" + file + "\n");
   });
