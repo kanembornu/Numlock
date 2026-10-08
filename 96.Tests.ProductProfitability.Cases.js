@@ -466,7 +466,10 @@ function testProductProfitabilityReconcilesToFinance() {
   var depreciationSource = buildFinanceDepreciationSource(ledger, assets);
 
   var period = { filter: "custom", startDate: "2026-01-01", endDate: "2026-01-31", label: "Jan 2026" };
-  var financePnl = buildFinanceProfitAndLoss(canonical, accounts, period, depreciationSource);
+  // U5: P&L Revenue reads the U3 projection over the same Sales rows.
+  var salesProjection = buildRecognizedSalesProjection_({ rows: { tabsal: source.sales,
+    Products: source.products }, presence: {}, issues: [] });
+  var financePnl = buildFinanceProfitAndLoss(canonical, accounts, period, depreciationSource, null, salesProjection);
   var pp = buildProductProfitability(filterTransactionsByDateRange(canonical.records, period), productsMap, null, period, null);
 
   check(Math.abs(pp.revenue - financePnl.summary.revenue) < 0.000001,
@@ -510,7 +513,9 @@ function testProductProfitabilityFailureIsolation() {
   var depreciationSource = buildFinanceDepreciationSource(ledger, assets);
 
   var period = { filter: "custom", startDate: "2026-01-01", endDate: "2026-01-31", label: "Jan 2026" };
-  var financePnl = buildFinanceProfitAndLoss(canonical, accounts, period, depreciationSource);
+  var salesProjection = buildRecognizedSalesProjection_({ rows: { tabsal: source.sales,
+    Products: source.products }, presence: {}, issues: [] });
+  var financePnl = buildFinanceProfitAndLoss(canonical, accounts, period, depreciationSource, null, salesProjection);
   var pp = buildProductProfitability(filterTransactionsByDateRange(canonical.records, period), productsMap, null, period, null);
 
   check(financePnl.summary.revenue === 75000, "Finance P&L revenue still correct after Product Profitability run");

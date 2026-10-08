@@ -34,6 +34,9 @@ function requireNumlockProductionSpreadsheet() {
 function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
   var ss = runtime.spreadsheet;
   var canonicalData = getCanonicalTransactionData(ss);
+  // U5: ONE recognized-Sales authority. Composed once per Finance request and
+  // reused across the P&L, the post-cutoff comparison build, and quality.
+  var salesProjection = buildRecognizedSalesProjectionFromSpreadsheet_(ss);
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
   ]);
@@ -44,7 +47,8 @@ function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
   catch (ledgerError) {
     if (period.endDate >= BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE) throw ledgerError;
   }
-  var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, balanceLedger);
+  var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource,
+    balanceLedger, salesProjection);
   try {
     var capitalRows = readCanonicalTable(ss, "CapitalEquity", CAPITAL_EQUITY_POLICY.HEADERS);
     var openingRows = readFinanceOpeningBalancesCompat(ss);
@@ -55,7 +59,7 @@ function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
         startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
         endDate: period.endDate,
         label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + period.endDate
-      }, depreciationSource).summary.operatingNetProfit;
+      }, depreciationSource, null, salesProjection).summary.operatingNetProfit;
     }
     finance.capitalEquity = buildCapitalEquityReadModel(
       capitalRows, openingRows, accounts, period.endDate, postCutoffProfit);
@@ -226,6 +230,7 @@ function scopeFinanceDepreciation(source, period) {
 function buildFinanceFinalReadinessEvidence_(runtime) {
   var ss = runtime.spreadsheet;
   var canonicalData = getCanonicalTransactionData(ss);
+  var salesProjection = buildRecognizedSalesProjectionFromSpreadsheet_(ss);
   var accountHeaders = ["AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"];
   var accounts = readCanonicalTable(ss, "Accounts", accountHeaders);
   var ledger = readCanonicalTable(ss, "BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
@@ -245,7 +250,7 @@ function buildFinanceFinalReadinessEvidence_(runtime) {
   var cases = {};
   buildFinanceRuntimeValidationPeriods(canonicalData).forEach(function(period) {
     if (period.validationName === "emptyPeriod") return;
-    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation, ledger);
+    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation, ledger, salesProjection);
     var summary = finance.summary;
     var breakdown = finance.expenseBreakdown.reduce(function(total, item) { return total + Number(item.amount || 0); }, 0);
     var predicateAExpected = Number(summary.operatingExpenses || 0), predicateADifference = breakdown - predicateAExpected;
@@ -269,12 +274,13 @@ function buildFinanceFinalReadinessEvidence_(runtime) {
     BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE : lastDate;
   var prospectivePeriod = { filter: "custom", startDate: BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE,
     endDate: prospectiveEnd, label: BALANCE_FOUNDATION_POLICY.POLICY_C_TRANSITION_DATE + " to " + prospectiveEnd };
-  var prospective = buildFinanceProfitAndLoss(canonicalData, accounts, prospectivePeriod, depreciation, ledger);
+  var prospective = buildFinanceProfitAndLoss(canonicalData, accounts, prospectivePeriod, depreciation, ledger,
+    salesProjection);
   var balance = buildPolicyCStatementReconciliation(ledger, { accountingRegime: "PROSPECTIVE_PURCHASE_EXPENSE" });
   var cashFlow = buildCashFlowStatement(ledger, accounts, prospectivePeriod, null);
   var firstDate = dates.length ? dates[0] : "2026-09-30";
   var split = buildFinanceProfitAndLoss(canonicalData, accounts, { filter: "custom", startDate: firstDate,
-    endDate: prospectiveEnd, label: firstDate + " to " + prospectiveEnd }, depreciation, ledger);
+    endDate: prospectiveEnd, label: firstDate + " to " + prospectiveEnd }, depreciation, ledger, salesProjection);
   var purchaseSheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet), purchaseValues = purchaseSheet ?
     purchaseSheet.getDataRange().getValues() : [];
   var purchaseHeaders = (purchaseValues[0] || []).map(function(value) { return String(value || "").trim(); });
@@ -325,6 +331,7 @@ function validateFinanceProductionRuntime() {
   var canonicalData = getCanonicalTransactionData(ss);
   var canonicalAcquisitionMs = Date.now() - acquisitionStartedAt;
   var accountReadStartedAt = Date.now();
+  var salesProjection = buildRecognizedSalesProjectionFromSpreadsheet_(ss);
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
   ]);
@@ -333,7 +340,8 @@ function validateFinanceProductionRuntime() {
   var periods = buildFinanceRuntimeValidationPeriods(canonicalData);
   var results = periods.map(function(period) {
     var buildStartedAt = Date.now();
-    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, null,
+      salesProjection);
     var reconciliation = buildFinanceRuntimeReconciliation_(finance);
     var expenseTotal = reconciliation.expenseTotal;
     var summary = finance.summary;
@@ -413,6 +421,7 @@ function validateFinanceProductionRuntime() {
 function validateFinanceDepreciationProductionRuntime() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var canonicalData = getCanonicalTransactionData(ss);
+  var salesProjection = buildRecognizedSalesProjectionFromSpreadsheet_(ss);
   var accounts = readCanonicalTable(ss, "Accounts", [
     "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
   ]);
@@ -425,7 +434,8 @@ function validateFinanceDepreciationProductionRuntime() {
   ];
   var failures = [];
   var results = periods.map(function(period) {
-    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource);
+    var finance = buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, null,
+      salesProjection);
     var summary = finance.summary, quality = finance.dataQuality;
     if (!financeAmountsMatch(summary.operatingNetProfit,
         summary.grossProfit - summary.operatingExpenses - summary.depreciationExpense)) {
@@ -550,6 +560,7 @@ function getPartialBalanceDataWithRuntime(runtime, filter, customStart, customEn
   var capitalEquity = { status: "UNAVAILABLE" };
   try {
     var canonicalData = getCanonicalTransactionData(ss);
+    var salesProjection = buildRecognizedSalesProjectionFromSpreadsheet_(ss);
     var accounts = readCanonicalTable(ss, "Accounts", [
       "AccountCode", "AccountName", "AccountType", "StatementGroup", "CashFlowGroup", "IsActive"
     ]);
@@ -561,7 +572,7 @@ function getPartialBalanceDataWithRuntime(runtime, filter, customStart, customEn
       postCutoffProfit = buildFinanceProfitAndLoss(canonicalData, accounts, {
         filter: "custom", startDate: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START,
         endDate: asOfDate, label: FINANCE_OPENING_BALANCE_POLICY.POST_CUTOFF_PROFIT_AND_LOSS_START + " to " + asOfDate
-      }, depreciationSource).summary.operatingNetProfit;
+      }, depreciationSource, null, salesProjection).summary.operatingNetProfit;
     }
     capitalEquity = buildCapitalEquityReadModel(capitalRows, openingRows, accounts, asOfDate, postCutoffProfit);
   } catch (equityError) {
@@ -628,8 +639,46 @@ function buildFinanceAccountMap(accounts) {
   return buildCanonicalMasterMap(accounts || [], "AccountCode", "Accounts");
 }
 
-function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depreciationSource) {
+// SALES_RECOGNITION_V2 U5 Revenue scope. ONE Revenue authority: signed U3
+// projection `events`, attributed ONLY by each event's authoritative
+// EconomicDate (event.dateKey). Never activeView, never BalanceLedger 4000
+// credits, Payments, Order headers, OrderLines, or a second legacy Sales
+// reconstruction. Excluded cohorts stay excluded and are surfaced through
+// machine-readable quality metadata; a source-read failure makes the Revenue
+// authority incomplete for the period instead of silently authoritative zero.
+function buildFinanceSalesRecognitionScope_(salesProjection, period) {
+  if (!salesProjection) throw new Error("Finance requires the recognized Sales projection authority");
+  var revenue = 0;
+  var revenueEvents = salesProjection.events || [];
+  revenueEvents.forEach(function(event) {
+    if (event.status !== "RECOGNIZED") return;
+    var dateKey = String(event.dateKey || "");
+    if (!dateKey || dateKey < period.startDate || dateKey > period.endDate) return;
+    revenue += Number(event.signedAmount) || 0;
+  });
+  var quality = salesProjection.quality || {};
+  var excluded = quality.excluded || [];
+  var sourceReadFailed = (quality.issues || []).some(function(issue) {
+    return issue.code === SALES_RECOGNITION_PROJECTION.ISSUES.SOURCE_READ_FAILED;
+  });
+  return {
+    authority: "SALES_RECOGNITION_V2_PROJECTION",
+    contract: String(salesProjection.contract || ""),
+    recognizedRevenue: revenue,
+    unresolvedCount: excluded.length,
+    recoveryRequiredCount: (quality.recoveryIssues || []).length,
+    integrityConflictCount: excluded.filter(function(entry) {
+      return entry.status === "INTEGRITY_CONFLICT";
+    }).length,
+    revenueAuthorityComplete: !sourceReadFailed,
+    issues: quality.issues || [],
+    excluded: excluded
+  };
+}
+
+function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depreciationSource, salesProjection) {
   if (!depreciationSource) throw new Error("Finance requires the authoritative DepreciationLedger read model");
+  if (!salesProjection) throw new Error("Finance requires the recognized Sales projection authority");
   var accountMap = buildFinanceAccountMap(accounts);
   var scopedRecords = filterTransactionsByDateRange(canonicalData.records || [], period);
   var scopedLifecycle = filterTransactionsByDateRange(canonicalData.lifecycleRecords || [], period);
@@ -642,7 +691,8 @@ function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depre
   }).slice();
   var inactiveAccountMappings = [];
   var expenseTotals = {};
-  var revenue = 0;
+  var salesRecognition = buildFinanceSalesRecognitionScope_(salesProjection, period);
+  var revenue = salesRecognition.recognizedRevenue;
   var cogs = 0;
   var operatingExpenses = 0;
   var depreciationOverlapTransactions = [];
@@ -667,6 +717,9 @@ function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depre
 
   scopedRecords.forEach(function(row) {
     if (row.transactionType === "Sales") {
+      // Expense-side authority only: Revenue comes from the U3 projection
+      // above; the canonical Sales row still resolves historical COGS
+      // (pre-Policy-C 5000/1100 contract) and account-mapping quality.
       if (!row.productIsActive) {
         unresolvedProducts.push({ transactionId: String(row.id || ""), productId: String(row.productId || ""),
           reason: "INACTIVE_PRODUCT" });
@@ -675,7 +728,6 @@ function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depre
       var revenueAccount = resolveAccount(row.revenueAccountCode, "REVENUE", row, unresolvedProducts);
       var cogsAccount = resolveAccount(row.cogsAccountCode, "COGS", row, unresolvedProducts);
       if (!revenueAccount || !cogsAccount) return;
-      revenue += Number(row.revenue) || 0;
       cogs += Number(row.cogs) || 0;
       return;
     }
@@ -709,7 +761,8 @@ function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depre
   var issueCount = unresolvedProducts.length + unresolvedExpenseItems.length +
     inactiveAccountMappings.length + excludedInactiveTransactions + depreciationOverlapTransactions.length +
     depreciation.quality.duplicateLogicalKeys.length + depreciation.quality.invalidDepreciationRows.length +
-    depreciation.quality.invalidPeriodRows.length + depreciation.quality.unresolvedAssetReferences.length;
+    depreciation.quality.invalidPeriodRows.length + depreciation.quality.unresolvedAssetReferences.length +
+    (salesRecognition.revenueAuthorityComplete ? 0 : 1);
 
   return {
     period: { filter: period.filter, startDate: period.startDate, endDate: period.endDate, label: period.label },
@@ -719,6 +772,8 @@ function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depre
       operatingNetProfit: operatingNetProfit,
       operatingProfitMargin: revenue === 0 ? 0 : operatingNetProfit / revenue },
     expenseBreakdown: Object.keys(expenseTotals).sort().map(function(code) { return expenseTotals[code]; }),
+    // U5 machine-readable Revenue report metadata (additive DTO surface).
+    salesRecognition: salesRecognition,
     dataQuality: { unresolvedProducts: unresolvedProducts, unresolvedExpenseItems: unresolvedExpenseItems,
       inactiveAccountMappings: inactiveAccountMappings,
       duplicateDepreciationLogicalKeys: depreciation.quality.duplicateLogicalKeys,
@@ -732,18 +787,21 @@ function buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depre
   };
 }
 
-function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, ledgerRows) {
+function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciationSource, ledgerRows,
+  salesProjection) {
   var start = resolvePolicyCAccountingRegime_(period && period.startDate);
   var end = resolvePolicyCAccountingRegime_(period && period.endDate);
   if (start.status !== "RESOLVED" || end.status !== "RESOLVED") throw new Error("Finance economic period required");
   if (start.regime === "LEGACY_PRE_TRANSITION" && end.regime === "LEGACY_PRE_TRANSITION") {
-    var legacy = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depreciationSource);
+    var legacy = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, period, depreciationSource,
+      salesProjection);
     legacy.contractVersion = "POLICY_C_PE_V1"; legacy.accountingRegime = "LEGACY_PRE_TRANSITION";
     legacy.grossProfitAvailable = true; legacy.regimeSections = null; legacy.policyDisclosures = [];
     return legacy;
   }
   function buildProspective(prospectivePeriod) {
-    var result = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, prospectivePeriod, depreciationSource);
+    var result = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, prospectivePeriod, depreciationSource,
+      salesProjection);
     var material = (ledgerRows || []).reduce(function(total, row) {
       var date = capitalEquityDateKey(row.Tanggal);
       return isCanonicalActive(row.IsActive) && String(row.AccountCode || "") === "6210" &&
@@ -764,7 +822,8 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation
   if (start.regime === "PROSPECTIVE_PURCHASE_EXPENSE") return buildProspective(period);
   var legacyPeriod = Object.assign({}, period, { endDate: "2026-09-30", label: period.startDate + " to 2026-09-30" });
   var prospectivePeriod = Object.assign({}, period, { startDate: "2026-10-01", label: "2026-10-01 to " + period.endDate });
-  var legacySection = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, legacyPeriod, depreciationSource);
+  var legacySection = buildFinanceProfitAndLossLegacy_(canonicalData, accounts, legacyPeriod, depreciationSource,
+    salesProjection);
   var prospectiveSection = buildProspective(prospectivePeriod);
   var combinedExpenses = {};
   legacySection.expenseBreakdown.concat(prospectiveSection.expenseBreakdown).forEach(function(item) {
@@ -783,6 +842,11 @@ function buildFinanceProfitAndLoss(canonicalData, accounts, period, depreciation
       operatingNetProfit: legacySection.summary.operatingNetProfit + prospectiveSection.summary.operatingNetProfit,
       operatingProfitMargin: null },
     expenseBreakdown: Object.keys(combinedExpenses).sort().map(function(code) { return combinedExpenses[code]; }),
+    // Same events authority across both regime sections; recognized Revenue
+    // is the sum of each section's event-scoped amount.
+    salesRecognition: Object.assign({}, legacySection.salesRecognition, {
+      recognizedRevenue: legacySection.salesRecognition.recognizedRevenue +
+        prospectiveSection.salesRecognition.recognizedRevenue }),
     dataQuality: prospectiveSection.dataQuality, accountingPolicy: FINANCE_ACCOUNTING_POLICY,
     regimeSections: { legacy: legacySection, prospective: prospectiveSection },
     policyDisclosures: ["Accounting regime changes on 2026-10-01.",

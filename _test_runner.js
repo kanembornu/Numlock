@@ -8,6 +8,8 @@ var runSalesV2U3MutationProof = require('./tests/browser/sales-v2-u3-mutation-pr
 globalThis.runSalesV2U3MutationProof = runSalesV2U3MutationProof;
 var runSalesV2U4MutationProof = require('./tests/browser/sales-v2-u4-mutation-proof.js');
 globalThis.runSalesV2U4MutationProof = runSalesV2U4MutationProof;
+var runSalesV2U5MutationProof = require('./tests/browser/sales-v2-u5-mutation-proof.js');
+globalThis.runSalesV2U5MutationProof = runSalesV2U5MutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -88,6 +90,7 @@ var files = [
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
   '96.Tests.SalesRecognition.V2.Projection.Cases.js',
   '96.Tests.SalesRecognition.V2.U4.Cases.js',
+  '96.Tests.SalesRecognition.V2.U5.Cases.js',
   '96.Tests.Supplier.Master.Cases.js',
   '96.Tests.Inventory.Receipt.Cases.js',
   '96.Tests.Expense.Purchase.Cases.js',
@@ -258,6 +261,15 @@ run('testSalesRecognitionV2U4ReaderCohorts', 'testSalesRecognitionV2U4ReaderCoho
 run('testSalesRecognitionV2U4ReaderList', 'testSalesRecognitionV2U4ReaderList()');
 run('testSalesRecognitionV2U4ReaderDetail', 'testSalesRecognitionV2U4ReaderDetail()');
 run('testSalesV2U4MutationProof', 'JSON.stringify(runSalesV2U4MutationProof())');
+
+// SALES_RECOGNITION_V2 U5 Finance P&L Revenue integration: Revenue/P&L reads
+// the signed U3 projection events by EconomicDate (Policy C COGS semantics,
+// fail-closed quality metadata, U3/U4/U5 parity) + sensitivity proof.
+run('testSalesRecognitionV2U5RevenueAuthority', 'testSalesRecognitionV2U5RevenueAuthority()');
+run('testSalesRecognitionV2U5LifecyclePeriods', 'testSalesRecognitionV2U5LifecyclePeriods()');
+run('testSalesRecognitionV2U5PolicyCQuality', 'testSalesRecognitionV2U5PolicyCQuality()');
+run('testSalesRecognitionV2U5Parity', 'testSalesRecognitionV2U5Parity()');
+run('testSalesV2U5MutationProof', 'JSON.stringify(runSalesV2U5MutationProof())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

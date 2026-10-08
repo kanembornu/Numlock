@@ -142,10 +142,15 @@ function testFinanceCoreBackendContract() {
   if (!missingLedgerRejected) throw new Error("Finance accepted a missing depreciation ledger source");
   var period = { filter: "custom", startDate: "2026-01-01", endDate: "2026-01-31", label: "January" };
   var canonical = buildCanonicalTransactionData(source);
-  var result = buildFinanceProfitAndLoss(canonical, accounts, period, depreciationSource);
-  var expectedSummary = { revenue: 92000, cogs: 32000, grossProfit: 60000,
+  // U5: P&L Revenue authority is the U3 projection over the same Sales rows.
+  var salesProjection = buildRecognizedSalesProjection_({ rows: { tabsal: source.sales,
+    Products: source.products }, presence: {}, issues: [] });
+  var result = buildFinanceProfitAndLoss(canonical, accounts, period, depreciationSource, null, salesProjection);
+  // Revenue = signed projection events (includes the active P2-inactive row
+  // once, per U3); COGS stays on the canonical pre-Policy-C record path.
+  var expectedSummary = { revenue: 92002, cogs: 32000, grossProfit: 60002,
     operatingExpenses: 12000, depreciationExpense: 3000,
-    operatingNetProfit: 45000, operatingProfitMargin: 45000 / 92000 };
+    operatingNetProfit: 45002, operatingProfitMargin: 45002 / 92002 };
   if (JSON.stringify(result.summary) !== JSON.stringify(expectedSummary)) throw new Error("Finance P&L summary mismatch");
   if (result.expenseBreakdown.length !== 2 || result.expenseBreakdown[1].AccountCode !== "6310" ||
       result.expenseBreakdown[1].amount !== 7000) throw new Error("Finance expense account resolution or 6310 inclusion mismatch");
@@ -155,19 +160,22 @@ function testFinanceCoreBackendContract() {
     throw new Error("Finance data-quality diagnostics mismatch");
   }
   var empty = buildFinanceProfitAndLoss(canonical, accounts,
-    { filter: "custom", startDate: "2027-01-01", endDate: "2027-01-31", label: "Empty" }, depreciationSource);
+    { filter: "custom", startDate: "2027-01-01", endDate: "2027-01-31", label: "Empty" }, depreciationSource,
+    null, salesProjection);
   if (empty.summary.revenue !== 0 || empty.summary.depreciationExpense !== 0 ||
       empty.summary.operatingProfitMargin !== 0 || empty.expenseBreakdown.length !== 0) {
     throw new Error("Finance empty-period or zero-revenue contract mismatch");
   }
   var year = buildFinanceProfitAndLoss(canonical, accounts,
-    { filter: "custom", startDate: "2026-01-01", endDate: "2026-12-31", label: "2026" }, depreciationSource);
+    { filter: "custom", startDate: "2026-01-01", endDate: "2026-12-31", label: "2026" }, depreciationSource,
+    null, salesProjection);
   if (year.summary.depreciationExpense !== 7000) throw new Error("Finance annual depreciation aggregation mismatch");
   var custom = buildFinanceProfitAndLoss(canonical, accounts,
-    { filter: "custom", startDate: "2026-01-15", endDate: "2026-01-20", label: "Mid-month" }, depreciationSource);
+    { filter: "custom", startDate: "2026-01-15", endDate: "2026-01-20", label: "Mid-month" }, depreciationSource,
+    null, salesProjection);
   if (custom.summary.depreciationExpense !== 3000) throw new Error("Finance monthly intersection rule mismatch");
   var duplicateSource = buildFinanceDepreciationSource(ledger.concat([ledger[0]]), assets);
-  var duplicate = buildFinanceProfitAndLoss(canonical, accounts, period, duplicateSource);
+  var duplicate = buildFinanceProfitAndLoss(canonical, accounts, period, duplicateSource, null, salesProjection);
   if (duplicate.summary.depreciationExpense !== 3000 ||
       duplicate.dataQuality.duplicateDepreciationLogicalKeys.length !== 1) {
     throw new Error("Finance depreciation duplicate handling mismatch");
@@ -836,8 +844,12 @@ function testFinanceCrossBoundaryExpenseBreakdownReconciliation() {
   ];
   var depreciation = { rows: [], quality: { duplicateLogicalKeys: [], invalidDepreciationRows: [], invalidPeriodRows: [], unresolvedAssetReferences: [] } };
   var ledger = [{ Tanggal: "2026-10-01", AccountCode: "6210", Debit: 40, Credit: 0, IsActive: true }];
+  // U5: no Sales rows in this fixture; the empty projection is the Revenue
+  // authority (zero recognized events), not a legacy reconstruction.
+  var salesProjection = buildRecognizedSalesProjection_({ rows: {}, presence: {}, issues: [] });
   function period(start, end) { return { filter: "custom", startDate: start, endDate: end, label: start + " to " + end }; }
-  var split = buildFinanceProfitAndLoss(canonical, accounts, period("2026-09-30", "2026-10-02"), depreciation, ledger);
+  var split = buildFinanceProfitAndLoss(canonical, accounts, period("2026-09-30", "2026-10-02"), depreciation, ledger,
+    salesProjection);
   var sum = split.expenseBreakdown.reduce(function(total, item) { return total + item.amount; }, 0);
   check(sum === split.summary.operatingExpenses && sum === 350, "full cross-boundary breakdown reconciles");
   check(split.expenseBreakdown.length === 2 && split.expenseBreakdown.filter(function(item) {
@@ -850,17 +862,21 @@ function testFinanceCrossBoundaryExpenseBreakdownReconciliation() {
     "incompatible top-level material semantics remain null");
   check(split.expenseBreakdown.every(function(item) { return ["6100", "6210"].indexOf(item.AccountCode) !== -1; }),
     "no HPP COGS or inventory row invented");
-  var year = buildFinanceProfitAndLoss(canonical, accounts, period("2026-01-01", "2026-12-31"), depreciation, ledger);
+  var year = buildFinanceProfitAndLoss(canonical, accounts, period("2026-01-01", "2026-12-31"), depreciation, ledger,
+    salesProjection);
   check(year.expenseBreakdown.reduce(function(total, item) { return total + item.amount; }, 0) === year.summary.operatingExpenses,
     "populated year cross-boundary breakdown reconciles");
-  var month = buildFinanceProfitAndLoss(canonical, accounts, period("2026-10-01", "2026-10-31"), depreciation, ledger);
+  var month = buildFinanceProfitAndLoss(canonical, accounts, period("2026-10-01", "2026-10-31"), depreciation, ledger,
+    salesProjection);
   check(month.accountingRegime === "PROSPECTIVE_PURCHASE_EXPENSE" && month.summary.materialPurchasesExpensed === 40 &&
     month.summary.cogs === null && month.summary.grossProfit === null && month.grossProfitAvailable === false,
     "prospective-only material semantics unchanged");
-  var day = buildFinanceProfitAndLoss(canonical, accounts, period("2026-10-01", "2026-10-01"), depreciation, ledger);
+  var day = buildFinanceProfitAndLoss(canonical, accounts, period("2026-10-01", "2026-10-01"), depreciation, ledger,
+    salesProjection);
   check(day.expenseBreakdown.reduce(function(total, item) { return total + item.amount; }, 0) === day.summary.operatingExpenses,
     "inclusive custom range remains reconciled");
-  var legacy = buildFinanceProfitAndLoss(canonical, accounts, period("2026-09-01", "2026-09-30"), depreciation, ledger);
+  var legacy = buildFinanceProfitAndLoss(canonical, accounts, period("2026-09-01", "2026-09-30"), depreciation, ledger,
+    salesProjection);
   check(legacy.accountingRegime === "LEGACY_PRE_TRANSITION" && legacy.expenseBreakdown.length === 1 &&
     legacy.grossProfitAvailable === true, "legacy-only response unchanged");
   var source = buildFinanceProfitAndLoss.toString();
