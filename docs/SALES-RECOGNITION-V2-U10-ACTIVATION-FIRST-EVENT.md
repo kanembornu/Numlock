@@ -3,9 +3,13 @@
 TASK_ID: U10A-ACTIVATION-CLOSURE-01 (successor to U10-ACTIVATION-FIRST-EVENT-01) · Complexity L3 · Operational risk R4 · Reasoning high
 Backend/model `9router/numlock-explore-free` (numlock-critical, executed in-session).
 
-**STATUS: `ACTIVATED_WAITING_FOR_FIRST_REAL_EVENT` — production
-`SALES_RECOGNITION_V2` is `PRODUCTION_ACTIVE` (activation accepted); first
-genuine Sale not yet available.**
+**STATUS: `ACTIVE_UI_ACCEPTED_WAITING_FOR_FIRST_REAL_EVENT` — canonical
+deployment **709** (display fix `ad4857f`) serves the ACTIVE V2 operator
+surface; fresh-session production acceptance **27/27 PASS**; first genuine
+Sale not yet available. Activation identity unchanged
+(`b4791011-120e-4985-92da-a61c6311060c`, `2026-10-08T18:59:50.540Z`).**
+(U10A activation acceptance `ACTIVATED_WAITING_FOR_FIRST_REAL_EVENT` remains
+the activation-stage result.)
 
 ### 0.1 Activation-writer closure (implementation)
 
@@ -737,3 +741,103 @@ in this session and none was fabricated. No Treasury change.
 3. Re-run `tests/browser/sales-v2-u10c-fresh-session.js`; all 27 checks must
    pass, then perform exactly one genuine first V2 Sale and run U10
    first-event acceptance.
+
+---
+
+## U10D — final operator-surface deployment (TASK_ID `U10D-FINAL-DEPLOY-01`)
+
+Owner authorization consumed: ONE final deployment cycle — exactly one fourth
+`clasp push --force`, exactly one immutable version, canonical 708 → that
+version, read-only verification, fresh-session acceptance, first genuine Sale
+only if 27/27.
+
+### D1. Baseline (measured)
+
+- HEAD `e2d358a`, worktree clean; ancestry includes `7fefacc` (deployed U10C),
+  `ad4857f` (undeployed display fix), `e2d358a` (evidence) — all verified.
+- Display fix present at HEAD and *only* that fix: `195.View.Transactions.Actions.html`
+  `applySalesV2OperatorSurface_` sets `element.style.display = element.hidden ? "none" : ""`
+  (heading + payment/fulfillment), plus test `AUD-4b`. No other runtime delta.
+
+### D2. Local pre-deploy gates (MEASURED)
+
+| gate | result |
+| --- | --- |
+| U10C/U10D operator-surface harness (`sales-v2-u10c-operator-surface.js`, incl. `AUD-4b`) | **61 / 61 PASS** |
+| full `node _test_runner.js` | **97 PASS / 0 FAIL** (baseline 97/0 preserved) |
+| syntax (`node --check` on all root `.js`) | PASS |
+| `git diff --check` | clean |
+| pre-deploy production `sales-v2-u10c-fresh-session.js` | **25 / 27** — exactly `A1-c` + `A10-a` (the undeployed heading defect), 0 writer dispatch, no other residual |
+
+Note on gate semantics: the fresh-session suite targets the canonical `/exec`,
+so pre-deploy it can only measure the *shipped* artifact — it reproduced the
+25/27 U10C residual with no new failure. The binding 27/27 target was applied
+to the post-deployment run (D5), which is the acceptance gate before any Sale.
+
+### D3. Manifest gate (measured)
+
+- `clasp status` → **68 tracked runtime files**, identical before/after push
+  (`diff` clean); `tests/`, `docs/`, `AGENTS.md` etc. are untracked by clasp.
+- `git diff --name-only 7fefacc -- <68 tracked files>` →
+  **only `195.View.Transactions.Actions.html`**. Difference vs v708 is
+  explained entirely by `ad4857f`. No docs/tests in the runtime package.
+
+### D4. Fourth/final push + immutable version + canonical update (measured)
+
+- **`clasp push --force` → success path** (full `└─` 68-file list emitted);
+  this is the FOURTH and FINAL push for U10. No fifth push exists.
+- `clasp update-deployment AKfycbxyll…ZXAzPkkSEhbwZKxkX6q -d "U10D final
+  display fix ad4857f: legacy Order review heading suppressed on ACTIVE"` →
+  `Redeployed … @709` (single call = one new immutable version + existing
+  deployment updated; no `clasp version`, no second deployment).
+- Readback: `clasp deployments` → still exactly **2** deployments; canonical
+  **@709** (was @708), `@HEAD` untouched; `clasp versions` → **705/706/707/708
+  intact**, only 709 added.
+
+### D5. Deployment readback + config stability (measured, read-only)
+
+- Canonical `/exec` GET → HTTP 200, 1,060,648 bytes. Served artifact contains
+  the display fix (`element.style.display \x3d element.hidden ? \x22none\x22 : \x22\x22`),
+  `salesV2ClientModeState_`, `applySalesV2OperatorSurface_`,
+  `isValidActiveSalesEntry_`, `operationalOrderLookupControl`,
+  `showSalesV2OrderSuccess_`, `salesRecognitionV2Activate`; **absent**
+  `var validSales = false`. Push manifest includes `97D` and `97E`.
+- No activation/config file changed (manifest delta = `195` only) and **no
+  config write was performed**. Runtime mode re-measured fresh post-deploy:
+  `salesV2ClientModeState_ = {status:"READY", mode:"ACTIVE"}`,
+  `authority.salesV2Mode = "ACTIVE"`.
+- Limitation (explicit): direct ActivationID/`T` read stays
+  **`BLOCKED_PERMISSION`** (Execution API `403 PERMISSION_DENIED` measured in
+  U10C, known-denied → not retried). Identity therefore evidenced
+  structurally (97E untouched, zero config mutation) + runtime ACTIVE, not by
+  a fresh direct read.
+
+### D6. Fresh-session production acceptance (MEASURED)
+
+`tests/browser/sales-v2-u10c-fresh-session.js` on canonical `/exec`, genuinely
+fresh context, post-709: **27 / 27 PASS**, `FRESH_SESSION_UI_ACCEPTED`.
+ACTIVE mode; `Order review` heading invisible; Save Order / Continue existing
+order / Find Order / No open orders invisible; payment and fulfillment
+controls absent; Order Type, ProductVariant, qty, Add Line → one draft line,
+total displayed; exactly one `Save Transaction`, enabled after the valid line;
+**0 writer requests** (9 non-writer POSTs: authority/options/pricing only);
+stopped before Save by contract (`STOPPED_BEFORE_SAVE_BY_CONTRACT`).
+Evidence: `docs/evidence/u10c-fresh-session/{results.json,active-surface-before-save.png}`.
+
+### D7. First genuine Sale + first-event acceptance
+
+No genuine customer order was available in this session, so **no Sale was
+created, no Save was clicked, no writer ran** — nothing fabricated, no
+payment, no fulfillment, no Treasury action.
+
+`U10_SALES_V2_ACTIVATION_FIRST_EVENT =
+ACTIVE_UI_ACCEPTED_WAITING_FOR_FIRST_REAL_EVENT`
+
+### D8. U10D status / next recommendation
+
+Status `ACTIVE_UI_ACCEPTED_WAITING_FOR_FIRST_REAL_EVENT`. Next: the next
+genuine customer order performs exactly one V2 Sale, then run the U10
+first-event acceptance (chain, Order/lines, RecognitionEvent, 1030/4000
+journal, Policy C, +0 Payments/Settlements/fulfillment/InventoryLedger, single
+audit, U3/U4/U5 parity, protected delta). No automatic Treasury; 1030 stays
+uncleared by design.

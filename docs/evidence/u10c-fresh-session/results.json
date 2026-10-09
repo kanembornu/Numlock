@@ -1,46 +1,46 @@
 {
   "task": "U10C-SURFACE-CLOSURE-01",
   "canonical": "https://script.google.com/macros/s/<canonical-deployment-id>/exec",
-  "startedAt": "2026-10-09T02:10:56.820Z",
+  "startedAt": "2026-10-09T02:28:43.660Z",
   "steps": [
     {
-      "at": "2026-10-09T02:10:56.820Z",
+      "at": "2026-10-09T02:28:43.661Z",
       "name": "launch fresh context"
     },
     {
-      "at": "2026-10-09T02:10:57.816Z",
+      "at": "2026-10-09T02:28:44.859Z",
       "name": "goto canonical /exec"
     },
     {
-      "at": "2026-10-09T02:11:07.641Z",
+      "at": "2026-10-09T02:28:55.636Z",
       "name": "open Transactions page"
     },
     {
-      "at": "2026-10-09T02:11:07.774Z",
+      "at": "2026-10-09T02:28:55.768Z",
       "name": "open New Transaction"
     },
     {
-      "at": "2026-10-09T02:11:07.837Z",
+      "at": "2026-10-09T02:28:55.834Z",
       "name": "select Sales"
     },
     {
-      "at": "2026-10-09T02:11:07.883Z",
+      "at": "2026-10-09T02:28:55.880Z",
       "name": "wait for server-derived ACTIVE mode"
     },
     {
-      "at": "2026-10-09T02:11:15.549Z",
+      "at": "2026-10-09T02:29:01.531Z",
       "name": "surface assertions"
     },
     {
-      "at": "2026-10-09T02:11:15.572Z",
+      "at": "2026-10-09T02:29:01.552Z",
       "name": "choose product / serving type / qty"
     },
     {
-      "at": "2026-10-09T02:11:15.673Z",
+      "at": "2026-10-09T02:29:01.651Z",
       "name": "Add Line"
     },
     {
-      "at": "2026-10-09T02:11:15.719Z",
+      "at": "2026-10-09T02:29:01.698Z",
       "name": "screenshot BEFORE Save — no submission"
     }
   ],
@@ -92,7 +92,7 @@
     },
     {
       "id": "A1-c",
-      "value": false,
+      "value": true,
       "detail": "Order review heading hidden"
     },
     {
@@ -122,8 +122,8 @@
     },
     {
       "id": "A10-a",
-      "value": false,
-      "detail": "Order review"
+      "value": true,
+      "detail": ""
     },
     {
       "id": "A2-a",
@@ -222,7 +222,7 @@
     {
       "method": "POST",
       "type": "xhr",
-      "url": "https://script.google.com/wardeninit?_reqid=33066&rt=j",
+      "url": "https://script.google.com/wardeninit?_reqid=34134&rt=j",
       "postData": "f.req=%5B%22wisp%22%2C1%2C2%5D&"
     },
     {
@@ -253,36 +253,30 @@
       "method": "POST",
       "type": "xhr",
       "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=10",
-      "postData": "request=%5B%22getCanonicalTransactionDetails%22%2C%22%5B%5B%5C%22OPS-APP-20261007-7DFF552C9036%5C%22%2C%5C%22SAL-APP-20261006-FF6A1257D2AD%5C%22%2C%5C%22SAL-APP-20261006-B31B985BE68C%5C%22%2C%5C%22SAL-APP-20261006-4C4DEE2A21E6%5C%22%2C%5C%22SAL-APP-20261006-22F773D06CB3%5C%22%2C%5C%22ORDER%3AORD-D0D68C09-ORDERCREATEO%5C%22%2C%5C%22SAL-APP-20261002-E9652FEC123D%5C%22%2C%5C%22SAL-APP-20261002-D53EBF2B20E2%5C%22%2C%5C%22SAL-APP-20261002-BD9C332B8EC8%5C%22%2C%5C%22SAL-APP-20261002-B7D3CB56767C%5C%22%2C%5C%22SAL-APP-20261002-B071BC633D65%5C%22%2C%5C%22SAL-APP-20261002-AC378360074D%5C%22%2C%5C%22SAL-APP-20261002-749400E04E3D%5C%22%2C%5C%22SAL-APP-20261002-6B0C8A10BBD5%5C%22%2C%5C%22SAL-APP-20261002-5E26D1B132B6%5C%22%5D%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
-    },
-    {
-      "method": "POST",
-      "type": "xhr",
-      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=11",
       "postData": "request=%5B%22getFinanceData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
     },
     {
       "method": "POST",
       "type": "xhr",
-      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=12",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=11",
       "postData": "request=%5B%22getProductProfitabilityData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
     },
     {
       "method": "POST",
       "type": "xhr",
-      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=13",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=12",
       "postData": "request=%5B%22getPartialBalanceData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
     },
     {
       "method": "POST",
       "type": "xhr",
-      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=14",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=13",
       "postData": "request=%5B%22getDepreciationData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
     }
   ],
   "total": 27,
-  "passed": 25,
-  "failed": 2,
+  "passed": 27,
+  "failed": 0,
   "reachedSave": true,
   "loadedUrl": "https://script.google.com/macros/s/<canonical-deployment-id>/exec",
   "clientMode": {
@@ -296,8 +290,8 @@
   "product": "Americano\nCoffee · Coffee",
   "screenshot": "docs/evidence/u10c-fresh-session/active-surface-before-save.png",
   "stopReason": "STOPPED_BEFORE_SAVE_BY_CONTRACT",
-  "postRequestCount": 10,
+  "postRequestCount": 9,
   "writerDispatch": [],
-  "finishedAt": "2026-10-09T02:11:16.055Z",
-  "status": "FRESH_SESSION_UI_REJECTED"
+  "finishedAt": "2026-10-09T02:29:02.049Z",
+  "status": "FRESH_SESSION_UI_ACCEPTED"
 }
