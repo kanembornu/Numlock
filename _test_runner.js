@@ -106,6 +106,7 @@ var files = [
   '97C.SalesRecognition.V2.Correction.js',
   '97D.SalesRecognition.V2.OperatorGuard.js',
   '97E.SalesRecognition.V2.Activation.js',
+  '99.Treasury.Receipt.Foundation.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -126,7 +127,8 @@ var files = [
   '96.Tests.Balance.Foundation.Cases.js',
   '96.Tests.Finance.Cases.js',
   '96.Tests.Inventory.Policy.Evidence.Cases.js',
-  '96.Tests.Master.WritePolicy.Cases.js'
+  '96.Tests.Master.WritePolicy.Cases.js',
+  '96.Tests.Treasury.Receipt.Foundation.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -183,7 +185,8 @@ vm.runInContext([
   'var _htmlRender = ' + JSON.stringify(fs.readFileSync('193.View.Transactions.Render.html', 'utf8')) + ';',
   'var _htmlActions = ' + JSON.stringify(fs.readFileSync('195.View.Transactions.Actions.html', 'utf8')) + ';',
   'var _htmlForms = ' + JSON.stringify(fs.readFileSync('194.View.Transactions.Forms.html', 'utf8')) + ';',
-  'var _productionSource = ' + JSON.stringify(fs.readFileSync('95A.Transaction.Production.js', 'utf8')) + ';'
+  'var _productionSource = ' + JSON.stringify(fs.readFileSync('95A.Transaction.Production.js', 'utf8')) + ';',
+  'var _treasuryFoundationSource = ' + JSON.stringify(fs.readFileSync('99.Treasury.Receipt.Foundation.js', 'utf8')) + ';'
 ].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
@@ -364,6 +367,22 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   // (F1..F12 + static guards + M1..M10 mutation sensitivity) over the real
   // 199/200/201 Finance view sources with mocked google.script.run.
   run('testFinanceUiDispatchLiveness', 'JSON.stringify(runFinanceUiLivenessController())');
+
+  // TREASURY_T3: inert TREASURY_RECEIPT_V1 foundation — contract constants,
+  // exact schemas, fail-closed config reader/classifier, destination
+  // eligibility + 1030 preflight, Asia/Jakarta date authority, identity
+  // namespaces, canonical journal signature, legacy isolation + 15-point
+  // mutation sensitivity.
+  run('testTreasuryT3ContractConstants', 'testTreasuryT3ContractConstants()');
+  run('testTreasuryT3SchemaValidation', 'testTreasuryT3SchemaValidation()');
+  run('testTreasuryT3ConfigClassifier', 'testTreasuryT3ConfigClassifier()');
+  run('testTreasuryT3DestinationEligibility', 'testTreasuryT3DestinationEligibility()');
+  run('testTreasuryT3DateAuthority', 'testTreasuryT3DateAuthority()');
+  run('testTreasuryT3IdentityNamespaces', 'testTreasuryT3IdentityNamespaces()');
+  run('testTreasuryT3IdentityFailClosed', 'testTreasuryT3IdentityFailClosed()');
+  run('testTreasuryT3JournalSignature', 'testTreasuryT3JournalSignature()');
+  run('testTreasuryT3LegacyIsolation', 'testTreasuryT3LegacyIsolation()');
+  run('testTreasuryT3MutationSensitivity', 'testTreasuryT3MutationSensitivity()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
