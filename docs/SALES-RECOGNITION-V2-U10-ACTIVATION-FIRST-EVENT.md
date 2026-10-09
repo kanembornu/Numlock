@@ -1106,3 +1106,199 @@ seed `transactions-period-v3|…` cache → perform V2 Save → read
 - Local evidence commit: attempted paths `docs/SALES-RECOGNITION-V2-U10-ACTIVATION-FIRST-EVENT.md`
   + `tests/tmp/*` — staging not permitted in this session →
   `BLOCKED_PERMISSION` (no retry). No Git push.
+
+---
+
+## U10F — U4 CACHE FRESHNESS REMEDIATION + FINANCE LOAD DIAGNOSIS
+
+TASK_ID: U10F-CACHE-FIX-FINANCE-DX-01 · Complexity L3 · Operational risk R2 ·
+Reasoning high · Backend `9router/numlock-explore-free` (numlock-heavy,
+executed in-session).
+
+**STATUS: `U10F_U4_CACHE_REMEDIATION = COMPLETE_LOCAL_READY_FOR_R4`** — the
+U10E root cause (`FIRST_EVENT_PERSISTED_U4_READ_MODEL_DEFECT`) is fixed at the
+two V2 DONE choke points using the existing `invalidateDashboardCache()`
+primitive; warm-cache regression FAILs pre-fix and PASSes post-fix; full local
+harness **100 PASS / 0 FAIL** (97 baseline + 3 new); Finance P&L UI stall
+classified `FINANCE_UI_DISPATCH_DEFECT` (read-only; separate task). **No
+deployment performed. First genuine Rp24,000 Sale preserved (no second Sale, no
+mutation, no retry).**
+
+### Root cause (reconfirmed, A1/A2)
+
+- `getTransactionsPeriodRows()` (`91.Transactions.Query.js:147-205`) caches
+  period rows in `CacheService` under
+  `transactions-period-v3|<revision>|<start>|<end>` with
+  `DASHBOARD_CACHE.TTL_SECONDS = 300`; `<revision>` =
+  `getDashboardCacheRevision()` (script property
+  `NUMLOCK_DASHBOARD_CACHE_REVISION`).
+- The invalidation primitive `invalidateDashboardCache()`
+  (`90.Dashboard.Service.js:10-15`) increments that revision — it DOES cover
+  `transactions-period-v3` (and `dashboard-v1`) because the revision is part
+  of every key prefix. No parallel namespace needed (A2 PASS).
+- Legacy mutators invalidate post-durable (`21.Transaction.Entry.js:253`,
+  `22.Transaction.Lifecycle.js:291/346`, `47.Purchase.Events.js:562/889/1086`).
+  V2 paths NEVER did: `97A` Save DONE and `97C` Correct/Void DONE returned
+  without invalidation → pre-warmed cache served stale Sales authority for up
+  to 300s (the exact U10E owner symptom).
+
+### Mutation-to-cache matrix (A1)
+
+| Mutation | Changes U3/U4-visible Sales authority? | Existing invalidation? | Required? |
+| --- | --- | --- | --- |
+| V2 Save | YES (new committed Sale) | NO (defect) | YES — added |
+| V2 Void | YES (reversal voids recognition) | NO (defect) | YES — added |
+| V2 Correct | YES (reversal + replacement) | NO (defect) | YES — added |
+| Legacy Sales create | YES | YES (`21:253`) | already correct |
+| Legacy Correct | YES | YES (`22:346`) | already correct |
+| Legacy Void | YES | YES (`22:291`) | already correct |
+| Payment | NO (U5 cash/settlement only) | n/a | NO |
+| Fulfillment | NO | n/a | NO |
+
+U6 Correct/Void share the defect (same established primitive suffices, zero
+architecture change) → included in the same remediation.
+
+### Exact source change (A5; +34 net lines, 2 runtime files)
+
+1. `97A.SalesRecognition.V2.Save.js salesRecognitionV2SaveWithRuntime_` —
+   single choke point for EVERY Save flow (operator create `97D:204/237`,
+   recovery replay `97D:356`, core tests). After the result is computed:
+   `if (result.status === save.STATUS.DONE) { try { invalidateDashboardCache(); }
+   catch (cacheError) { Logger.log(...) } }`.
+2. `97C.SalesRecognition.V2.Correction.js salesRecognitionV2MutationRun_` —
+   single choke point for EVERY Void/Correct flow (production
+   `salesRecognitionV2DurableMutation_` + recovery). Same DONE-gated,
+   best-effort pattern.
+
+No other runtime change. No accounting, OperationPlan, identity, ProductVariant,
+Policy C, U3/U4/U5 projection, or historical-cohort change.
+
+### Success boundary (A3)
+
+Invalidate ONLY after durable authority is established AND exactly verified:
+fresh path = intent → atomic batch → artifact readback `EXACT` → commit →
+verified commit readback (`State == COMMITTED`) → DONE → **invalidate**;
+resume path = COMMITTED + exact artifacts → DONE replay → invalidate (harmless
+revision bump; no writes; guarantees freshness). NEVER on pre-mutation,
+REFUSED, CONFLICT, UNKNOWN, RECOVERY_REQUIRED, partial/corrupt, or mere
+request receipt. Invalidation is ephemeral read-model maintenance, not write
+authority. Replays re-invalidate deterministically (exactly-once preserved —
+proven by warm-cache C7/C8).
+
+### Failure semantics (A4)
+
+`invalidateDashboardCache()` CAN throw (PropertiesService). The hook wraps it
+in try/catch + log and NEVER alters the envelope: a COMMITTED durable Sale is
+never reported failed by cache-maintenance failure. No retry path exists (no
+Sale duplication risk). Bounded effect of a failed invalidation: stale cache
+until TTL (≤300s) — durable authority untouched (proven by warm-cache C9/C10).
+
+### Warm-cache regression (A6; real cache boundary, not grep-only)
+
+New harness `u4CacheEnv_` (96 U4 cases): revision-aware in-memory
+`CacheService` + `invalidateDashboardCache` that bumps the revision exactly
+like production (key-embedded revision), spanning pre-warm → Save → immediate
+re-read in ONE environment. `testSalesRecognitionV2U4WarmCacheFreshness`:
+pre-Sale data → populate the same cache → new Sale absent → successful V2
+Save through the real core → `invalidateCalls == 1` → immediate re-read within
+TTL → `cacheHit == false` → committed Sale present EXACTLY once with exact
+amount/identity (60,000, V2_COMMITTED, SALES_RECOGNITION_V2) → COMMITTED
+replay re-invalidates harmlessly, exactly-once preserved → A4: failing
+invalidation leaves DONE + COMMITTED intact, one batch, no fabricated row.
+**MEASURED: FAIL pre-fix (mutation: hook removed → C3 `calls:0`; and cache-key
+mutation removing the revision → C4 `stale warm cache served after committed
+save`, the exact U10E symptom), PASS post-fix.**
+
+### Negative paths (A7)
+
+`testSalesRecognitionV2U4CacheNegativePaths`: validation failure → REFUSED, 0
+invalidations, no false rows; payload conflict → CONFLICT
+(`OPERATION_PAYLOAD_CONFLICT`), original op authority intact, 0 invalidations;
+UNKNOWN before resolution (batch timeout) → no false Done, requestKey retained,
+0 invalidations, no fabricated Transaction, deterministic resume later commits
++ invalidates once; partial/corrupt (crash after intent + partial artifacts)
+→ RECOVERY_REQUIRED `ARTIFACTS_INCOMPLETE`, fail closed, invalidation NOT
+invoked (partial state never surfaced as recognized authority). Static A9:
+journal accounts (1030/4000), movement type, posting status unchanged; the
+hook exists ONLY at the two DONE choke points, never inside batch/commit
+primitives.
+
+### Correct/Void disposition (A8)
+
+`testSalesRecognitionV2U4MutationCacheFreshness`: pre-warmed cache → V2 Void →
+immediate period read reflects voided state (row `isActive=false`) and the
+active U4 view excludes the chain — no TTL wait; V2 Correct → immediate read
+shows the replacement as the single active authority (original inactive,
+replacement active V2_COMMITTED, exact amount). Invalidation counts exact
+(1 per DONE). Mutation sensitivity #8 (hook removed in 97C) → M1 FAIL MEASURED.
+
+### Accounting non-impact (A9) / authority preservation
+
+Diff touches only invalidation control flow. `Dr1030/Cr4000`, Policy C,
+HPP, SalesRecognitionEvents/Audits, BalanceLedger plan, ProductVariant
+snapshots, Operation identity, Correct/Void accounting, historical cohorts:
+source-unchanged (static N5/N6 + full U1–U10 suites green). U3/U4/U5
+authority unchanged; Rp24,000 first Sale preserved exactly (no production
+interaction this task).
+
+### Finance P&L load-stall diagnosis (PART B, READ-ONLY)
+
+- **Observation (U10E, bounded 3 attempts already consumed):** fresh-session
+  Finance → P&L load stalled ×3 (up to ~7.5 min each); `#finance` stayed
+  `aria-busy=true` at "Loading Profit & Loss…"; ZERO post-click network
+  requests beyond bootstrap `/callback?nocache_id` POSTs (all 200); no
+  page/console errors. Direct production Finance computation (same code/data,
+  local VM) SUCCEEDED: October recognizedRevenue 403,000, `SCR-CE122B27…`
+  +24,000 exactly once, `revenueAuthorityComplete=true` (B4 PASS — no
+  accounting divergence; no `BLOCKED_FINANCE_AUTHORITY`).
+- **Source trace (B5):** `201.View.Finance.Controller.html` —
+  `ensureFinanceData()` → cache hit render, else join
+  `financeInflight[cacheType|cacheKey]`, else `requestFinanceData()` →
+  `google.script.run.getFinanceData(...)`. The warm/join design has NO
+  timeout and NO liveness check: if a `google.script.run` response never
+  arrives (channel death / silent drop — Apps Script provides no failure
+  callback in that case), `financeInflight` stays `true` forever; every
+  subsequent navigation joins the ghost in-flight, registers a
+  `_warmCallbacks` entry that never fires, and the view stays "loading"
+  indefinitely with ZERO new server requests — matching the U10E signature
+  exactly (stuck loading + zero requests + no errors + direct computation OK).
+- **Classification (B3):** `FINANCE_UI_DISPATCH_DEFECT` (browser controller
+  never dispatches; visible symptom is a loading-state that can never clean).
+  NOT a Finance computation, serialization, or accounting defect. Runtime
+  browser reproduction this session: not possible (browser capability not
+  configured; bounded attempts consumed) — classification rests on U10E
+  measured behavior + exact source trace. The Products/COGS/Inventory alerts
+  seen during U10E belong to other page sections (products area), not the
+  Finance controller path.
+- **Test gap (B6):** no controller regression covers "in-flight response
+  never arrives" for Finance warm-joins. Minimum regression for a
+  separately-authorized Finance remediation: controller fixture — ghost
+  `financeInflight` entry set → `ensureFinanceData()` → assert bounded
+  recovery (timeout dispatch or explicit error state) instead of infinite
+  loading. No Finance source modified here.
+
+### Validation (MEASURED, this task)
+
+- Full `node _test_runner.js` (final, after final runtime edit):
+  **100 PASS / 0 FAIL** (baseline 97 + new Warm/Negative/Mutation-cache).
+- Warm-cache FAIL pre-fix MEASURED via 8 mutation-sensitivity runs (all
+  restored): #1/#4 remove Save invalidation → C3 FAIL; #2 invalidate on
+  non-DONE → N1 FAIL; #3 drop revision from cache key → C4 FAIL (stale served);
+  #5 duplicate Sales rows → 13 FAILs (exactly-once suites); #6 UNKNOWN→DONE →
+  9 FAILs; #7 lose requestKey on UNKNOWN → 11 FAILs; #8 remove Correct/Void
+  invalidation → M1 FAIL.
+- `node --check` on all 7 changed files PASS; `git diff --check` PASS.
+- Zero production writes; zero deployment actions; no clasp push/deploy/
+  version; no second Sale / Save retry / Correct-Void / Payment / Fulfillment /
+  Treasury / config mutation; no production cache mutation; no Git push.
+
+### R4 recommendation
+
+Deploy the proven cache-freshness fix under separate owner authorization;
+re-run first-event acceptance against the EXISTING genuine Rp24,000 Sale
+(`ORDER:ORD-677BE5CE-SALESRECOGNI`) — do NOT create another Sale solely for
+acceptance. The Finance UI dispatch defect should NOT block R4: it is a
+browser-controller availability issue independent of the server-side cache
+fix and of U5 accounting authority; handle it as a separate authorized task
+(timeout/liveness recovery in `201.View.Finance.Controller.html` + the
+controller regression above).

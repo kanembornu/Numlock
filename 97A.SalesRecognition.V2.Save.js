@@ -1312,8 +1312,24 @@ function salesRecognitionV2SaveWithRuntime_(payload, runtime) {
       requestKey: normalized.requestKey, detail: error && error.message ? error.message : "" });
   }
   var hash = transactionPayloadHash_(normalized);
-  if (existing) return salesRecognitionV2SaveResume_(existing, hash, normalized, runtime);
-  return salesRecognitionV2SaveNewIntent_(normalized, hash, runtime);
+  var result = existing ?
+    salesRecognitionV2SaveResume_(existing, hash, normalized, runtime) :
+    salesRecognitionV2SaveNewIntent_(normalized, hash, runtime);
+  // U10F read-model freshness: a DONE result means durable authority is
+  // COMMITTED and exactly verified (fresh commit or COMMITTED replay). Only
+  // then bump the shared dashboard cache revision so the pre-warmed
+  // transactions-period-v3 read model can never serve stale Sales authority.
+  // Ephemeral maintenance only: best effort, never retried, never allowed to
+  // contradict the durable DONE (no Sale can be duplicated or falsely failed
+  // by a cache-maintenance error).
+  if (result.status === save.STATUS.DONE) {
+    try { invalidateDashboardCache(); }
+    catch (cacheError) {
+      Logger.log("Sales V2 post-commit cache invalidation skipped: " +
+        String(cacheError && cacheError.message || cacheError));
+    }
+  }
+  return result;
 }
 
 // Production runtime factory. Never invoked by local tests; the default config

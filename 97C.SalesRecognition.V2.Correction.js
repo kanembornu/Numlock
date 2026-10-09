@@ -1709,10 +1709,23 @@ function salesRecognitionV2MutationRun_(operationType, normalized, runtime) {
       detail: error && error.message ? error.message : "" });
   }
   var hash = transactionPayloadHash_(normalized);
-  if (existing) {
-    return salesRecognitionV2MutationResume_(operationType, existing, hash, normalized, runtime);
+  var result = existing ?
+    salesRecognitionV2MutationResume_(operationType, existing, hash, normalized, runtime) :
+    salesRecognitionV2MutationNewIntent_(operationType, normalized, hash, runtime);
+  // U10F read-model freshness: a DONE result means durable mutation authority
+  // is COMMITTED and exactly verified (fresh commit or COMMITTED replay).
+  // Only then bump the shared dashboard cache revision so the pre-warmed
+  // transactions-period-v3 read model can never serve stale voided/replaced
+  // Sales authority. Ephemeral maintenance only: best effort, never retried,
+  // never allowed to contradict the durable DONE.
+  if (result.status === mutation.STATUS.DONE) {
+    try { invalidateDashboardCache(); }
+    catch (cacheError) {
+      Logger.log("Sales V2 mutation post-commit cache invalidation skipped: " +
+        String(cacheError && cacheError.message || cacheError));
+    }
   }
-  return salesRecognitionV2MutationNewIntent_(operationType, normalized, hash, runtime);
+  return result;
 }
 
 function salesRecognitionV2VoidWithRuntime_(payload, runtime) {

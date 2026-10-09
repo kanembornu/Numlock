@@ -285,6 +285,12 @@ run('testSalesRecognitionV2U4ReaderList', 'testSalesRecognitionV2U4ReaderList()'
 run('testSalesRecognitionV2U4ReaderDetail', 'testSalesRecognitionV2U4ReaderDetail()');
 run('testSalesV2U4MutationProof', 'JSON.stringify(runSalesV2U4MutationProof())');
 
+// U10F: U4 cache-freshness remediation — warm-cache regression (real cache
+// boundary), invalidation negative paths, Correct/Void immediate freshness.
+run('testSalesRecognitionV2U4WarmCacheFreshness', 'testSalesRecognitionV2U4WarmCacheFreshness()');
+run('testSalesRecognitionV2U4CacheNegativePaths', 'testSalesRecognitionV2U4CacheNegativePaths()');
+run('testSalesRecognitionV2U4MutationCacheFreshness', 'testSalesRecognitionV2U4MutationCacheFreshness()');
+
 // SALES_RECOGNITION_V2 U5 Finance P&L Revenue integration: Revenue/P&L reads
 // the signed U3 projection events by EconomicDate (Policy C COGS semantics,
 // fail-closed quality metadata, U3/U4/U5 parity) + sensitivity proof.

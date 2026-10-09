@@ -47,7 +47,13 @@ var MUTATIONS = [
 ];
 
 function runU2Suites_(domainSource) {
-  var ctx = vm.createContext({});
+  // U10F: minimal harness stubs mirroring _test_runner.js — the U2 DONE path
+  // performs best-effort post-commit cache invalidation (90.Dashboard.Service).
+  var ctx = vm.createContext({
+    Logger: { log: function() {} },
+    invalidateDashboardCache: function() {},
+    getDashboardCacheRevision: function() { return "LOCAL_FIXTURE"; }
+  });
   SOURCES.forEach(function(file) {
     vm.runInContext(fs.readFileSync(file, "utf8"), ctx, { filename: file });
   });
