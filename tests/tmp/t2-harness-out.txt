@@ -1,0 +1,28 @@
+Treasury T2 design harness — date battery (Asia/Jakarta)
+  PASS D1 23:59:59 Asia/Jakarta day attribution
+  PASS D2 midnight Asia/Jakarta rollover
+  PASS D3 UTC boundary (16:59:59Z vs 17:00:00Z = Jakarta midnight)
+  PASS D4 month boundary stays Jakarta day
+  PASS D5 EconomicDate == ReceiptDate on boundary date (ledger Tanggal)
+Treasury T2 design harness — 20 design-challenge cases
+  PASS C01 exact receipt
+  PASS C02 dup RequestKey same payload = exact replay
+  PASS C03 dup RequestKey conflicting payload = conflict
+  PASS C04 new RequestKey on cleared exposure refused
+  PASS C05 simultaneous clears = exactly one active full clearing
+  PASS C06 invalid destination account refused
+  PASS C07 destination 1030 refused
+  PASS C08 wrong amount refused
+  PASS C09 zero amount refused
+  PASS C10 negative amount refused
+  PASS C11 missing/non-V2/voided/integrity recognition refused
+  PASS C12 UNKNOWN/late-callback recovery = one committed receipt, no duplicates
+  PASS C13 reversal restores exposure, original immutable
+  PASS C14 double reversal refused
+  PASS C15 correction = reversal + replacement, original immutable, delta exact
+  PASS C16 correction date: replacement dates valid, original untouched
+  PASS C17 no stale read model after DONE
+  PASS C18 UTC/Jakarta boundary battery (D1-D5)
+  PASS C19 corrupted signature => EXCEPTION, fail-closed, no auto-repair
+  PASS C20 unexplained residual surfaced, never auto-repaired
+===== TREASURY T2 DESIGN HARNESS: 25 PASS, 0 FAIL =====
