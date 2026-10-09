@@ -841,3 +841,268 @@ first-event acceptance (chain, Order/lines, RecognitionEvent, 1030/4000
 journal, Policy C, +0 Payments/Settlements/fulfillment/InventoryLedger, single
 audit, U3/U4/U5 parity, protected delta). No automatic Treasury; 1030 stays
 uncleared by design.
+
+---
+
+## U10E — FIRST GENUINE EVENT — RP24,000 MISSING FROM TRANSACTION GRID (diagnosis)
+
+TASK_ID `U10E-FIRST-EVENT-DIAGNOSIS-01` · L3 · R2 (production READ ONLY) ·
+2026-10-09. HEAD `1e8c7a4` = required, worktree clean at start ✓.
+
+**STATUS: `U10_SALES_V2_ACTIVATION_FIRST_EVENT =
+BLOCKED_FIRST_EVENT_ACCEPTANCE`**
+**ROOT_CAUSE: `FIRST_EVENT_PERSISTED_U4_READ_MODEL_DEFECT`** (transient,
+self-expiring; still present in code — recurs on the next V2 Save).
+
+### Owner observation (authoritative)
+
+First genuine V2 Sale returned `Sale saved` / `Recognized` / `Done`, yet the
+Rp 24,000 Sale was absent from Recent, Sales, and inspected Transaction tabs;
+Correct/Void therefore unavailable. The visible `ORDER:…` row was an older
+existing Order, not this Sale.
+
+### Exact identity (MEASURED, Sheets REST GET only, 2026-10-09T03:31:59.765Z)
+
+| link | value |
+| --- | --- |
+| RequestKey | `order-1791515035042-mwdw9dhlap` |
+| OperationID / State | `TXOP-677BE5CE-SALESRECOGNI` / `COMMITTED`, type `SALES_RECOGNITION_V2_SAVE` |
+| OrderID / RevisionID | `ORD-677BE5CE-SALESRECOGNI` / `REV-CE122B27-ORD677BE5CES` |
+| RecognitionID | `SCR-CE122B27-ORD677BE5CES` (RECOGNITION, Amount 24000, COMMITTED) |
+| JournalID | `SRV2J-CE122B27-ORD677BE5CES` |
+| AuditID | `SRA-CE122B27-ORD677BE5CES` |
+| SavedAt / RecognizedAt / EconomicDate | `2026-10-09T03:04:07.420Z` / same / `2026-10-09` |
+| contractVersion / ActivationID / T | `SALES_RECOGNITION_V2` / `b4791011-120e-4985-92da-a61c6311060c` / `2026-10-08T18:59:50.540Z` (embedded in persisted OperationPlan) |
+
+Actor: owner Google account (redacted). Exactly ONE candidate event; identified
+by persisted cross-links, not by recency.
+
+### Artifact counts (MEASURED vs U10A §2.5 baseline)
+
+Exactly the expected first-event delta — reported, never normalized:
+
+| surface | baseline → now | sha vs baseline |
+| --- | --- | --- |
+| TransactionOperations | 2 → 3 (+1 V2 op) | changed (expected) |
+| Orders | 1 → 2 (+1 DINE_IN 24000 UNPAID/OPEN) | changed (expected) |
+| OrderLines | 1 → 3 (+2: 6000 + 18000 = 24000) | changed (expected) |
+| BalanceLedger | 6 → 8 (+2: Dr1030 24000 / Cr4000 24000, `SALES_RECOGNITION`/`SALES_RECOGNITION_V2`) | 6 legacy rows byte-identical |
+| SalesRecognitionEvents | 0 → 1 | expected |
+| SalesRecognitionAudits | 0 → 1 | expected |
+| Payments | 1 | `e357140d51acf6fc` UNCHANGED |
+| Settlements | 2 | `1b3a361e0f014464` UNCHANGED |
+| InventoryLedger | 0 | `b750a6c453934c23` UNCHANGED |
+| Accounts | 22 | `f97cbe167e6a9364` UNCHANGED |
+| tabsal | 10808 | `db160e397fb80870` UNCHANGED |
+| tabops | 1976 | `c8754e64eca27628` UNCHANGED |
+| Logs | 225 | `5005a024663f4c56` UNCHANGED |
+| Settings / Products / ProductPricing | 7 / 34 / 154 | no pre-event hash in U10A §2.5 (limitation: counts only) |
+| workbook sheets | 38 | expected 36 + 2 companions |
+
+Headers: SalesRecognitionEvents 20-col and SalesRecognitionAudits 10-col exact
+vs frozen contract. OrderLines has NO RevisionID column (schema fact); line
+linkage is OrderID + persisted `lineRows` in OperationPlan + SnapshotJSON.
+ProductVariantID explicit on both lines (not `Tipe`-only); no duplicate LineID;
+sum = 24000; RecipeVersionID + UnitHppSnapshot/LineHpp present
+(2735.3 + 7945.3 = 10680.6 = Order `HppTotalSnapshot`, decimal-comma display
+only).
+
+### Accounting / Policy C
+
+- Journal by `SRV2J-CE122B27-ORD677BE5CES`: exactly 2 lines —
+  Dr 1030 24000 / Cr 4000 24000; MovementType `SALES_RECOGNITION`,
+  SourceType `SALES_RECOGNITION_V2`, SourceID = RecognitionID; stored
+  JournalSignature matches `policyCJournalSignature_(rows)` (U3 verification
+  passed → status RECOGNIZED).
+- Forbidden postings for this Sale: 0 of 1000/1010/1020/1100/2000/2010/5000/
+  6210 (only 1030/4000 touched; historical SALE_HPP 5000/1100 rows belong to
+  the old paid chain and are unchanged).
+- HPP analytical only: Order/lines/SnapshotJSON carry 10680.6; no Sales HPP
+  entry, no Dr5000/Cr1100, no Inventory Asset credit, no sale-triggered
+  ingredient expense (InventoryLedger still 0, tabops unchanged).
+- Payments/Settlements/Fulfillment/Inventory deltas attributable to this
+  identity/time: **0 / 0 / 0 / 0**. Order columns: PaymentStatus `UNPAID`,
+  FulfillmentStatus `OPEN`, PreparingAt/ReadyAt/CompletedAt empty, no
+  ReceiveVia/PAID/COMPLETED/Payment linkage.
+
+### U3 (measured)
+
+Production `clasp run` = **BLOCKED_PERMISSION** (HTTP 403 class, re-measured
+once via the allowlisted `validateFinanceProductionRuntime`, no retry).
+Instead the exact production functions were executed in a local VM over
+MEASURED live rows (UNFORMATTED values + date-serial→Date emulation of
+`getValues()` semantics; diagnostic harness, zero writes):
+
+- `buildRecognizedSalesProjectionFromSpreadsheet_` → target chain
+  `ORDER:ORD-677BE5CE-SALESRECOGNI`: in `events` = 1, in `transactions` = 1
+  (`kind=ORDER`, `cohort=V2_COMMITTED`, `status=RECOGNIZED`,
+  `economicDateKey=2026-10-09`, amount 24000), in `activeView` = 1, lines = 2.
+- `quality`: 0 recovery issues, 0 excluded, 0 issues touching the V2 identity;
+  the only 6 issues are pre-existing `LEGACY_INACTIVE_EXCLUDED` (historical
+  voided legacy rows, unrelated).
+- totals (production-accurate): recognized 2026-10 = 403,000 =
+  legacy 343,000 + pre-V2 36,000 + **V2 24,000 once**.
+
+### U4 (owner-observed failure — MEASURED twice, production browser, fresh sessions)
+
+`tests/tmp/u10e-u4-probe.js` on canonical `/exec` (fresh context, read-only):
+
+- Recent (default This Year 01/2026–10/2026, Status=Active):
+  row `ORDER:ORD-677BE5CE-SALESRECOGNI 09 Oct 2026 Sales … Rp 24.000 Active
+  View/Correct/Void` — present on page 1.
+- Sales tab: same row present (Showing 1–15 of 1106).
+- Search `677BE5CE` on Sales and Recent: exactly 1/1 hit each.
+- Detail: `View` opens the lifecycle overlay; the exact server detail function
+  `buildSalesRecognitionOrderDetail_` (executed locally over live rows)
+  returns the full detail: revenue 24000, status ACTIVE, recognitionStatus
+  RECOGNIZED, lineage (single active RECOGNITION), 2 snapshot lines,
+  `quality = {issues: [], excluded: [], recoveryIssues: []}`,
+  `canCorrect=false, canVoid=false,
+  immutableReason="SALES_RECOGNITION_ACTION_UNSUPPORTED"` (mutation seam
+  fail-closed; no mutation attempted). Browser dialog body rendering was not
+  captured (limitation; overlay opened, 0 page errors).
+
+**Exact exclusion point (first divergence):** the Sale was persisted and
+U3-valid, but the owner's post-Save reads were served from the
+`transactions-period-v3` read cache:
+
+- `91.Transactions.Query.js getTransactionsPeriodRows()` caches period rows in
+  `CacheService` under `transactions-period-v3|<revision>|<start>|<end>` for
+  `DASHBOARD_CACHE.TTL_SECONDS = 300` and returns `cacheHit: true` without
+  re-reading.
+- The V2 Save path (`97A`) NEVER calls `invalidateDashboardCache()`
+  (grep over `97*.js`: zero matches); every legacy mutator does
+  (`21:253`, `22:291/346`, `47:562/889/1086`). The revision key therefore did
+  not change at Save, and any period-cache entry warmed by the operator's
+  pre-Save Transactions session served pre-Save rows for up to 5 minutes.
+- Timeline consistent with measurement: Save 03:04:07Z; first measured
+  production grid read ~04:00Z (>TTL) already shows the row; owner's
+  immediate post-Save inspection falls inside the TTL window.
+- Filter/date/status are NOT the cause: default period `currentYear` covers
+  2026-10-09, Status filter `active` matches the row (`isActive=true`), and
+  `Recognized`/`Active` normalization is compatible (measured).
+
+### U5 (measured) / Policy C shape
+
+- Production `buildFinanceSalesRecognitionScope_` executed in local VM over
+  the live projection: period 2026-10-01..2026-10-31 →
+  `recognizedRevenue = 403000`, `revenueAuthorityComplete = true`,
+  `unresolvedCount = 0`, `recoveryRequiredCount = 0`,
+  `integrityConflictCount = 0`; `SCR-CE122B27-ORD677BE5CES` occurs exactly
+  once in scope events at **+24,000**.
+- Policy C shape (`cogs=null`, `grossProfit=null`, `grossProfitAvailable=false`
+  for prospective/October periods) is frozen and covered by measured suites
+  `testSalesRecognitionV2U5*` / `testSalesRecognitionV2U8*` (97/0 this session)
+  and static authority `36.Finance.Service.js:642-677, 818, 837-839`.
+- **Production Finance UI limitation (measured, separate observation):** the
+  Profit & Loss destination did not complete loading in 3 fresh-session
+  attempts (up to ~7.5 min each): `#finance` stayed `aria-busy=true`/hidden at
+  “Loading Profit & Loss…”, with client alerts `Products could not be loaded`,
+  `COGS and recipe data could not be loaded`, `Inventory items could not be
+  loaded`, and ZERO post-click network requests (only bootstrap
+  `/callback?nocache_id` POSTs, all 200). No page/console errors. Classified
+  as an availability observation outside the first-event chain; value parity
+  for U5 is proven by same-code/same-data execution above, but the production
+  Finance browser contract was NOT demonstrated this session.
+
+### Cross-layer matrix (measured)
+
+| layer | present? | identity | amount | status/quality | exclusion reason |
+| --- | --- | --- | --- | --- | --- |
+| TransactionOperation | yes | TXOP-677BE5CE… | plan 24000 | COMMITTED | — |
+| Order | yes | ORD-677BE5CE… | 24000 | UNPAID/OPEN (intent, not authority) | — |
+| OrderLines | yes (2) | OL-…-1/2 | 6000+18000 | — | — |
+| SalesRecognitionEvent | yes | SCR-CE122B27… | +24000 | COMMITTED/RECOGNIZED | — |
+| BalanceLedger | yes (2) | SRV2J-… | Dr1030/Cr4000 | active | — |
+| SalesRecognitionAudit | yes | SRA-CE122B27… | — | 1 exact | — |
+| U3 events | yes | chain in events | 24000 | RECOGNIZED | — |
+| U3 transactions | yes | V2_COMMITTED/ORDER | 24000 | RECOGNIZED | — |
+| U3 activeView | yes | active event | 24000 | RECOGNIZED | — |
+| U4 Recent | yes (measured ~04:00Z) | ORDER:ORD-677BE5CE… | Rp 24.000 | Active | absent ≤300s post-Save (cache) |
+| U4 Sales | yes (same) | same | Rp 24.000 | Active | same |
+| U4 detail | yes (server fn + overlay) | ORDER:ORD-677BE5CE… | 24000 | ACTIVE, quality empty | — |
+| U5 Revenue | yes (local VM of prod fn) | SCR once | +24000 in 403,000 | authorityComplete=true | prod Finance UI load not completed (separate) |
+
+**PARITY = PASS** for values U3 = U4 = U5 = 24,000 (same lineage, measured),
+with the two stated limitations (observation-time U4 cache window; production
+Finance UI load not completed).
+
+### Success-response validity (static, no source edits)
+
+`Sale saved`/`Recognized`/`Done` is emitted only after: batch write → exact
+artifact inspection (`EXACT`) → commit transition → verified commit readback
+(`salesRecognitionV2SaveCommitVerify_`: field-exact readback + `State ==
+COMMITTED`) — `97A:1004, 1019-1053, 1120-1148`. The success response does NOT
+verify U3/U4 read-model visibility and does NOT invalidate the transactions
+read cache — success while the grid is stale is therefore possible, exactly as
+observed.
+
+### Date / period / status
+
+Save instant 2026-10-09T03:04:07.420Z (10:04 local, same calendar day under
+either UTC or Asia/Jakarta) → no off-by-one possible for this event; grid date
+`09 Oct 2026`; period `This Year 01/2026 – 10/2026` includes it;
+`DATE_PERIOD_FILTER = PASS`. Status filter `active` includes the row;
+`DATE/STATUS = PASS`.
+
+### Protected delta / historical preservation / 1030
+
++1 op, +1 Order, +2 OrderLines, +2 ledger lines, +1 event, +1 audit; +0
+Payments/Settlements/InventoryLedger/Accounts/tabsal/tabops/Logs (hash-equal
+to pre-event baseline). Zero changes to pre-V2 Orders, historical 5000/1100
+rows, old Payments/Settlements, Correct/Void lineage (events = 1, no
+REVERSAL/replacement). Account 1030 shows the expected +24,000 uncleared debit
+from this Sale; NOT reconciled (Treasury out of scope).
+
+### Config
+
+`CONFIG_DIRECT_READ = BLOCKED_PERMISSION` (Execution API 403, single measured
+attempt, no retry). Runtime evidence instead: persisted OperationPlan embeds
+`mode:"ACTIVE"`, exact ActivationID, `activatedAt` T, `configVersion:1`,
+`contractVersion` exact — all read from TransactionOperations; no config
+write of any kind (config surfaces hash-stable, 0 write endpoints called).
+
+### Static source trace (smallest remediation scope — NOT implemented)
+
+1. `97A.SalesRecognition.V2.Save.js` — success path lacks
+   `invalidateDashboardCache()` (legacy mutators `21.Transaction.Entry.js:253`,
+   `22.Transaction.Lifecycle.js:291/346`, `47.Purchase.Events.js:562/889/1086`
+   all call it).
+2. `91.Transactions.Query.js:147-205` — period cache served stale rows until
+   TTL because the revision key never changed.
+Recommended minimum: call `invalidateDashboardCache()` once in the 97A DONE
+path + one warm-cache read-after-write regression test. Requires separate
+authorization (runtime source change forbidden here).
+
+### TEST_GAP_ROOT_CAUSE
+
+Green U1–U10 suites never exercise `getTransactionsPage`/
+`getTransactionsPeriodRows` with a PRE-WARMED `CacheService` entry across a V2
+Save: all U4 tests run the reader against fixtures with no cache layer
+(`CacheService` stubbed/absent), so the 300-second stale-read window and the
+missing invalidation are structurally unrepresentable. Minimum regression:
+seed `transactions-period-v3|…` cache → perform V2 Save → read
+`getTransactionsPeriodRows` within TTL → assert the new Sale row present
+(expected to FAIL today; drives remediation item 1).
+
+### Validation / diagnostics (MEASURED)
+
+- `node _test_runner.js` → **97 PASS / 0 FAIL** (full suite incl. U1–U10,
+  Transaction readers, Finance, Policy C, mutation proofs).
+- Diagnostic harnesses (local, read-only, GET-only production reads):
+  `tests/tmp/u10e-sheets-read.js` (inventory) PASS ·
+  `tests/tmp/u10e-u3-projection.js` (U3 VM) PASS ·
+  `tests/tmp/u10e-u5-scope.js` (U5 scope VM) PASS ·
+  `tests/tmp/u10e-u4-detail-vm.js` (U4 detail server fn) PASS ·
+  `tests/tmp/u10e-u4-probe.js` (production browser U4) PASS ·
+  `tests/tmp/u10e-u5-browser.js` + network probes (production Finance UI:
+  load not completed — recorded above).
+- Zero runtime source changes; zero production writes; no Sale/Save
+  retry/Correct/Void/Payment/Fulfillment/Treasury/config/deploy/Git-push.
+- `clasp status` / `clasp deployments` → `BLOCKED_PERMISSION` (deny-tail
+  allowlist this session); canonical deployment number NOT re-measured this
+  session (last measured `@709` in U10D; canonical `/exec` serves the ACTIVE
+  V2 UI, measured via browser).
+- Local evidence commit: attempted paths `docs/SALES-RECOGNITION-V2-U10-ACTIVATION-FIRST-EVENT.md`
+  + `tests/tmp/*` — staging not permitted in this session →
+  `BLOCKED_PERMISSION` (no retry). No Git push.
