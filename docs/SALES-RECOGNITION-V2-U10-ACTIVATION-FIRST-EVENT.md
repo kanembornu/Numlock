@@ -1302,3 +1302,156 @@ browser-controller availability issue independent of the server-side cache
 fix and of U5 accounting authority; handle it as a separate authorized task
 (timeout/liveness recovery in `201.View.Finance.Controller.html` + the
 controller regression above).
+
+---
+
+## R4 — U4 CACHE-FRESHNESS PRODUCTION DEPLOYMENT (TASK_ID `R4-CACHE-DEPLOY-01`)
+
+Owner authorization consumed (exact scope): deploy the already-proven U10F
+cache remediation — exactly ONE `clasp push --force`, exactly ONE new immutable
+version, canonical `v709 → <new>`, then production READ-ONLY verification and
+re-acceptance of the EXISTING genuine Rp24,000 Sale. Not authorized and not
+performed: another runtime fix, Finance UI fix, another Sale, Save retry,
+Correct/Void on the genuine Sale, Payment/Fulfillment, Treasury,
+config/account/schema mutation, historical rewrite, Git push.
+
+**STATUS: `R4_U4_CACHE_FRESHNESS_DEPLOYMENT = COMPLETE`**
+
+### R4.1 Baseline (measured)
+
+- Starting HEAD `81a3ca8` (U10F candidate), tracked worktree/index clean at
+  start; 27 intentional untracked paths `tests/tmp/u10e-*` inventoried,
+  untouched, never staged/deployed/deleted.
+- Frozen runtime delta vs v709 baseline (`1e8c7a4`): of the 68 clasp-tracked
+  runtime files, **only `97A.SalesRecognition.V2.Save.js` and
+  `97C.SalesRecognition.V2.Correction.js` differ** — both changes are the U10F
+  DONE-gated `invalidateDashboardCache()` blocks (+34 net lines, no other
+  runtime edit). Tests/docs/`_test_runner.js` differ but are outside the push
+  manifest. Source audit: invalidation only after `status === DONE` (Save) /
+  `status === mutation.STATUS.DONE` (Correct/Void), inside `try/catch`,
+  best-effort, no retry, no RequestKey/artifact/status side effects.
+
+### R4.2 Pre-deploy gates (MEASURED)
+
+| gate | result |
+| --- | --- |
+| full `node _test_runner.js` (3 runs: baseline, pre-push-final) | **100 PASS / 0 FAIL** (MEASURED, final run immediately pre-push) |
+| focused cache suites in that run | `U4WarmCacheFreshness`, `U4CacheNegativePaths`, `U4MutationCacheFreshness` **PASS** |
+| U7 / U6 / U5 / U4 / U3 / U2 / U1 / legacy Transaction / Policy C / U8 / U10 suites | all PASS inside the 100 (U1–U10 mutation proofs + activation + U10B/U10C operator-surface present) |
+| legacy Payment/Fulfillment coverage | no standalone named suite exists; covered by `Cash`/`Finance`/`OperationalOrders` transport/policy contracts inside the 100 — reported as-is, 0 FAIL |
+| warm-cache proof (not string inspection) | `WarmCacheFreshness` exercises pre-warm → committed V2 Save → invalidate → immediate TTL-window read shows the new row exactly once: **GREEN** |
+| `node --check` on all root `*.js` + `_test_runner.js` | PASS |
+| `git diff --check` | clean |
+| manifest (`.claspignore`) | **68 explicit `!` includes** (the previously reported "69" was off by one; current reality = 68), `clasp status` = **68 tracked**, tracked set ≡ include set (diff empty); no `tests/`, `docs/`, `_test_runner.js`, `tests/tmp/u10e-*` |
+| secrets/debug/prod-ID scan of changed runtime files | clean |
+
+### R4.3 Push + version + canonical (measured)
+
+- Pre-push production readback (read-only): canonical `@709` (2 deployments,
+  `@HEAD` untouched), `/exec` HTTP 200 / 1,060,648 bytes with U10D markers;
+  fresh-session **27/27 PASS**, `authorityMode = READY/ACTIVE`, **0 writer
+  requests**; Sheets inventory = U10E baseline (ops 3, events 1, audits 1,
+  orders 2, orderlines 3, ledger 8, payments 1 `e357140d51acf6fc`,
+  settlements 2 `1b3a361e0f014464`, inventory 0, accounts 22 …); direct
+  ActivationID/`T` read remains **BLOCKED_PERMISSION** (known-denied Execution
+  API `403`, not retried) — identity evidenced structurally (manifest includes
+  `97E`/`10.Config` unchanged, zero config mutation) + persisted OperationPlan
+  `activationID b4791011-120e-4985-92da-a61c6311060c`, `activatedAt
+  2026-10-08T18:59:50.540Z`, `contractVersion SALES_RECOGNITION_V2`,
+  `configVersion 1`.
+- **Push count: exactly 1** — `clasp push --force` → `Pushed 68 files`
+  (single success path; no second push attempted).
+- **Version: exactly 1 new immutable version** — single
+  `clasp update-deployment <canonical> -d "U10F cache freshness fix 81a3ca8: …"`
+  → `Redeployed … @710`; canonical **709 → 710**; still exactly 2 deployments;
+  versions `695–709` intact, only `710` added (no deletions/orphans).
+
+### R4.4 Post-push source + deployment verification (measured, read-only)
+
+- Apps Script API `projects.getContent` (GET, same identity): **68 remote
+  files, 68/68 sha256 identical to the local tracked package** (mismatch 0,
+  missing 0) — including `97A`/`97C` byte-exact; U10F markers present in both
+  (`invalidateDashboardCache` on DONE gate, `try/catch` best-effort);
+  `97E` activation writer present; `195` `applySalesV2OperatorSurface_`
+  present. Push altered no config file and no business data.
+- Canonical `/exec` GET after deploy: **HTTP 200 / 1,060,648 bytes**; U10D
+  operator-surface markers present (`salesV2ClientModeState_`,
+  `applySalesV2OperatorSurface_`, `salesRecognitionV2Activate`,
+  `isValidActiveSalesEntry_`, `operationalOrderLookupControl`,
+  `showSalesV2OrderSuccess_`), `var validSales = false` absent.
+- Config stability post-deploy: fresh-session **27/27**, `mode ACTIVE`,
+  0 writers; no config write performed; ActivationID/`T` direct read stays
+  BLOCKED_PERMISSION (structural + runtime evidence as above).
+
+### R4.5 Protected delta (business spreadsheet = 0)
+
+Pre- vs post-deploy Sheets REST GET (16 sheets, row counts + data/header
+sha16): **diff = NONE**. No new TransactionOperation/Order/OrderLine/
+RecognitionEvent/RecognitionAudit/BalanceLedger/Payment/Settlement/
+InventoryLedger row attributable to R4. Only source/version/deployment state
+changed. Exactly ONE V2 Sale exists (no second Sale); no Save retry; no
+Correct/Void; no Payment/Fulfillment; no Treasury (1030 stays Dr 24,000
+uncleared, no 2010).
+
+### R4.6 Existing-first-event re-acceptance (MEASURED, read-only)
+
+Order `ORD-677BE5CE-SALESRECOGNI`, `SCR-CE122B27-ORD677BE5CES`, Rp24,000,
+DINE_IN, 2 lines (`PV-739E6B5D-SNT06HOT` 6,000 + `PV-A7D13148-SCC02COLD`
+18,000), op `TXOP-677BE5CE-SALESRECOGNI` = `COMMITTED`.
+
+- **U3** (fresh local VM of `97B` over live rows): target chain in events /
+  transactions / active view = **1 / 1 / 1**, `RECOGNIZED`, amount 24,000,
+  2 lines, `recoveryIssues []`, no reversal/replacement/lineage break.
+- **U4** (fresh production browser, post-710): Recent default row **once**;
+  Sales default row **once**; exact-identity search `677BE5CE` → **exactly 1
+  row**; detail opens and renders amount **Rp 24.000**, **DINE_IN**,
+  Qty 2, both persisted ProductVariantIDs, `Status ACTIVE`,
+  `localSnapshot:false` (canonical server record), `paymentStatus UNPAID` /
+  `fulfillmentStatus OPEN` as data only, footer = `Close` only (no
+  Correct/Void invoked), `lineCount 2` with both line IDs/amounts.
+- **U5** (direct Finance computation — scope function of `36.Finance.Service`
+  over the fresh U3 projection): Oct-2026 `recognizedRevenue 403000` =
+  `expectedOctTotalFromEvents 403000`; target RecognitionID
+  `occurrencesInEvents 1`, `signedAmount 24000` (**+24,000 exactly once**);
+  `unresolvedCount 0`, `recoveryRequiredCount 0`, `integrityConflictCount 0`,
+  `revenueAuthorityComplete true`.
+- **PARITY = PASS**: U3 24,000 = U4 24,000 = U5 24,000, same lineage.
+- **Accounting**: BalanceLedger unchanged (sha `ca572515a683c19c`); V2 journal
+  still exactly `Dr 1030 24,000` / `Cr 4000 24,000` (`SRV2J-CE122B27-…`), no
+  extra lines, no 5000/1100/2010/Cash-Bank/6210 attributable to this Sale;
+  Policy C signature verified by the passing U3 projection.
+
+### R4.7 Explicit limitation — original TTL window
+
+The original defect was the immediate post-mutation **300 s stale-cache
+window**; it has already expired and **R4 cannot recreate it without another
+production mutation**. No Sale was fabricated, no Correct/Void used to force a
+cache event, no production cache mutated for testing. Re-acceptance therefore
+rests on: (1) deployed-source verification (68/68 sha match incl. U10F
+logic), (2) measured local warm-cache regression against the exact defect
+shape (`WarmCacheFreshness` PASS, FAIL pre-fix per U10F), (3) fresh
+production U4 visibility of the existing Sale, (4) persisted U3/U4/U5 parity
+for that Sale.
+
+### R4.8 Carried-forward items (not fixed, not blocking R4)
+
+- `FINANCE_UI_DISPATCH_DEFECT` — `ensureFinanceData()` ghost-in-flight join,
+  `201.View.Finance.Controller.html:387-395`. Fresh U5 browser probe did not
+  surface the Finance surface within the 420 s attempt window (terminated);
+  classified as the known UI dispatch defect, NOT an accounting failure —
+  direct Finance computation is correct (R4.6). Separate authorized fix
+  later; final release-acceptance decision stays open.
+- Observation (cosmetic, out of scope): when a transaction detail is served
+  from the preload cache, `#transactionLifecycleState` keeps the
+  `Loading transaction…` label after the canonical detail has rendered. Data
+  is complete; no authorized fix in R4.
+
+### R4.9 Status / next recommendation
+
+`R4_U4_CACHE_FRESHNESS_DEPLOYMENT = COMPLETE` (19/19 success criteria).
+`U10_SALES_V2_ACTIVATION_FIRST_EVENT = COMPLETE` is now justified by
+accumulated evidence + deployed remediation (activation ACTIVE, operator
+surface accepted, first genuine Sale accepted with U3/U4/U5 parity), subject
+to the TTL-window limitation above. The Finance UI defect remains tracked
+separately and is the remaining gate for overall release acceptance. No
+automatic Treasury.
