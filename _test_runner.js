@@ -24,6 +24,8 @@ var runSalesV2U10ActivationMutationProof = require('./tests/browser/sales-v2-u10
 globalThis.runSalesV2U10ActivationMutationProof = runSalesV2U10ActivationMutationProof;
 var runSalesV2U10BOperatorSurface = require('./tests/browser/sales-v2-u10b-operator-surface.js');
 globalThis.runSalesV2U10BOperatorSurface = runSalesV2U10BOperatorSurface;
+var runSalesV2U10COperatorSurface = require('./tests/browser/sales-v2-u10c-operator-surface.js');
+globalThis.runSalesV2U10COperatorSurface = runSalesV2U10COperatorSurface;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -345,6 +347,10 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   // legacy controls + disabled Save Transaction reproduced from HEAD source,
   // mode-blind client proof, operable Save Order -> server mode dispatcher.
   run('testSalesV2U10BOperatorSurface', 'JSON.stringify(runSalesV2U10BOperatorSurface())');
+
+  // SALES_RECOGNITION_V2 U10C ACTIVE operator surface (real 190 dialog markup +
+  // 194/195 controller composition): UI-A1..A14 + 18-item source audit.
+  run('testSalesV2U10COperatorSurface', 'JSON.stringify(runSalesV2U10COperatorSurface())');
 
 console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

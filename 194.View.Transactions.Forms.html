@@ -36,7 +36,7 @@
     {
       var entry = initializeStableDashboardElements().transactionEntry;
       var state = transactionEntryState;
-      var validSales = false;
+      var validSales = isValidActiveSalesEntry_();
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
         (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0) &&
         state.cashAccountCode;
@@ -187,7 +187,8 @@
       entry.salesFields.hidden = type !== "SALES";
       entry.expenseFields.hidden = type !== "EXPENSE";
       operationalElement("operationalOrderFields").hidden = type !== "SALES";
-      if (type === "SALES") { restoreOperationalRecovery(); listOperationalOpenOrders(); }
+      if (type === "SALES") { restoreOperationalRecovery(); if (salesV2OperatorLegacyControlsAllowed_()) listOperationalOpenOrders(); }
+      applySalesV2OperatorSurface_();
       var receipt = receiptEntryElements();
       updateExpensePurchaseFields();
       entry.generalError.innerText = "";
@@ -532,6 +533,8 @@
       entry.correctionReview.parentElement.classList.remove("has-review");
       entry.salesFields.hidden = true;
       entry.expenseFields.hidden = true;
+      operationalElement("operationalOrderFields").hidden = true;
+      applySalesV2OperatorSurface_();
       entry.typeSales.setAttribute("aria-checked", "false");
       entry.typeExpense.setAttribute("aria-checked", "false");
       entry.typeHot.setAttribute("aria-checked", "false");

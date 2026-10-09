@@ -1,22 +1,20 @@
-// SALES_RECOGNITION_V2 U10B operator-surface reproduction (Node-only;
-// executed via `_test_runner.js`). Loads the real 194 forms + 195 controller
-// into an in-memory DOM/`google.script.run` harness and reproduces the
-// owner-observed production surface from HEAD source, separating two facts a
-// screenshot alone cannot discriminate:
-//   (S1-S3) the legacy-shaped New Transaction/Sales controls AND the
-//   permanently disabled "Save Transaction" button are produced by HEAD
-//   source itself: the client is mode-blind by U7 design (97D doc §9), the
-//   order-workflow section unhidden on Sales selection (194), and
-//   `var validSales = false;` (194, since 37df7ee, an ancestor of pinned
-//   version 705) forces `entry.submit.disabled = true` for every SALES
-//   state. UI appearance alone therefore does NOT identify the served
-//   deployment;
-//   (S4-S6) the operable save at HEAD is the operational Save Order control
-//   (server-routed `submitOperationalOrder` -> 97D mode dispatcher -> U2 V2
-//   save under ACTIVE) and that mode routing exists ONLY in server files
-//   (97D/97E), which are absent from the served pinned version-705 artifact
-//   (deployment identity is external recorded evidence, not re-measured
-//   here). No browser process, no network, no production access.
+// SALES_RECOGNITION_V2 U10B operator-surface suite (Node-only; executed via
+// `_test_runner.js`). Loads the real 194 forms + 195 controller into an
+// in-memory DOM/`google.script.run` harness. Originally written to reproduce
+// the owner-observed legacy surface from HEAD source; since U10C it asserts the
+// POST-CORRECTION contract of the same composition:
+//   (S1) every legacy element string still exists in source, so UI appearance
+//   alone never identifies the served deployment;
+//   (S2) the client never resolves config: no config property, no server
+//   resolver, no activation metadata in any view file, and the mode is read
+//   only from the server authority response (`salesV2Mode`);
+//   (S3-S4) Save eligibility for Sales is derived
+//   (`isValidActiveSalesEntry_`) instead of the removed
+//   `var validSales = false;` defect, so an unconfigured/unknown mode still
+//   fails closed for Sales while a valid EXPENSE state enables;
+//   (S5-S6) the durable save entrypoint and server mode routing remain the U7
+//   path. UI-A1..A14 coverage lives in `sales-v2-u10c-operator-surface.js`.
+// No browser process, no network, no production access.
 var fs = require("fs");
 var vm = require("vm");
 
@@ -187,25 +185,38 @@ function runSalesV2U10BOperatorSurface() {
     ok("S1-" + (i + 1), entry[1].indexOf(entry[0]) !== -1, entry[0]);
   });
 
-  // S2: the client never receives or resolves the config mode (U7 design):
-  // no resolver/config-property/mode-route token in any view file, and no
-  // PREPARED/ACTIVE literal driving UI branches.
+  // S2: the client never resolves config itself (U10C). The mode arrives as a
+  // plain server value on the authority bootstrap: view files hold no config
+  // property name, no server resolver, no activation metadata, and the mode is
+  // never computed on the client.
   [index, render, forms, actions].forEach(function(source, i) {
     ok("S2-" + (i + 1),
       source.indexOf("salesRecognitionV2OperatorConfig") === -1 &&
       source.indexOf("SALES_RECOGNITION_V2_CONFIG") === -1 &&
       source.indexOf("salesV2OperatorResolvedRoute_") === -1 &&
-      source.indexOf("PREPARED") === -1);
+      source.indexOf("activationID") === -1 &&
+      source.indexOf("activatedAt") === -1);
   });
+  ok("S2-5", actions.indexOf("response.data.salesV2Mode") !== -1 &&
+    index.indexOf("salesV2Mode") === -1 && render.indexOf("salesV2Mode") === -1 &&
+    forms.indexOf("salesV2Mode") === -1,
+    "mode is read from the server authority response only");
+  var modeCalls = actions.match(/setSalesV2ClientMode_\(([^)]*)\)/g) || [];
+  ok("S2-6", modeCalls.join("|").indexOf("response.data.salesV2Mode") !== -1 &&
+    modeCalls.join("|").indexOf("null") !== -1 &&
+    modeCalls.every(function(call) {
+      return !/Date|getMonth|getTime|activatedAt|activationID|Math\./.test(call);
+    }), modeCalls.join("|"));
 
-  // S3: Save Transaction for Sales is structurally dead at HEAD:
-  // `var validSales = false;` and no other validSales assignment exists.
-  ok("S3-1", forms.indexOf("var validSales = false;") !== -1);
-  ok("S3-2", (forms.match(/validSales/g) || []).length === 2,
+  // S3: Save eligibility for Sales is derived from live V2 input state; the
+  // unconditional `var validSales = false;` defect is gone.
+  ok("S3-1", forms.indexOf("var validSales = false;") === -1);
+  ok("S3-2", forms.indexOf("var validSales = isValidActiveSalesEntry_();") !== -1 &&
+    (forms.match(/validSales/g) || []).length === 2,
     String((forms.match(/validSales/g) || []).length));
 
-  // S4: reproduce the observed disabled Save button from HEAD source with a
-  // fully valid SALES state; control: a valid EXPENSE state enables it.
+  // S4: with no resolved server mode the SALES Save stays fail-closed even
+  // with fully valid input; control: a valid EXPENSE state enables it.
   var h = operatorSurfaceHarness_();
   var s = h.ctx.transactionEntryState;
   s.receiptUnresolved = false; s.submitting = false; s.submissionComplete = false;

@@ -356,7 +356,12 @@ function getOperationalTransactionAuthority() { return transactionResponse_(func
   authority.expenseItems = expenses.filter(function(e) {
     if (!isCanonicalActive(e.IsActive)) return false; try { return !expensePolicyIsPurchase_(resolveExpensePurchasePolicy_(e.ID_Ops, [e])); } catch (error) { return false; }
   }).map(function(e) { return { ExpenseItemID: e.ID_Ops, label: e.Item + " · " + e.Kategori }; });
-  return transactionAuthorityTransportDto_(authority, new Date());
+  var dto = transactionAuthorityTransportDto_(authority, new Date());
+  // U10C: the operator surface renders from the server-resolved config mode.
+  // The client never resolves config itself; an unresolved/invalid config
+  // travels as "REJECT" so the client fails closed for new Sales.
+  dto.salesV2Mode = salesV2OperatorResolvedRoute_().mode;
+  return dto;
 }); }
 function submitOperationalOrder(payload) {
   // U7: config-aware routing for NEW Sales orders. PREPARED keeps the exact

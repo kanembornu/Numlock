@@ -1,6 +1,104 @@
     var operationalTransactionState = { authority: null, authorityStatus: "UNAVAILABLE", authorityReason: "NOT_LOADED", lines: [], order: null,
       pending: null, pendingOpenOrdersRecovery: false, inFlight: { order: false, payment: false, fulfillment: false } };
 
+    // U10C: server-derived Sales V2 mode for the ACTIVE operator surface. The
+    // value arrives only from the server authority response (server config is
+    // the only authority); it is never derived from the clock, from activation
+    // metadata, or from any client state. An unresolved read fails closed: no
+    // new Sales, no operable legacy fallback.
+    var salesV2ClientModeState_ = { status: "UNKNOWN", mode: null };
+
+    function salesV2ClientSurface_()
+    {
+      var state = salesV2ClientModeState_;
+      if (state.status !== "READY") return "UNAVAILABLE";
+      if (state.mode === "ACTIVE") return "ACTIVE";
+      if (state.mode === "PREPARED") return "PREPARED";
+      if (state.mode === "PAUSED") return "PAUSED";
+      return "UNAVAILABLE";
+    }
+
+    // Legacy Order-lifecycle controls are a PREPARED-only surface. ACTIVE,
+    // PAUSED and unresolved config never expose them.
+    function salesV2OperatorLegacyControlsAllowed_() { return salesV2ClientSurface_() === "PREPARED"; }
+
+    function salesV2ActiveSurface_()
+    {
+      return salesV2ClientSurface_() === "ACTIVE" &&
+        Boolean(transactionEntryState && transactionEntryState.transactionType === "SALES");
+    }
+
+    function setSalesV2ClientMode_(value)
+    {
+      var ready = typeof value === "string" && value.length > 0;
+      salesV2ClientModeState_.status = ready ? "READY" : "UNKNOWN";
+      salesV2ClientModeState_.mode = ready ? value : null;
+    }
+
+    // One place decides which Sales controls exist for the current mode:
+    // ACTIVE -> Order Type + lines + total only; PREPARED -> legacy-compatible
+    // surface preserved; PAUSED/unresolved -> no operable save at all.
+    function applySalesV2OperatorSurface_()
+    {
+      var surface = salesV2ClientSurface_();
+      var sales = Boolean(transactionEntryState && transactionEntryState.transactionType === "SALES");
+      var prepared = sales && surface === "PREPARED";
+      var inFlight = Boolean(operationalTransactionState.inFlight.order);
+      [["operationalOrderHeading", false], ["operationalSaveOrder", true],
+        ["operationalOrderLookupControl", false], ["operationalOpenOrders", false]].forEach(function(pair) {
+        var element = operationalElement(pair[0]);
+        if (!element) return;
+        element.hidden = sales ? !prepared : true;
+        if (pair[1]) element.disabled = sales ? (!prepared || inFlight) : true;
+      });
+      var payment = operationalElement("operationalPaymentFields");
+      var fulfillment = operationalElement("operationalFulfillmentFields");
+      // PREPARED keeps legacy visibility driven by the loaded order; every
+      // other surface never exposes payment/fulfillment at all.
+      if (payment && !prepared) payment.hidden = true;
+      if (fulfillment && !prepared) fulfillment.hidden = true;
+      if (sales) {
+        var error = operationalElement("operationalOrderError");
+        if (error) {
+          if (surface === "PAUSED") error.innerText = "New sales are paused.";
+          else if (surface === "UNAVAILABLE") error.innerText = "Sales configuration is unavailable. New sales are disabled.";
+          else error.innerText = "";
+        }
+      }
+      if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
+    }
+
+    // U10C: Save eligibility is derived from the real V2 input state instead of
+    // a constant. Price/HPP authority stays server-side; this only answers
+    // "may this draft be saved right now" for the ACTIVE V2 Sales surface.
+    function isValidActiveSalesEntry_()
+    {
+      var state = transactionEntryState;
+      if (!state || state.transactionType !== "SALES" || state.mode === "correction") return false;
+      if (!salesV2ActiveSurface_()) return false;
+      if (state.receiptUnresolved || state.submitting || state.submissionComplete || state.loadingOptions) return false;
+      // A save is only "pending" while it is in flight; an UNKNOWN outcome
+      // keeps its RequestKey and stays retryable under the same identity.
+      if (operationalTransactionState.inFlight.order) return false;
+      var errorIds = ["salesEntryQtyError", "salesTypeError", "productEntryError"];
+      for (var e = 0; e < errorIds.length; e++) {
+        var errorElement = operationalElement(errorIds[e]);
+        if (errorElement && String(errorElement.innerText || "").trim()) return false;
+      }
+      var orderTypeElement = operationalElement("operationalOrderType");
+      var orderType = orderTypeElement ? orderTypeElement.value : "";
+      if (orderType !== "DINE_IN" && orderType !== "TAKE_AWAY") return false;
+      var lines = operationalTransactionState.lines || [];
+      if (!lines.length) return false;
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (!line || !line.productID || !line.productVariantID) return false;
+        var qty = Number(line.qty);
+        if (!Number.isInteger(qty) || qty < 1) return false;
+      }
+      return true;
+    }
+
     function operationalElement(id) { return document.getElementById(id); }
 
     function markOperationalAuthorityUnavailable(reason)
@@ -12,6 +110,9 @@
       ["operationalOrderError", "operationalPurchaseError", "operationalExpenseError", "operationalPaymentError"].forEach(function(id) {
         var element = operationalElement(id); if (element) element.innerText = "Transaction authority is unavailable.";
       });
+      // U10C: an authority/config read failure fails closed for new Sales.
+      setSalesV2ClientMode_(null);
+      applySalesV2OperatorSurface_();
     }
 
     function validOperationalAuthorityResponse(response)
@@ -36,6 +137,10 @@
         operationalTransactionState.authority = response.data;
         operationalTransactionState.authorityStatus = "READY";
         operationalTransactionState.authorityReason = null;
+        // U10C: authoritative mode travels with the bootstrap; only a real
+        // server value may enable the ACTIVE operator surface.
+        setSalesV2ClientMode_(response.data.salesV2Mode);
+        applySalesV2OperatorSurface_();
         if (operationalTransactionState.pendingOpenOrdersRecovery) {
           operationalTransactionState.pendingOpenOrdersRecovery = false;
           listOperationalOpenOrders();
@@ -85,8 +190,8 @@
 
     function operationalRequestKey_(type) { return type.toLowerCase() + "-" + String(Date.now()) + "-" + Math.random().toString(36).slice(2); }
     function persistOperationalRecovery_() { try { if (operationalTransactionState.pending) localStorage.setItem("numlock.sales.pending", JSON.stringify(operationalTransactionState.pending)); else localStorage.removeItem("numlock.sales.pending"); if (operationalTransactionState.order) localStorage.setItem("numlock.sales.order", operationalTransactionState.order.OrderNumber); } catch (error) {} }
-    function restoreOperationalRecovery() { try { var pending = JSON.parse(localStorage.getItem("numlock.sales.pending") || "null"), orderNumber = localStorage.getItem("numlock.sales.order"); if (pending) { operationalTransactionState.pending = pending; reconcileOperationalUnknown(); } else if (orderNumber) loadOperationalOrder(orderNumber); } catch (error) {} }
-    function setOperationalInFlight_(type, active) { operationalTransactionState.inFlight[type] = active; var ids = { order: "operationalSaveOrder", payment: "operationalConfirmPayment", fulfillment: "operationalFulfillmentNext" }; var button = operationalElement(ids[type]); if (button) { button.disabled = active; button.setAttribute("aria-busy", String(active)); } }
+    function restoreOperationalRecovery() { try { var pending = JSON.parse(localStorage.getItem("numlock.sales.pending") || "null"), orderNumber = localStorage.getItem("numlock.sales.order"); if (pending) { operationalTransactionState.pending = pending; reconcileOperationalUnknown(); } else if (orderNumber && salesV2OperatorLegacyControlsAllowed_()) loadOperationalOrder(orderNumber); } catch (error) {} }
+    function setOperationalInFlight_(type, active) { operationalTransactionState.inFlight[type] = active; var ids = { order: "operationalSaveOrder", payment: "operationalConfirmPayment", fulfillment: "operationalFulfillmentNext" }; var button = operationalElement(ids[type]); if (button) { button.disabled = active; button.setAttribute("aria-busy", String(active)); } if (type === "order") { var submit = operationalElement("submitTransactionEntryButton"); if (submit) { submit.disabled = active; submit.setAttribute("aria-busy", String(active)); } applySalesV2OperatorSurface_(); } }
     function operationalUnknown_(errorElement) { errorElement.innerText = "Result belum dapat dipastikan. Sistem akan memeriksa transaksi yang sama; jangan membuat transaksi baru."; if (operationalTransactionState.pending) operationalTransactionState.pending.state = "UNKNOWN"; persistOperationalRecovery_(); reconcileOperationalUnknown(); }
 
     function addSelectedSalesOrderLine()
@@ -101,6 +206,7 @@
       if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant yang tersedia."; return; }
       operationalTransactionState.lines.push({ productID: state.selectedProduct.productId, productVariantID: variant.ProductVariantID, qty: state.qty,
         name: state.selectedProduct.product + " · " + state.selectedType, price: Number(state.pricing.price) });
+      applySalesV2OperatorSurface_();
       renderOperationalOrderLines();
     }
     function removeOperationalOrderLine(index) { if (operationalTransactionState.pending) return; operationalTransactionState.lines.splice(index, 1); renderOperationalOrderLines(); }
@@ -109,6 +215,7 @@
       var total = operationalTransactionState.lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0), region = operationalElement("operationalOrderLines"); region.innerHTML = "";
       operationalTransactionState.lines.forEach(function(line, index) { var row = document.createElement("div"); row.textContent = line.name + " × " + line.qty + " · " + formatEntryCurrency(line.price) + " · " + formatEntryCurrency(line.qty * line.price) + " "; var remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove"; remove.onclick = function() { removeOperationalOrderLine(index); }; row.appendChild(remove); region.appendChild(row); });
       operationalElement("operationalOrderTotal").textContent = "Total: " + formatEntryCurrency(total);
+      if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
     }
     function operationalServerCall(method, payload, onSuccess, onRefusal, onUnknown)
     {
@@ -123,13 +230,13 @@
       var pending = operationalTransactionState.pending;
       if (!pending) pending = operationalTransactionState.pending = { type: "ORDER_CREATE", requestKey: operationalRequestKey_("order"), state: "NEW", payload: { orderType: operationalElement("operationalOrderType").value, lines: operationalTransactionState.lines.map(function(line) { return { productID: line.productID, productVariantID: line.productVariantID, qty: line.qty }; }) } };
       pending.state = "SUBMITTING"; persistOperationalRecovery_(); setOperationalInFlight_("order", true);
-      operationalServerCall("submitOperationalOrder", Object.assign({ requestKey: pending.requestKey }, pending.payload), function(order) { pending.state = "CONFIRMED"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); showOperationalOrder(order); persistOperationalRecovery_(); }, function(error) { pending.state = "DEFINITE_FAILURE"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); operationalElement("operationalOrderError").innerText = error.message; persistOperationalRecovery_(); }, function() { setOperationalInFlight_("order", false); operationalUnknown_(operationalElement("operationalOrderError")); });
+      operationalServerCall("submitOperationalOrder", Object.assign({ requestKey: pending.requestKey }, pending.payload), function(order) { pending.state = "CONFIRMED"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); showOperationalOrder(order); persistOperationalRecovery_(); completeSalesV2OperatorSave_(order); }, function(error) { pending.state = "DEFINITE_FAILURE"; operationalTransactionState.pending = null; setOperationalInFlight_("order", false); operationalElement("operationalOrderError").innerText = error.message; persistOperationalRecovery_(); }, function() { setOperationalInFlight_("order", false); operationalUnknown_(operationalElement("operationalOrderError")); });
     }
     // U7: a V2 sale renders recognition/lineage status only — Payment Method,
     // Receive Via, Paid/Unpaid and fulfillment progression are never its
     // lifecycle. Cohort arrives from the server's persisted-evidence check.
     function salesV2OperatorVisibleOrder_(order) { return !!(order && (order.salesCohort === "V2_COMMITTED" || order.salesCohort === "V2_PENDING")); }
-    function showOperationalOrder(order) { if (!order) return; operationalTransactionState.order = order; if (salesV2OperatorVisibleOrder_(order)) { operationalElement("operationalPaymentFields").hidden = true; operationalElement("operationalFulfillmentFields").hidden = true; renderOperationalOrderStatus(); return; } operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID"; operationalElement("operationalFulfillmentFields").hidden = false; operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal); renderOperationalOrderStatus(); }
+    function showOperationalOrder(order) { if (!order) return; operationalTransactionState.order = order; if (salesV2OperatorVisibleOrder_(order) || !salesV2OperatorLegacyControlsAllowed_()) { operationalElement("operationalPaymentFields").hidden = true; operationalElement("operationalFulfillmentFields").hidden = true; renderOperationalOrderStatus(); return; } operationalElement("operationalPaymentFields").hidden = order.PaymentStatus === "PAID"; operationalElement("operationalFulfillmentFields").hidden = false; operationalElement("operationalPaymentAmount").value = formatEntryCurrency(order.OrderTotal); renderOperationalOrderStatus(); }
     function loadOperationalOrder(identifier) { operationalServerCall("findOperationalOrder", identifier, function(order) { if (order) { showOperationalOrder(order); persistOperationalRecovery_(); } else operationalElement("operationalOrderError").innerText = "Order tidak ditemukan."; }, function(error) { operationalElement("operationalOrderError").innerText = error.message; }, function() { operationalUnknown_(operationalElement("operationalOrderError")); }); }
     function lookupOperationalOrder() { loadOperationalOrder(operationalElement("operationalOrderLookup").value); }
     function listOperationalOpenOrders() {
@@ -143,6 +250,15 @@
         // V2 operator status = recognition/lineage semantics, never a payment
         // or fulfillment status, never a fabricated payment method.
         operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.OrderType + " · " + lines + " · " + formatEntryCurrency(order.OrderTotal) + " · Recognized";
+        operationalElement("operationalPaymentFields").hidden = true;
+        operationalElement("operationalFulfillmentFields").hidden = true;
+        operationalElement("operationalFulfillmentNext").hidden = true;
+        return;
+      }
+      if (!salesV2OperatorLegacyControlsAllowed_()) {
+        // Non-PREPARED surfaces never render a payment or fulfillment
+        // lifecycle: a pre-V2 order still shows only identity and total.
+        operationalElement("operationalOrderStatus").textContent = order.OrderNumber + " · " + order.OrderType + " · " + lines + " · " + formatEntryCurrency(order.OrderTotal);
         operationalElement("operationalPaymentFields").hidden = true;
         operationalElement("operationalFulfillmentFields").hidden = true;
         operationalElement("operationalFulfillmentNext").hidden = true;
@@ -167,7 +283,46 @@
     function reconcileOperationalUnknown()
     {
       var pending = operationalTransactionState.pending; if (!pending || pending.state !== "UNKNOWN") return; pending.state = "RECONCILING"; persistOperationalRecovery_();
-      operationalServerCall("findOperationalOperation", { operationType: pending.type, requestKey: pending.requestKey }, function(result) { if (result && result.operation && result.operation.State === "COMMITTED" && result.order) { operationalTransactionState.pending = null; showOperationalOrder(result.order); persistOperationalRecovery_(); } else { pending.state = "UNKNOWN"; persistOperationalRecovery_(); } }, function() { pending.state = "UNKNOWN"; persistOperationalRecovery_(); }, function() { pending.state = "UNKNOWN"; persistOperationalRecovery_(); });
+      operationalServerCall("findOperationalOperation", { operationType: pending.type, requestKey: pending.requestKey }, function(result) { if (result && result.operation && result.operation.State === "COMMITTED" && result.order) { operationalTransactionState.pending = null; showOperationalOrder(result.order); persistOperationalRecovery_(); completeSalesV2OperatorSave_(result.order); } else { pending.state = "UNKNOWN"; persistOperationalRecovery_(); } }, function() { pending.state = "UNKNOWN"; persistOperationalRecovery_(); }, function() { pending.state = "UNKNOWN"; persistOperationalRecovery_(); });
+    }
+
+    // U10C: a confirmed durable V2 Save completes into the single Done
+    // surface. Nothing on this path exposes a legacy payment, fulfillment or
+    // open-order continuation, and the draft lines are cleared only after the
+    // outcome is confirmed.
+    function completeSalesV2OperatorSave_(order)
+    {
+      if (!salesV2ActiveSurface_()) return;
+      showSalesV2OrderSuccess_(order);
+      operationalTransactionState.lines = [];
+      renderOperationalOrderLines();
+    }
+
+    function showSalesV2OrderSuccess_(order)
+    {
+      var state = transactionEntryState;
+      var entry = initializeStableDashboardElements().transactionEntry;
+      state.submitting = false;
+      state.submissionComplete = true;
+      state.successResult = order || null;
+      entry.form.hidden = true;
+      entry.submitRegion.hidden = true;
+      entry.successDetails.innerHTML = "";
+      [["Order number", order && order.OrderNumber], ["Order type", order && order.OrderType],
+        ["Total", formatEntryCurrency(order && order.OrderTotal)], ["Status", "Recognized"]].forEach(function(row) {
+        var wrapper = document.createElement("div"), term = document.createElement("dt"), detail = document.createElement("dd");
+        term.innerText = row[0];
+        detail.innerText = String(row[1] === undefined || row[1] === null ? "" : row[1]);
+        wrapper.appendChild(term); wrapper.appendChild(detail); entry.successDetails.appendChild(wrapper);
+      });
+      var heading = entry.success.querySelector("h3");
+      if (heading) heading.innerText = "Sale saved";
+      var successActions = entry.success.querySelector(".transaction-entry-success-actions");
+      if (successActions) successActions.innerHTML = '<button type="button" class="transaction-entry-primary" onclick="closeTransactionEntry()">Done</button><button type="button" class="transaction-entry-secondary" onclick="resetTransactionEntryForAnother()">Add Another</button>';
+      entry.success.hidden = false;
+      entry.success.focus();
+      invalidateTransactionsClientCaches();
+      refreshTransactionEntryAfterSuccess();
     }
 
     function filterOperationalPurchaseUoms()
@@ -214,6 +369,14 @@
       var entry = initializeStableDashboardElements().transactionEntry;
       if (state.submitting || entry.submit.disabled) return;
       if (isPurchaseExpenseEntry() || state.transactionType === "INVENTORY_RECEIPT") { submitReceiptEntry(); return; }
+      // U10C: the single normal ACTIVE V2 Sales save. It reuses the durable U7
+      // route (submitOperationalOrder -> server mode dispatcher -> U2). Every
+      // other mode fails closed here: no legacy fallback, no second writer.
+      if (state.mode !== "correction" && state.transactionType === "SALES") {
+        if (!salesV2ActiveSurface_()) return;
+        saveOperationalOrder();
+        return;
+      }
       var payload = state.transactionType === "SALES"
         ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty, cashAccountCode: state.cashAccountCode }
         : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount, cashAccountCode: state.cashAccountCode };

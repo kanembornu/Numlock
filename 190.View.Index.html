@@ -3502,7 +3502,7 @@
                 <label for="operationalOrderType">Order Type</label><select id="operationalOrderType"><option value="DINE_IN">Dine In</option><option value="TAKE_AWAY">Take Away</option></select>
                 <p id="operationalOrderError" class="transaction-entry-error" role="alert"></p><div id="operationalOrderLines"></div><p id="operationalOrderTotal">Total: Rp 0</p>
                 <button id="operationalSaveOrder" type="button" onclick="saveOperationalOrder()">Save Order</button>
-                <div class="transaction-entry-control"><label for="operationalOrderLookup">Continue existing order</label><input id="operationalOrderLookup" type="search" placeholder="Order number"><button id="operationalLookupButton" type="button" onclick="lookupOperationalOrder()">Find Order</button></div>
+                <div id="operationalOrderLookupControl" class="transaction-entry-control"><label for="operationalOrderLookup">Continue existing order</label><input id="operationalOrderLookup" type="search" placeholder="Order number"><button id="operationalLookupButton" type="button" onclick="lookupOperationalOrder()">Find Order</button></div>
                 <div id="operationalOpenOrders" role="status" aria-live="polite"></div>
               </section>
               <section id="operationalPaymentFields" class="transaction-entry-fields" aria-labelledby="operationalPaymentHeading" hidden>
