@@ -582,3 +582,158 @@ locally, 96/0), not D (browser state cannot change a pinned artifact), not F.
 - Verification after authorized remediation: deployment version readback +
   fresh-session production page shows current artifact + operator performs
   the first genuine V2 Sale; then U10 first-event acceptance.
+
+---
+
+## U10C ACTIVE Operator Surface + Canonical Deployment Repair (2026-10-09)
+
+TASK `U10C-SURFACE-CLOSURE-01` · L3 / **R4** · repo HEAD `1104ec9` clean at
+baseline (verified first; mismatch would have stopped the task).
+Production writes this task: **0**. First V2 Sale: **0**. No fourth push, no
+Git push, no Treasury, no historical rewrite.
+
+### C1. Root-cause closure (both defects)
+
+| # | Defect | Closure |
+| --- | --- | --- |
+| 1 | `SERVED_WEBAPP_DEPLOYMENT_STALE` — canonical `/exec` pinned to version **705** (pre-U1 tree) | canonical deployment `AKfycbxyll…ZXAzPkkSEhbwZKxkX6q` re-pointed **705 → 708** (one existing deployment, no second URL) |
+| 2 | HEAD operator UI mode-blind; legacy Order-lifecycle surface retained; `var validSales = false;` permanently disabled Save Transaction for Sales | server-derived mode + single ACTIVE Save control + derived eligibility (below) |
+
+### C2. Source correction (commit `7fefacc`, candidate for the push)
+
+- `95A.Transaction.Production.js` — `getOperationalTransactionAuthority()`
+  now attaches `dto.salesV2Mode = salesV2OperatorResolvedRoute_().mode`
+  (ACTIVE / PREPARED / PAUSED / REJECT). Client never resolves config.
+- `195.View.Transactions.Actions.html` — mode cache
+  `salesV2ClientModeState_`, `salesV2ClientSurface_`,
+  `salesV2OperatorLegacyControlsAllowed_`, `salesV2ActiveSurface_`,
+  `applySalesV2OperatorSurface_`, `isValidActiveSalesEntry_`,
+  `completeSalesV2OperatorSave_`, `showSalesV2OrderSuccess_`; ACTIVE surface
+  hides Order review / Save Order / Find Order / open orders / payment /
+  fulfillment; `submitTransactionEntry` routes ACTIVE Sales to
+  `saveOperationalOrder()` (U7 → U2) and fails closed in every other mode;
+  `showOperationalOrder` / `renderOperationalOrderStatus` never render a
+  payment or fulfillment lifecycle outside PREPARED.
+- `194.View.Transactions.Forms.html` — `var validSales = isValidActiveSalesEntry_();`
+  (the constant is gone); Sales selection applies the surface and only lists
+  open orders in PREPARED.
+- `190.View.Index.html` — `#operationalOrderLookupControl` id added so the
+  legacy continuation block can be suppressed as one unit.
+- Tests: new `tests/browser/sales-v2-u10c-operator-surface.js` (UI-A1..A14 +
+  18-item source audit) registered in `_test_runner.js`;
+  `sales-v2-u10b-operator-surface.js` S2/S3 updated to the post-correction
+  contract.
+
+**Post-correction local regression (MEASURED after the final source edit):**
+`node _test_runner.js` → **97 PASS / 0 FAIL** (baseline 96 + 1 new suite);
+`node --check` + view `vm.Script` parse → PASS; `git diff --check` → clean.
+
+### C3. Third push (exception used, exactly once)
+
+- Fresh pre-push manifest: `clasp status` → **68 tracked files** (97, 97A–97E,
+  95A, views, `98.Tests.Runner.js`, `appsscript.json`); excluded: `tests/`,
+  `96.Tests.*`, `_test_runner.js`, `docs/`. Worktree clean at `7fefacc`.
+- `clasp push --force` → clasp printed `Pushed 68 files at <time>.` followed by
+  the full `└─` list (that list is only emitted on the success path).
+  **Third push consumed. No fourth push exists or is permitted.**
+- Post-push manifest re-read: 68 tracked, byte-identical to the pre-push list.
+
+### C4. Immutable version + canonical deployment update (one command, one version)
+
+- `clasp update-deployment AKfycbxyll…ZXAzPkkSEhbwZKxkX6q -d "U10C ACTIVE V2
+  operator surface candidate 7fefacc"` →
+  `Redeployed AKfycbxyll…ZXAzPkkSEhbwZKxkX6q @708`.
+  In clasp 3.3.0 this is a single call that creates **exactly one** immutable
+  version from the pushed head and updates the **existing** deployment id —
+  no `clasp version` invocation, no second deployment.
+- Readback: `clasp deployments` → still exactly 2 deployments; canonical
+  **@708** (was @705), description = the U10C candidate; head unchanged.
+  Versions 705 / 706 / 707 left in place (never deleted, never re-deployed).
+
+### C5. Deployment content readback (MEASURED)
+
+Canonical `/exec` GET returns the current artifact (1,065,415 bytes). Identifier
+completeness of the shipped views:
+
+| file | identifiers found in served artifact |
+| --- | --- |
+| `194.View.Transactions.Forms.html` | **270 / 270** |
+| `195.View.Transactions.Actions.html` | **687 / 687** |
+| `190.View.Index.html` | 1418 / 1479 (61 = server-side scriptlet tokens, not emitted) |
+
+Confirmed present: `isValidActiveSalesEntry_`, `salesV2Mode`,
+`operationalOrderLookupControl`, `applySalesV2OperatorSurface_`,
+`showSalesV2OrderSuccess_`, `salesV2ClientModeState_`, `salesRecognitionV2Activate`;
+confirmed absent: `var validSales = false`. Server files (95A / 97D / 97E) are
+in the pushed manifest (C3) and the version was created from that head (C4).
+
+### C6. Config stability
+
+Fresh re-read attempted: `clasp run salesRecognitionV2OperatorConfig` →
+"Unable to run script function…" and a direct read-only Execution API
+`POST /v1/scripts/{id}:run` → **HTTP 403 PERMISSION_DENIED** (single attempt
+each, no retry) → exact state **`BLOCKED_PERMISSION`**. Config/first-event/audit
+counts are therefore **not re-measured this session**; strongest existing
+evidence remains U10A §0.6–0.7 (2026-10-08): ACTIVE,
+ActivationID `b4791011-120e-4985-92da-a61c6311060c`,
+T `2026-10-08T18:59:50.540Z`, Events 0, Audits 0, v2Ops 0, Orders 1, with no
+intervening write of any kind by this task. **Server-derived mode was
+nevertheless freshly measured in C7** (client mode read back as ACTIVE), which
+is independent evidence that the config is still ACTIVE.
+
+### C7. Fresh-session production UI acceptance (MEASURED, read-only)
+
+`tests/browser/sales-v2-u10c-fresh-session.js` → Playwright + system Chrome,
+genuinely fresh context (no cookies/storage), canonical `/exec`, app frame
+located beneath the standard unverified-app warning bar. Evidence:
+`docs/evidence/u10c-fresh-session/{results.json,active-surface-before-save.png}`.
+
+- **25 / 27 checks PASS.** Server-derived mode read back
+  `salesV2ClientModeState_ = {status:"READY", mode:"ACTIVE"}` and
+  `authority.salesV2Mode = "ACTIVE"` (fresh, post-deployment measurement).
+- PASSED: New Transaction opens; Sales selectable; Order Type (DINE_IN /
+  TAKE_AWAY) available; Sales details; ProductVariant (Hot) selection; qty;
+  Add Line → exactly one draft line + total; **one** normal Save control
+  (`Save Transaction`, and only it) enabled after the valid line; Save Order,
+  Continue existing order, Find Order, No open orders, Receive Via/Payment,
+  Fulfillment/Complete all absent; server pricing resolved; **zero writer
+  requests dispatched** (`submitOperationalOrder` / `submitCanonicalTransaction`
+  / payment / fulfillment never appear in any POST body).
+- **FAILED (2):** `A1-c` / `A10-a` — the legacy **`Order review`** heading is
+  still rendered on the ACTIVE surface. Root cause measured in-browser:
+  `#operationalOrderHeading.hidden === true` but
+  `getComputedStyle(el).display === "flex"` — an author CSS rule out-specifies
+  the UA `[hidden]` rule. The buttons/sections are unaffected (`display:none`).
+
+### C8. Containment
+
+Per the frozen failure-containment rule (canonical UI incorrect → no Sale, no
+deployment re-update, no re-push):
+
+- **No Sale attempted. No second transaction. No Payment. No Fulfillment.**
+- The residual is visual-only (heading text); no operable legacy control
+  remains (Save Order is hidden **and** disabled; Find Order hidden; payment and
+  fulfillment sections hidden).
+- The correction is prepared and committed locally but **NOT deployed**: it
+  adds `element.style.display = element.hidden ? "none" : ""` in
+  `applySalesV2OperatorSurface_` (plus the payment/fulfillment equivalent) and
+  a matching `AUD-4b` audit check. Shipping it **requires a FOURTH
+  `clasp push --force`**, which this task forbids → **`HUMAN_GATE_REQUIRED`**.
+  Production continues to serve version 708 (= commit `7fefacc`) without it.
+
+### C9. Status
+
+`U10_FIRST_EVENT_ACCEPTANCE = BLOCKED_OPERATOR_SURFACE`.
+Deployment defect **closed** (705 → 708, measured); mode propagation, single
+Save control and derived eligibility **closed and measured**; one PART A hide
+(`Order review` heading) still rendering in production. No genuine Sale exists
+in this session and none was fabricated. No Treasury change.
+
+### C10. Next recommendation (owner gate)
+
+1. Authorize a focused commit of the prepared `195` fix (explicit paths).
+2. Authorize a **fourth and final** `clasp push --force` + exactly one new
+   immutable version + canonical deployment update 708 → that version.
+3. Re-run `tests/browser/sales-v2-u10c-fresh-session.js`; all 27 checks must
+   pass, then perform exactly one genuine first V2 Sale and run U10
+   first-event acceptance.

@@ -1,0 +1,303 @@
+{
+  "task": "U10C-SURFACE-CLOSURE-01",
+  "canonical": "https://script.google.com/macros/s/<canonical-deployment-id>/exec",
+  "startedAt": "2026-10-09T02:10:56.820Z",
+  "steps": [
+    {
+      "at": "2026-10-09T02:10:56.820Z",
+      "name": "launch fresh context"
+    },
+    {
+      "at": "2026-10-09T02:10:57.816Z",
+      "name": "goto canonical /exec"
+    },
+    {
+      "at": "2026-10-09T02:11:07.641Z",
+      "name": "open Transactions page"
+    },
+    {
+      "at": "2026-10-09T02:11:07.774Z",
+      "name": "open New Transaction"
+    },
+    {
+      "at": "2026-10-09T02:11:07.837Z",
+      "name": "select Sales"
+    },
+    {
+      "at": "2026-10-09T02:11:07.883Z",
+      "name": "wait for server-derived ACTIVE mode"
+    },
+    {
+      "at": "2026-10-09T02:11:15.549Z",
+      "name": "surface assertions"
+    },
+    {
+      "at": "2026-10-09T02:11:15.572Z",
+      "name": "choose product / serving type / qty"
+    },
+    {
+      "at": "2026-10-09T02:11:15.673Z",
+      "name": "Add Line"
+    },
+    {
+      "at": "2026-10-09T02:11:15.719Z",
+      "name": "screenshot BEFORE Save — no submission"
+    }
+  ],
+  "checks": [
+    {
+      "id": "F1",
+      "value": true,
+      "detail": "app shell rendered in fresh session"
+    },
+    {
+      "id": "F1b",
+      "value": true,
+      "detail": "Transactions page visible"
+    },
+    {
+      "id": "F2",
+      "value": true,
+      "detail": "New Transaction opened"
+    },
+    {
+      "id": "F3",
+      "value": true,
+      "detail": "Sales selected"
+    },
+    {
+      "id": "F4",
+      "value": true,
+      "detail": "{\"status\":\"READY\",\"mode\":\"ACTIVE\"}"
+    },
+    {
+      "id": "F4b",
+      "value": true,
+      "detail": "{\"status\":\"READY\",\"mode\":\"ACTIVE\"}"
+    },
+    {
+      "id": "F4c",
+      "value": true,
+      "detail": "legacy Save Order hidden on ACTIVE surface"
+    },
+    {
+      "id": "A1-a",
+      "value": true,
+      "detail": "Sales details visible"
+    },
+    {
+      "id": "A1-b",
+      "value": true,
+      "detail": "Order Type block visible"
+    },
+    {
+      "id": "A1-c",
+      "value": false,
+      "detail": "Order review heading hidden"
+    },
+    {
+      "id": "A1-d",
+      "value": true,
+      "detail": "Save Order hidden"
+    },
+    {
+      "id": "A1-e",
+      "value": true,
+      "detail": "Continue existing order / Find Order hidden"
+    },
+    {
+      "id": "A1-f",
+      "value": true,
+      "detail": "No open orders block hidden"
+    },
+    {
+      "id": "A11-a",
+      "value": true,
+      "detail": "Payment / Receive Via hidden"
+    },
+    {
+      "id": "A11-b",
+      "value": true,
+      "detail": "Fulfillment / Complete hidden"
+    },
+    {
+      "id": "A10-a",
+      "value": false,
+      "detail": "Order review"
+    },
+    {
+      "id": "A2-a",
+      "value": true,
+      "detail": "DINE_IN,TAKE_AWAY"
+    },
+    {
+      "id": "A5-a",
+      "value": true,
+      "detail": "Save Transaction"
+    },
+    {
+      "id": "A4-a",
+      "value": true,
+      "detail": "Save disabled before a committed line"
+    },
+    {
+      "id": "F6",
+      "value": true,
+      "detail": "entry options loaded"
+    },
+    {
+      "id": "F7",
+      "value": true,
+      "detail": "server pricing preview resolved"
+    },
+    {
+      "id": "A2-b",
+      "value": true,
+      "detail": "product + serving type + qty entered"
+    },
+    {
+      "id": "A3",
+      "value": true,
+      "detail": "{\"count\":1,\"text\":\"Americano · Hot × 1 · Rp 13.000 · Rp 13.000 Remove\",\"total\":\"Total: Rp 13.000\"}"
+    },
+    {
+      "id": "A5-b",
+      "value": true,
+      "detail": "Total: Rp 13.000"
+    },
+    {
+      "id": "A4-b",
+      "value": true,
+      "detail": "Save enabled after a valid line"
+    },
+    {
+      "id": "A5-c",
+      "value": true,
+      "detail": "Save Transaction"
+    },
+    {
+      "id": "F5-no-write",
+      "value": true,
+      "detail": ""
+    }
+  ],
+  "errors": [],
+  "requests": [
+    {
+      "method": "GET",
+      "type": "document",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/exec",
+      "postData": ""
+    },
+    {
+      "method": "GET",
+      "type": "stylesheet",
+      "url": "https://script.google.com/static/macros/client/css/2208734863-mae_html_css_ltr.css",
+      "postData": ""
+    },
+    {
+      "method": "GET",
+      "type": "script",
+      "url": "https://script.google.com/static/macros/client/js/1474876015-warden_bin_i18n_warden__id.js",
+      "postData": ""
+    },
+    {
+      "method": "GET",
+      "type": "document",
+      "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/userCodeAppPanel",
+      "postData": ""
+    },
+    {
+      "method": "GET",
+      "type": "script",
+      "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/static/macros/client/js/4237552591-mae_html_user_bin_i18n_mae_html_user__id.js",
+      "postData": ""
+    },
+    {
+      "method": "GET",
+      "type": "document",
+      "url": "https://n-r2yuudqpizz42ae4pp66sqfu32gfbw7w2aaexbq-0lu-script.googleusercontent.com/blank",
+      "postData": ""
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/wardeninit?_reqid=33066&rt=j",
+      "postData": "f.req=%5B%22wisp%22%2C1%2C2%5D&"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=6",
+      "postData": "request=%5B%22getTransactionsPage%22%2C%22%5B%7B%5C%22tab%5C%22%3A%5C%22recent%5C%22%2C%5C%22page%5C%22%3A1%2C%5C%22pageSize%5C%22%3A15%2C%5C%22includeVoided%5C%22%3Afalse%2C%5C%22lifecycleState%5C%22%3A%5C%22active%5C%22%2C%5C%22filter%5C%22%3A%5C%22currentYear%5C%22%2C%5C%22customStart%5C%22%3A%5C%22%5C%22%2C%5C%22customEnd%5C%22%3A%5C%22%5C%22%2C%5C%22drilldownType%5C%22%3Anull%2C%5C%22drilldownValue%5C%22%3Anull%2C%5C%22search%5C%22%3A%5C%22%5C%22%7D%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=7",
+      "postData": "request=%5B%22getTransactionEntryOptions%22%2C%22%5B%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=8",
+      "postData": "request=%5B%22getOperationalTransactionAuthority%22%2C%22%5B%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=9",
+      "postData": "request=%5B%22getDashboardData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=10",
+      "postData": "request=%5B%22getCanonicalTransactionDetails%22%2C%22%5B%5B%5C%22OPS-APP-20261007-7DFF552C9036%5C%22%2C%5C%22SAL-APP-20261006-FF6A1257D2AD%5C%22%2C%5C%22SAL-APP-20261006-B31B985BE68C%5C%22%2C%5C%22SAL-APP-20261006-4C4DEE2A21E6%5C%22%2C%5C%22SAL-APP-20261006-22F773D06CB3%5C%22%2C%5C%22ORDER%3AORD-D0D68C09-ORDERCREATEO%5C%22%2C%5C%22SAL-APP-20261002-E9652FEC123D%5C%22%2C%5C%22SAL-APP-20261002-D53EBF2B20E2%5C%22%2C%5C%22SAL-APP-20261002-BD9C332B8EC8%5C%22%2C%5C%22SAL-APP-20261002-B7D3CB56767C%5C%22%2C%5C%22SAL-APP-20261002-B071BC633D65%5C%22%2C%5C%22SAL-APP-20261002-AC378360074D%5C%22%2C%5C%22SAL-APP-20261002-749400E04E3D%5C%22%2C%5C%22SAL-APP-20261002-6B0C8A10BBD5%5C%22%2C%5C%22SAL-APP-20261002-5E26D1B132B6%5C%22%5D%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=11",
+      "postData": "request=%5B%22getFinanceData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=12",
+      "postData": "request=%5B%22getProductProfitabilityData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=13",
+      "postData": "request=%5B%22getPartialBalanceData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    },
+    {
+      "method": "POST",
+      "type": "xhr",
+      "url": "https://script.google.com/macros/s/<canonical-deployment-id>/callback?nocache_id=14",
+      "postData": "request=%5B%22getDepreciationData%22%2C%22%5B%5C%22currentYear%5C%22%2Cnull%2Cnull%5D%22%2Cnull%2C%5B0%5D%2Cnull%2Cnull%2C1%2C0%5D"
+    }
+  ],
+  "total": 27,
+  "passed": 25,
+  "failed": 2,
+  "reachedSave": true,
+  "loadedUrl": "https://script.google.com/macros/s/<canonical-deployment-id>/exec",
+  "clientMode": {
+    "status": "READY",
+    "mode": "ACTIVE"
+  },
+  "authorityMode": {
+    "status": "READY",
+    "mode": "ACTIVE"
+  },
+  "product": "Americano\nCoffee · Coffee",
+  "screenshot": "docs/evidence/u10c-fresh-session/active-surface-before-save.png",
+  "stopReason": "STOPPED_BEFORE_SAVE_BY_CONTRACT",
+  "postRequestCount": 10,
+  "writerDispatch": [],
+  "finishedAt": "2026-10-09T02:11:16.055Z",
+  "status": "FRESH_SESSION_UI_REJECTED"
+}
