@@ -49,14 +49,17 @@
         var element = operationalElement(pair[0]);
         if (!element) return;
         element.hidden = sales ? !prepared : true;
+        // Author CSS can out-specify the UA [hidden] rule (the legacy "Order
+        // review" heading is display:flex), so suppression is explicit.
+        element.style.display = element.hidden ? "none" : "";
         if (pair[1]) element.disabled = sales ? (!prepared || inFlight) : true;
       });
       var payment = operationalElement("operationalPaymentFields");
       var fulfillment = operationalElement("operationalFulfillmentFields");
       // PREPARED keeps legacy visibility driven by the loaded order; every
       // other surface never exposes payment/fulfillment at all.
-      if (payment && !prepared) payment.hidden = true;
-      if (fulfillment && !prepared) fulfillment.hidden = true;
+      if (payment) { if (!prepared) payment.hidden = true; payment.style.display = prepared ? "" : "none"; }
+      if (fulfillment) { if (!prepared) fulfillment.hidden = true; fulfillment.style.display = prepared ? "" : "none"; }
       if (sales) {
         var error = operationalElement("operationalOrderError");
         if (error) {

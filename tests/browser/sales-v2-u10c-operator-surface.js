@@ -557,8 +557,12 @@ function runSalesV2U10COperatorSurface() {
     guardSource.indexOf("function salesV2OperatorModeCreateOrder_") !== -1);
   ok("AUD-12", submitRegion.indexOf("saveOperationalOrder();") !== -1 &&
     submitRegion.indexOf("saveOperationalOrder();") < submitRegion.indexOf("submitCanonicalTransaction(payload)"));
-  ok("AUD-13", actionsSource.indexOf("if (payment && !prepared) payment.hidden = true;") !== -1);
-  ok("AUD-14", actionsSource.indexOf("if (fulfillment && !prepared) fulfillment.hidden = true;") !== -1);
+  ok("AUD-13", actionsSource.indexOf("if (!prepared) payment.hidden = true;") !== -1 &&
+    actionsSource.indexOf('payment.style.display = prepared ? "" : "none"') !== -1);
+  ok("AUD-14", actionsSource.indexOf("if (!prepared) fulfillment.hidden = true;") !== -1 &&
+    actionsSource.indexOf('fulfillment.style.display = prepared ? "" : "none"') !== -1);
+  ok("AUD-4b", actionsSource.indexOf("element.style.display = element.hidden ? \"none\" : \"\";") !== -1,
+    "hidden suppression out-specifies author CSS");
   ok("AUD-15", saveRegion.indexOf("productID: line.productID, productVariantID: line.productVariantID, qty: line.qty") !== -1 &&
     saveRegion.indexOf("hpp") === -1 && saveRegion.indexOf("SellingPrice") === -1);
   ok("AUD-16", actionsSource.indexOf("function operationalUnknown_") !== -1 &&
