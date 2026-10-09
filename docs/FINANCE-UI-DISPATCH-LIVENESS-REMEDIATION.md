@@ -1,7 +1,9 @@
 # Finance UI Dispatch-Liveness Remediation (FIN-UI-LIVENESS-01)
 
-Status: `COMPLETE_LOCAL_READY_FOR_DEPLOYMENT`
-Baseline commit: `d7c9814` (canonical v710 production line). Deployment: **NOT performed**.
+Status: `COMPLETE` / `PRODUCTION_ACCEPTED` (local + production; see §16)
+Candidate commit: `c384170` on baseline `d7c9814` (canonical v710 production line).
+Deployment: **performed once** under task `FIN-UI-DEPLOY-01` — one
+`clasp push --force`, one immutable version `v711`, canonical `v710 → v711`.
 Scope: Finance client/controller surfaces only (`201.View.Finance.Controller.html`,
 local test harness, test-runner wiring). No server Finance, Sales V2, accounting,
 config, schema, or data changes.
@@ -241,8 +243,139 @@ mutated (caught 10/10, reverted/none-persisted by construction).
   drift (documented in `docs/evidence/finance-phase-13moe.md`); this task did
   not widen that drift and preserved all extractable tokens.
 
-## 16. Deployment
+## 16. Production deployment and acceptance (TASK `FIN-UI-DEPLOY-01`)
 
-No `clasp push`, no version creation, no deployment. Candidate for a
-separately authorized deployment task covering exactly
-`201.View.Finance.Controller.html` (this candidate).
+Owner-authorized scope consumed: pre-deploy verification, exactly ONE
+`clasp push --force`, exactly ONE new immutable version, canonical
+`v710 → v711`, fresh-session production Finance UI acceptance, read-only
+accounting/Sales non-regression, evidence docs, local evidence commit.
+No second push, no additional runtime edit, no Finance/Sales change, no
+Save/Correct/Void/Payment/Fulfillment/Treasury activity, no
+config/account/schema/history mutation, no Git push.
+
+### 16.1 Baseline and pre-deploy gates (MEASURED)
+
+- Starting HEAD `c384170`; tracked worktree/index clean (0 tracked entries);
+  27 untracked `tests/tmp/u10e-*` inventoried and left untouched.
+- Frozen runtime delta vs canonical **v710**: `projects.getContent` (read-only)
+  returned 68 remote files; local package 68; **67/68 byte-identical**, sole
+  difference `201.View.Finance.Controller.html` (+88/−16 lines). `97A`/`97C`
+  U10F DONE-gated `invalidateDashboardCache()` mods, `97E` activation writer,
+  `195`/`194` operator surface, `10.Config.js`, `36.Finance.Service.js` all
+  byte-identical to v710.
+- Finance authority gate (server-side, read-only local VM over live rows):
+  U3 projection valid (target chain 1 event / 1 transaction / 2 lines),
+  U5 scope Oct-2026 `recognizedRevenue` 403,000 on the measurement host basis,
+  `revenueAuthorityComplete=true`, first Sale `SCR-CE122B27-ORD677BE5CES`
+  exactly once at +24,000, journal `Dr1030 24,000 / Cr4000 24,000` once.
+- Liveness suites: static guards **28/28**, F-checks **58/58** (F1–F12 PASS),
+  mutation sensitivity **10/10** (M1–M10), battery PASS.
+- Full regression: `node _test_runner.js` → **101 PASS / 0 FAIL** (MEASURED,
+  immediately pre-push).
+- Syntax/parse: `node --check` on 100 root `*.js`, `_test_runner.js` and the
+  controller harness PASS; real `199/200/201` sources parse and execute in the
+  VM harness; `git diff --check` clean.
+- Package/manifest: `.claspignore` = 68 explicit `!` includes; `clasp status`
+  = 68 tracked, tracked set ≡ allowlist (empty diff); `201`, `97A`, `97C`,
+  `97E`, `195` included; `tests/`, `docs/`, `_test_runner.js`,
+  `tests/tmp/u10e-*` excluded; no secret/fixture in the package.
+- Pre-push production snapshot (read-only Sheets REST): 16 sheets row counts
+  + data/header sha16; canonical deployment readback **@710**, 2 deployments.
+
+### 16.2 Push, version, canonical update (MEASURED)
+
+- **Push count: exactly 1** — `clasp push --force` → `Pushed 68 files`
+  (single success path; no second push attempted).
+- Uploaded-source verification (read-only `projects.getContent`): **68/68
+  sha256 identical to the local candidate**; `FINANCE_REQUEST_STALE_TIMEOUT_MS`
+  present, `{requestId, startedAt}` markers and `releaseFinanceInflightEntry`
+  present, old immortal `financeInflight[…] = true` absent; U10F cache
+  invalidation, `97E` activation writer and operator-surface markers intact.
+- **Version: exactly 1 new immutable version** — one
+  `clasp update-deployment <canonical> -d "Finance UI dispatch liveness fix
+  c384170: stale in-flight timeout, guarded callbacks"` → `Redeployed … @711`.
+  Canonical **710 → 711**; deployment count unchanged (2); `@HEAD`
+  untouched; no version-list/creation command was run, so no orphan version
+  was introduced.
+- Post-deploy `/exec` readback: **HTTP 200 / 1,063,877 bytes**;
+  `FINANCE_REQUEST_STALE_TIMEOUT_MS \x3d 120000`, ownership/request markers,
+  U10C/U10D operator markers, U10F cache markers present; no pre-candidate
+  controller content.
+
+### 16.3 Production Finance UI acceptance (fresh sessions, read-only)
+
+- **A Normal load PASS:** loading observed (`aria-busy=true`) at 10.66 s,
+  terminal render at 22.995 s from page start (**12.34 s from loading start**);
+  `aria-busy` true → false; content rendered (`Current Year`, `Rp 19.498.000`);
+  **0 page errors, 0 console errors**.
+- **B Data validity — DELTA, fully reconciled:** rendered `Current Month`
+  **Rp 391.000**; the raw production payload for period `2026-10-01..2026-10-09`
+  carries `summary.revenue=391000`, `recognizedRevenue=391000`,
+  `revenueAuthorityComplete=true`. Expected task figure 403,000 →
+  **Δ −12,000**, reconciled as a measurement-basis difference, NOT activity:
+  - workbook snapshots (pre-deploy / post-deploy / post-acceptance) are
+    sha-identical across all 16 sheets → dataset unchanged;
+  - the deployed server source is byte-identical to v710 → not caused by this
+    deployment;
+  - the same deployed code over the same live rows yields **391,000 / 1,369,000
+    (Sep) / 1,741,000 (Aug) / 19,498,000 (YTD)** when date derivation runs on a
+    UTC host basis (production) and 403,000 / 1,468,000 / 1,630,000 / 19,498,000
+    on the Asia/Jakarta host basis that produced the 403,000 expectation.
+    Difference is one boundary row `LEGACY:SAL-APP-20260930-8615DD463535`
+    (12,000): 2026-10-01 under Asia/Jakarta, 2026-09-30 under UTC; YTD is
+    identical on both bases and production custom-period payloads
+    (Sep 1,369,000; Oct 391,000) match the UTC run exactly.
+  - first Sale **+24,000 included exactly once** in October
+    (`ORDER:ORD-677BE5CE-SALESRECOGNI`, RECOGNIZED, `V2_COMMITTED`, 2026-10-09).
+- **C Repeated navigation PASS:** 3 away/back cycles; each return navigation
+  rendered from valid cache with **0 script requests**, revenue stable
+  `Rp 391.000`, no immortal in-flight, Finance usable, no business mutation.
+- **D Retry/timeout:** `PRODUCTION_TIMEOUT_PATH = NOT_TRIGGERED` — no real
+  request stalled; no outage was manufactured (timeout path remains covered by
+  local F1–F12 + 10/10 mutation battery).
+- **E aria-busy PASS:** every measured attempt (normal load, period switch,
+  3 return navigations) terminated with `aria-busy=false`.
+- **F Storm PASS:** 6 requests on first load, 0 on each return navigation;
+  no request storm.
+
+### 16.4 Non-regression (read-only, MEASURED)
+
+- **Business delta 0:** pre vs post vs final snapshots → 16/16 sheets
+  identical (row counts + sha16): TransactionOperations 3, Orders 2,
+  OrderLines 3, SalesRecognitionEvents 1, SalesRecognitionAudits 1,
+  BalanceLedger 8, Payments 1, Settlements 2, InventoryLedger 0, Accounts 22,
+  Settings 7, tabsal 10808, tabops 1976, Logs 225, Products 34,
+  ProductPricing 154. Only source/version/deployment state changed.
+- **Accounting:** journal unchanged — `Dr1030 24,000 / Cr4000 24,000` for the
+  first Sale (uncleared by design), no Cash/Bank, 2010, 5000/1100 or
+  sale-triggered 6210 movement; Policy C untouched; no Treasury.
+- **Sales V2:** exactly 1 committed V2 operation, 1 RecognitionEvent,
+  1 audit, 2 lines; no second Sale, no Save retry, no Correct/Void.
+- **Config stability:** `10.Config.js` byte-identical, `Settings` row count +
+  sha unchanged, zero config writes. Direct ActivationID/property read remains
+  `BLOCKED_PERMISSION` (known-denied Execution API 403; not retried, never
+  written to verify).
+- **Historical/1030:** no rewrite, backfill or migration; TabSal/Orders/
+  Payments/Settlements/journals untouched.
+
+### 16.5 Limitations
+
+- Production loss vector remains `LOSS_MECHANISM_NOT_FULLY_OBSERVABLE` from
+  browser traces alone; the proven controller defect (no liveness bound on an
+  immortal in-flight marker) is remediated and served.
+- The 120 s timeout path was not exercised in production (no genuine stall);
+  it is covered by local regression only.
+- Navigation click listeners are attached inside `initializeResponsiveShell()`
+  from `window.onload`; clicks issued before `window.onload` completes are
+  silently dropped (`#finance` stays hidden, `requestSequence=0`, no dispatch,
+  no client error). Observed in three earlier fresh sessions with an
+  over-early harness click; wiring is byte-identical to v710 (unchanged by
+  this deployment) and a later navigation works normally. Acceptance was
+  re-run with a click-accepted gate and passed.
+- Harness away-steps waited on a Finance-specific terminal condition and
+  consumed their full window; return-navigation measurements are the valid
+  C/F evidence.
+- `clasp list-versions` was deliberately not run (a prior incident showed
+  clasp 3.3.0 can parse ambiguous `version` commands as create-version);
+  version readback comes from the single `update-deployment` output (@711) and
+  the deployments readback (count 2, canonical @711).
