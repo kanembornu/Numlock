@@ -26,6 +26,8 @@ var runSalesV2U10BOperatorSurface = require('./tests/browser/sales-v2-u10b-opera
 globalThis.runSalesV2U10BOperatorSurface = runSalesV2U10BOperatorSurface;
 var runSalesV2U10COperatorSurface = require('./tests/browser/sales-v2-u10c-operator-surface.js');
 globalThis.runSalesV2U10COperatorSurface = runSalesV2U10COperatorSurface;
+var runFinanceUiLivenessController = require('./tests/browser/finance-ui-liveness-controller.js');
+globalThis.runFinanceUiLivenessController = runFinanceUiLivenessController;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -358,5 +360,10 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   // 194/195 controller composition): UI-A1..A14 + 18-item source audit.
   run('testSalesV2U10COperatorSurface', 'JSON.stringify(runSalesV2U10COperatorSurface())');
 
-console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
+  // FIN-UI-LIVENESS-01: Finance UI dispatch-liveness controller regressions
+  // (F1..F12 + static guards + M1..M10 mutation sensitivity) over the real
+  // 199/200/201 Finance view sources with mocked google.script.run.
+  run('testFinanceUiDispatchLiveness', 'JSON.stringify(runFinanceUiLivenessController())');
+
+  console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

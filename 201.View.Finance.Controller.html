@@ -1,6 +1,41 @@
     // 11X.3K — one-shot callbacks for warming race resolution
     var _warmCallbacks = {};
 
+    // FIN-UI-LIVENESS-01 — central client-stale bound for Finance dispatches.
+    // 120s bounds recovery well under the observed pathological ~420s hang
+    // while staying above normal Finance read durations. Client-side only:
+    // a timed-out Apps Script request may still complete server-side, and its
+    // late callbacks are safely ignored via the requestId/destination guards.
+    var FINANCE_REQUEST_STALE_TIMEOUT_MS = 120000;
+
+    function financeNow_()
+    {
+      return Date.now();
+    }
+
+    // In-flight entries: { requestId?, startedAt }. Foreground dispatches
+    // carry requestId; background warm dispatches carry startedAt only.
+    // Entries without a numeric startedAt are treated as stale (defensive).
+    function isFinanceInflightEntryStale(entry)
+    {
+      if (!entry) return false;
+      return typeof entry.startedAt !== "number" ||
+        (financeNow_() - entry.startedAt) > FINANCE_REQUEST_STALE_TIMEOUT_MS;
+    }
+
+    // Guarded marker release: a late callback may only clear the marker it
+    // owns, never a newer replacement request's marker.
+    function releaseFinanceInflightEntry(inflightKey, requestId)
+    {
+      var entry = financeInflight[inflightKey];
+      if (!entry) return;
+      if (requestId === undefined) {
+        if (entry.requestId === undefined) delete financeInflight[inflightKey];
+        return;
+      }
+      if (entry.requestId === requestId) delete financeInflight[inflightKey];
+    }
+
     function getFinanceRequestFromControls()
     {
       var filter = getFinanceElement("financeFilter").value;
@@ -89,9 +124,15 @@
       var cacheType = dest === "product-profitability" ? "productProfitability" : dest === "balance-sheet" ? "balanceSheet" : dest === "depreciation" ? "depreciation" : dest === "assets" ? "assets" : dest === "cash-flow" ? "cashFlow" : "finance";
       var cacheKey = buildFinanceCacheKey(capturedFilter, capturedCustomStart, capturedCustomEnd);
 
-      // Deduplicate: join existing in-flight request for same cache key + type
+      // Deduplicate: join an existing healthy in-flight request for the same
+      // cache key + type; a stale marker stops blocking and is replaced.
+      var inflightKey = cacheType + "|" + cacheKey;
+      if (financeInflight[inflightKey] && isFinanceInflightEntryStale(financeInflight[inflightKey])) {
+        releaseFinanceInflightEntry(inflightKey);
+      }
       if (financeInflight[cacheType + "|" + cacheKey]) {
         setFinanceViewState("loading");
+        _warmCallbacks[cacheType + "|" + cacheKey] = function() { ensureFinanceData(); };
         return;
       }
 
@@ -99,8 +140,20 @@
       financeState.activeRequestId = requestId;
       setFinanceViewState("loading");
 
+      // FIN-UI-LIVENESS-01 — one bounded liveness timer per foreground
+      // dispatch. If neither callback fires, the request is declared
+      // client-stale: its marker is released and an explicit recoverable
+      // failure is surfaced (Retry visible). No auto re-dispatch, no polling.
+      var requestTimeoutId = setTimeout(function() {
+        if (requestId !== financeState.activeRequestId) return;
+        releaseFinanceInflightEntry(inflightKey, requestId);
+        var timeoutLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : dest === "depreciation" ? "Depreciation" : dest === "cash-flow" ? "Cash Flow" : "Profit & Loss";
+        setFinanceViewState("error", "Timed out loading " + timeoutLabel + ".");
+      }, FINANCE_REQUEST_STALE_TIMEOUT_MS);
+
       function onSuccess(response) {
-        delete financeInflight[cacheType + "|" + cacheKey];
+        clearTimeout(requestTimeoutId);
+        releaseFinanceInflightEntry(inflightKey, requestId);
         if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         try {
           financeState.data = response;
@@ -137,14 +190,15 @@
       }
 
       function onFailure(error) {
-        delete financeInflight[cacheType + "|" + cacheKey];
+        clearTimeout(requestTimeoutId);
+        releaseFinanceInflightEntry(inflightKey, requestId);
         if (requestId !== financeState.activeRequestId || dest !== financeState.destination) return;
         console.error("Finance request failed", error);
         var failLabel = dest === "capital-equity" ? "Capital & Equity" : dest === "product-profitability" ? "Product Profitability" : dest === "balance-sheet" ? "Balance Position" : dest === "depreciation" ? "Depreciation" : dest === "cash-flow" ? "Cash Flow" : "Profit & Loss";
         setFinanceViewState("error", "Unable to load " + failLabel + ".");
       }
 
-      financeInflight[cacheType + "|" + cacheKey] = true;
+      financeInflight[inflightKey] = { requestId: requestId, startedAt: financeNow_() };
 
       if (dest === "product-profitability") {
         google.script.run
@@ -185,11 +239,14 @@
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
       var cbKey = "finance|" + cacheKey;
       if (financeCache.finance[cacheKey]) return;
+      if (financeInflight[cbKey] && isFinanceInflightEntryStale(financeInflight[cbKey])) {
+        releaseFinanceInflightEntry(cbKey);
+      }
       if (financeInflight[cbKey]) return;
-      financeInflight[cbKey] = true;
+      financeInflight[cbKey] = { startedAt: financeNow_() };
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           if (response && isFinanceDataCompatible(response, "profit-loss")) {
             financeCache.finance[cacheKey] = { data: response, destination: "profit-loss" };
           }
@@ -198,7 +255,7 @@
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           // 11X.3K — on failure, wake foreground so it can retry
           var cb = _warmCallbacks[cbKey];
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
@@ -212,11 +269,14 @@
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
       var cbKey = "productProfitability|" + cacheKey;
       if (financeCache.productProfitability[cacheKey]) return;
+      if (financeInflight[cbKey] && isFinanceInflightEntryStale(financeInflight[cbKey])) {
+        releaseFinanceInflightEntry(cbKey);
+      }
       if (financeInflight[cbKey]) return;
-      financeInflight[cbKey] = true;
+      financeInflight[cbKey] = { startedAt: financeNow_() };
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           if (response && isFinanceDataCompatible(response, "product-profitability")) {
             financeCache.productProfitability[cacheKey] = { data: response, destination: "product-profitability" };
           }
@@ -224,7 +284,7 @@
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           var cb = _warmCallbacks[cbKey];
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
@@ -237,11 +297,14 @@
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
       var cbKey = "balanceSheet|" + cacheKey;
       if (financeCache.balanceSheet[cacheKey]) return;
+      if (financeInflight[cbKey] && isFinanceInflightEntryStale(financeInflight[cbKey])) {
+        releaseFinanceInflightEntry(cbKey);
+      }
       if (financeInflight[cbKey]) return;
-      financeInflight[cbKey] = true;
+      financeInflight[cbKey] = { startedAt: financeNow_() };
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           if (response && isFinanceDataCompatible(response, "balance-sheet")) {
             financeCache.balanceSheet[cacheKey] = { data: response, destination: "balance-sheet" };
           }
@@ -249,7 +312,7 @@
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           var cb = _warmCallbacks[cbKey];
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
@@ -262,11 +325,14 @@
       var cacheKey = buildFinanceCacheKey(filter, customStart, customEnd);
       var cbKey = "depreciation|" + cacheKey;
       if (financeCache.depreciation[cacheKey]) return;
+      if (financeInflight[cbKey] && isFinanceInflightEntryStale(financeInflight[cbKey])) {
+        releaseFinanceInflightEntry(cbKey);
+      }
       if (financeInflight[cbKey]) return;
-      financeInflight[cbKey] = true;
+      financeInflight[cbKey] = { startedAt: financeNow_() };
       google.script.run
         .withSuccessHandler(function(response) {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           if (response && isFinanceDataCompatible(response, "depreciation")) {
             financeCache.depreciation[cacheKey] = { data: response, destination: "depreciation" };
           }
@@ -274,7 +340,7 @@
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
         .withFailureHandler(function() {
-          delete financeInflight[cbKey];
+          releaseFinanceInflightEntry(cbKey);
           var cb = _warmCallbacks[cbKey];
           if (cb) { delete _warmCallbacks[cbKey]; cb(); }
         })
@@ -384,6 +450,12 @@
         return;
       }
 
+      // FIN-UI-LIVENESS-01 — a stale in-flight marker (lost response) must
+      // stop blocking this navigation: release it and request afresh below.
+      var inflightKey = cacheType + "|" + cacheKey;
+      if (financeInflight[inflightKey] && isFinanceInflightEntryStale(financeInflight[inflightKey])) {
+        releaseFinanceInflightEntry(inflightKey);
+      }
       if (financeInflight[cacheType + "|" + cacheKey]) {
         financeState.filter = request.filter;
         financeState.customStart = request.customStart;
