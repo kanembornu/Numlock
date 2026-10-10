@@ -109,6 +109,7 @@ var files = [
   '99.Treasury.Receipt.Foundation.js',
   '99A.Treasury.Receipt.Durable.Save.js',
   '99B.Treasury.Clearing.Projection.js',
+  '99C.Treasury.Receipt.Reversal.Correction.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -132,7 +133,8 @@ var files = [
   '96.Tests.Master.WritePolicy.Cases.js',
   '96.Tests.Treasury.Receipt.Foundation.Cases.js',
   '96.Tests.Treasury.Receipt.Durable.Save.Cases.js',
-  '96.Tests.Treasury.Clearing.Projection.Cases.js'
+  '96.Tests.Treasury.Clearing.Projection.Cases.js',
+  '96.Tests.Treasury.Receipt.Lifecycle.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -192,7 +194,8 @@ vm.runInContext([
   'var _productionSource = ' + JSON.stringify(fs.readFileSync('95A.Transaction.Production.js', 'utf8')) + ';',
   'var _treasuryFoundationSource = ' + JSON.stringify(fs.readFileSync('99.Treasury.Receipt.Foundation.js', 'utf8')) + ';',
   'var _treasuryDurableSource = ' + JSON.stringify(fs.readFileSync('99A.Treasury.Receipt.Durable.Save.js', 'utf8')) + ';',
-  'var _treasuryClearingSource = ' + JSON.stringify(fs.readFileSync('99B.Treasury.Clearing.Projection.js', 'utf8')) + ';'
+  'var _treasuryClearingSource = ' + JSON.stringify(fs.readFileSync('99B.Treasury.Clearing.Projection.js', 'utf8')) + ';',
+  'var _treasuryLifecycleSource = ' + JSON.stringify(fs.readFileSync('99C.Treasury.Receipt.Reversal.Correction.js', 'utf8')) + ';'
 ].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
@@ -421,6 +424,20 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT5ReadOnlyAudit', 'testTreasuryT5ReadOnlyAudit()');
   run('testTreasuryT5MutationSensitivity', 'testTreasuryT5MutationSensitivity()');
   run('testTreasuryT5PostReversalFoundation', 'testTreasuryT5PostReversalFoundation()');
+
+  // TREASURY_T6: durable append-only receipt reversal + correction — reversal
+  // core, correction core (ONE atomic batch), integrity, recovery +
+  // 20-boundary failure injection, concurrency, T5 canonical integration,
+  // isolation/source audit, failure paths, and 30-point mutation sensitivity.
+  run('testTreasuryT6ReversalCore', 'testTreasuryT6ReversalCore()');
+  run('testTreasuryT6CorrectionCore', 'testTreasuryT6CorrectionCore()');
+  run('testTreasuryT6Integrity', 'testTreasuryT6Integrity()');
+  run('testTreasuryT6Recovery', 'testTreasuryT6Recovery()');
+  run('testTreasuryT6Concurrency', 'testTreasuryT6Concurrency()');
+  run('testTreasuryT6T5Integration', 'testTreasuryT6T5Integration()');
+  run('testTreasuryT6Isolation', 'testTreasuryT6Isolation()');
+  run('testTreasuryT6FailurePaths', 'testTreasuryT6FailurePaths()');
+  run('testTreasuryT6MutationSensitivity', 'testTreasuryT6MutationSensitivity()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
