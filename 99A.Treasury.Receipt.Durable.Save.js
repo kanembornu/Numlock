@@ -371,10 +371,14 @@ function treasuryResolveExposure_(recognitionID, ss) {
   };
 }
 // ---------------------------------------------------------------------------
-// Outstanding (T4 view, T2 section 7.2): active recognized exposure - active
-// committed clearings (+ committed reversals, T6-compatible). Fail closed on
-// uninterpretable Treasury state — unknown is NEVER treated as zero. Reads
-// only the independent Treasury sheets; T5 owns the canonical projection.
+// Outstanding (T4 view; governing authorities: T2 section 12 > T5 projection >
+// T4 implementation): cleared = committed ordinary - committed reversals;
+// outstanding = recognized - cleared (a committed reversal contributes exactly
+// once and restores the pre-receipt outstanding). Receipt activeness feeds the
+// duplicate-active fail-closed gate ONLY — never the outstanding formula.
+// Fail closed on uninterpretable Treasury state — unknown is NEVER treated as
+// zero. Reads only the independent Treasury sheets; T5 owns the canonical
+// projection.
 // ---------------------------------------------------------------------------
 function treasuryComputeOutstanding_(recognitionID, recognizedAmount, ss, ownOperationID) {
   var save = TREASURY_RECEIPT_V1_SAVE, codes = save.CODES,
@@ -457,6 +461,11 @@ function treasuryComputeOutstanding_(recognitionID, recognizedAmount, ss, ownOpe
         throw treasuryReceiptSaveError_(codes.EXPOSURE_EXCEPTION, "recognitionID",
           "REVERSAL_TARGET_MISSING:" + id);
       }
+      if (reversedIds[target]) {
+        // T2 section 12: one committed reversal max per target, fail closed.
+        throw treasuryReceiptSaveError_(codes.EXPOSURE_EXCEPTION, "recognitionID",
+          "REVERSAL_TARGET_MULTIPLE:" + target);
+      }
       reversedIds[target] = true;
     }
   });
@@ -479,14 +488,158 @@ function treasuryComputeOutstanding_(recognitionID, recognizedAmount, ss, ownOpe
     throw treasuryReceiptSaveError_(codes.EXPOSURE_EXCEPTION, "recognitionID",
       "DUPLICATE_ACTIVE_RECEIPTS:" + active.length);
   }
-  var activeSum = active.reduce(function(total, entry) { return total + entry.amount; }, 0);
+  // T2 section 12 / T5 parity: EVERY committed ordinary receipt counts toward
+  // cleared (including one later reversed — its committed reversal adds back
+  // once). Never recognized - activeOrdinarySum + reversalSum.
+  var ordinarySum = classified.filter(function(entry) {
+    return entry.kind === "SALES_RECEIPT";
+  }).reduce(function(total, entry) { return total + entry.amount; }, 0);
   var reversalSum = classified.filter(function(entry) {
     return entry.kind === "SALES_RECEIPT_REVERSAL";
   }).reduce(function(total, entry) { return total + entry.amount; }, 0);
+  var cleared = ordinarySum - reversalSum;
   return {
-    outstanding: recognizedAmount - activeSum + reversalSum,
-    activeClearings: activeSum
+    outstanding: recognizedAmount - cleared,
+    activeClearings: cleared
   };
+}
+
+// ---------------------------------------------------------------------------
+// Frozen sibling context (T2 sections 12, 16): same-recognition receipt and
+// audit siblings observed under the lock IMMEDIATELY before plan freeze are
+// recorded as sorted, unique, canonical IDs plus one content digest per row.
+// A legitimate pre-existing sibling (e.g. a receipt already reversed before
+// this replacement Save) never becomes a false cross-owner conflict, while a
+// post-freeze sibling, a missing sibling, or an edited sibling (owner,
+// recognition, or content change) still fails closed at readback. The own
+// planned receipt/audit IDs are NEVER part of the context: they are derived
+// and verified separately against the frozen plan rows.
+// ---------------------------------------------------------------------------
+function treasuryReceiptContextHash_(row, headers) {
+  var canonicalRow = {};
+  headers.forEach(function(header) {
+    canonicalRow[header] = row[header] === undefined ? "" : row[header];
+  });
+  return transactionPayloadHash_(canonicalRow);
+}
+
+function treasuryReceiptFrozenContext_(ss, recognitionID, ownReceiptID, ownAuditID) {
+  var save = TREASURY_RECEIPT_V1_SAVE, codes = save.CODES,
+    contract = TREASURY_RECEIPT_V1_CONTRACT;
+  var receipts, audits;
+  try {
+    receipts = readCanonicalTable(ss, contract.SCHEMAS.RECEIPTS.SHEET,
+      contract.SCHEMAS.RECEIPTS.HEADERS);
+    audits = readCanonicalTable(ss, contract.SCHEMAS.AUDITS.SHEET,
+      contract.SCHEMAS.AUDITS.HEADERS);
+  } catch (error) {
+    throw treasuryReceiptSaveError_(codes.EXPOSURE_EXCEPTION, "recognitionID",
+      "CONTEXT_READ_FAILED:" + error.message);
+  }
+  function collect(rows, idField, headers, ownID) {
+    var digestById = {}, ids = [];
+    rows.forEach(function(row) {
+      if (String(row.RecognitionID) !== recognitionID) return;
+      var id = String(row[idField] === undefined || row[idField] === null ? "" : row[idField]);
+      if (!id || id === ownID) return;
+      if (digestById[id]) {
+        throw treasuryReceiptSaveError_(codes.EXPOSURE_EXCEPTION, "recognitionID",
+          "CONTEXT_DUPLICATE_ID:" + id);
+      }
+      digestById[id] = treasuryReceiptContextHash_(row, headers);
+      ids.push(id);
+    });
+    ids.sort();
+    var hashes = {};
+    ids.forEach(function(id) { hashes[id] = digestById[id]; });
+    return { ids: ids, hashes: hashes };
+  }
+  var receiptContext = collect(receipts, "TreasuryReceiptID",
+    contract.SCHEMAS.RECEIPTS.HEADERS, ownReceiptID);
+  var auditContext = collect(audits, "AuditID", contract.SCHEMAS.AUDITS.HEADERS, ownAuditID);
+  return {
+    contextReceiptIds: receiptContext.ids,
+    contextReceiptHashes: receiptContext.hashes,
+    contextAuditIds: auditContext.ids,
+    contextAuditHashes: auditContext.hashes
+  };
+}
+
+// Normalized context view for readback. A legacy ordinary plan without context
+// fields is interpreted as an EMPTY context (old fail-closed behavior); a
+// multi-artifact plan without context never reaches readback (verify fails
+// closed first).
+function treasuryReceiptContextOf_(plan) {
+  var context = { receiptIds: {}, receiptHashes: {}, auditIds: {}, auditHashes: {} };
+  if (!plan || typeof plan !== "object") return context;
+  if (!Array.isArray(plan.contextReceiptIds) || !Array.isArray(plan.contextAuditIds)) {
+    return context;
+  }
+  plan.contextReceiptIds.forEach(function(id) {
+    context.receiptIds[String(id)] = true;
+  });
+  plan.contextAuditIds.forEach(function(id) {
+    context.auditIds[String(id)] = true;
+  });
+  if (plan.contextReceiptHashes && typeof plan.contextReceiptHashes === "object") {
+    context.receiptHashes = plan.contextReceiptHashes;
+  }
+  if (plan.contextAuditHashes && typeof plan.contextAuditHashes === "object") {
+    context.auditHashes = plan.contextAuditHashes;
+  }
+  return context;
+}
+
+// Structural shape of the frozen context fields, checked at plan verification
+// (freeze-time REFUSED and every resume, fail closed, zero writes). Compatibility
+// without persisted-plan rewrites: legacy ordinary pre-T6 plan missing BOTH
+// context fields => empty context; a T6-era multi-artifact plan missing them
+// => malformed.
+function treasuryReceiptPlanMultiArtifact_(plan) {
+  return [plan.plannedReceiptIds, plan.plannedAuditIds, plan.receiptRows].some(function(list) {
+    return Array.isArray(list) && list.length > 1;
+  });
+}
+
+function treasuryReceiptContextShape_(plan) {
+  var hasReceipt = plan.contextReceiptIds !== undefined;
+  var hasAudit = plan.contextAuditIds !== undefined;
+  if (!hasReceipt && !hasAudit) {
+    if (plan.contextReceiptHashes !== undefined || plan.contextAuditHashes !== undefined) {
+      return { ok: false, reason: "CONTEXT_FIELDS_INCOMPLETE" };
+    }
+    if (treasuryReceiptPlanMultiArtifact_(plan)) return { ok: false, reason: "CONTEXT_MISSING" };
+    return { ok: true };
+  }
+  if (!hasReceipt || !hasAudit) return { ok: false, reason: "CONTEXT_FIELDS_INCOMPLETE" };
+  var idLists = [plan.contextReceiptIds, plan.contextAuditIds];
+  var hashMaps = [plan.contextReceiptHashes, plan.contextAuditHashes];
+  for (var i = 0; i < idLists.length; i++) {
+    var ids = idLists[i];
+    if (!Array.isArray(ids)) return { ok: false, reason: "CONTEXT_IDS_INVALID" };
+    var previous = null;
+    for (var j = 0; j < ids.length; j++) {
+      var id = ids[j];
+      if (typeof id !== "string" || !id) return { ok: false, reason: "CONTEXT_IDS_INVALID" };
+      if (previous !== null && !(id > previous)) {
+        return { ok: false, reason: "CONTEXT_IDS_INVALID" }; // sorted + unique
+      }
+      previous = id;
+    }
+    var hashes = hashMaps[i];
+    if (!hashes || typeof hashes !== "object" || Array.isArray(hashes)) {
+      return { ok: false, reason: "CONTEXT_HASHES_INVALID" };
+    }
+    var keys = Object.keys(hashes);
+    if (keys.length !== ids.length) return { ok: false, reason: "CONTEXT_HASHES_INVALID" };
+    for (var k = 0; k < keys.length; k++) {
+      if (ids.indexOf(keys[k]) === -1 ||
+          typeof hashes[keys[k]] !== "string" || !hashes[keys[k]]) {
+        return { ok: false, reason: "CONTEXT_HASHES_INVALID" };
+      }
+    }
+  }
+  return { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -499,6 +652,11 @@ function treasuryReceiptPlan_(input) {
   var save = TREASURY_RECEIPT_V1_SAVE, contract = TREASURY_RECEIPT_V1_CONTRACT;
   var normalized = input.normalized, config = input.config, exposure = input.exposure;
   var destination = input.destination, nowISO = input.now.toISOString();
+  var context = input.context;
+  if (!context || !Array.isArray(context.contextReceiptIds) ||
+      !Array.isArray(context.contextAuditIds)) {
+    throw new Error("CONTEXT_MISSING"); // frozen sibling context is mandatory at freeze
+  }
   var grossAmount = normalized.grossAmount;
   var operationID = treasuryOperationId(save.OPERATION_TYPE, normalized.requestKey);
   var receiptID = treasuryReceiptId(save.OPERATION_TYPE, normalized.requestKey, save.SIDE);
@@ -603,6 +761,12 @@ function treasuryReceiptPlan_(input) {
     receiptID: receiptID,
     journalID: journalID,
     auditID: auditID,
+    // Frozen sibling context: digest-covered immutable plan fields (the
+    // planDigest below covers them like every other plan field).
+    contextReceiptIds: context.contextReceiptIds,
+    contextReceiptHashes: context.contextReceiptHashes,
+    contextAuditIds: context.contextAuditIds,
+    contextAuditHashes: context.contextAuditHashes,
     journalSignature: journalSignature,
     movementType: contract.MOVEMENT_TYPE,
     sourceType: contract.SOURCE_TYPE,
@@ -782,6 +946,11 @@ function treasuryReceiptVerifyPlan_(plan) {
       audit.SavedAt !== plan.savedAt) {
     return drift("AUDIT_ROW_MISMATCH");
   }
+  // Frozen sibling context: legacy ordinary plan without context fields is an
+  // empty context; a multi-artifact plan without context is malformed (T6-era
+  // plan never resumes through the legacy interpretation).
+  var contextShape = treasuryReceiptContextShape_(plan);
+  if (!contextShape.ok) return fail(contextShape.reason);
   if (typeof plan.planDigest !== "string" || !plan.planDigest) return fail("PLAN_DIGEST_MISSING");
   var copy = Object.assign({}, plan);
   delete copy.planDigest;
@@ -907,6 +1076,12 @@ function treasuryReceiptInspect_(plan, ss) {
     return { state: "UNKNOWN", detail: "READBACK_FAILED:" + error.message };
   }
   var conflicts = [], missing = [];
+  // Frozen context membership (T2 section 12/16): pre-existing siblings frozen
+  // into the plan are allowed but must be present exactly once and byte-exact
+  // (owner, recognition, and content covered by the frozen digest); anything
+  // else under the same recognition stays a hard conflict.
+  var context = treasuryReceiptContextOf_(plan);
+  var contextReceiptSeen = {}, contextAuditSeen = {};
   var plannedLineIds = {};
   plan.journalRows.forEach(function(row) { plannedLineIds[row.LineID] = true; });
   ledger.forEach(function(row) {
@@ -920,25 +1095,58 @@ function treasuryReceiptInspect_(plan, ss) {
     }
   });
   receipts.forEach(function(row) {
+    var rowReceiptID = String(row.TreasuryReceiptID);
     if (row.TreasuryReceiptID === plan.receiptID && row.OperationID !== plan.operationID) {
       conflicts.push("RECEIPT_CROSS_OWNER");
     }
     if (row.OperationID === plan.operationID && row.TreasuryReceiptID !== plan.receiptID) {
       conflicts.push("RECEIPT_OPERATION_CROSS_OWNER");
     }
-    if (String(row.RecognitionID) === plan.recognitionID && row.TreasuryReceiptID !== plan.receiptID) {
-      conflicts.push("RECOGNITION_DUPLICATE_RECEIPT");
+    if (context.auditIds[rowReceiptID]) {
+      conflicts.push("RECEIPT_CONTEXT_CLASS_MISMATCH"); // artifact class violation
+    }
+    if (rowReceiptID !== plan.receiptID && context.receiptIds[rowReceiptID]) {
+      contextReceiptSeen[rowReceiptID] = (contextReceiptSeen[rowReceiptID] || 0) + 1;
+      if (treasuryReceiptContextHash_(row, receiptHeaders) !==
+          context.receiptHashes[rowReceiptID]) {
+        conflicts.push("RECOGNITION_CONTEXT_TAMPERED");
+      }
+    }
+    if (String(row.RecognitionID) === plan.recognitionID &&
+        row.TreasuryReceiptID !== plan.receiptID && !context.receiptIds[rowReceiptID]) {
+      conflicts.push("RECOGNITION_DUPLICATE_RECEIPT"); // post-freeze unplanned sibling
+    }
+  });
+  Object.keys(context.receiptIds).forEach(function(id) {
+    if (id !== plan.receiptID && contextReceiptSeen[id] !== 1) {
+      conflicts.push("RECOGNITION_CONTEXT_INCOMPLETE"); // frozen sibling vanished/duplicated
     }
   });
   audits.forEach(function(row) {
+    var rowAuditID = String(row.AuditID);
     if (row.AuditID === plan.auditID && row.OperationID !== plan.operationID) {
       conflicts.push("AUDIT_IDENTITY_CROSSOVER");
     }
     if (row.OperationID === plan.operationID && row.AuditID !== plan.auditID) {
       conflicts.push("AUDIT_OPERATION_CROSS_OWNER");
     }
-    if (String(row.RecognitionID) === plan.recognitionID && row.AuditID !== plan.auditID) {
-      conflicts.push("AUDIT_RECOGNITION_CROSS_OWNER");
+    if (context.receiptIds[rowAuditID]) {
+      conflicts.push("AUDIT_CONTEXT_CLASS_MISMATCH"); // artifact class violation
+    }
+    if (rowAuditID !== plan.auditID && context.auditIds[rowAuditID]) {
+      contextAuditSeen[rowAuditID] = (contextAuditSeen[rowAuditID] || 0) + 1;
+      if (treasuryReceiptContextHash_(row, auditHeaders) !== context.auditHashes[rowAuditID]) {
+        conflicts.push("AUDIT_CONTEXT_TAMPERED");
+      }
+    }
+    if (String(row.RecognitionID) === plan.recognitionID &&
+        row.AuditID !== plan.auditID && !context.auditIds[rowAuditID]) {
+      conflicts.push("AUDIT_RECOGNITION_CROSS_OWNER"); // post-freeze unplanned sibling
+    }
+  });
+  Object.keys(context.auditIds).forEach(function(id) {
+    if (id !== plan.auditID && contextAuditSeen[id] !== 1) {
+      conflicts.push("AUDIT_CONTEXT_INCOMPLETE"); // frozen sibling vanished/duplicated
     }
   });
   var receiptMatches = receipts.filter(function(row) {
@@ -1348,15 +1556,27 @@ function treasuryReceiptNewIntent_(normalized, hash, runtime) {
     });
   }
   // Freeze the immutable OperationPlan once (identities, rows, snapshot,
-  // signature, payload hash, contract/config identity).
+  // signature, payload hash, contract/config identity). The same-recognition
+  // sibling context is observed under the lock IMMEDIATELY before the freeze.
   var plan;
   var now = runtime.now();
   var resolvedActor = normalized.actor || runtime.actor();
+  var context;
+  try {
+    context = treasuryReceiptFrozenContext_(runtime.spreadsheet, normalized.recognitionID,
+      treasuryReceiptId(save.OPERATION_TYPE, normalized.requestKey, save.SIDE),
+      treasuryAuditId(save.OPERATION_TYPE, normalized.requestKey, save.SIDE));
+  } catch (error) {
+    return outcome(save.STATUS.REFUSED, {
+      code: error.treasuryCode || codes.EXPOSURE_EXCEPTION,
+      field: error.field || "recognitionID", detail: error.message
+    });
+  }
   try {
     plan = treasuryReceiptPlan_({
       normalized: normalized, hash: hash, config: runtime.config, exposure: exposure,
       outstanding: outstandingView.outstanding, destination: destination,
-      actor: resolvedActor, now: now
+      actor: resolvedActor, now: now, context: context
     });
   } catch (error) {
     return outcome(save.STATUS.REFUSED,

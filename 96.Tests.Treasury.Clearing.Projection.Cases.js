@@ -1005,6 +1005,209 @@ function testTreasuryT5ReadOnlyAudit() {
   return { total: pass, pass: pass, fail: 0 };
 }
 // ---------------------------------------------------------------------------
+// Suite 9 — Sol AUTHORITY_CONFLICT resolution (T2 section 12 > T5): measured
+// post-reversal semantics on the T5 side (checks 2, 4, 5, 6, 13, 14) plus
+// T4/T5 parity. Check 13 is a FIXTURE-LEVEL correction simulation (one op,
+// two receipts, four Treasury journal lines, one audit, residual 0) built by
+// direct in-memory construction — no T6 writer exists or is exercised.
+// ---------------------------------------------------------------------------
+
+function treasuryT5CorrectionFixture_(options) {
+  var o = options || {};
+  var fixture = treasuryT4SeededFixture_();
+  var contract = TREASURY_RECEIPT_V1_CONTRACT;
+  var actor = "tester@numlock.test";
+  var receivedAt = "2026-10-14T03:00:00.000Z";
+  var receiptDate = "2026-10-14";
+  var operationID = "TROP-T5-CORR";
+  var requestKey = "t5-corr";
+  var recognitionID = TREASURY_T5_RID;
+  var receipt1 = "TRC-T5-CORR-ORIG", receipt2 = "TRC-T5-CORR-REV";
+  var journal1 = "TRJ-T5-CORR-ORIG", journal2 = "TRJ-T5-CORR-REV";
+  var payloadHash = "H-CORR";
+  var foreignOperationID = "";
+  if (o.reassignOperation) {
+    // Unrelated cross-owner operation under a different recognition.
+    treasuryT5FabricateReceipt_(fixture, { suffix: "XOP",
+      recognitionID: "SCR-NOPE-9" });
+    foreignOperationID = "TROP-T5-XOP";
+  }
+  function journalLines(journalID, ordinary) {
+    var movement = ordinary ? contract.MOVEMENT_TYPE : contract.MOVEMENT_TYPE_REVERSAL;
+    var destDebit = ordinary ? 24000 : 0, destCredit = ordinary ? 0 : 24000;
+    var clearDebit = ordinary ? 0 : 24000, clearCredit = ordinary ? 24000 : 0;
+    return [
+      { JournalID: journalID, LineID: journalID + "-1", Tanggal: receiptDate,
+        AccountCode: "1000", Debit: destDebit, Credit: destCredit,
+        MovementType: movement, SourceType: contract.SOURCE_TYPE, SourceID: "",
+        ExternalRef: recognitionID, Keterangan: "", IsActive: true,
+        CreatedAt: receivedAt, CreatedBy: actor, UpdatedAt: receivedAt, UpdatedBy: actor },
+      { JournalID: journalID, LineID: journalID + "-2", Tanggal: receiptDate,
+        AccountCode: contract.CLEARING_ACCOUNT_CODE, Debit: clearDebit, Credit: clearCredit,
+        MovementType: movement, SourceType: contract.SOURCE_TYPE, SourceID: "",
+        ExternalRef: recognitionID, Keterangan: "", IsActive: true,
+        CreatedAt: receivedAt, CreatedBy: actor, UpdatedAt: receivedAt, UpdatedBy: actor }
+    ];
+  }
+  var lines1 = journalLines(journal1, true);
+  var lines2 = journalLines(journal2, false);
+  lines1[0].SourceID = receipt1; lines1[1].SourceID = receipt1;
+  lines2[0].SourceID = receipt2; lines2[1].SourceID = receipt2;
+  var signature1 = treasuryJournalSignature(lines1);
+  var signature2 = treasuryJournalSignature(lines2);
+  var auditRow = { AuditID: "TRA-T5-CORR", ContractVersion: contract.CONTRACT_VERSION,
+    OperationID: operationID, RequestKey: requestKey, TreasuryReceiptID: receipt1,
+    RecognitionID: recognitionID, OrderID: "ORD-T4-1", JournalID: journal1,
+    PayloadHash: payloadHash, Actor: actor, SavedAt: receivedAt };
+  var plan = { requestKey: requestKey, operationID: operationID,
+    recognitionID: recognitionID, receiptID: receipt1,
+    plannedReceiptIds: o.noMembership ? [receipt1] : [receipt1, receipt2],
+    journalID: journal1, auditID: auditRow.AuditID, auditRow: auditRow };
+  u3AppendRow_(fixture, "TreasuryOperations", contract.SCHEMAS.OPERATIONS.HEADERS, {
+    TreasuryOperationID: operationID, OperationType: "TREASURY_RECEIPT_SAVE",
+    RecognitionID: recognitionID, RequestKey: requestKey, State: "COMMITTED",
+    PayloadHash: payloadHash, OperationPlan: JSON.stringify(plan),
+    CreatedAt: receivedAt, UpdatedAt: receivedAt, LastError: "" });
+  function receiptRow(receiptID, operationForReceipt, journalID, signature, reversalOf) {
+    return { TreasuryReceiptID: receiptID, ContractVersion: contract.CONTRACT_VERSION,
+      OperationID: operationForReceipt, RequestKey: requestKey,
+      RecognitionID: recognitionID, OrderID: "ORD-T4-1",
+      RevisionID: "REV-U3-ORD-T4-1",
+      ReceiptType: reversalOf ? "SALES_RECEIPT_REVERSAL" : "SALES_RECEIPT",
+      DestinationAccountCode: "1000", GrossAmount: 24000,
+      ReceiptDate: receiptDate, EconomicDate: receiptDate, ReceivedAt: receivedAt,
+      EvidenceType: contract.EVIDENCE_TYPE, EvidenceRef: "T5-CORR-EVIDENCE",
+      JournalID: journalID, JournalSignature: signature,
+      PostingStatus: contract.POSTING_STATUS_COMMITTED,
+      OriginalReceiptID: "", ReversalOfReceiptID: reversalOf || "",
+      ReplacementReceiptID: "", Reason: "", Actor: actor,
+      SnapshotJSON: JSON.stringify({ contractVersion: contract.CONTRACT_VERSION,
+        recognitionID: recognitionID, recognizedAmount: 24000 }) };
+  }
+  u3AppendRow_(fixture, "TreasuryReceipts", contract.SCHEMAS.RECEIPTS.HEADERS,
+    receiptRow(receipt1, operationID, journal1, signature1, ""));
+  u3AppendRow_(fixture, "TreasuryReceipts", contract.SCHEMAS.RECEIPTS.HEADERS,
+    receiptRow(receipt2, foreignOperationID || operationID, journal2, signature2, receipt1));
+  if (!o.auditRecognition) {
+    u3AppendRow_(fixture, "TreasuryAudits", contract.SCHEMAS.AUDITS.HEADERS, auditRow);
+  } else {
+    u3AppendRow_(fixture, "TreasuryAudits", contract.SCHEMAS.AUDITS.HEADERS,
+      Object.assign({}, auditRow, { RecognitionID: o.auditRecognition }));
+  }
+  u3AppendLedger_(fixture, lines1.concat(lines2));
+  return { fixture: fixture, receipt1: receipt1, receipt2: receipt2 };
+}
+
+function testTreasuryT5PostReversalFoundation() {
+  var pass = 0;
+  function check(id, value, detail) { treasuryT5Check_(id, value, detail); pass++; }
+  var contract = TREASURY_RECEIPT_V1_CONTRACT, rid = TREASURY_T5_RID;
+
+  // Check 2 — receipt 24000 + reversal 24000 => T5 row UNCLEARED, outstanding
+  // 24000, cleared 0, reversal amount 24000, zero quality codes; T4/T5 parity.
+  var f2 = treasuryT4SeededFixture_();
+  var orig2 = treasuryT5FabricateReceipt_(f2, { suffix: "ORIG" });
+  treasuryT5FabricateReceipt_(f2, { suffix: "REV",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: orig2.receiptID });
+  var r2 = treasuryT5Row_(treasuryT5Projection_(f2), rid);
+  check("T5X2a", r2.ClearingStatus === "UNCLEARED" &&
+    r2.OutstandingAmount === 24000 && r2.ClearedAmount === 0 &&
+    r2.ReversalAmount === 24000 && r2.QualityCodes.length === 0,
+    JSON.stringify(r2));
+  var c2 = treasuryT5Reconciliation_(f2);
+  check("T5X2b", c2.unexplainedResidual === 0 && c2.reconciliationStatus === "OK",
+    JSON.stringify(c2));
+  var parity2 = treasuryT5ParityView_(f2, rid, 24000);
+  check("T5X2c", parity2.t4View.outstanding === r2.OutstandingAmount &&
+    parity2.t4View.activeClearings === r2.ClearedAmount,
+    JSON.stringify({ t4: parity2.t4View, t5: r2 }));
+
+  // Check 5 — reversed original + valid replacement: NO duplicate-active code,
+  // healthy CLEARED, parity with T4 (net cleared 24000).
+  var f5 = treasuryT4SeededFixture_();
+  var orig5 = treasuryT5FabricateReceipt_(f5, { suffix: "ORIG" });
+  treasuryT5FabricateReceipt_(f5, { suffix: "REV",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: orig5.receiptID });
+  treasuryT5FabricateReceipt_(f5, { suffix: "REPL" });
+  var r5 = treasuryT5Row_(treasuryT5Projection_(f5), rid);
+  check("T5X5a", r5.ClearingStatus === "CLEARED" && r5.QualityCodes.length === 0 &&
+    r5.ClearedAmount === 24000 && r5.OutstandingAmount === 0 &&
+    r5.ActiveReceiptCount === 1, JSON.stringify(r5));
+  var parity5 = treasuryT5ParityView_(f5, rid, 24000);
+  check("T5X5b", parity5.t4View.outstanding === 0 &&
+    parity5.t4View.activeClearings === 24000 &&
+    !treasuryT5HasCode_(r5, "DUPLICATE_ACTIVE_RECEIPTS"),
+    JSON.stringify({ t4: parity5.t4View, codes: r5.QualityCodes }));
+
+  // Check 6 — two genuinely active ordinary receipts still trigger it.
+  var f6 = treasuryT4SeededFixture_();
+  treasuryT5SaveReceipt_(f6);
+  treasuryT5FabricateReceipt_(f6, { suffix: "DUPX" });
+  var r6 = treasuryT5Row_(treasuryT5Projection_(f6), rid);
+  check("T5X6", r6.ClearingStatus === "EXCEPTION" &&
+    treasuryT5HasCode_(r6, "DUPLICATE_ACTIVE_RECEIPTS"), JSON.stringify(r6.QualityCodes));
+
+  // Check 4 — double reversal of one target rejected (one reversal max).
+  var f4 = treasuryT4SeededFixture_();
+  var orig4 = treasuryT5FabricateReceipt_(f4, { suffix: "ORIG" });
+  treasuryT5FabricateReceipt_(f4, { suffix: "REV-A",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: orig4.receiptID });
+  treasuryT5FabricateReceipt_(f4, { suffix: "REV-B",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: orig4.receiptID });
+  var r4 = treasuryT5Row_(treasuryT5Projection_(f4), rid);
+  check("T5X4", r4.ClearingStatus === "EXCEPTION" &&
+    treasuryT5HasCode_(r4, "RECEIPT_REVERSAL_CONFLICT"), JSON.stringify(r4.QualityCodes));
+
+  // Check 13 — correction simulation (FIXTURE-LEVEL, no T6 machinery): one
+  // operation, two receipts (original + reversal), four Treasury journal
+  // lines, ONE audit, residual 0, healthy UNCLEARED row, T4/T5 parity.
+  var corr = treasuryT5CorrectionFixture_();
+  var receiptRows = readCanonicalTable(corr.fixture, "TreasuryReceipts",
+    contract.SCHEMAS.RECEIPTS.HEADERS);
+  var auditRows = readCanonicalTable(corr.fixture, "TreasuryAudits",
+    contract.SCHEMAS.AUDITS.HEADERS);
+  var operationRows = readCanonicalTable(corr.fixture, "TreasuryOperations",
+    contract.SCHEMAS.OPERATIONS.HEADERS).filter(function(row) {
+      return String(row.RequestKey) === "t5-corr";
+    });
+  var treasuryLines = treasuryT4LedgerRows_(corr.fixture).filter(function(row) {
+    return String(row.SourceType) === "TREASURY_RECEIPT_V1";
+  });
+  check("T5X13a", receiptRows.length === 2 && auditRows.length === 1 &&
+    operationRows.length === 1 && treasuryLines.length === 4,
+    JSON.stringify({ receipts: receiptRows.length, audits: auditRows.length,
+      operations: operationRows.length, lines: treasuryLines.length }));
+  var r13 = treasuryT5Row_(treasuryT5Projection_(corr.fixture), rid);
+  check("T5X13b", r13.ClearingStatus === "UNCLEARED" &&
+    r13.QualityCodes.length === 0 && r13.OutstandingAmount === 24000 &&
+    r13.ClearedAmount === 0 && r13.ReversalAmount === 24000,
+    JSON.stringify(r13));
+  var c13 = treasuryT5Reconciliation_(corr.fixture);
+  check("T5X13c", c13.unexplainedResidual === 0 &&
+    c13.reconciliationStatus === "OK", JSON.stringify(c13));
+  var t4x13 = treasuryComputeOutstanding_(rid, 24000, corr.fixture, "");
+  check("T5X13d", t4x13.outstanding === r13.OutstandingAmount &&
+    t4x13.activeClearings === r13.ClearedAmount,
+    JSON.stringify({ t4: t4x13, t5: r13 }));
+
+  // Check 14 — operation-audit coverage rejects unrelated/cross-owner cases.
+  var noMember = treasuryT5CorrectionFixture_({ noMembership: true });
+  var r14a = treasuryT5Row_(treasuryT5Projection_(noMember.fixture), rid);
+  check("T5X14a", r14a.ClearingStatus === "EXCEPTION" &&
+    treasuryT5HasCode_(r14a, "AUDIT_MISSING"), JSON.stringify(r14a.QualityCodes));
+  var crossRecognition = treasuryT5CorrectionFixture_({ auditRecognition: "SCR-EVIL-9" });
+  var r14b = treasuryT5Row_(treasuryT5Projection_(crossRecognition.fixture), rid);
+  check("T5X14b", r14b.ClearingStatus === "EXCEPTION" &&
+    treasuryT5HasCode_(r14b, "AUDIT_MISSING") &&
+    treasuryT5HasCode_(r14b, "AUDIT_MISMATCH"), JSON.stringify(r14b.QualityCodes));
+  var crossOwner = treasuryT5CorrectionFixture_({ reassignOperation: true });
+  var r14c = treasuryT5Row_(treasuryT5Projection_(crossOwner.fixture), rid);
+  check("T5X14c", r14c.ClearingStatus === "EXCEPTION" &&
+    treasuryT5HasCode_(r14c, "AUDIT_MISSING") &&
+    treasuryT5HasCode_(r14c, "OPERATION_MISMATCH"), JSON.stringify(r14c.QualityCodes));
+  return { total: pass, pass: pass, fail: 0 };
+}
+// ---------------------------------------------------------------------------
 // Suite 8 — 25-point mutation sensitivity: every listed defect class is caught
 // by a behavioral assertion and/or a source invariant. All fixture tampering
 // is in-memory and local to the test; no mutation is left in any source file.

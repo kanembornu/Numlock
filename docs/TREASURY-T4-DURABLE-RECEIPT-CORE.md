@@ -113,10 +113,17 @@ byte-identical (suite G).
 
 ## 6. Outstanding computation
 
-`treasuryComputeOutstanding_(recognitionID, recognizedAmount, ss, ownOperationID)` — T4 view
-(T2 §7.2): `recognized − activeCommittedClearings + committedReversals` (reversal rows
-T6-compatible: classified, target-validated, never produced by T4). Receipt activeness: no
-committed `SALES_RECEIPT_REVERSAL` targets it. Fail closed (never treat unknown as zero):
+`treasuryComputeOutstanding_(recognitionID, recognizedAmount, ss, ownOperationID)` — T4 view.
+Governing authorities (precedence): **T2 §12 > T5 projection > T4 implementation/docs**.
+Formula (T2 §12, T5 parity): `cleared = committedOrdinary − committedReversals`;
+`outstanding = recognized − cleared` (equivalently `recognized − (ordinarySum − reversalSum)`).
+A committed reversal contributes **exactly once** and restores the pre-receipt outstanding
+(receipt 24,000 + reversal 24,000 → outstanding 24,000, UNCLEARED); with no reversal,
+`outstanding = recognized − ordinarySum`. Reversal rows are T6-compatible: classified,
+target-validated (one committed reversal max per target, else `TREASURY_EXPOSURE_EXCEPTION`),
+never produced by T4. Receipt activeness (no committed `SALES_RECEIPT_REVERSAL` targets the
+receipt) feeds **only** the duplicate-active fail-closed gate — never the outstanding formula.
+Fail closed (never treat unknown as zero):
 
 - duplicate `(OperationType, RequestKey)` operation rows, unknown operation `State`,
   unparseable `OperationPlan`, receipt with unresolvable/mismatched operation linkage,

@@ -151,6 +151,56 @@ function treasuryClearingReadSources_(ss) {
 // they stay surfaced on the row (or in the orphan list) and their ledger
 // effect is attributed in reconciliation, never netted into canonical
 // outstanding.
+// Operation-audit coverage for a receipt with no audit row keyed to it (T2
+// sections 9 and 12): the single frozen audit of the receipt's own COMMITTED
+// operation satisfies the link ONLY when (1) exactly one operation row owns
+// this receipt (type, state, request key, recognition all exact), (2) the
+// frozen OperationPlan names this receipt as its own (primary or explicitly
+// planned member), and (3) the single operation audit is byte-exact against
+// the plan's frozen audit row plus its independent linkages (operation, request
+// key, recognition, order, payload hash). Any unrelated or cross-owner audit,
+// missing membership, or plan disagreement returns false -> AUDIT_MISSING.
+function treasuryClearingOperationAuditCovers_(receipt, ctx, contract,
+    recognitionID, orderID, receiptID) {
+  var operationRows = ctx.operationRowsById[String(receipt.OperationID)] || [];
+  if (operationRows.length !== 1) return false;
+  var operation = operationRows[0];
+  if (contract.OPERATION_TYPES.indexOf(String(operation.OperationType || "")) === -1 ||
+      String(operation.State === undefined || operation.State === null ? "" :
+        operation.State) !== "COMMITTED" ||
+      String(operation.RequestKey || "") !== String(receipt.RequestKey || "") ||
+      String(operation.RecognitionID || "") !== recognitionID) {
+    return false;
+  }
+  var plan = null;
+  try { plan = JSON.parse(String(operation.OperationPlan || "")); }
+  catch (error) { return false; }
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) return false;
+  var member = String(plan.receiptID || "") === receiptID ||
+    (Array.isArray(plan.plannedReceiptIds) && plan.plannedReceiptIds.indexOf(receiptID) !== -1);
+  if (!member || String(plan.operationID || "") !== String(receipt.OperationID) ||
+      String(plan.requestKey || "") !== String(receipt.RequestKey || "") ||
+      String(plan.recognitionID || "") !== recognitionID ||
+      !plan.auditRow || typeof plan.auditRow !== "object" || Array.isArray(plan.auditRow)) {
+    return false;
+  }
+  var audits = ctx.auditsByOperationID[String(receipt.OperationID)] || [];
+  if (audits.length !== 1) return false;
+  var audit = audits[0];
+  var exact = contract.SCHEMAS.AUDITS.HEADERS.every(function(header) {
+    var expected = plan.auditRow[header];
+    expected = expected === undefined || expected === null ? "" : expected;
+    var actual = audit[header] === undefined || audit[header] === null ? "" : audit[header];
+    return String(actual) === String(expected);
+  });
+  return exact &&
+    String(audit.OperationID || "") === String(receipt.OperationID) &&
+    String(audit.RequestKey || "") === String(receipt.RequestKey || "") &&
+    String(audit.RecognitionID || "") === recognitionID &&
+    String(audit.OrderID || "") === orderID &&
+    String(audit.PayloadHash || "") === String(operation.PayloadHash || "");
+}
+
 function treasuryClearingReceiptAssessment_(receipt, ctx) {
   var contract = TREASURY_RECEIPT_V1_CONTRACT;
   var codes = [];
@@ -303,10 +353,18 @@ function treasuryClearingReceiptAssessment_(receipt, ctx) {
       }
     }
   }
-  // Audit: exactly one 11-column row, all linkages exact.
+  // Audit: exactly one 11-column row, all linkages exact. T2 section 9 keeps
+  // ONE audit per operation: a multi-artifact operation freezes a single audit
+  // for its planned primary receipt, and that operation audit may satisfy a
+  // planned sibling receipt ONLY after exact operation ownership and planned
+  // receipt membership are proven against the frozen plan. Unrelated or
+  // cross-owner audits never satisfy the link (fail closed as missing).
   var audits = ctx.auditsByReceiptID[receiptID] || [];
   if (audits.length === 0) {
-    treasuryClearingPushCode_(codes, "AUDIT_MISSING");
+    if (!treasuryClearingOperationAuditCovers_(receipt, ctx, contract,
+        recognitionID, orderID, receiptID)) {
+      treasuryClearingPushCode_(codes, "AUDIT_MISSING");
+    }
   } else if (audits.length > 1) {
     treasuryClearingPushCode_(codes, "AUDIT_DUPLICATE");
   } else {
@@ -345,11 +403,14 @@ function treasuryClearingReceiptRowCodes_(receipt, recognitionEvent, attachedByI
   if (receiptType === "SALES_RECEIPT_REVERSAL") {
     var target = String(receipt.ReversalOfReceiptID === undefined ||
       receipt.ReversalOfReceiptID === null ? "" : receipt.ReversalOfReceiptID);
-    var targetReceipt = target ? attachedById[target] : null;
-    if (!targetReceipt) {
+    var targetEntry = target ? attachedById[target] : null;
+    if (!targetEntry) {
       treasuryClearingPushCode_(codes, "UNKNOWN_REVERSAL");
       return;
     }
+    // attachedById stores {receipt, codes, ...} entries; the target's TYPE and
+    // AMOUNT authority is the target receipt ROW itself (T2 section 12).
+    var targetReceipt = targetEntry.receipt || targetEntry;
     if (String(targetReceipt.ReceiptType || "") !== "SALES_RECEIPT") {
       treasuryClearingPushCode_(codes, "RECEIPT_REVERSAL_CONFLICT");
     }
@@ -425,10 +486,12 @@ function treasuryClearingAnalyze_(sources, request) {
     var key = String(operation.OperationType) + "|" + String(operation.RequestKey);
     operationKeyCounts[key] = (operationKeyCounts[key] || 0) + 1;
   });
-  var auditsByReceiptID = Object.create(null);
+  var auditsByReceiptID = Object.create(null), auditsByOperationID = Object.create(null);
   sources.TreasuryAudits.forEach(function(audit) {
     var key = String(audit.TreasuryReceiptID || "");
     (auditsByReceiptID[key] = auditsByReceiptID[key] || []).push(audit);
+    var operationKey = String(audit.OperationID || "");
+    (auditsByOperationID[operationKey] = auditsByOperationID[operationKey] || []).push(audit);
   });
   var ledgerLinesByReceiptID = Object.create(null);
   ledgerAll.forEach(function(line) {
@@ -438,6 +501,7 @@ function treasuryClearingAnalyze_(sources, request) {
   });
   var ctx = { orderIds: orderIds, accounts: sources.Accounts,
     operationRowsById: operationRowsById, auditsByReceiptID: auditsByReceiptID,
+    auditsByOperationID: auditsByOperationID,
     ledgerLinesByReceiptID: ledgerLinesByReceiptID };
 
   // Receipt census: unresolved RecognitionID => full orphan (never attached);
@@ -696,7 +760,17 @@ function treasuryClearingAnalyze_(sources, request) {
     var validReversals = reversalReceipts.filter(function(entry) {
       return entry.codes.length === 0;
     });
-    if (validOrdinary.length > 1) {
+    // Duplicate-active counts ONLY valid non-reversed ordinary receipts (T2
+    // section 12): a reversed original plus its valid replacement is a healthy
+    // lineage, not a duplicate; two genuinely active ordinary receipts still
+    // fail closed.
+    var activeOrdinaryCount = validOrdinary.filter(function(entry) {
+      var target = String(entry.receipt.TreasuryReceiptID);
+      return !validReversals.some(function(reversal) {
+        return String(reversal.receipt.ReversalOfReceiptID) === target;
+      });
+    }).length;
+    if (activeOrdinaryCount > 1) {
       treasuryClearingPushCode_(codes, "DUPLICATE_ACTIVE_RECEIPTS");
     }
     // One reversal max per target (T2 section 12 read-side rule).

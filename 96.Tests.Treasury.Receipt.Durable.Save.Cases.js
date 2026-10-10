@@ -1589,3 +1589,299 @@ function testTreasuryT4MutationSensitivity() {
     blankEvidenceRuntime.events.batches.length === 0);
   return { total: 25, pass: pass, fail: 25 - pass };
 }
+
+// ---------------------------------------------------------------------------
+// Suite I — Sol AUTHORITY_CONFLICT resolution (T2 section 12 > T5 > T4):
+// post-reversal outstanding semantics + frozen sibling-context foundation
+// (contract checks 1-12). Fixture-local only: sibling receipt/reversal rows
+// are direct in-memory constructions (T5 fabricator, no T6 writer). Every
+// check is measured by execution, never estimated.
+// ---------------------------------------------------------------------------
+
+// Receipt 24000 + committed reversal 24000 on the seeded exposure.
+function treasuryT4PostReversalFixture_() {
+  var fixture = treasuryT4SeededFixture_();
+  var original = treasuryT5FabricateReceipt_(fixture, { suffix: "ORIG" });
+  treasuryT5FabricateReceipt_(fixture, { suffix: "REV",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: original.receiptID });
+  return { fixture: fixture, original: original };
+}
+
+function treasuryT4OpRow_(fixture, requestKey) {
+  var schema = TREASURY_RECEIPT_V1_CONTRACT.SCHEMAS.OPERATIONS;
+  var rows = readCanonicalTable(fixture, schema.SHEET, schema.HEADERS);
+  var matches = rows.filter(function(row) {
+    return String(row.RequestKey) === requestKey;
+  });
+  return matches.length === 1 ? matches[0] : null;
+}
+
+function treasuryT4WriteOpPlan_(fixture, requestKey, plan) {
+  var schema = TREASURY_RECEIPT_V1_CONTRACT.SCHEMAS.OPERATIONS;
+  var sheet = fixture.getSheetByName(schema.SHEET);
+  var keyIndex = schema.HEADERS.indexOf("RequestKey");
+  var planIndex = schema.HEADERS.indexOf("OperationPlan");
+  for (var i = 1; i < sheet.values.length; i++) {
+    if (String(sheet.values[i][keyIndex]) === requestKey) {
+      sheet.values[i][planIndex] = JSON.stringify(plan);
+      return;
+    }
+  }
+  throw new Error("T4_OP_NOT_FOUND:" + requestKey);
+}
+
+function treasuryT4Redigest_(plan) {
+  var copy = JSON.parse(JSON.stringify(plan));
+  delete copy.planDigest;
+  copy.planDigest = transactionPayloadHash_(copy);
+  return copy;
+}
+
+function testTreasuryT4PostReversalFoundation() {
+  var pass = 0;
+  function check(id, value, detail) { treasuryT4Check_(id, value, detail); pass++; }
+  var save = TREASURY_RECEIPT_V1_SAVE, codes = save.CODES,
+    contract = TREASURY_RECEIPT_V1_CONTRACT, rid = "SCR-U3-ORD-T4-1";
+
+  // Check 1 — fresh ordinary receipt: exact-clear semantics unchanged.
+  var f1 = treasuryT4SeededFixture_();
+  var v1 = treasuryComputeOutstanding_(rid, 24000, f1, "");
+  check("T4X1a", v1.outstanding === 24000 && v1.activeClearings === 0,
+    JSON.stringify(v1));
+  var s1 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x1-01"),
+    treasuryT4Runtime_({ fixture: f1 }));
+  var v1b = treasuryComputeOutstanding_(rid, 24000, f1, "");
+  check("T4X1b", s1.status === "DONE" && v1b.outstanding === 0 &&
+    v1b.activeClearings === 24000, JSON.stringify({ result: s1, view: v1b }));
+  // Check 3 — no reversal: outstanding = recognized - ordinary sum.
+  check("T4X1c", v1.outstanding === 24000 - 0 && v1b.outstanding === 24000 - 24000);
+
+  // Check 2 — receipt 24000 + reversal 24000 => outstanding 24000 (restored).
+  var f2 = treasuryT4PostReversalFixture_();
+  var v2 = treasuryComputeOutstanding_(rid, 24000, f2.fixture, "");
+  check("T4X2", v2.outstanding === 24000 && v2.activeClearings === 0,
+    JSON.stringify(v2));
+
+  // Check 4 — double reversal of one target rejected (one reversal max).
+  var f4 = treasuryT4SeededFixture_();
+  var o4 = treasuryT5FabricateReceipt_(f4, { suffix: "O4" });
+  treasuryT5FabricateReceipt_(f4, { suffix: "R4A",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: o4.receiptID });
+  treasuryT5FabricateReceipt_(f4, { suffix: "R4B",
+    receiptType: "SALES_RECEIPT_REVERSAL", reversalOf: o4.receiptID });
+  var e4 = null;
+  try { treasuryComputeOutstanding_(rid, 24000, f4, ""); }
+  catch (error) { e4 = error; }
+  check("T4X4", !!e4 && e4.treasuryCode === codes.EXPOSURE_EXCEPTION &&
+    String(e4.message).indexOf("REVERSAL_TARGET_MULTIPLE") !== -1,
+    e4 ? e4.message : "NO_ERROR");
+
+  // Check 5 — reversed original + valid replacement: no duplicate-active throw,
+  // net clearing 24000 => outstanding 0.
+  var f5 = treasuryT4PostReversalFixture_();
+  treasuryT5FabricateReceipt_(f5.fixture, { suffix: "REPL" });
+  var v5 = treasuryComputeOutstanding_(rid, 24000, f5.fixture, "");
+  check("T4X5a", v5.outstanding === 0 && v5.activeClearings === 24000,
+    JSON.stringify(v5));
+
+  // Check 6 — two genuinely active ordinary receipts still fail closed.
+  var f6 = treasuryT4SeededFixture_();
+  treasuryT5FabricateReceipt_(f6, { suffix: "ACT-A" });
+  treasuryT5FabricateReceipt_(f6, { suffix: "ACT-B" });
+  var e6 = null;
+  try { treasuryComputeOutstanding_(rid, 24000, f6, ""); }
+  catch (error) { e6 = error; }
+  check("T4X6", !!e6 && e6.treasuryCode === codes.EXPOSURE_EXCEPTION &&
+    String(e6.message).indexOf("DUPLICATE_ACTIVE_RECEIPTS") !== -1,
+    e6 ? e6.message : "NO_ERROR");
+
+  // Check 7 — post-reversal Save accepts the frozen legitimate sibling context.
+  var f7 = treasuryT4PostReversalFixture_();
+  var s7 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x7-01"),
+    treasuryT4Runtime_({ fixture: f7.fixture }));
+  var op7 = treasuryT4OpRow_(f7.fixture, "t4-x7-01");
+  var plan7 = JSON.parse(op7.OperationPlan);
+  check("T4X7a", s7.status === "DONE", JSON.stringify(s7));
+  check("T4X7b", Array.isArray(plan7.contextReceiptIds) &&
+    plan7.contextReceiptIds.length === 2 && plan7.contextAuditIds.length === 2 &&
+    JSON.stringify(plan7.contextReceiptIds) ===
+      JSON.stringify(plan7.contextReceiptIds.slice().sort()) &&
+    JSON.stringify(plan7.contextAuditIds) ===
+      JSON.stringify(plan7.contextAuditIds.slice().sort()) &&
+    plan7.contextReceiptIds.indexOf(s7.receiptID) === -1 &&
+    plan7.contextAuditIds.indexOf(s7.auditID) === -1 &&
+    Object.keys(plan7.contextReceiptHashes).length === 2 &&
+    Object.keys(plan7.contextAuditHashes).length === 2,
+    JSON.stringify(plan7.contextReceiptIds));
+  check("T4X7c", treasuryReceiptVerifyPlan_(plan7).ok === true &&
+    treasuryComputeOutstanding_(rid, 24000, f7.fixture, "").outstanding === 0);
+
+  // Check 8 — a new unplanned sibling after plan freeze fails closed, zero
+  // new writes from the resume attempt.
+  var f8 = treasuryT4PostReversalFixture_();
+  var e8 = null;
+  try {
+    treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x8-01"),
+      treasuryT4Runtime_({ fixture: f8.fixture, crash: "T4_BEFORE_BATCH" }));
+  } catch (error) { e8 = error; }
+  check("T4X8a", !!e8 && e8.message === "CRASH:T4_BEFORE_BATCH");
+  treasuryT5FabricateReceipt_(f8.fixture, { suffix: "LATE" });
+  var counts8 = JSON.stringify(treasuryT4RowCounts_(f8.fixture));
+  var rt8 = treasuryT4Runtime_({ fixture: f8.fixture });
+  var s8 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x8-01"), rt8);
+  check("T4X8b", s8.status === "RECOVERY_REQUIRED" &&
+    String(s8.detail).indexOf("RECOGNITION_DUPLICATE_RECEIPT") !== -1,
+    JSON.stringify(s8));
+  check("T4X8c", JSON.stringify(treasuryT4RowCounts_(f8.fixture)) === counts8 &&
+    rt8.events.batches.length === 0 && rt8.events.cacheCalls === 0);
+
+  // Check 9 — context tampering (owner / recognition / content / audit) all
+  // fail closed on resume with zero new writes.
+  function tamperedResume(tamper) {
+    var fx = treasuryT4PostReversalFixture_();
+    var threw = null;
+    try {
+      treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x9-01"),
+        treasuryT4Runtime_({ fixture: fx.fixture, crash: "T4_BEFORE_BATCH" }));
+    } catch (error) { threw = error; }
+    tamper(fx.fixture);
+    var counts = JSON.stringify(treasuryT4RowCounts_(fx.fixture));
+    var runtime = treasuryT4Runtime_({ fixture: fx.fixture });
+    var result = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x9-01"), runtime);
+    return { threw: threw, result: result, counts: counts, runtime: runtime,
+      fixture: fx.fixture };
+  }
+  function receiptsSheet(fixture) {
+    return fixture.getSheetByName("TreasuryReceipts");
+  }
+  function receiptHeaderIndex(header) {
+    return contract.SCHEMAS.RECEIPTS.HEADERS.indexOf(header);
+  }
+  var ownerTamper = tamperedResume(function(fixture) {
+    receiptsSheet(fixture).values[1][receiptHeaderIndex("OperationID")] = "TROP-EVIL-OWNER";
+  });
+  check("T4X9a", !!ownerTamper.threw &&
+    ownerTamper.result.status === "RECOVERY_REQUIRED" &&
+    String(ownerTamper.result.detail).indexOf("RECOGNITION_CONTEXT_TAMPERED") !== -1 &&
+    JSON.stringify(treasuryT4RowCounts_(ownerTamper.fixture)) === ownerTamper.counts,
+    JSON.stringify(ownerTamper.result));
+  var recognitionTamper = tamperedResume(function(fixture) {
+    receiptsSheet(fixture).values[1][receiptHeaderIndex("RecognitionID")] = "SCR-EVIL-1";
+  });
+  check("T4X9b", recognitionTamper.result.status === "RECOVERY_REQUIRED" &&
+    String(recognitionTamper.result.detail).indexOf("RECOGNITION_CONTEXT_TAMPERED") !== -1,
+    JSON.stringify(recognitionTamper.result));
+  var contentTamper = tamperedResume(function(fixture) {
+    receiptsSheet(fixture).values[1][receiptHeaderIndex("GrossAmount")] = 1;
+  });
+  check("T4X9c", contentTamper.result.status === "RECOVERY_REQUIRED" &&
+    String(contentTamper.result.detail).indexOf("RECOGNITION_CONTEXT_TAMPERED") !== -1,
+    JSON.stringify(contentTamper.result));
+  var auditTamper = tamperedResume(function(fixture) {
+    fixture.getSheetByName("TreasuryAudits").values[1]
+      [contract.SCHEMAS.AUDITS.HEADERS.indexOf("Actor")] = "tampered@actor.test";
+  });
+  check("T4X9d", auditTamper.result.status === "RECOVERY_REQUIRED" &&
+    String(auditTamper.result.detail).indexOf("AUDIT_CONTEXT_TAMPERED") !== -1,
+    JSON.stringify(auditTamper.result));
+
+  // Check 10 — crash/resume preserves the identical frozen context and the
+  // batch+commit executes at most once.
+  var f10 = treasuryT4PostReversalFixture_();
+  var e10 = null;
+  try {
+    treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x10-01"),
+      treasuryT4Runtime_({ fixture: f10.fixture, crash: "T4_AFTER_INTENT" }));
+  } catch (error) { e10 = error; }
+  check("T4X10a", !!e10 && e10.message === "CRASH:T4_AFTER_INTENT");
+  var planBefore = JSON.parse(treasuryT4OpRow_(f10.fixture, "t4-x10-01").OperationPlan);
+  check("T4X10b", planBefore.contextReceiptIds.length === 2 &&
+    planBefore.contextAuditIds.length === 2);
+  var rt10 = treasuryT4Runtime_({ fixture: f10.fixture });
+  var s10 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x10-01"), rt10);
+  var planAfter = JSON.parse(treasuryT4OpRow_(f10.fixture, "t4-x10-01").OperationPlan);
+  check("T4X10c", s10.status === "DONE" && s10.replay === false &&
+    s10.writeCount === save.FRESH_WRITE_COUNT &&
+    JSON.stringify(planAfter.contextReceiptIds) ===
+      JSON.stringify(planBefore.contextReceiptIds) &&
+    JSON.stringify(planAfter.contextAuditIds) ===
+      JSON.stringify(planBefore.contextAuditIds) &&
+    JSON.stringify(planAfter.contextReceiptHashes) ===
+      JSON.stringify(planBefore.contextReceiptHashes) &&
+    JSON.stringify(planAfter.contextAuditHashes) ===
+      JSON.stringify(planBefore.contextAuditHashes),
+    JSON.stringify(s10));
+  var counts10 = JSON.stringify(treasuryT4RowCounts_(f10.fixture));
+  var rt10b = treasuryT4Runtime_({ fixture: f10.fixture });
+  var s10b = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x10-01"), rt10b);
+  check("T4X10d", s10b.status === "DONE" && s10b.replay === true &&
+    s10b.writeCount === 0 && rt10b.events.batches.length === 0 &&
+    rt10b.events.appliedRows === 0 &&
+    JSON.stringify(treasuryT4RowCounts_(f10.fixture)) === counts10,
+    JSON.stringify(s10b));
+  check("T4X10e", rt10.events.batches.length === 1 && rt10.events.appliedRows === 4);
+
+  // Check 11 — legacy plan lacking context fields = EMPTY context (old
+  // fail-closed behavior preserved; no persisted-plan rewrite in production).
+  var f11 = treasuryT4SeededFixture_();
+  var s11 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x11-01"),
+    treasuryT4Runtime_({ fixture: f11 }));
+  var legacyPlan = JSON.parse(treasuryT4OpRow_(f11, "t4-x11-01").OperationPlan);
+  delete legacyPlan.contextReceiptIds;
+  delete legacyPlan.contextReceiptHashes;
+  delete legacyPlan.contextAuditIds;
+  delete legacyPlan.contextAuditHashes;
+  legacyPlan = treasuryT4Redigest_(legacyPlan);
+  check("T4X11a", s11.status === "DONE" &&
+    treasuryReceiptVerifyPlan_(legacyPlan).ok === true,
+    JSON.stringify(treasuryReceiptVerifyPlan_(legacyPlan)));
+  treasuryT4WriteOpPlan_(f11, "t4-x11-01", legacyPlan);
+  var s11b = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x11-01"),
+    treasuryT4Runtime_({ fixture: f11 }));
+  check("T4X11b", s11b.status === "DONE" && s11b.replay === true &&
+    s11b.writeCount === 0, JSON.stringify(s11b));
+  treasuryT5FabricateReceipt_(f11, { suffix: "LEG" });
+  var s11c = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x11-01"),
+    treasuryT4Runtime_({ fixture: f11 }));
+  check("T4X11c", s11c.status === "RECOVERY_REQUIRED" &&
+    String(s11c.detail).indexOf("RECOGNITION_DUPLICATE_RECEIPT") !== -1,
+    JSON.stringify(s11c));
+
+  // Check 12 — T6-era multi-artifact plan lacking context = malformed
+  // (fail closed at verify and at resume, zero writes).
+  var f12 = treasuryT4SeededFixture_();
+  var s12 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x12-01"),
+    treasuryT4Runtime_({ fixture: f12 }));
+  var t6Plan = JSON.parse(treasuryT4OpRow_(f12, "t4-x12-01").OperationPlan);
+  delete t6Plan.contextReceiptIds;
+  delete t6Plan.contextReceiptHashes;
+  delete t6Plan.contextAuditIds;
+  delete t6Plan.contextAuditHashes;
+  t6Plan.plannedReceiptIds = [t6Plan.receiptID, "TRC-T6-SYNTHETIC"];
+  t6Plan = treasuryT4Redigest_(t6Plan);
+  var verdict12 = treasuryReceiptVerifyPlan_(t6Plan);
+  check("T4X12a", s12.status === "DONE" && verdict12.ok === false &&
+    verdict12.kind === "MALFORMED" && verdict12.reason === "CONTEXT_MISSING",
+    JSON.stringify(verdict12));
+  treasuryT4WriteOpPlan_(f12, "t4-x12-01", t6Plan);
+  var counts12 = JSON.stringify(treasuryT4RowCounts_(f12));
+  var rt12 = treasuryT4Runtime_({ fixture: f12 });
+  var s12b = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x12-01"), rt12);
+  check("T4X12b", s12b.status === "RECOVERY_REQUIRED" &&
+    s12b.code === codes.OPERATION_PLAN_MALFORMED &&
+    String(s12b.detail).indexOf("CONTEXT_MISSING") !== -1 &&
+    JSON.stringify(treasuryT4RowCounts_(f12)) === counts12 &&
+    rt12.events.batches.length === 0, JSON.stringify(s12b));
+
+  // Context never suppresses own-artifact conflicts (frozen-plan authority).
+  var f13 = treasuryT4PostReversalFixture_();
+  var s13 = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x13-01"),
+    treasuryT4Runtime_({ fixture: f13.fixture }));
+  f13.fixture.getSheetByName("TreasuryReceipts").values[3]
+    [receiptHeaderIndex("GrossAmount")] = 1; // own receipt content tamper
+  var s13b = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-x13-01"),
+    treasuryT4Runtime_({ fixture: f13.fixture }));
+  check("T4X13", s13.status === "DONE" && s13b.status === "RECOVERY_REQUIRED" &&
+    String(s13b.detail).indexOf("RECEIPT_TAMPERED") !== -1, JSON.stringify(s13b));
+  return { total: pass, pass: pass, fail: 0 };
+}

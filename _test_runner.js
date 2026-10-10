@@ -404,6 +404,7 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT4Cache', 'testTreasuryT4Cache()');
   run('testTreasuryT4CashFlowGroupGate', 'testTreasuryT4CashFlowGroupGate()');
   run('testTreasuryT4MutationSensitivity', 'testTreasuryT4MutationSensitivity()');
+  run('testTreasuryT4PostReversalFoundation', 'testTreasuryT4PostReversalFoundation()');
 
   // TREASURY_T5: canonical clearing projection + global 1030 reconciliation —
   // statuses/row contract, integrity gates, orphans + Sales reversal
@@ -419,6 +420,7 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT5FinanceIsolation', 'testTreasuryT5FinanceIsolation()');
   run('testTreasuryT5ReadOnlyAudit', 'testTreasuryT5ReadOnlyAudit()');
   run('testTreasuryT5MutationSensitivity', 'testTreasuryT5MutationSensitivity()');
+  run('testTreasuryT5PostReversalFoundation', 'testTreasuryT5PostReversalFoundation()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
