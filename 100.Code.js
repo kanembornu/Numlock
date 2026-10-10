@@ -162,6 +162,353 @@ function doGet(e) {
 }
 
 // ---------------------------------------------------------------------------
+// Treasury T10.5 production activation (admin/bootstrap surface).
+//
+// Lives here for the same reason as the T9 preparation entry: the frozen
+// T3/T8 purity audits keep every 99*/202-204 Treasury runtime file free of
+// `.setProperty(` and of any write primitive, and this module already hosts
+// the production admin bootstrap routes.
+//
+// Scope, exactly: PREPARED -> ACTIVE inside ONE ScriptLock, and only after the
+// exact T3 schemas, zero business rows, destination authority, 1030 readiness
+// (incl. CashFlowGroup), canonical exposure, and global reconciliation all
+// validate — with UnexplainedResidual === 0 REQUIRED (a non-zero outstanding
+// 1030 balance is normal and is never cleared here). ONE config write targets
+// only `contract.CONFIG_PROPERTY`; the readback is exact before ACTIVE is
+// ever reported. Server-generated TRACT- ActivationID and server activatedAt
+// (the public entry takes no parameters). No receipt, operation, audit,
+// ledger, Cash/Bank, 1030, Sales, Payment/Settlement, AP, Inventory or
+// Accounts write is reachable from this call graph.
+// Authority: T2 section 5 (config/activation contract), T3 section 4 (config
+// semantics), T10 measured finding, T10.5 owner authorization.
+// ---------------------------------------------------------------------------
+
+var TREASURY_PRODUCTION_ACTIVATION = Object.freeze({
+  STATUS: Object.freeze({
+    ACTIVATED: "ACTIVATED",
+    NOOP_ALREADY_ACTIVE: "NOOP_ALREADY_ACTIVE",
+    LOCK_TIMEOUT: "LOCK_TIMEOUT",
+    RUNTIME_UNAVAILABLE: "RUNTIME_UNAVAILABLE",
+    STOP_CONFIG_ABSENT: "STOP_CONFIG_ABSENT",
+    STOP_CONFIG_MALFORMED: "STOP_CONFIG_MALFORMED",
+    STOP_UNEXPECTED_MODE: "STOP_UNEXPECTED_MODE",
+    STOP_SCHEMA_CONFLICT: "STOP_SCHEMA_CONFLICT",
+    STOP_BUSINESS_ROWS: "STOP_BUSINESS_ROWS",
+    STOP_ACCOUNT_READINESS: "STOP_ACCOUNT_READINESS",
+    STOP_EXPOSURE_UNREADABLE: "STOP_EXPOSURE_UNREADABLE",
+    STOP_RECONCILIATION: "STOP_RECONCILIATION",
+    STOP_IDENTITY_INVALID: "STOP_IDENTITY_INVALID",
+    STOP_CONFIG_WRITE_FAILED: "STOP_CONFIG_WRITE_FAILED",
+    STOP_CONFIG_READBACK_MISMATCH: "STOP_CONFIG_READBACK_MISMATCH"
+  })
+});
+
+function treasuryActivationResult_(status, detail) {
+  return { status: status, detail: detail || "", writes: { sheets: 0, config: 0 },
+    schemas: {}, businessRows: {}, config: null, readiness: null,
+    exposure: null, reconciliation: null };
+}
+
+// Exact five-field config surface reported on every classification.
+function treasuryActivationConfigFields_(config) {
+  return { contractVersion: config.contractVersion, mode: config.mode,
+    activationID: config.activationID, activatedAt: config.activatedAt,
+    configVersion: config.configVersion };
+}
+
+// Activation core. Never acquires a lock (the public entry owns the single
+// ScriptLock) and never writes anything except the single ACTIVE config
+// property, only after every frozen precondition has passed inside that lock.
+// Zero financial surface: no sheet writer, no ledger writer, no receipt,
+// operation or audit artifact exists in this function.
+function treasuryActivationApplyWithRuntime_(runtime) {
+  var contract = TREASURY_RECEIPT_V1_CONTRACT, act = TREASURY_PRODUCTION_ACTIVATION,
+    prep = TREASURY_PRODUCTION_PREPARATION;
+  var result = treasuryActivationResult_(act.STATUS.STOP_CONFIG_ABSENT, "");
+
+  // 1) Zero-write re-read of config, schemas and business rows. This is the
+  //    ONLY config read in the activation path and it runs under the lock.
+  var inspection = treasuryPreparationInspect_(runtime);
+  if (!inspection.rawReadable) {
+    result.status = act.STATUS.STOP_CONFIG_MALFORMED;
+    result.detail = "CONFIG_PROPERTY_UNREADABLE";
+    return result;
+  }
+  treasuryPreparationSnapshot_(result, inspection);
+  if (!inspection.rawPresent) {
+    result.detail = "CONFIG_ABSENT";
+    return result;
+  }
+  if (inspection.configState.status !== "PASS" || !inspection.configState.config) {
+    result.status = act.STATUS.STOP_CONFIG_MALFORMED;
+    result.detail = "EXISTING_CONFIG_INVALID";
+    return result;
+  }
+  // 2) Classification. A valid ACTIVE already carries a durable identity:
+  //    return it untouched — never a second ActivationID, never a second T.
+  var current = inspection.configState.config, mode = String(current.mode);
+  if (mode === contract.MODES[1]) {
+    result.status = act.STATUS.NOOP_ALREADY_ACTIVE;
+    result.config = treasuryActivationConfigFields_(current);
+    return result;
+  }
+  // 3) Only PREPARED may activate. PAUSED is a separate owner-authorized
+  //    mutation; every other state fails closed. No unauthorized transition.
+  if (mode !== contract.MODES[0]) {
+    result.status = act.STATUS.STOP_UNEXPECTED_MODE;
+    result.detail = "EXISTING_MODE_" + mode;
+    return result;
+  }
+  // 4) Exact Treasury schemas through the frozen T3 validators.
+  var schemaProblems = prep.SCHEMA_KEYS.filter(function(key) {
+    var state = inspection.sheets[key];
+    return state.exists !== true || state.headersExact !== true;
+  });
+  if (schemaProblems.length) {
+    result.status = act.STATUS.STOP_SCHEMA_CONFLICT;
+    result.detail = schemaProblems.map(function(key) {
+      var state = inspection.sheets[key];
+      return state.sheet + "(" + state.headerValidation + ")";
+    }).join(",");
+    return result;
+  }
+  // 5) Zero business rows on every Treasury surface. Receipts are Gate B and
+  //    are never produced, synthesized or inferred by activation.
+  var rowProblems = prep.SCHEMA_KEYS.filter(function(key) {
+    return inspection.sheets[key].businessRows !== 0;
+  });
+  if (rowProblems.length) {
+    result.status = act.STATUS.STOP_BUSINESS_ROWS;
+    result.detail = rowProblems.map(function(key) {
+      var state = inspection.sheets[key];
+      return state.sheet + "(" + state.businessRows + ")";
+    }).join(",");
+    return result;
+  }
+  // 6) Destination authority (T2 section 6) + 1030 readiness (T2 sections 21,
+  //    28) including the CashFlowGroup == Operating hard gate. The Accounts
+  //    master is read-only here.
+  var accountRows = null;
+  try { accountRows = treasuryReceiptAccountRows_(runtime.spreadsheet); }
+  catch (error) {
+    result.status = act.STATUS.STOP_ACCOUNT_READINESS;
+    result.detail = "ACCOUNTS:" + String(error && error.message || error);
+    return result;
+  }
+  var ineligible = [];
+  contract.DESTINATION_ACCOUNT_CODES.forEach(function(code) {
+    if (treasuryDestinationEligible(code, accountRows).eligible !== true) {
+      ineligible.push(code);
+    }
+  });
+  var clearing = treasuryClearingPreflight(accountRows);
+  result.readiness = { clearing: clearing.status,
+    destinations: contract.DESTINATION_ACCOUNT_CODES.map(function(code) {
+      return { accountCode: code,
+        eligible: treasuryDestinationEligible(code, accountRows).eligible === true };
+    }) };
+  if (ineligible.length !== 0 || clearing.status !== "PASS") {
+    result.status = act.STATUS.STOP_ACCOUNT_READINESS;
+    result.detail = "DESTINATIONS:" + ineligible.join(",") + ";CLEARING:" + clearing.status;
+    return result;
+  }
+  // 7) Canonical exposure authority — read-only projection, never derived from
+  //    the ledger and never written back anywhere.
+  var exposure = null;
+  try { exposure = buildTreasuryClearingProjection_(runtime.spreadsheet, {}); }
+  catch (error) {
+    result.status = act.STATUS.STOP_EXPOSURE_UNREADABLE;
+    result.detail = "EXPOSURE:" + String(error && error.message || error);
+    return result;
+  }
+  var unclearedIds = (exposure.rows || []).filter(function(row) {
+    return String(row.ClearingStatus) === "UNCLEARED";
+  }).map(function(row) { return String(row.RecognitionID); });
+  result.exposure = {
+    recognizedExposure: exposure.totals.recognizedExposure,
+    outstandingTotal: exposure.totals.outstandingTotal,
+    unclearedCount: exposure.totals.unclearedCount,
+    unclearedIds: unclearedIds
+  };
+  // 8) Global 1030 reconciliation. UnexplainedResidual MUST be 0. An
+  //    outstanding balance is NOT required to be zero — money that has not
+  //    been received stays outstanding and is never cleared by activation.
+  var reconciliation = null;
+  try { reconciliation = buildTreasury1030Reconciliation_(runtime.spreadsheet, {}); }
+  catch (error) {
+    result.status = act.STATUS.STOP_RECONCILIATION;
+    result.detail = "RECONCILIATION:" + String(error && error.message || error);
+    return result;
+  }
+  result.reconciliation = {
+    ledgerNet1030: reconciliation.ledgerNet1030,
+    outstandingTotal: reconciliation.outstandingTotal,
+    explicitExceptionAmount: reconciliation.explicitExceptionAmount,
+    unexplainedResidual: reconciliation.unexplainedResidual,
+    reconciliationStatus: reconciliation.reconciliationStatus
+  };
+  if (Number(reconciliation.unexplainedResidual) !== 0 ||
+      String(reconciliation.reconciliationStatus) !== "OK") {
+    result.status = act.STATUS.STOP_RECONCILIATION;
+    result.detail = "RESIDUAL:" + String(reconciliation.unexplainedResidual) +
+      ";STATUS:" + String(reconciliation.reconciliationStatus);
+    return result;
+  }
+  // 9) Frozen activation plan, derived only from the frozen contract enum.
+  if (contract.MODES[1] !== "ACTIVE") {
+    result.status = act.STATUS.STOP_UNEXPECTED_MODE;
+    result.detail = "ACTIVE_MODE_NOT_SECOND";
+    return result;
+  }
+  var plan = { mode: contract.MODES[1], contractVersion: contract.CONTRACT_VERSION };
+  // 10) Durable, unique, non-empty ActivationID: server uuid, frozen TRACT-
+  //     prefix, never client-chosen (the public entry takes no parameters).
+  var activationID = "";
+  try { activationID = contract.ID_PREFIXES.ACTIVATION + String(runtime.uuid()); }
+  catch (error) {
+    result.status = act.STATUS.STOP_IDENTITY_INVALID;
+    result.detail = "UUID_UNAVAILABLE:" + String(error && error.message || error);
+    return result;
+  }
+  if (activationID.length <= contract.ID_PREFIXES.ACTIVATION.length ||
+      activationID.trim() === "") {
+    result.status = act.STATUS.STOP_IDENTITY_INVALID;
+    result.detail = "UUID_EMPTY";
+    return result;
+  }
+  // 11) Server activatedAt instant — produced inside the deployed runtime, so
+  //     no client can supply or backdate it.
+  var activatedAt = "";
+  try {
+    var now = runtime.now();
+    activatedAt = now instanceof Date ? now.toISOString() : String(now);
+  } catch (error) {
+    result.status = act.STATUS.STOP_IDENTITY_INVALID;
+    result.detail = "NOW_UNAVAILABLE:" + String(error && error.message || error);
+    return result;
+  }
+  if (!activatedAt || activatedAt.trim() === "") {
+    result.status = act.STATUS.STOP_IDENTITY_INVALID;
+    result.detail = "TIMESTAMP_EMPTY";
+    return result;
+  }
+  // 12) Next configVersion per the existing frozen scheme: carried forward
+  //     from the current validated value (T2 section 5 fixes the activation
+  //     state at configVersion 1 and the 97E Sales activation carries
+  //     current.configVersion). No second scheme is introduced here.
+  var nextConfigVersion = current.configVersion;
+  if (typeof nextConfigVersion !== "number" || !isFinite(nextConfigVersion) ||
+      nextConfigVersion < 1 || Math.floor(nextConfigVersion) !== nextConfigVersion) {
+    result.status = act.STATUS.STOP_IDENTITY_INVALID;
+    result.detail = "CONFIG_VERSION_INVALID";
+    return result;
+  }
+  var activated = { contractVersion: plan.contractVersion, mode: plan.mode,
+    activationID: activationID, activatedAt: activatedAt,
+    configVersion: nextConfigVersion };
+  var validation = validateTreasuryReceiptConfig(activated);
+  if (validation.status !== "PASS") {
+    var first = validation.errors && validation.errors[0] ? validation.errors[0] : {};
+    result.status = act.STATUS.STOP_IDENTITY_INVALID;
+    result.detail = "PLAN_" + String(first.code || "CONFIG_INVALID");
+    return result;
+  }
+  var payload = "";
+  try { payload = JSON.stringify(activated); }
+  catch (error) {
+    result.status = act.STATUS.STOP_CONFIG_WRITE_FAILED;
+    result.detail = "SERIALIZE_FAILED";
+    return result;
+  }
+  // 13) THE single config write of this function — one property, one key,
+  //     one time, and only after every frozen precondition passed.
+  try {
+    runtime.properties.setProperty(contract.CONFIG_PROPERTY, payload);
+  } catch (error) {
+    result.status = act.STATUS.STOP_CONFIG_WRITE_FAILED;
+    result.detail = String(error && error.message || error);
+    return result;
+  }
+  result.writes.config = 1;
+  // 14) Exact readback through the normal T3 reader before any ACTIVE claim.
+  var readback = treasuryPreparationInspect_(runtime);
+  treasuryPreparationSnapshot_(result, readback);
+  // Nothing is ever reported as a classified config until the readback below
+  // is proven byte-exact against what was written.
+  result.config = null;
+  var written = readback.configState.config;
+  if (readback.configState.status !== "PASS" || !written) {
+    result.status = act.STATUS.STOP_CONFIG_READBACK_MISMATCH;
+    result.detail = "READBACK_INVALID";
+    return result;
+  }
+  if (String(written.mode) !== activated.mode ||
+      written.contractVersion !== activated.contractVersion ||
+      written.activationID !== activated.activationID ||
+      written.activatedAt !== activated.activatedAt ||
+      written.configVersion !== activated.configVersion) {
+    result.status = act.STATUS.STOP_CONFIG_READBACK_MISMATCH;
+    result.detail = "READBACK_FIELD_MISMATCH";
+    return result;
+  }
+  // 15) Classify ACTIVE only after the exact identity/configVersion readback.
+  if (String(written.mode) !== contract.MODES[1]) {
+    result.status = act.STATUS.STOP_CONFIG_READBACK_MISMATCH;
+    result.detail = "MODE_NOT_ACTIVE";
+    return result;
+  }
+  result.status = act.STATUS.ACTIVATED;
+  result.config = treasuryActivationConfigFields_(written);
+  return result;
+}
+
+// Production activation runtime factory. Spreadsheet identity comes from the
+// canonical resolver; activatedAt and ActivationID are produced here, on the
+// server, never from a caller argument.
+function treasuryActivationRuntime_() {
+  var ss = requireNumlockProductionSpreadsheet();
+  return {
+    spreadsheet: ss,
+    properties: PropertiesService.getScriptProperties(),
+    now: function() { return new Date(); },
+    uuid: function() { return String(Utilities.getUuid()); }
+  };
+}
+
+// Public activation entry (Apps Script editor / Execution API). The ONLY outer
+// lock: acquired before any config read or write; the PREPARED classification
+// and every precondition run inside it, so there is no pre-lock
+// check-then-write. Zero parameters — no client can choose the ActivationID,
+// the timestamp or the mode. Lock or runtime failure returns before any
+// mutation. Never callable from a Treasury write path; never invoked by
+// application load.
+function activateTreasuryReceiptV1Production() {
+  var act = TREASURY_PRODUCTION_ACTIVATION;
+  var runtime;
+  try { runtime = treasuryActivationRuntime_(); }
+  catch (error) {
+    return treasuryActivationResult_(act.STATUS.RUNTIME_UNAVAILABLE,
+      String(error && error.message || error));
+  }
+  var lock = null, acquired = false;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    acquired = true;
+  } catch (error) {
+    return treasuryActivationResult_(act.STATUS.LOCK_TIMEOUT,
+      String(error && error.message || error));
+  }
+  try {
+    return treasuryActivationApplyWithRuntime_(runtime);
+  } finally {
+    if (acquired) {
+      try { lock.releaseLock(); } catch (lockError) { /* lock auto-expires */ }
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Treasury T9 production preparation (admin/bootstrap surface).
 //
 // Lives here, NOT in the 99*/202-204 Treasury runtime: the frozen T3/T8 purity

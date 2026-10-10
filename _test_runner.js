@@ -34,6 +34,8 @@ var runTreasuryT8ReleaseGate = require('./tests/browser/treasury-t8-release-gate
 globalThis.runTreasuryT8ReleaseGate = runTreasuryT8ReleaseGate;
 var runTreasuryT9PreparationMutationProof = require('./tests/browser/treasury-t9-preparation-mutation-proof.js');
 globalThis.runTreasuryT9PreparationMutationProof = runTreasuryT9PreparationMutationProof;
+var runTreasuryT105ActivationMutationProof = require('./tests/browser/treasury-t105-activation-mutation-proof.js');
+globalThis.runTreasuryT105ActivationMutationProof = runTreasuryT105ActivationMutationProof;
 
 globalThis.Logger = { log: function() {} };
 globalThis.fs = require('fs');
@@ -145,7 +147,8 @@ var files = [
   '96.Tests.Treasury.Clearing.Projection.Cases.js',
   '96.Tests.Treasury.Receipt.Lifecycle.Cases.js',
   '96.Tests.Treasury.Operator.Cases.js',
-  '96.Tests.Treasury.Receipt.Preparation.Cases.js'
+  '96.Tests.Treasury.Receipt.Preparation.Cases.js',
+  '96.Tests.Treasury.Activation.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -510,6 +513,29 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT9PreparationSourceAudit', 'testTreasuryT9PreparationSourceAudit()');
   run('testTreasuryT9DeploymentOrder', 'testTreasuryT9DeploymentOrder()');
   run('testTreasuryT9MutationSensitivity', 'JSON.stringify(runTreasuryT9PreparationMutationProof())');
+
+  // TREASURY_T10.5: production activation writer — PREPARED -> ACTIVE core
+  // (identity/lock/schema/account/1030/reconciliation gates, config-only
+  // write, exact readback, idempotent ACTIVE, ambiguous-response recovery),
+  // call-graph/writer source audit, and 20-point mutation sensitivity.
+  run('testTreasuryT105ActivationPreparedToActive', 'testTreasuryT105ActivationPreparedToActive()');
+  run('testTreasuryT105ActivationIdempotent', 'testTreasuryT105ActivationIdempotent()');
+  run('testTreasuryT105ActivationAbsentConfig', 'testTreasuryT105ActivationAbsentConfig()');
+  run('testTreasuryT105ActivationMalformedConfig', 'testTreasuryT105ActivationMalformedConfig()');
+  run('testTreasuryT105ActivationPausedRefused', 'testTreasuryT105ActivationPausedRefused()');
+  run('testTreasuryT105ActivationSurfaceGates', 'testTreasuryT105ActivationSurfaceGates()');
+  run('testTreasuryT105ActivationAccountGate', 'testTreasuryT105ActivationAccountGate()');
+  run('testTreasuryT105ActivationClearingGate', 'testTreasuryT105ActivationClearingGate()');
+  run('testTreasuryT105ActivationResidualGate', 'testTreasuryT105ActivationResidualGate()');
+  run('testTreasuryT105ActivationOutstandingAllowed', 'testTreasuryT105ActivationOutstandingAllowed()');
+  run('testTreasuryT105ActivationConfigOnlyWrite', 'testTreasuryT105ActivationConfigOnlyWrite()');
+  run('testTreasuryT105ActivationBusinessRowsUnchanged', 'testTreasuryT105ActivationBusinessRowsUnchanged()');
+  run('testTreasuryT105ActivationLedgerUnchanged', 'testTreasuryT105ActivationLedgerUnchanged()');
+  run('testTreasuryT105ActivationSalesUnchanged', 'testTreasuryT105ActivationSalesUnchanged()');
+  run('testTreasuryT105ActivationIdentityReadback', 'testTreasuryT105ActivationIdentityReadback()');
+  run('testTreasuryT105ActivationAmbiguousRecovery', 'testTreasuryT105ActivationAmbiguousRecovery()');
+  run('testTreasuryT105ActivationSourceAudit', 'testTreasuryT105ActivationSourceAudit()');
+  run('testTreasuryT105ActivationMutationSensitivity', 'JSON.stringify(runTreasuryT105ActivationMutationProof())');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
