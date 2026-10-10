@@ -30,6 +30,8 @@ var runFinanceUiLivenessController = require('./tests/browser/finance-ui-livenes
 globalThis.runFinanceUiLivenessController = runFinanceUiLivenessController;
 var runTreasuryT7OperatorController = require('./tests/browser/treasury-t7-operator-controller.js');
 globalThis.runTreasuryT7OperatorController = runTreasuryT7OperatorController;
+var runTreasuryT8ReleaseGate = require('./tests/browser/treasury-t8-release-gate.js');
+globalThis.runTreasuryT8ReleaseGate = runTreasuryT8ReleaseGate;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -462,6 +464,22 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
     'm: r.mutationFailures, anchors: r.mutationAnchorMisses}));' +
     'var summary = "T7_CONTROLLER EVIDENCE: U" + r.uChecks + " checks, L" + r.lChecks + ' +
     '" checks, mutation " + r.mutationCaught + "/" + r.mutationTotal + ", static 0 failures";' +
+    'console.log(summary); return summary;' +
+    '})()');
+
+  // TREASURY_T8: integration and release evidence gate — R1-R20 release
+  // scenarios over real T3-T7 authority paths, independent accounting oracle,
+  // global 1030 invariant, Finance/Cash-Flow/Balance parity, package
+  // manifest+hash, call-graph/duplication/forbidden-token/schema/config/
+  // account/date/RequestKey/error/cache audits, crash/recovery + concurrency
+  // matrices, and the 20/20 release mutation-sensitivity battery.
+  run('testTreasuryT8ReleaseGate', '(function() {' +
+    'var r = runTreasuryT8ReleaseGate();' +
+    'if (!r.passed) throw new Error("T8_GATE_FAILED");' +
+    'var summary = "T8_RELEASE_GATE EVIDENCE: scenarios=" + r.scenarios.checks +' +
+    ' " crashCells=" + r.crashMatrixCells + " concurrency=" + r.concurrencyCells +' +
+    ' " audits=" + r.audits + " finance=" + r.financeParityChecks +' +
+    ' " mutation=" + r.mutations.caught + "/" + r.mutations.total;' +
     'console.log(summary); return summary;' +
     '})()');
 

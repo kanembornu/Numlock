@@ -1,0 +1,601 @@
+{
+  "note": "T8 release-candidate upload fingerprint (local .claspignore allowlist; no push). Treasury 99/99A-99D + 202-204 registration is the T9 authorized upload-manifest gate (T3-T7 documented deferral, U8->U9 precedent); 'prospective' = current + those 8 files.",
+  "current": {
+    "count": 68,
+    "files": [
+      {
+        "path": "00.Project.Spec.js",
+        "sha256": "029d2c6676b6e4726f32b9459e01f68e68a0695b2a5a1342596ad0c1a676c514"
+      },
+      {
+        "path": "10.Config.js",
+        "sha256": "fba9e5a2549fb63da19aad01ff1ceaee798183a08b21e2781d3f7eb7f0c9a81e"
+      },
+      {
+        "path": "100.Code.js",
+        "sha256": "e1918a819cccea6f4d2d718d57a829fce70eed32937cbbce09a36f2b11629b51"
+      },
+      {
+        "path": "12A.Depreciation.Report.Service.js",
+        "sha256": "82d82eaae3ef51b6c4a3d39a4c72106ecd11ab07d37c1a69ff4ff31bec23b39f"
+      },
+      {
+        "path": "189.View.Tailwind.html",
+        "sha256": "633b8428bdf7389bb14336ec6f24461b0551990d35c702963ad689bee98f8eb8"
+      },
+      {
+        "path": "190.View.Index.html",
+        "sha256": "9fb4ee532783439986e9d5372df46602d425b78c7b4e10e017f5923841bf707c"
+      },
+      {
+        "path": "191.View.Diagnostics.html",
+        "sha256": "f9b37ccbc59c9f2264850f1ba08b94dd494f1b49ad8facb8852f3ab38b5f552d"
+      },
+      {
+        "path": "192.View.Transactions.State.html",
+        "sha256": "54645ca38efd65f37749c0ee4f24b962db19ef861d8b29d329b4adc58288afbf"
+      },
+      {
+        "path": "193.View.Transactions.Render.html",
+        "sha256": "ef0b9c730053ed2de03c960ba07d341ffd778bc9ba2766632f1e4f7af9d92628"
+      },
+      {
+        "path": "194.View.Transactions.Forms.html",
+        "sha256": "720c835207483715b940734dbdd79a435521573213fac84ae155799e36347b1d"
+      },
+      {
+        "path": "195.View.Transactions.Actions.html",
+        "sha256": "0ccc06bcb25c7ec4362dc7e0f39565dea95083f90b232e2239602b57087e05ad"
+      },
+      {
+        "path": "196.View.Dashboard.Render.html",
+        "sha256": "abace8f9941b81a99fc41954b6860f0d38532b4563affdcb009249c2bf43c537"
+      },
+      {
+        "path": "197.View.Dashboard.Charts.html",
+        "sha256": "3cdd88d47d067d099c3d68ec7ad467f261cac2bf80657ed71f4c653fe3915365"
+      },
+      {
+        "path": "198.View.Dashboard.Controller.html",
+        "sha256": "b40b7831886a94ad983aeee85088eef26476cbc1fb9e7ab18da59834c92b7a33"
+      },
+      {
+        "path": "199.View.Finance.State.html",
+        "sha256": "285dfb421badd51d71f71f2184e594525298b72bc1037dd566a9e029c102b6f1"
+      },
+      {
+        "path": "20.Data.Source.js",
+        "sha256": "28039acff4f12c3677c6cf953150ad36fd5a090d993feb51e6ae46153a29fd3c"
+      },
+      {
+        "path": "200.View.Finance.Render.html",
+        "sha256": "91b2fa7e7528573d9280457e36252f414d883ac7f6eaa36f22fd47faa7feb736"
+      },
+      {
+        "path": "201.View.Finance.Controller.html",
+        "sha256": "bcae151fe48adbb1f80d85aaddeffdb47b30f4f9f47074aff9fc8fe3f38c89c3"
+      },
+      {
+        "path": "21.Transaction.Entry.js",
+        "sha256": "0c94d9a8bcc4ddf73c221c1729d8399f3c4c2ea15b1ca09cd83f7655649be973"
+      },
+      {
+        "path": "22.Transaction.Lifecycle.js",
+        "sha256": "508595c545f6f0b89b24c5b1a72f30ddccabf567fdcf29d31311800ecc0fbbd9"
+      },
+      {
+        "path": "25.Data.Processor.js",
+        "sha256": "0d1bcaf243d3e4a7a6db958dda6d3c5a5fe0b850bee0ddc01f0a056441c5949e"
+      },
+      {
+        "path": "30.Analytics.Aggregate.js",
+        "sha256": "ca56c3e0b50c128032e1f85929da20b93a66240819eed19e843871b491529c54"
+      },
+      {
+        "path": "35.Analytics.Financial.js",
+        "sha256": "a1ff744e0dce8a59a19f89b4e218f3e2f318b37c9b29b0b714078c72b6610b77"
+      },
+      {
+        "path": "36.Finance.Service.js",
+        "sha256": "2a533f77f2548387c78cff89f36ec38ec99ce57841ebfc711bdd5a73b28dd437"
+      },
+      {
+        "path": "37.Depreciation.Service.js",
+        "sha256": "73ba7568c134209e4a38d55885eacd81418d1b864cf2e2bc94f52d958889b476"
+      },
+      {
+        "path": "37.Inventory.Policy.Evidence.js",
+        "sha256": "41af9e279901fa13c3474d6261a9ae55e4d4ddbfd2bed19e02e0e2a18d344055"
+      },
+      {
+        "path": "38.CapitalEquity.Service.js",
+        "sha256": "fa1aa11c109126929b7ff519a08639491ce0a752fb47483383379c8f2af0029a"
+      },
+      {
+        "path": "39.Balance.Foundation.js",
+        "sha256": "c6ee9f8360a0f97d37db62ef2c8ac5ae48c18823fe74903c2cf8c7f3b6fda509"
+      },
+      {
+        "path": "40.Analytics.Summary.js",
+        "sha256": "91fac6beb07e163aa6e169f07ed69f2550a5ec82105dff48439acf4dbb6e7dc7"
+      },
+      {
+        "path": "40.Cash.Foundation.js",
+        "sha256": "3fe9501ca80225520ebe22acd20442d2851269c6c7c9562fd3bfd5a15a947a9e"
+      },
+      {
+        "path": "40.Inventory.Conversion.Population.js",
+        "sha256": "a7709d1fb90244abe48fc949218ea48c3e7a534d6b998ee7700c3c2600d21501"
+      },
+      {
+        "path": "41.Inventory.Opening.Staging.js",
+        "sha256": "af93286ac7e64bb1bc3392614523e1d66906c5e0d2fae7a3c946f7dd2ec10824"
+      },
+      {
+        "path": "42.Inventory.Receipt.Foundation.js",
+        "sha256": "2116b5fec1c72fddc41a058f0ac93ed460c1e704f4966bee9d12f15b95c6087a"
+      },
+      {
+        "path": "43.Inventory.Receipt.Migration.js",
+        "sha256": "bf48b4ead90f20d311f2fde03ea5bec96423cb8e4266b476483582335fd191d1"
+      },
+      {
+        "path": "44.Inventory.Receipt.Operational.js",
+        "sha256": "86f54f12649ecaae4bb1ef8df5d44309ca325961b688e6cf21e30a4c905eadc1"
+      },
+      {
+        "path": "45.Analytics.Trend.js",
+        "sha256": "a9045efe4d4de36993b2bec2c3de9f962c06f11bd53af3b32cf07855df824000"
+      },
+      {
+        "path": "45.Inventory.Receipt.Orchestration.js",
+        "sha256": "97b4fba35a9d9b6144446cdf607a72fc9b7e9c328f3a945f4507308c93b97673"
+      },
+      {
+        "path": "46.Expense.Purchase.Policy.js",
+        "sha256": "6ca8c09ec1fb99a37645de875eea3d46e4361ebbc387825601d1a4c17e576024"
+      },
+      {
+        "path": "47.Purchase.Events.js",
+        "sha256": "e68333b48190957e7eaa40c8ae1f08e9489b2fa70d8a5324d1d68c0a2fe6c4aa"
+      },
+      {
+        "path": "48.Purchase.Events.Migration.js",
+        "sha256": "1d7df0fa49524dd5b2fbc820f2a9d63823a987a31b23f7cb00ac610ea231d9d5"
+      },
+      {
+        "path": "50.Analytics.Product.js",
+        "sha256": "0f5665de05ff01b7706fbb370645febb3f102364dcb47c744ee9c3e04b74d51b"
+      },
+      {
+        "path": "55.Analytics.Expense.js",
+        "sha256": "fec3d501e529ec3538b7328b1abc9eca2161f732a4f2daf02dc472e88e2ed0f5"
+      },
+      {
+        "path": "60.Intelligence.Revenue.js",
+        "sha256": "ab2481474f8a667188b22f1658c44df61c639f9fbd99b06eca9750c69fb9bc6b"
+      },
+      {
+        "path": "65.Intelligence.Profit.js",
+        "sha256": "73d62ebd3f9a27ee9cba97c0285988eae14599962459e4ae88e18f7d6ba2c750"
+      },
+      {
+        "path": "70.Intelligence.Score.js",
+        "sha256": "b75a0c64564649e116777344f23021b73d6e2fad508f792485df920224f8ab37"
+      },
+      {
+        "path": "75.Intelligence.Diagnosis.js",
+        "sha256": "0dba26678651c5d1aeca8139ffee564d43af3e91cd6f3c70eed6bb88be1a0c3b"
+      },
+      {
+        "path": "80.Intelligence.Recommendation.js",
+        "sha256": "bc33e092f84cc3266505b951a9e5b4b16965292bd321151514dd0f60d0fe64a9"
+      },
+      {
+        "path": "85.Intelligence.Decision.js",
+        "sha256": "fedd64bc88e1b686d915f33ea1df46159bbae3659c96055c08f638efcd92f196"
+      },
+      {
+        "path": "90.Dashboard.DateRange.js",
+        "sha256": "ac79039c3edbb6c92d17ede4e7b14d672993c978867bcd71032a824d97b09d9a"
+      },
+      {
+        "path": "90.Dashboard.Quality.js",
+        "sha256": "853715f906a26a32ab26db57ce2c7c5bfa0c9c8be725fd61bfe644cdb1bd44be"
+      },
+      {
+        "path": "90.Dashboard.Reporting.js",
+        "sha256": "d08d893d50b609f4b9d7aca107cf54a0647418a192f36f8d47717f58255d81be"
+      },
+      {
+        "path": "90.Dashboard.Service.js",
+        "sha256": "9cb94743a9057d30aed4f05e774c944f50ec34129e70c27ded0d3b0d31475c27"
+      },
+      {
+        "path": "91.Transactions.Query.js",
+        "sha256": "00085fee30bf9ef11655104dfa2cc7358e0b4506a50c2754a52dc06e04a880d8"
+      },
+      {
+        "path": "92.Products.Domain.js",
+        "sha256": "405831706f4cc56ac992dbef8370e95913b4ad3099654a5eebfbd7871c037b25"
+      },
+      {
+        "path": "93.Master.WritePolicy.js",
+        "sha256": "924c04749bde36c5edd414089013efedca44f3a54f3ba1d1be23530d4ba069d5"
+      },
+      {
+        "path": "94.Supplier.Master.js",
+        "sha256": "ac1c4e9d254ac40dfe0ea15d8017d134f7cc587502becaab1ace1bec785e4da8"
+      },
+      {
+        "path": "95.Transaction.Operational.js",
+        "sha256": "708cbd5f4a3d423f342357e5e2618ab01d0e9903014fc94ab2c44df801d37613"
+      },
+      {
+        "path": "95A.Transaction.Production.js",
+        "sha256": "3ee4d80e3bd5290b6751c6977c24958a4686448d5e8aa2767821cb4f6cb3bf49"
+      },
+      {
+        "path": "97.Inventory.Receipt.Operational.Runtime.Proof.js",
+        "sha256": "80c20e163e94039d59b86723c0acf1b2ef3392db6bc5e5e4aad54dca93fbbc9b"
+      },
+      {
+        "path": "97.Inventory.Receipt.Runtime.Proof.js",
+        "sha256": "3d841785928dfff2a6e03903ba18dd5dcc77e5256a55c69c2ffc3267a79c49fd"
+      },
+      {
+        "path": "97.SalesRecognition.V2.Foundation.js",
+        "sha256": "decb6318964df82cfe8adc56cb791341e6b76324463792f8b05c8c856ac7ddd0"
+      },
+      {
+        "path": "97A.SalesRecognition.V2.Save.js",
+        "sha256": "b3f33b05030062b3b3d3ad00b53cdad66f3d71a400e63b8b42680a5a43862309"
+      },
+      {
+        "path": "97B.SalesRecognition.V2.Projection.js",
+        "sha256": "1265bdad790b6065096254aefe6ec87c73fb020adbeb47f031004e6c21d289a0"
+      },
+      {
+        "path": "97C.SalesRecognition.V2.Correction.js",
+        "sha256": "d62d12afbebf5dc5d8a660ab33319e99207a5395c591ef1c728d48c23213beab"
+      },
+      {
+        "path": "97D.SalesRecognition.V2.OperatorGuard.js",
+        "sha256": "e1a0acfadbf74d701dd3505aa947276df450d871d93712b22e25525af08abf24"
+      },
+      {
+        "path": "97E.SalesRecognition.V2.Activation.js",
+        "sha256": "fcbd3404cadd756e3f13be5be8636c1d5839c4a494d4137a4c20af82b3edb008"
+      },
+      {
+        "path": "98.Tests.Runner.js",
+        "sha256": "7f26f247fe63ddac4a2e2e27af5a57253d4c99b377a14b63b21655d0905f6016"
+      },
+      {
+        "path": "appsscript.json",
+        "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
+      }
+    ],
+    "aggregateHash": "9369d0b6e583afae9a72bdc4325539e7b29eacd047797c5df2c4935286050aba"
+  },
+  "prospective": {
+    "count": 76,
+    "files": [
+      {
+        "path": "00.Project.Spec.js",
+        "sha256": "029d2c6676b6e4726f32b9459e01f68e68a0695b2a5a1342596ad0c1a676c514"
+      },
+      {
+        "path": "10.Config.js",
+        "sha256": "fba9e5a2549fb63da19aad01ff1ceaee798183a08b21e2781d3f7eb7f0c9a81e"
+      },
+      {
+        "path": "100.Code.js",
+        "sha256": "e1918a819cccea6f4d2d718d57a829fce70eed32937cbbce09a36f2b11629b51"
+      },
+      {
+        "path": "12A.Depreciation.Report.Service.js",
+        "sha256": "82d82eaae3ef51b6c4a3d39a4c72106ecd11ab07d37c1a69ff4ff31bec23b39f"
+      },
+      {
+        "path": "189.View.Tailwind.html",
+        "sha256": "633b8428bdf7389bb14336ec6f24461b0551990d35c702963ad689bee98f8eb8"
+      },
+      {
+        "path": "190.View.Index.html",
+        "sha256": "9fb4ee532783439986e9d5372df46602d425b78c7b4e10e017f5923841bf707c"
+      },
+      {
+        "path": "191.View.Diagnostics.html",
+        "sha256": "f9b37ccbc59c9f2264850f1ba08b94dd494f1b49ad8facb8852f3ab38b5f552d"
+      },
+      {
+        "path": "192.View.Transactions.State.html",
+        "sha256": "54645ca38efd65f37749c0ee4f24b962db19ef861d8b29d329b4adc58288afbf"
+      },
+      {
+        "path": "193.View.Transactions.Render.html",
+        "sha256": "ef0b9c730053ed2de03c960ba07d341ffd778bc9ba2766632f1e4f7af9d92628"
+      },
+      {
+        "path": "194.View.Transactions.Forms.html",
+        "sha256": "720c835207483715b940734dbdd79a435521573213fac84ae155799e36347b1d"
+      },
+      {
+        "path": "195.View.Transactions.Actions.html",
+        "sha256": "0ccc06bcb25c7ec4362dc7e0f39565dea95083f90b232e2239602b57087e05ad"
+      },
+      {
+        "path": "196.View.Dashboard.Render.html",
+        "sha256": "abace8f9941b81a99fc41954b6860f0d38532b4563affdcb009249c2bf43c537"
+      },
+      {
+        "path": "197.View.Dashboard.Charts.html",
+        "sha256": "3cdd88d47d067d099c3d68ec7ad467f261cac2bf80657ed71f4c653fe3915365"
+      },
+      {
+        "path": "198.View.Dashboard.Controller.html",
+        "sha256": "b40b7831886a94ad983aeee85088eef26476cbc1fb9e7ab18da59834c92b7a33"
+      },
+      {
+        "path": "199.View.Finance.State.html",
+        "sha256": "285dfb421badd51d71f71f2184e594525298b72bc1037dd566a9e029c102b6f1"
+      },
+      {
+        "path": "20.Data.Source.js",
+        "sha256": "28039acff4f12c3677c6cf953150ad36fd5a090d993feb51e6ae46153a29fd3c"
+      },
+      {
+        "path": "200.View.Finance.Render.html",
+        "sha256": "91b2fa7e7528573d9280457e36252f414d883ac7f6eaa36f22fd47faa7feb736"
+      },
+      {
+        "path": "201.View.Finance.Controller.html",
+        "sha256": "bcae151fe48adbb1f80d85aaddeffdb47b30f4f9f47074aff9fc8fe3f38c89c3"
+      },
+      {
+        "path": "202.View.Treasury.State.html",
+        "sha256": "9b5c02289cddc3356b0910f00f48df7c9fad4de570a530c02e7a4a83bde7d6dc"
+      },
+      {
+        "path": "203.View.Treasury.Render.html",
+        "sha256": "9c0bb5ad6422f6799adeb2f21b82fab228b6b4f069b1d628870bc400009bdea9"
+      },
+      {
+        "path": "204.View.Treasury.Controller.html",
+        "sha256": "b096f70e2aeec310523f9a314015bad1318c5961f642d6d23ac1d6c265b6edfc"
+      },
+      {
+        "path": "21.Transaction.Entry.js",
+        "sha256": "0c94d9a8bcc4ddf73c221c1729d8399f3c4c2ea15b1ca09cd83f7655649be973"
+      },
+      {
+        "path": "22.Transaction.Lifecycle.js",
+        "sha256": "508595c545f6f0b89b24c5b1a72f30ddccabf567fdcf29d31311800ecc0fbbd9"
+      },
+      {
+        "path": "25.Data.Processor.js",
+        "sha256": "0d1bcaf243d3e4a7a6db958dda6d3c5a5fe0b850bee0ddc01f0a056441c5949e"
+      },
+      {
+        "path": "30.Analytics.Aggregate.js",
+        "sha256": "ca56c3e0b50c128032e1f85929da20b93a66240819eed19e843871b491529c54"
+      },
+      {
+        "path": "35.Analytics.Financial.js",
+        "sha256": "a1ff744e0dce8a59a19f89b4e218f3e2f318b37c9b29b0b714078c72b6610b77"
+      },
+      {
+        "path": "36.Finance.Service.js",
+        "sha256": "2a533f77f2548387c78cff89f36ec38ec99ce57841ebfc711bdd5a73b28dd437"
+      },
+      {
+        "path": "37.Depreciation.Service.js",
+        "sha256": "73ba7568c134209e4a38d55885eacd81418d1b864cf2e2bc94f52d958889b476"
+      },
+      {
+        "path": "37.Inventory.Policy.Evidence.js",
+        "sha256": "41af9e279901fa13c3474d6261a9ae55e4d4ddbfd2bed19e02e0e2a18d344055"
+      },
+      {
+        "path": "38.CapitalEquity.Service.js",
+        "sha256": "fa1aa11c109126929b7ff519a08639491ce0a752fb47483383379c8f2af0029a"
+      },
+      {
+        "path": "39.Balance.Foundation.js",
+        "sha256": "c6ee9f8360a0f97d37db62ef2c8ac5ae48c18823fe74903c2cf8c7f3b6fda509"
+      },
+      {
+        "path": "40.Analytics.Summary.js",
+        "sha256": "91fac6beb07e163aa6e169f07ed69f2550a5ec82105dff48439acf4dbb6e7dc7"
+      },
+      {
+        "path": "40.Cash.Foundation.js",
+        "sha256": "3fe9501ca80225520ebe22acd20442d2851269c6c7c9562fd3bfd5a15a947a9e"
+      },
+      {
+        "path": "40.Inventory.Conversion.Population.js",
+        "sha256": "a7709d1fb90244abe48fc949218ea48c3e7a534d6b998ee7700c3c2600d21501"
+      },
+      {
+        "path": "41.Inventory.Opening.Staging.js",
+        "sha256": "af93286ac7e64bb1bc3392614523e1d66906c5e0d2fae7a3c946f7dd2ec10824"
+      },
+      {
+        "path": "42.Inventory.Receipt.Foundation.js",
+        "sha256": "2116b5fec1c72fddc41a058f0ac93ed460c1e704f4966bee9d12f15b95c6087a"
+      },
+      {
+        "path": "43.Inventory.Receipt.Migration.js",
+        "sha256": "bf48b4ead90f20d311f2fde03ea5bec96423cb8e4266b476483582335fd191d1"
+      },
+      {
+        "path": "44.Inventory.Receipt.Operational.js",
+        "sha256": "86f54f12649ecaae4bb1ef8df5d44309ca325961b688e6cf21e30a4c905eadc1"
+      },
+      {
+        "path": "45.Analytics.Trend.js",
+        "sha256": "a9045efe4d4de36993b2bec2c3de9f962c06f11bd53af3b32cf07855df824000"
+      },
+      {
+        "path": "45.Inventory.Receipt.Orchestration.js",
+        "sha256": "97b4fba35a9d9b6144446cdf607a72fc9b7e9c328f3a945f4507308c93b97673"
+      },
+      {
+        "path": "46.Expense.Purchase.Policy.js",
+        "sha256": "6ca8c09ec1fb99a37645de875eea3d46e4361ebbc387825601d1a4c17e576024"
+      },
+      {
+        "path": "47.Purchase.Events.js",
+        "sha256": "e68333b48190957e7eaa40c8ae1f08e9489b2fa70d8a5324d1d68c0a2fe6c4aa"
+      },
+      {
+        "path": "48.Purchase.Events.Migration.js",
+        "sha256": "1d7df0fa49524dd5b2fbc820f2a9d63823a987a31b23f7cb00ac610ea231d9d5"
+      },
+      {
+        "path": "50.Analytics.Product.js",
+        "sha256": "0f5665de05ff01b7706fbb370645febb3f102364dcb47c744ee9c3e04b74d51b"
+      },
+      {
+        "path": "55.Analytics.Expense.js",
+        "sha256": "fec3d501e529ec3538b7328b1abc9eca2161f732a4f2daf02dc472e88e2ed0f5"
+      },
+      {
+        "path": "60.Intelligence.Revenue.js",
+        "sha256": "ab2481474f8a667188b22f1658c44df61c639f9fbd99b06eca9750c69fb9bc6b"
+      },
+      {
+        "path": "65.Intelligence.Profit.js",
+        "sha256": "73d62ebd3f9a27ee9cba97c0285988eae14599962459e4ae88e18f7d6ba2c750"
+      },
+      {
+        "path": "70.Intelligence.Score.js",
+        "sha256": "b75a0c64564649e116777344f23021b73d6e2fad508f792485df920224f8ab37"
+      },
+      {
+        "path": "75.Intelligence.Diagnosis.js",
+        "sha256": "0dba26678651c5d1aeca8139ffee564d43af3e91cd6f3c70eed6bb88be1a0c3b"
+      },
+      {
+        "path": "80.Intelligence.Recommendation.js",
+        "sha256": "bc33e092f84cc3266505b951a9e5b4b16965292bd321151514dd0f60d0fe64a9"
+      },
+      {
+        "path": "85.Intelligence.Decision.js",
+        "sha256": "fedd64bc88e1b686d915f33ea1df46159bbae3659c96055c08f638efcd92f196"
+      },
+      {
+        "path": "90.Dashboard.DateRange.js",
+        "sha256": "ac79039c3edbb6c92d17ede4e7b14d672993c978867bcd71032a824d97b09d9a"
+      },
+      {
+        "path": "90.Dashboard.Quality.js",
+        "sha256": "853715f906a26a32ab26db57ce2c7c5bfa0c9c8be725fd61bfe644cdb1bd44be"
+      },
+      {
+        "path": "90.Dashboard.Reporting.js",
+        "sha256": "d08d893d50b609f4b9d7aca107cf54a0647418a192f36f8d47717f58255d81be"
+      },
+      {
+        "path": "90.Dashboard.Service.js",
+        "sha256": "9cb94743a9057d30aed4f05e774c944f50ec34129e70c27ded0d3b0d31475c27"
+      },
+      {
+        "path": "91.Transactions.Query.js",
+        "sha256": "00085fee30bf9ef11655104dfa2cc7358e0b4506a50c2754a52dc06e04a880d8"
+      },
+      {
+        "path": "92.Products.Domain.js",
+        "sha256": "405831706f4cc56ac992dbef8370e95913b4ad3099654a5eebfbd7871c037b25"
+      },
+      {
+        "path": "93.Master.WritePolicy.js",
+        "sha256": "924c04749bde36c5edd414089013efedca44f3a54f3ba1d1be23530d4ba069d5"
+      },
+      {
+        "path": "94.Supplier.Master.js",
+        "sha256": "ac1c4e9d254ac40dfe0ea15d8017d134f7cc587502becaab1ace1bec785e4da8"
+      },
+      {
+        "path": "95.Transaction.Operational.js",
+        "sha256": "708cbd5f4a3d423f342357e5e2618ab01d0e9903014fc94ab2c44df801d37613"
+      },
+      {
+        "path": "95A.Transaction.Production.js",
+        "sha256": "3ee4d80e3bd5290b6751c6977c24958a4686448d5e8aa2767821cb4f6cb3bf49"
+      },
+      {
+        "path": "97.Inventory.Receipt.Operational.Runtime.Proof.js",
+        "sha256": "80c20e163e94039d59b86723c0acf1b2ef3392db6bc5e5e4aad54dca93fbbc9b"
+      },
+      {
+        "path": "97.Inventory.Receipt.Runtime.Proof.js",
+        "sha256": "3d841785928dfff2a6e03903ba18dd5dcc77e5256a55c69c2ffc3267a79c49fd"
+      },
+      {
+        "path": "97.SalesRecognition.V2.Foundation.js",
+        "sha256": "decb6318964df82cfe8adc56cb791341e6b76324463792f8b05c8c856ac7ddd0"
+      },
+      {
+        "path": "97A.SalesRecognition.V2.Save.js",
+        "sha256": "b3f33b05030062b3b3d3ad00b53cdad66f3d71a400e63b8b42680a5a43862309"
+      },
+      {
+        "path": "97B.SalesRecognition.V2.Projection.js",
+        "sha256": "1265bdad790b6065096254aefe6ec87c73fb020adbeb47f031004e6c21d289a0"
+      },
+      {
+        "path": "97C.SalesRecognition.V2.Correction.js",
+        "sha256": "d62d12afbebf5dc5d8a660ab33319e99207a5395c591ef1c728d48c23213beab"
+      },
+      {
+        "path": "97D.SalesRecognition.V2.OperatorGuard.js",
+        "sha256": "e1a0acfadbf74d701dd3505aa947276df450d871d93712b22e25525af08abf24"
+      },
+      {
+        "path": "97E.SalesRecognition.V2.Activation.js",
+        "sha256": "fcbd3404cadd756e3f13be5be8636c1d5839c4a494d4137a4c20af82b3edb008"
+      },
+      {
+        "path": "98.Tests.Runner.js",
+        "sha256": "7f26f247fe63ddac4a2e2e27af5a57253d4c99b377a14b63b21655d0905f6016"
+      },
+      {
+        "path": "99.Treasury.Receipt.Foundation.js",
+        "sha256": "35660306d26bf09645c878ff0a5df79032acd0f3ec10e7ffd599b8955831d5d1"
+      },
+      {
+        "path": "99A.Treasury.Receipt.Durable.Save.js",
+        "sha256": "430f6db741011d62ff92746f3c94d64ece7ba12872ca78f324fa0db865123844"
+      },
+      {
+        "path": "99B.Treasury.Clearing.Projection.js",
+        "sha256": "29af26db3fcec8832d09fd3ee044eceb4dd66c045d2fdbe4367a93d2ea886d20"
+      },
+      {
+        "path": "99C.Treasury.Receipt.Reversal.Correction.js",
+        "sha256": "5890fe3e540f1f8cf422df2cc4892c0cd9f245a57418d90aedc9144eaf57f3e8"
+      },
+      {
+        "path": "99D.Treasury.Operator.Api.js",
+        "sha256": "ffb7e4594da68b4f0d312ead919ba69d92790080e87c5239f4451475cfac1e08"
+      },
+      {
+        "path": "appsscript.json",
+        "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
+      }
+    ],
+    "aggregateHash": "38b053297c2ed5ff3e70d97f499dc7eac125b2bd12a8d6d4bf28deaa3ffa4125"
+  },
+  "treasuryRuntimePendingRegistration": [
+    "99.Treasury.Receipt.Foundation.js",
+    "99A.Treasury.Receipt.Durable.Save.js",
+    "99B.Treasury.Clearing.Projection.js",
+    "99C.Treasury.Receipt.Reversal.Correction.js",
+    "99D.Treasury.Operator.Api.js",
+    "202.View.Treasury.State.html",
+    "203.View.Treasury.Render.html",
+    "204.View.Treasury.Controller.html"
+  ]
+}
