@@ -70,7 +70,13 @@ function t8BuildPackageManifest_() {
     t8Check("PKG_FORBIDDEN_INCLUDE", !forbidden.test(path), path);
   });
   var current = t8ManifestFor_(allowlist);
-  t8Check("PKG_CURRENT_COUNT", current.count === 68, String(current.count));
+  // T9 upload-manifest gate: the eight T3-T7 Treasury runtime files are now
+  // REGISTERED (U8->U9 precedent). Pre-T9 count was 68; the closure is 76 and
+  // the prospective set equals the current set.
+  t8Check("PKG_CURRENT_COUNT", current.count === 76, String(current.count));
+  t8Check("PKG_TREASURY_REGISTERED", T8_TREASURY_RUNTIME.every(function(path) {
+    return allowlist.indexOf(path) !== -1;
+  }), "Treasury runtime files must be registered after the T9 gate");
   var prospectivePaths = allowlist.concat(T8_TREASURY_RUNTIME.filter(function(path) {
     return allowlist.indexOf(path) === -1;
   })).sort();
@@ -89,9 +95,10 @@ function t8BuildPackageManifest_() {
     return e.path.indexOf("tests/") !== 0 && e.path.indexOf("docs/") !== 0;
   }));
   var artifact = {
-    note: "T8 release-candidate upload fingerprint (local .claspignore allowlist; no push). " +
-      "Treasury 99/99A-99D + 202-204 registration is the T9 authorized upload-manifest " +
-      "gate (T3-T7 documented deferral, U8->U9 precedent); 'prospective' = current + those 8 files.",
+    note: "T9 upload-manifest state (local .claspignore allowlist; no push). " +
+      "The eight Treasury runtime files (99/99A-99D + 202-204) are REGISTERED " +
+      "per the T9 authorized gate (T3-T7 documented deferral, U8->U9 precedent); " +
+      "'prospective' = current + any still-pending Treasury files (none after T9).",
     current: current,
     prospective: prospective,
     treasuryRuntimePendingRegistration: T8_TREASURY_RUNTIME

@@ -32,8 +32,11 @@ var runTreasuryT7OperatorController = require('./tests/browser/treasury-t7-opera
 globalThis.runTreasuryT7OperatorController = runTreasuryT7OperatorController;
 var runTreasuryT8ReleaseGate = require('./tests/browser/treasury-t8-release-gate.js');
 globalThis.runTreasuryT8ReleaseGate = runTreasuryT8ReleaseGate;
+var runTreasuryT9PreparationMutationProof = require('./tests/browser/treasury-t9-preparation-mutation-proof.js');
+globalThis.runTreasuryT9PreparationMutationProof = runTreasuryT9PreparationMutationProof;
 
 globalThis.Logger = { log: function() {} };
+globalThis.fs = require('fs');
 globalThis.Utilities = {
   getUuid: function() { return 'test-uuid-000000000000000000000000'; },
   formatDate: function(d, tz, fmt) { return d.toISOString().slice(0, 19) + '.000Z'; }
@@ -115,6 +118,7 @@ var files = [
   '99B.Treasury.Clearing.Projection.js',
   '99C.Treasury.Receipt.Reversal.Correction.js',
   '99D.Treasury.Operator.Api.js',
+  '100.Code.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -140,7 +144,8 @@ var files = [
   '96.Tests.Treasury.Receipt.Durable.Save.Cases.js',
   '96.Tests.Treasury.Clearing.Projection.Cases.js',
   '96.Tests.Treasury.Receipt.Lifecycle.Cases.js',
-  '96.Tests.Treasury.Operator.Cases.js'
+  '96.Tests.Treasury.Operator.Cases.js',
+  '96.Tests.Treasury.Receipt.Preparation.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -482,6 +487,29 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
     ' " mutation=" + r.mutations.caught + "/" + r.mutations.total;' +
     'console.log(summary); return summary;' +
     '})()');
+
+  // TREASURY_T9: production preparation gate — create-if-absent Treasury
+  // sheets with the exact T3 headers, PREPARED-only config establishment,
+  // fail-closed schema/account/config refusals, idempotent second run, exact
+  // package registration + 20-point sensitivity proof. In-memory fixtures
+  // only: no production access, no clasp, no writes outside fixture memory.
+  run('testTreasuryT9PreparationCore', 'testTreasuryT9PreparationCore()');
+  run('testTreasuryT9PreparationPartial', 'testTreasuryT9PreparationPartial()');
+  run('testTreasuryT9PreparationConfigOnly', 'testTreasuryT9PreparationConfigOnly()');
+  run('testTreasuryT9PreparationSchemaConflict', 'testTreasuryT9PreparationSchemaConflict()');
+  run('testTreasuryT9PreparationIdempotent', 'testTreasuryT9PreparationIdempotent()');
+  run('testTreasuryT9PreparationMalformedConfig', 'testTreasuryT9PreparationMalformedConfig()');
+  run('testTreasuryT9PreparationUnexpectedMode', 'testTreasuryT9PreparationUnexpectedMode()');
+  run('testTreasuryT9PreparationAccountReadiness', 'testTreasuryT9PreparationAccountReadiness()');
+  run('testTreasuryT9PreparationCashFlowGroupGate', 'testTreasuryT9PreparationCashFlowGroupGate()');
+  run('testTreasuryT9PreparationCreateFailure', 'testTreasuryT9PreparationCreateFailure()');
+  run('testTreasuryT9PreparationZeroBusinessRows', 'testTreasuryT9PreparationZeroBusinessRows()');
+  run('testTreasuryT9PreparationConfigClassification', 'testTreasuryT9PreparationConfigClassification()');
+  run('testTreasuryT9PreparationPreparedRefusal', 'testTreasuryT9PreparationPreparedRefusal()');
+  run('testTreasuryT9PackageRegistration', 'testTreasuryT9PackageRegistration()');
+  run('testTreasuryT9PreparationSourceAudit', 'testTreasuryT9PreparationSourceAudit()');
+  run('testTreasuryT9DeploymentOrder', 'testTreasuryT9DeploymentOrder()');
+  run('testTreasuryT9MutationSensitivity', 'JSON.stringify(runTreasuryT9PreparationMutationProof())');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

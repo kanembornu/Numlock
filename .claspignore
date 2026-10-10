@@ -67,3 +67,11 @@
 !199.View.Finance.State.html
 !200.View.Finance.Render.html
 !201.View.Finance.Controller.html
+!99.Treasury.Receipt.Foundation.js
+!99A.Treasury.Receipt.Durable.Save.js
+!99B.Treasury.Clearing.Projection.js
+!99C.Treasury.Receipt.Reversal.Correction.js
+!99D.Treasury.Operator.Api.js
+!202.View.Treasury.State.html
+!203.View.Treasury.Render.html
+!204.View.Treasury.Controller.html
