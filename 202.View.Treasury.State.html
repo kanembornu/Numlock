@@ -1,0 +1,69 @@
+    // Treasury T7 operator surface state (client). READ AUTHORITY: T5 via the
+    // server workspace/detail endpoints only — this client never recomputes
+    // recognized/cleared/outstanding, ReceiptStatus, or quality.
+    let treasuryState = {
+      view: "list", // list | saveForm | saveReview | done | detail | reverse | reverseReview | correct | correctReview
+      workspace: null,
+      detail: null,
+      selectedRecognitionID: "",
+      form: { destinationAccountCode: "", receiptDate: "", evidenceRef: "" },
+      correct: { destinationAccountCode: "", receiptDate: "", evidenceRef: "", reason: "" },
+      reverseReason: "",
+      action: null, // single-flight mutation: { kind, requestKey, payload, dispatchId, phase, result, detail }
+      read: { phase: "init", error: null }, // init | loading | ready | error
+      requestSequence: 0,
+      hasLoaded: false
+    };
+    let treasuryElementCache = {};
+    // In-flight READ markers per kind ("workspace" | "detail"): { requestId, startedAt }.
+    let treasuryReadInflight = {};
+
+    // Read staleness bound (Finance incident precedent class) — a lost read
+    // callback must surface a recoverable failure, never an immortal spinner.
+    const TREASURY_READ_STALE_TIMEOUT_MS = 60000;
+    // Mutation staleness bound: a lost mutation callback becomes the UNKNOWN
+    // recovery state (same RequestKey), never a new transaction.
+    const TREASURY_MUTATION_STALE_TIMEOUT_MS = 120000;
+    const TREASURY_RECOVERY_STORAGE_KEY = "numlock.treasury.mutationRecovery";
+
+    function getTreasuryElement(id) {
+      if (!treasuryElementCache[id]) treasuryElementCache[id] = document.getElementById(id);
+      if (!treasuryElementCache[id]) throw new Error("Required Treasury element missing: #" + id);
+      return treasuryElementCache[id];
+    }
+
+    // RequestKey lifecycle: generated ONCE per operator intent, survives
+    // disable/delay/UNKNOWN/retry, never regenerated on uncertainty.
+    function treasuryNewRequestKey_(kind) {
+      return "t7" + kind + "-" + String(Date.now()) + "-" + Math.random().toString(36).slice(2);
+    }
+
+    // Persisted intent for the active app session: an UNKNOWN mutation keeps
+    // its identity across navigation/re-entry (session-scoped, Purchase
+    // recovery precedent; no local persistent store for Treasury).
+    function persistTreasuryRecovery_() {
+      try {
+        var action = treasuryState.action;
+        if (action && action.phase === "unknown") {
+          sessionStorage.setItem(TREASURY_RECOVERY_STORAGE_KEY, JSON.stringify({
+            kind: action.kind, requestKey: action.requestKey, payload: action.payload
+          }));
+        } else {
+          sessionStorage.removeItem(TREASURY_RECOVERY_STORAGE_KEY);
+        }
+      } catch (error) { /* session store unavailable: in-memory intent only */ }
+    }
+
+    function loadTreasuryRecovery_() {
+      try {
+        var raw = sessionStorage.getItem(TREASURY_RECOVERY_STORAGE_KEY);
+        if (!raw) return null;
+        var parsed = JSON.parse(raw);
+        if (!parsed || !parsed.requestKey || !parsed.payload || !parsed.kind) return null;
+        return parsed;
+      } catch (error) { return null; }
+    }
+
+    function clearTreasuryRecovery_() {
+      try { sessionStorage.removeItem(TREASURY_RECOVERY_STORAGE_KEY); } catch (error) {}
+    }

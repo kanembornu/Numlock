@@ -570,7 +570,10 @@ function runSalesV2U10COperatorSurface() {
   ok("AUD-17", (actionsSource.match(/completeSalesV2OperatorSave_\(/g) || []).length === 3 &&
     successRegion.indexOf("if (!salesV2ActiveSurface_()) return;") !== -1 &&
     successRegion.indexOf('successActions.innerHTML') !== -1);
-  ok("AUD-18", [indexSource, formsSource, actionsSource, productionSource].every(function(source) {
+  // T7: the 190 shell now hosts the dedicated Treasury module (nav + page),
+  // so the Sales-surface isolation check is scoped to the Sales entry dialog
+  // markup (not the whole shell) plus the Sales forms/actions/production.
+  ok("AUD-18", [parseEntryElements_(indexSource).markup, formsSource, actionsSource, productionSource].every(function(source) {
     return source.indexOf("Treasury") === -1 && source.indexOf('"2010"') === -1;
   }));
 

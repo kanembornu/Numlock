@@ -1,0 +1,371 @@
+    // Treasury T7 render layer. All values rendered here are SERVER values
+    // (T5 projection / T3 destinations / T4-T6 results) — presentation only.
+
+    function treasuryStatusLabel_(status) {
+      return status === "CLEARED" ? "Cleared" : status === "UNCLEARED" ? "Uncleared" :
+        status === "EXCEPTION" ? "Exception" : String(status || "");
+    }
+
+    function treasuryFormatAmount_(value) {
+      return formatDashboardSummaryCurrency(value);
+    }
+
+    function syncTreasuryBusy_() {
+      var readBusy = Object.keys(treasuryReadInflight).length > 0;
+      var busy = readBusy || treasuryState.read.phase === "loading" ||
+        (treasuryState.action && treasuryState.action.phase === "inflight");
+      getTreasuryElement("treasury").setAttribute("aria-busy", busy ? "true" : "false");
+    }
+
+    function setTreasuryViewState(state, message) {
+      treasuryState.read.phase = state;
+      treasuryState.read.error = state === "error" ? (message || "Unable to load receipts.") : null;
+      var text = getTreasuryElement("treasuryStatusText");
+      var retry = getTreasuryElement("treasuryRetryButton");
+      if (state === "loading") {
+        text.innerText = "Loading receipts…";
+        retry.hidden = true;
+      } else if (state === "error") {
+        text.innerText = treasuryState.read.error;
+        retry.hidden = false;
+      } else if (state === "empty") {
+        text.innerText = "Receipts loaded.";
+        retry.hidden = true;
+      } else {
+        text.innerText = "Receipts loaded from the canonical projection.";
+        retry.hidden = true;
+      }
+      syncTreasuryBusy_();
+    }
+
+    // Action (mutation) status region: in-flight / UNKNOWN recovery wording /
+    // terminal REFUSED/CONFLICT codes. Never implies completion before a
+    // server DONE, and the UNKNOWN wording never suggests a new transaction.
+    function renderTreasuryActionStatus_() {
+      var region = getTreasuryElement("treasuryActionStatus");
+      var text = getTreasuryElement("treasuryActionStatusText");
+      var retry = getTreasuryElement("treasuryActionRetryButton");
+      var action = treasuryState.action;
+      if (!action) {
+        region.hidden = true;
+        text.innerText = "";
+        retry.hidden = true;
+        syncTreasuryBusy_();
+        return;
+      }
+      region.hidden = false;
+      retry.hidden = action.phase !== "unknown";
+      if (action.phase === "inflight") {
+        text.innerText = action.kind === "save" ? "Saving receipt…" :
+          action.kind === "reverse" ? "Reversing receipt…" : "Correcting receipt…";
+      } else if (action.phase === "unknown") {
+        text.innerText = "Receipt status is being verified. Retry verification without creating a new receipt.";
+      } else if (action.phase === "failed") {
+        text.innerText = "Request " + String(action.requestKey || "") + " refused (" +
+          String((action.result && action.result.code) || action.errorCode || "REFUSED") +
+          "). Review the receipt and try again.";
+      } else {
+        text.innerText = "";
+        retry.hidden = true;
+      }
+      syncTreasuryBusy_();
+    }
+
+    var treasuryViewPanels_ = {
+      list: "treasuryListView",
+      saveForm: "treasurySaveFormView",
+      saveReview: "treasurySaveReviewView",
+      done: "treasuryDoneView",
+      detail: "treasuryDetailView",
+      reverse: "treasuryReverseView",
+      reverseReview: "treasuryReverseReviewView",
+      correct: "treasuryCorrectView",
+      correctReview: "treasuryCorrectReviewView"
+    };
+
+    function renderTreasuryView_() {
+      Object.keys(treasuryViewPanels_).forEach(function(view) {
+        getTreasuryElement(treasuryViewPanels_[view]).hidden = treasuryState.view !== view;
+      });
+      if (treasuryState.view === "list") renderTreasuryList_();
+      else if (treasuryState.view === "saveForm") renderTreasuryForm_();
+      else if (treasuryState.view === "saveReview") renderTreasuryReview_();
+      else if (treasuryState.view === "done") renderTreasuryDone_();
+      else if (treasuryState.view === "detail") renderTreasuryDetail_();
+      else if (treasuryState.view === "reverse") renderTreasuryReverse_();
+      else if (treasuryState.view === "reverseReview") renderTreasuryReverseReview_();
+      else if (treasuryState.view === "correct") renderTreasuryCorrect_();
+      else if (treasuryState.view === "correctReview") renderTreasuryCorrectReview_();
+      renderTreasuryActionStatus_();
+      syncTreasuryBusy_();
+    }
+
+    function renderTreasuryReconciliation_() {
+      var workspace = treasuryState.workspace;
+      var container = getTreasuryElement("treasuryReconciliation");
+      if (!workspace || !workspace.reconciliation) { container.hidden = true; return; }
+      container.hidden = false;
+      var recon = workspace.reconciliation;
+      getTreasuryElement("treasuryLedger1030").innerText = treasuryFormatAmount_(recon.ledgerNet1030);
+      getTreasuryElement("treasuryOutstandingExposure").innerText = treasuryFormatAmount_(recon.outstandingTotal);
+      getTreasuryElement("treasuryExplicitExceptions").innerText = treasuryFormatAmount_(recon.explicitExceptionAmount);
+      getTreasuryElement("treasuryUnexplainedResidual").innerText = treasuryFormatAmount_(recon.unexplainedResidual);
+      getTreasuryElement("treasuryReconciliationStatus").innerText =
+        "Target Rp 0 · Status " + String(recon.reconciliationStatus || "");
+      var warning = getTreasuryElement("treasuryReconciliationWarning");
+      var residual = Number(recon.unexplainedResidual);
+      if (recon.reconciliationStatus === "OK" && residual === 0) {
+        warning.hidden = true;
+        warning.innerText = "";
+      } else {
+        // Nonzero residual / malformed 1030 line: visible warning, NO fix
+        // action — reconciliation repair is never a client operation.
+        warning.hidden = false;
+        warning.innerText = recon.reconciliationStatus === "MALFORMED_1030_LINE" ?
+          "Ledger 1030 contains malformed lines. Status " + recon.reconciliationStatus +
+            " — review required. Residual target Rp 0." :
+          "Unexplained residual " + treasuryFormatAmount_(residual) +
+            " differs from target Rp 0 (" + String(recon.reconciliationStatus || "") +
+            ") — review required.";
+      }
+    }
+
+    function renderTreasuryList_() {
+      renderTreasuryReconciliation_();
+      var workspace = treasuryState.workspace;
+      var body = getTreasuryElement("treasuryListBody");
+      var rows = workspace && workspace.receipts && Array.isArray(workspace.receipts.rows) ?
+        workspace.receipts.rows : [];
+      var capabilities = (workspace && workspace.capabilities) || {};
+      getTreasuryElement("treasuryTableCard").hidden = rows.length === 0;
+      getTreasuryElement("treasuryEmptyNotice").hidden = rows.length !== 0;
+      body.innerHTML = rows.map(function(row) {
+        var capability = capabilities[String(row.RecognitionID)] ||
+          { canSave: false, canReverse: false, canCorrect: false, actionReason: "EXPOSURE_NOT_FOUND" };
+        var actions = "";
+        if (capability.canSave === true) {
+          actions += '<button type="button" class="rounded-lg border px-2 py-1 text-sm font-semibold" onclick="openTreasuryForm(\'' +
+            escapeUiHtml(row.RecognitionID) + '\')">New Receipt</button> ';
+        }
+        actions += '<button type="button" class="rounded-lg border px-2 py-1 text-sm font-semibold" onclick="openTreasuryDetail(\'' +
+          escapeUiHtml(row.RecognitionID) + '\')">View</button>';
+        return "<tr>" +
+          '<td class="px-4 text-left">' + escapeUiHtml(row.OrderID) + "</td>" +
+          '<td class="px-4 text-left font-mono text-xs">' + escapeUiHtml(row.RecognitionID) + "</td>" +
+          '<td class="px-4 text-center">' + escapeUiHtml(row.SalesEconomicDate) + "</td>" +
+          '<td class="px-4 text-right">' + escapeUiHtml(treasuryFormatAmount_(row.RecognizedAmount)) + "</td>" +
+          '<td class="px-4 text-right">' + escapeUiHtml(treasuryFormatAmount_(row.ClearedAmount)) + "</td>" +
+          '<td class="px-4 text-right">' + escapeUiHtml(treasuryFormatAmount_(row.OutstandingAmount)) + "</td>" +
+          '<td class="px-4 text-center">' + escapeUiHtml(treasuryStatusLabel_(row.ClearingStatus)) + "</td>" +
+          '<td class="px-2 text-center whitespace-nowrap">' + actions + "</td>" +
+          "</tr>";
+      }).join("");
+    }
+
+    function renderTreasuryDestinationOptions_(select, selectedCode) {
+      var workspace = treasuryState.workspace;
+      var destinations = (workspace && workspace.destinations) || [];
+      var options = ['<option value="">Select destination</option>'];
+      destinations.forEach(function(destination) {
+        var label = String(destination.accountName || "") !== "" ?
+          destination.accountName + " (" + destination.accountCode + ")" : destination.accountCode;
+        options.push('<option value="' + escapeUiHtml(destination.accountCode) + '"' +
+          (destination.accountCode === selectedCode ? " selected" : "") + ">" +
+          escapeUiHtml(label) + "</option>");
+      });
+      select.innerHTML = options.join("");
+    }
+
+    function renderTreasuryForm_() {
+      var row = treasurySelectedRow_();
+      if (!row) return;
+      getTreasuryElement("treasuryFormRecognitionRef").innerText = String(row.RecognitionID || "");
+      getTreasuryElement("treasuryFormOrderRef").innerText = String(row.OrderID || "");
+      // Amount UX: canonical OutstandingAmount, locked — never editable,
+      // never partially payable (server validates the exact amount).
+      getTreasuryElement("treasuryFormAmount").innerText = treasuryFormatAmount_(row.OutstandingAmount);
+      var destination = getTreasuryElement("treasuryDestination");
+      renderTreasuryDestinationOptions_(destination, treasuryState.formSeed ?
+        treasuryState.form.destinationAccountCode : (destination.value || treasuryState.form.destinationAccountCode));
+      if (treasuryState.formSeed) {
+        // Seed once per open; later re-renders never clobber operator input.
+        getTreasuryElement("treasuryReceiptDate").value = treasuryState.form.receiptDate || "";
+        getTreasuryElement("treasuryEvidenceRef").value = treasuryState.form.evidenceRef || "";
+        treasuryState.formSeed = false;
+      }
+      var error = getTreasuryElement("treasuryFormError");
+      error.hidden = !treasuryState.formError;
+      error.innerText = treasuryState.formError || "";
+    }
+
+    function renderTreasuryReview_() {
+      var row = treasurySelectedRow_();
+      if (!row) return;
+      var form = treasuryState.form;
+      getTreasuryElement("treasuryReviewRecognitionRef").innerText = String(row.RecognitionID || "");
+      getTreasuryElement("treasuryReviewAmount").innerText = treasuryFormatAmount_(row.OutstandingAmount);
+      getTreasuryElement("treasuryReviewDestination").innerText = treasuryDestinationLabel_(form.destinationAccountCode);
+      getTreasuryElement("treasuryReviewReceiptDate").innerText = String(form.receiptDate || "");
+      getTreasuryElement("treasuryReviewEvidenceRef").innerText = String(form.evidenceRef || "");
+      var saveButton = getTreasuryElement("treasurySaveButton");
+      var action = treasuryState.action;
+      saveButton.disabled = action !== null;
+    }
+
+    function renderTreasuryDone_() {
+      var done = treasuryState.done || {};
+      getTreasuryElement("treasuryDoneReceiptRef").innerText = String(done.receiptID || "");
+      getTreasuryElement("treasuryDoneAmount").innerText = treasuryFormatAmount_(done.amount);
+      getTreasuryElement("treasuryDoneDestination").innerText = treasuryDestinationLabel_(done.destinationAccountCode);
+      getTreasuryElement("treasuryDoneReceiptDate").innerText = String(done.receiptDate || "");
+      // Status comes ONLY from the immediate T5 reread — never inferred from
+      // the T4 DONE response alone.
+      var statusText;
+      if (done.verified) statusText = treasuryStatusLabel_(done.clearingStatus);
+      else if (done.verifyFailed) statusText = "Verification failed — retry verification.";
+      else statusText = "Being verified…";
+      getTreasuryElement("treasuryDoneStatus").innerText = statusText;
+      getTreasuryElement("treasuryDoneVerifyButton").hidden = done.verified === true;
+      getTreasuryElement("treasuryDoneVerifyButton").disabled = done.verifying === true;
+      getTreasuryElement("treasuryDoneButton").disabled = done.verifying === true;
+    }
+
+    function renderTreasuryDetail_() {
+      var detail = treasuryState.detail;
+      if (!detail) return;
+      var content = getTreasuryElement("treasuryDetailContent");
+      var html = [];
+      if (detail.status !== "OK") {
+        html.push('<p class="text-sm text-red-700" role="alert">This exposure is ' +
+          escapeUiHtml(String(detail.status).toLowerCase()) +
+          " — no ordinary receipt actions are available.</p>");
+      } else {
+        var exposure = detail.exposure || {};
+        html.push('<dl class="text-sm" aria-label="Exposure">');
+        html.push('<div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Recognition</dt><dd class="font-mono text-xs">' +
+          escapeUiHtml(exposure.RecognitionID) + "</dd></div>");
+        html.push('<div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Reference</dt><dd>' +
+          escapeUiHtml(exposure.OrderID) + "</dd></div>");
+        html.push('<div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Sales Economic Date</dt><dd>' +
+          escapeUiHtml(exposure.SalesEconomicDate) + "</dd></div>");
+        html.push('<div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Outstanding</dt><dd>' +
+          escapeUiHtml(treasuryFormatAmount_(exposure.OutstandingAmount)) + "</dd></div>");
+        html.push('<div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Clearing Status</dt><dd>' +
+          escapeUiHtml(treasuryStatusLabel_(exposure.ClearingStatus)) + "</dd></div>");
+        html.push('<div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Quality</dt><dd>' +
+          escapeUiHtml((Array.isArray(exposure.QualityCodes) && exposure.QualityCodes.length) ?
+            exposure.QualityCodes.join(", ") : "None") + "</dd></div>");
+        html.push("</dl>");
+        var receipts = Array.isArray(detail.receipts) ? detail.receipts : [];
+        html.push('<h3 class="mt-3 text-xs font-bold uppercase tracking-wide ui-theme-muted">Receipts</h3>');
+        receipts.forEach(function(receipt) {
+          html.push('<dl class="mt-1 text-sm" aria-label="Receipt ' + escapeUiHtml(receipt.treasuryReceiptID) + '">');
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Receipt ID</dt><dd class="font-mono text-xs">' +
+            escapeUiHtml(receipt.treasuryReceiptID) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Type / Role</dt><dd>' +
+            escapeUiHtml(receipt.receiptType) + " · " + escapeUiHtml(receipt.lineageRole) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Receipt Status</dt><dd>' +
+            escapeUiHtml(receipt.receiptStatus) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Amount</dt><dd>' +
+            escapeUiHtml(treasuryFormatAmount_(receipt.grossAmount)) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Destination</dt><dd>' +
+            escapeUiHtml(treasuryDestinationLabel_(receipt.destinationAccountCode)) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Receipt Date</dt><dd>' +
+            escapeUiHtml(receipt.receiptDate) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Evidence Reference</dt><dd>' +
+            escapeUiHtml(receipt.evidenceRef) + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Operation State</dt><dd>' +
+            escapeUiHtml(receipt.operationState || "—") + "</dd></div>");
+          html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Journal Reference</dt><dd class="font-mono text-xs">' +
+            escapeUiHtml(receipt.journalID) + "</dd></div>");
+          if (receipt.reason) {
+            html.push('<div class="flex justify-between gap-4 border-b py-1"><dt class="ui-theme-muted">Reason</dt><dd>' +
+              escapeUiHtml(receipt.reason) + "</dd></div>");
+          }
+          html.push("</dl>");
+        });
+        if (receipts.length === 0) {
+          html.push('<p class="mt-2 text-sm ui-theme-secondary">No receipts exist for this exposure yet.</p>');
+        }
+      }
+      content.innerHTML = html.join("");
+      var capabilities = detail.capabilities || {};
+      var actionReason = getTreasuryElement("treasuryDetailActionReason");
+      var canReverse = capabilities.canReverse === true;
+      var canCorrect = capabilities.canCorrect === true;
+      getTreasuryElement("treasuryReverseOpenButton").hidden = !canReverse;
+      getTreasuryElement("treasuryCorrectOpenButton").hidden = !canCorrect;
+      var row = treasurySelectedRow_();
+      var canSave = !!(treasuryState.workspace &&
+        treasuryState.workspace.capabilities &&
+        treasuryState.workspace.capabilities[String(detail.recognitionID)] &&
+        treasuryState.workspace.capabilities[String(detail.recognitionID)].canSave === true);
+      getTreasuryElement("treasuryDetailNewReceiptButton").hidden = !canSave || !row;
+      var showReason = detail.status === "OK" && !canReverse && !canCorrect;
+      actionReason.hidden = !showReason;
+      actionReason.innerText = showReason && capabilities.actionReason ?
+        "Actions unavailable: " + String(capabilities.actionReason) : "";
+      var inFlight = treasuryState.action !== null;
+      getTreasuryElement("treasuryReverseOpenButton").disabled = inFlight;
+      getTreasuryElement("treasuryCorrectOpenButton").disabled = inFlight;
+      getTreasuryElement("treasuryDetailNewReceiptButton").disabled = inFlight;
+    }
+
+    function renderTreasuryReverse_() {
+      if (treasuryState.reverseSeed) {
+        getTreasuryElement("treasuryReverseReason").value = treasuryState.reverseReason || "";
+        treasuryState.reverseSeed = false;
+      }
+      var error = getTreasuryElement("treasuryReverseReasonError");
+      var invalid = !treasuryReasonValid_(treasuryState.reverseReason) &&
+        treasuryState.formError === "REASON";
+      error.hidden = !invalid;
+      error.innerText = invalid ? "A reason of 3–200 characters is required." : "";
+      getTreasuryElement("treasuryReverseContinueButton").disabled = treasuryState.action !== null;
+    }
+
+    function renderTreasuryReverseReview_() {
+      var receipt = treasuryActiveReceipt_();
+      getTreasuryElement("treasuryReverseReviewReceiptRef").innerText =
+        receipt ? receipt.treasuryReceiptID : "";
+      getTreasuryElement("treasuryReverseReviewAmount").innerText =
+        receipt ? treasuryFormatAmount_(receipt.grossAmount) : "";
+      getTreasuryElement("treasuryReverseReviewReason").innerText =
+        String(treasuryState.reverseReason || "");
+      getTreasuryElement("treasuryReverseConfirmButton").disabled = treasuryState.action !== null;
+    }
+
+    function renderTreasuryCorrect_() {
+      var destination = getTreasuryElement("treasuryCorrectDestination");
+      renderTreasuryDestinationOptions_(destination, treasuryState.correctSeed ?
+        treasuryState.correct.destinationAccountCode :
+        (destination.value || treasuryState.correct.destinationAccountCode));
+      if (treasuryState.correctSeed) {
+        getTreasuryElement("treasuryCorrectDate").value = treasuryState.correct.receiptDate || "";
+        getTreasuryElement("treasuryCorrectEvidenceRef").value = treasuryState.correct.evidenceRef || "";
+        getTreasuryElement("treasuryCorrectReason").value = treasuryState.correct.reason || "";
+        treasuryState.correctSeed = false;
+      }
+      var error = getTreasuryElement("treasuryCorrectFormError");
+      error.hidden = !treasuryState.formError;
+      error.innerText = treasuryState.formError || "";
+      getTreasuryElement("treasuryCorrectContinueButton").disabled = treasuryState.action !== null;
+    }
+
+    function renderTreasuryCorrectReview_() {
+      var receipt = treasuryActiveReceipt_();
+      var correct = treasuryState.correct;
+      getTreasuryElement("treasuryCorrectReviewReceiptRef").innerText =
+        receipt ? receipt.treasuryReceiptID : "";
+      getTreasuryElement("treasuryCorrectReviewAmount").innerText =
+        receipt ? treasuryFormatAmount_(receipt.grossAmount) : "";
+      getTreasuryElement("treasuryCorrectReviewDestination").innerText =
+        treasuryDestinationLabel_(correct.destinationAccountCode);
+      getTreasuryElement("treasuryCorrectReviewReceiptDate").innerText =
+        String(correct.receiptDate || "");
+      getTreasuryElement("treasuryCorrectReviewEvidenceRef").innerText =
+        String(correct.evidenceRef || "");
+      getTreasuryElement("treasuryCorrectReviewReason").innerText =
+        String(correct.reason || "");
+      getTreasuryElement("treasuryCorrectConfirmButton").disabled = treasuryState.action !== null;
+    }

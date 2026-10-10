@@ -28,6 +28,8 @@ var runSalesV2U10COperatorSurface = require('./tests/browser/sales-v2-u10c-opera
 globalThis.runSalesV2U10COperatorSurface = runSalesV2U10COperatorSurface;
 var runFinanceUiLivenessController = require('./tests/browser/finance-ui-liveness-controller.js');
 globalThis.runFinanceUiLivenessController = runFinanceUiLivenessController;
+var runTreasuryT7OperatorController = require('./tests/browser/treasury-t7-operator-controller.js');
+globalThis.runTreasuryT7OperatorController = runTreasuryT7OperatorController;
 
 globalThis.Logger = { log: function() {} };
 globalThis.Utilities = {
@@ -110,6 +112,7 @@ var files = [
   '99A.Treasury.Receipt.Durable.Save.js',
   '99B.Treasury.Clearing.Projection.js',
   '99C.Treasury.Receipt.Reversal.Correction.js',
+  '99D.Treasury.Operator.Api.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -134,7 +137,8 @@ var files = [
   '96.Tests.Treasury.Receipt.Foundation.Cases.js',
   '96.Tests.Treasury.Receipt.Durable.Save.Cases.js',
   '96.Tests.Treasury.Clearing.Projection.Cases.js',
-  '96.Tests.Treasury.Receipt.Lifecycle.Cases.js'
+  '96.Tests.Treasury.Receipt.Lifecycle.Cases.js',
+  '96.Tests.Treasury.Operator.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -195,7 +199,12 @@ vm.runInContext([
   'var _treasuryFoundationSource = ' + JSON.stringify(fs.readFileSync('99.Treasury.Receipt.Foundation.js', 'utf8')) + ';',
   'var _treasuryDurableSource = ' + JSON.stringify(fs.readFileSync('99A.Treasury.Receipt.Durable.Save.js', 'utf8')) + ';',
   'var _treasuryClearingSource = ' + JSON.stringify(fs.readFileSync('99B.Treasury.Clearing.Projection.js', 'utf8')) + ';',
-  'var _treasuryLifecycleSource = ' + JSON.stringify(fs.readFileSync('99C.Treasury.Receipt.Reversal.Correction.js', 'utf8')) + ';'
+  'var _treasuryLifecycleSource = ' + JSON.stringify(fs.readFileSync('99C.Treasury.Receipt.Reversal.Correction.js', 'utf8')) + ';',
+  'var __t7apiSource = ' + JSON.stringify(fs.readFileSync('99D.Treasury.Operator.Api.js', 'utf8')) + ';',
+  'var __t7stateSource = ' + JSON.stringify(fs.readFileSync('202.View.Treasury.State.html', 'utf8')) + ';',
+  'var __t7renderSource = ' + JSON.stringify(fs.readFileSync('203.View.Treasury.Render.html', 'utf8')) + ';',
+  'var __t7controllerSource = ' + JSON.stringify(fs.readFileSync('204.View.Treasury.Controller.html', 'utf8')) + ';',
+  'var __t7indexSource = _htmlIndex;'
 ].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
@@ -438,6 +447,23 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT6Isolation', 'testTreasuryT6Isolation()');
   run('testTreasuryT6FailurePaths', 'testTreasuryT6FailurePaths()');
   run('testTreasuryT6MutationSensitivity', 'testTreasuryT6MutationSensitivity()');
+
+  // TREASURY_T7: operator API + application integration — thin endpoint
+  // contracts over T3-T6, U-scenario server flows with public-endpoint
+  // execution, source/call-graph audit, and the U1-U18 + liveness +
+  // 30-point mutation-sensitivity controller battery.
+  run('testTreasuryT7Endpoints', 'testTreasuryT7Endpoints()');
+  run('testTreasuryT7IntegrationFlows', 'testTreasuryT7IntegrationFlows()');
+  run('testTreasuryT7SourceAudit', 'testTreasuryT7SourceAudit()');
+  run('testTreasuryT7OperatorController', '(function() {' +
+    'var r = runTreasuryT7OperatorController();' +
+    'if (!r.passed) throw new Error("T7_CONTROLLER:" + JSON.stringify({' +
+    'static: r.staticFailures, u: r.uFailures, l: r.lFailures,' +
+    'm: r.mutationFailures, anchors: r.mutationAnchorMisses}));' +
+    'var summary = "T7_CONTROLLER EVIDENCE: U" + r.uChecks + " checks, L" + r.lChecks + ' +
+    '" checks, mutation " + r.mutationCaught + "/" + r.mutationTotal + ", static 0 failures";' +
+    'console.log(summary); return summary;' +
+    '})()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

@@ -2624,6 +2624,16 @@
           <i class="fas fa-boxes-stacked w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Products</span>
         </button>
 
+        <button
+          type="button"
+          data-page="treasury"
+          data-navigation-destination="treasury"
+          aria-label="Treasury"
+          title="Treasury"
+          class="ui-sidebar-item flex w-full items-center text-left transition">
+          <i class="fas fa-vault w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Treasury</span>
+        </button>
+
         </div>
 
         <div class="sidebar-finance-group mt-1">
@@ -3699,6 +3709,224 @@
         </section>
       </div>
 
+    <!-- TREASURY: RECEIPTS -->
+    <section id="treasury" class="page" hidden aria-labelledby="treasuryHeading" aria-busy="false">
+      <header class="sr-only">
+        <div class="min-w-0">
+          <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Verified receipt clearing</p>
+          <h1 id="treasuryHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Treasury</h1>
+          <p id="treasuryDescription" class="mt-1 text-sm ui-theme-secondary">Receipts over outstanding sales exposure, reconciled to ledger account 1030.</p>
+        </div>
+      </header>
+
+      <div id="treasuryStatus" class="hf-secondary-surface mb-3 px-4 py-3" role="status" aria-live="polite">
+        <span id="treasuryStatusText">Loading receipts…</span>
+        <button id="treasuryRetryButton" type="button" class="ml-3 rounded-lg border px-3 py-2 font-semibold" onclick="retryTreasuryLoad()" hidden>Retry</button>
+      </div>
+
+      <div id="treasuryActionStatus" class="hf-secondary-surface mb-3 px-4 py-3" role="status" aria-live="polite" hidden>
+        <span id="treasuryActionStatusText"></span>
+        <button id="treasuryActionRetryButton" type="button" class="ml-3 rounded-lg border px-3 py-2 font-semibold" onclick="retryTreasuryMutation()" hidden>Retry</button>
+      </div>
+
+      <section id="treasuryReconciliation" class="hf-secondary-surface mb-3 px-4 py-3" aria-label="1030 reconciliation summary" hidden>
+        <h2 class="hf-section-heading">1030 Reconciliation</h2>
+        <dl class="finance-kpis" aria-label="Reconciliation summary">
+          <div class="finance-kpi finance-surface"><dt>Ledger 1030</dt><dd id="treasuryLedger1030">—</dd></div>
+          <div class="finance-kpi finance-surface"><dt>Outstanding Exposure</dt><dd id="treasuryOutstandingExposure">—</dd></div>
+          <div class="finance-kpi finance-surface"><dt>Explicit Exceptions</dt><dd id="treasuryExplicitExceptions">—</dd></div>
+          <div class="finance-kpi finance-surface"><dt>Unexplained Residual</dt><dd id="treasuryUnexplainedResidual">—</dd></div>
+        </dl>
+        <p id="treasuryReconciliationStatus" class="mt-2 text-xs ui-theme-muted">Target Rp 0.</p>
+        <p id="treasuryReconciliationWarning" class="mt-2 text-sm font-semibold text-red-700" role="alert" hidden></p>
+      </section>
+
+      <div id="treasuryListView">
+        <div class="hf-secondary-surface mb-3 px-4 py-3">
+          <h2 id="treasuryListHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Receipts</h2>
+          <p id="treasuryListScopeText" class="mt-1 text-xs ui-theme-muted">Outstanding sales exposure from the canonical clearing projection.</p>
+        </div>
+        <p id="treasuryEmptyNotice" class="hf-secondary-surface px-4 py-3 text-sm ui-theme-secondary" role="status" hidden>No outstanding sales exposure is available for receipts.</p>
+        <div id="treasuryTableCard" class="hf-secondary-surface" hidden>
+          <div class="max-w-full overflow-x-auto">
+            <table class="w-full min-w-[1100px]">
+              <caption class="sr-only">Sales exposure rows with recognized, cleared, and outstanding amounts and clearing status</caption>
+              <thead class="border-b">
+                <tr>
+                  <th scope="col" class="px-4 text-left">Reference</th>
+                  <th scope="col" class="px-4 text-left">Recognition</th>
+                  <th scope="col" class="px-4 text-center">Sales Economic Date</th>
+                  <th scope="col" class="px-4 text-right">Recognized</th>
+                  <th scope="col" class="px-4 text-right">Cleared</th>
+                  <th scope="col" class="px-4 text-right">Outstanding</th>
+                  <th scope="col" class="px-4 text-center">Clearing Status</th>
+                  <th scope="col" class="px-2 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="treasuryListBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasurySaveFormView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryFormHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">New Receipt</h2>
+          <dl class="mt-3 text-sm" aria-label="Selected exposure">
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Recognition</dt><dd id="treasuryFormRecognitionRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Reference</dt><dd id="treasuryFormOrderRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Outstanding Amount (locked)</dt><dd id="treasuryFormAmount" aria-readonly="true">—</dd></div>
+          </dl>
+          <div class="mt-3 grid gap-3">
+            <label for="treasuryDestination" class="text-sm">Destination
+              <select id="treasuryDestination" class="ui-form-text mt-1 h-10 w-full rounded-lg border px-3">
+                <option value="">Select destination</option>
+              </select>
+            </label>
+            <label for="treasuryReceiptDate" class="text-sm">Receipt Date
+              <input id="treasuryReceiptDate" type="date" class="ui-form-text mt-1 h-10 w-full rounded-lg border px-3">
+            </label>
+            <label for="treasuryEvidenceRef" class="text-sm">Evidence Reference
+              <input id="treasuryEvidenceRef" type="text" maxlength="200" autocomplete="off" class="ui-form-text mt-1 h-10 w-full rounded-lg border px-3" aria-describedby="treasuryEvidenceRefHint">
+              <span id="treasuryEvidenceRefHint" class="mt-1 block text-xs ui-theme-muted">Verification evidence identity (3–200 characters). Never passwords, PINs, or tokens.</span>
+            </label>
+          </div>
+          <p id="treasuryFormError" class="mt-2 text-sm text-red-700" role="alert" hidden></p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryFormContinueButton" type="button" class="transaction-entry-primary" onclick="openTreasurySaveReview()">Review</button>
+            <button id="treasuryFormBackButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="closeTreasuryViews()">Back to Receipts</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasurySaveReviewView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasurySaveReviewHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Review Receipt</h2>
+          <dl class="mt-3 text-sm" aria-label="Receipt review">
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Recognition</dt><dd id="treasuryReviewRecognitionRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Amount</dt><dd id="treasuryReviewAmount">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Destination</dt><dd id="treasuryReviewDestination">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Receipt Date</dt><dd id="treasuryReviewReceiptDate">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Evidence Reference</dt><dd id="treasuryReviewEvidenceRef">—</dd></div>
+          </dl>
+          <p class="mt-3 text-xs ui-theme-secondary" role="note">Save records a verified receipt clearing 1030. This is not Revenue creation — Revenue follows Sales authority.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasurySaveButton" type="button" class="transaction-entry-primary" onclick="submitTreasurySaveReceipt()">Save Receipt</button>
+            <button id="treasurySaveBackButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="backToTreasuryForm()">Back</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasuryDoneView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryDoneHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Receipt Saved</h2>
+          <dl class="mt-3 text-sm" aria-label="Saved receipt">
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Receipt Reference</dt><dd id="treasuryDoneReceiptRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Amount</dt><dd id="treasuryDoneAmount">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Destination</dt><dd id="treasuryDoneDestination">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Receipt Date</dt><dd id="treasuryDoneReceiptDate">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Clearing Status</dt><dd id="treasuryDoneStatus">—</dd></div>
+          </dl>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryDoneVerifyButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="retryTreasuryVerification()" hidden>Retry verification</button>
+            <button id="treasuryDoneButton" type="button" class="transaction-entry-primary" onclick="finishTreasuryDone()">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasuryDetailView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryDetailHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Receipt Detail</h2>
+          <div id="treasuryDetailContent" class="mt-3 text-sm"></div>
+          <div id="treasuryDetailActions" class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryDetailNewReceiptButton" type="button" class="transaction-entry-primary" onclick="openTreasuryFormFromDetail()" hidden>New Receipt</button>
+            <button id="treasuryReverseOpenButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="openTreasuryReverse()" hidden>Reverse Receipt</button>
+            <button id="treasuryCorrectOpenButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="openTreasuryCorrect()" hidden>Correct Receipt</button>
+            <button id="treasuryDetailBackButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="closeTreasuryViews()">Back to Receipts</button>
+          </div>
+          <p id="treasuryDetailActionReason" class="mt-2 text-xs ui-theme-muted" hidden></p>
+        </div>
+      </div>
+
+      <div id="treasuryReverseView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryReverseHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Reverse Receipt</h2>
+          <p class="mt-2 text-xs ui-theme-secondary">The reversal is dated by the server action day — no ReversalDate is entered here.</p>
+          <label for="treasuryReverseReason" class="mt-3 block text-sm">Reason
+            <textarea id="treasuryReverseReason" rows="4" maxlength="200" class="ui-form-text mt-1 w-full rounded-lg border px-3" aria-describedby="treasuryReverseReasonError"></textarea>
+          </label>
+          <p id="treasuryReverseReasonError" class="mt-1 text-sm text-red-700" role="alert" hidden></p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryReverseContinueButton" type="button" class="transaction-entry-primary" onclick="openTreasuryReverseReview()">Review</button>
+            <button id="treasuryReverseCancelButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="openTreasuryDetail(treasuryState.selectedRecognitionID)">Back</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasuryReverseReviewView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryReverseReviewHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Review Reversal</h2>
+          <dl class="mt-3 text-sm" aria-label="Reversal review">
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Receipt</dt><dd id="treasuryReverseReviewReceiptRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Amount</dt><dd id="treasuryReverseReviewAmount">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Reason</dt><dd id="treasuryReverseReviewReason">—</dd></div>
+          </dl>
+          <p class="mt-3 text-xs ui-theme-secondary" role="note">Reverse restores the outstanding exposure. The original receipt history is never rewritten.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryReverseConfirmButton" type="button" class="transaction-entry-primary" onclick="submitTreasuryReverse()">Reverse Receipt</button>
+            <button id="treasuryReverseReviewBackButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="openTreasuryReverse()">Back</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasuryCorrectView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryCorrectHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Correct Receipt</h2>
+          <p class="mt-2 text-xs ui-theme-secondary">A correction appends a reversal and a replacement receipt. The amount is the full exposure and cannot be edited.</p>
+          <div class="mt-3 grid gap-3">
+            <label for="treasuryCorrectDestination" class="text-sm">Destination
+              <select id="treasuryCorrectDestination" class="ui-form-text mt-1 h-10 w-full rounded-lg border px-3">
+                <option value="">Select destination</option>
+              </select>
+            </label>
+            <label for="treasuryCorrectDate" class="text-sm">Receipt Date
+              <input id="treasuryCorrectDate" type="date" class="ui-form-text mt-1 h-10 w-full rounded-lg border px-3">
+            </label>
+            <label for="treasuryCorrectEvidenceRef" class="text-sm">Evidence Reference
+              <input id="treasuryCorrectEvidenceRef" type="text" maxlength="200" autocomplete="off" class="ui-form-text mt-1 h-10 w-full rounded-lg border px-3">
+            </label>
+            <label for="treasuryCorrectReason" class="text-sm">Reason
+              <textarea id="treasuryCorrectReason" rows="4" maxlength="200" class="ui-form-text mt-1 w-full rounded-lg border px-3" aria-describedby="treasuryCorrectFormError"></textarea>
+            </label>
+          </div>
+          <p id="treasuryCorrectFormError" class="mt-2 text-sm text-red-700" role="alert" hidden></p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryCorrectContinueButton" type="button" class="transaction-entry-primary" onclick="openTreasuryCorrectReview()">Review</button>
+            <button id="treasuryCorrectCancelButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="openTreasuryDetail(treasuryState.selectedRecognitionID)">Back</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="treasuryCorrectReviewView" hidden>
+        <div class="hf-secondary-surface px-4 py-3">
+          <h2 id="treasuryCorrectReviewHeading" class="text-sm font-bold ui-theme-primary" tabindex="-1">Review Correction</h2>
+          <dl class="mt-3 text-sm" aria-label="Correction review">
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Receipt</dt><dd id="treasuryCorrectReviewReceiptRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Amount (full exposure)</dt><dd id="treasuryCorrectReviewAmount">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Destination</dt><dd id="treasuryCorrectReviewDestination">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Receipt Date</dt><dd id="treasuryCorrectReviewReceiptDate">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Evidence Reference</dt><dd id="treasuryCorrectReviewEvidenceRef">—</dd></div>
+            <div class="flex justify-between gap-4 border-b py-2"><dt class="ui-theme-muted">Reason</dt><dd id="treasuryCorrectReviewReason">—</dd></div>
+          </dl>
+          <p class="mt-3 text-xs ui-theme-secondary" role="note">Save records a verified receipt clearing 1030. Original receipt history is preserved alongside the replacement.</p>
+          <div class="mt-3 flex flex-wrap gap-2">
+            <button id="treasuryCorrectConfirmButton" type="button" class="transaction-entry-primary" onclick="submitTreasuryCorrect()">Correct Receipt</button>
+            <button id="treasuryCorrectReviewBackButton" type="button" class="rounded-lg border px-3 py-2 font-semibold" onclick="openTreasuryCorrect()">Back</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- PRODUCTS -->
     <section id="products" class="page" hidden aria-labelledby="productsHeading" aria-busy="false">
       <header class="sr-only">
@@ -3931,6 +4159,7 @@
   let visibleTransactionRowCount = 0;
 <?!= include('192.View.Transactions.State'); ?>
 <?!= include('199.View.Finance.State'); ?>
+<?!= include('202.View.Treasury.State'); ?>
   let transactionDiagnosticPageSource = "unmeasured";
   let transactionDiagnosticPrefetchKeys = {};
   let transactionEntryOptionsDiagnosticSource = "server";
@@ -4837,6 +5066,10 @@
           title: "Products",
           context: "Read-only authoritative product catalog"
         },
+        treasury: {
+          title: "Treasury",
+          context: "Verified receipts over outstanding sales exposure"
+        },
         finance: {
           title: "Profit & Loss",
           context: "Transaction-date operating statement"
@@ -4901,6 +5134,10 @@
       else if (pageId === "products")
       {
         ensureProductsData();
+      }
+      else if (pageId === "treasury")
+      {
+        ensureTreasuryReady();
       }
     }
 
@@ -6218,6 +6455,7 @@
 
 <?!= include('193.View.Transactions.Render'); ?>
 <?!= include('200.View.Finance.Render'); ?>
+<?!= include('203.View.Treasury.Render'); ?>
 
     function applyTransactionDrilldown(type, value, label)
     {
@@ -6259,6 +6497,7 @@
 
 <?!= include('198.View.Dashboard.Controller'); ?>
 <?!= include('201.View.Finance.Controller'); ?>
+<?!= include('204.View.Treasury.Controller'); ?>
 
     var layoutDebugEnabled = false;
     var layoutDebugAnimationFrame = null;

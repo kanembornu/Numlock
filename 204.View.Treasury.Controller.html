@@ -1,0 +1,622 @@
+    // Treasury T7 operator controller: bounded liveness over google.script.run
+    // (Finance incident precedent class), single-flight mutations with a
+    // RequestKey generated once per intent, UNKNOWN-safe recovery, and
+    // dispatch-identity guards so a stale callback can never own newer UI.
+    // No automatic financial retries: mutation Retry is always explicit.
+
+    var treasuryReadRetryPendingDetail_ = null;
+
+    function treasuryRunCall_(method, args, onSuccess, onFailure) {
+      var run = google.script.run.withSuccessHandler(onSuccess).withFailureHandler(onFailure);
+      if (method === "getTreasuryOperatorWorkspace") run.getTreasuryOperatorWorkspace(args[0]);
+      else if (method === "getTreasuryOperatorReceiptDetail") run.getTreasuryOperatorReceiptDetail(args[0]);
+      else if (method === "treasuryOperatorSaveReceipt") run.treasuryOperatorSaveReceipt(args[0]);
+      else if (method === "treasuryOperatorReverseReceipt") run.treasuryOperatorReverseReceipt(args[0]);
+      else if (method === "treasuryOperatorCorrectReceipt") run.treasuryOperatorCorrectReceipt(args[0]);
+      else throw new Error("Unknown Treasury endpoint: " + method);
+    }
+
+    function treasuryReadEntryStale_(entry) {
+      if (!entry) return false;
+      return typeof entry.startedAt !== "number" ||
+        (Date.now() - entry.startedAt) > TREASURY_READ_STALE_TIMEOUT_MS;
+    }
+
+    // One bounded read dispatch per kind. Healthy duplicates JOIN (no request
+    // storm); stale markers stop blocking; every path is terminal or shows an
+    // explicit Retry — no immortal spinner anywhere.
+    function treasuryDispatchRead_(kind, method, args, apply) {
+      var existing = treasuryReadInflight[kind];
+      if (existing && !treasuryReadEntryStale_(existing)) {
+        if (kind === "workspace" && treasuryState.read.phase !== "loading") {
+          setTreasuryViewState("loading");
+        }
+        return false; // join: caller waits for the healthy in-flight dispatch
+      }
+      if (existing) delete treasuryReadInflight[kind];
+      var requestId = ++treasuryState.requestSequence;
+      treasuryReadInflight[kind] = { requestId: requestId, startedAt: Date.now() };
+      syncTreasuryBusy_();
+      if (kind === "workspace") setTreasuryViewState("loading");
+      if (kind === "detail") treasuryReadRetryPendingDetail_ =
+        String((args[0] && args[0].recognitionID) || treasuryState.selectedRecognitionID || "");
+      var timeoutId = setTimeout(function() {
+        var entry = treasuryReadInflight[kind];
+        if (!entry || entry.requestId !== requestId) return;
+        delete treasuryReadInflight[kind];
+        syncTreasuryBusy_();
+        if (kind === "verify") {
+          treasuryVerificationFailed_("Timed out verifying receipt status.");
+        } else if (kind === "detail") {
+          setTreasuryViewState("error", "Timed out loading receipt detail.");
+        } else {
+          setTreasuryViewState("error", "Timed out loading receipts.");
+        }
+      }, TREASURY_READ_STALE_TIMEOUT_MS);
+
+      function finish() { clearTimeout(timeoutId); }
+
+      function onStale() {
+        finish();
+        var entry = treasuryReadInflight[kind];
+        if (!entry || entry.requestId !== requestId) return true;
+        delete treasuryReadInflight[kind];
+        syncTreasuryBusy_();
+        return false;
+      }
+
+      treasuryRunCall_(method, args, function(response) {
+        if (onStale()) return; // stale callback cannot overwrite newer state
+        try {
+          apply(response);
+        } catch (error) {
+          if (kind === "verify") treasuryVerificationFailed_("Unable to verify receipt status.");
+          else if (kind === "detail") setTreasuryViewState("error", "Unable to display receipt detail.");
+          else setTreasuryViewState("error", "Unable to display receipts.");
+          return;
+        }
+        if (kind === "detail") {
+          setTreasuryViewState("ready");
+        }
+      }, function(error) {
+        if (onStale()) return;
+        console.error("Treasury request failed", error);
+        if (kind === "verify") treasuryVerificationFailed_("Unable to verify receipt status.");
+        else if (kind === "detail") setTreasuryViewState("error", "Unable to load receipt detail.");
+        else setTreasuryViewState("error", "Unable to load receipts.");
+      });
+      return true;
+    }
+
+    // Entry point from showPage("treasury"). Restores a persisted UNKNOWN
+    // intent WITHOUT auto-dispatching it (explicit Retry only), then requests
+    // a fresh workspace (no stale action-capability cache).
+    function ensureTreasuryReady() {
+      if (!treasuryState.recoveryRestored) {
+        treasuryState.recoveryRestored = true;
+        var recovered = loadTreasuryRecovery_();
+        if (recovered && !treasuryState.action) {
+          treasuryState.action = {
+            kind: recovered.kind, requestKey: recovered.requestKey,
+            payload: recovered.payload, dispatchId: 0, phase: "unknown",
+            result: null, error: null, startedAt: Date.now()
+          };
+          if (recovered.kind === "save") {
+            treasuryState.view = "done";
+            treasuryState.done = {
+              receiptID: "", amount: (recovered.payload && recovered.payload.grossAmount) || 0,
+              destinationAccountCode: (recovered.payload && recovered.payload.destinationAccountCode) || "",
+              receiptDate: (recovered.payload && recovered.payload.receiptDate) || "",
+              verified: false, verifying: false, verifyFailed: true
+            };
+          }
+        }
+      }
+      treasuryDispatchRead_("workspace", "getTreasuryOperatorWorkspace", [{}], function(workspace) {
+        treasuryState.workspace = workspace;
+        treasuryState.hasLoaded = true;
+        setTreasuryViewState(workspace.receipts && workspace.receipts.rows &&
+          workspace.receipts.rows.length ? "ready" : "empty");
+        renderTreasuryView_();
+      });
+      renderTreasuryView_();
+    }
+
+    function retryTreasuryLoad() {
+      if (treasuryReadRetryPendingDetail_) {
+        var recognitionID = treasuryReadRetryPendingDetail_;
+        treasuryReadRetryPendingDetail_ = null;
+        openTreasuryDetail(recognitionID);
+        return;
+      }
+      ensureTreasuryReady();
+    }
+
+    // -----------------------------------------------------------------------
+    // Read flows: list -> detail
+    // -----------------------------------------------------------------------
+    function treasurySelectedRow_() {
+      var workspace = treasuryState.workspace;
+      if (!workspace || !workspace.receipts || !Array.isArray(workspace.receipts.rows)) return null;
+      var recognitionID = treasuryState.selectedRecognitionID;
+      var matches = workspace.receipts.rows.filter(function(row) {
+        return String(row.RecognitionID) === recognitionID;
+      });
+      return matches[0] || null;
+    }
+
+    function treasuryCapability_(recognitionID) {
+      var workspace = treasuryState.workspace;
+      return (workspace && workspace.capabilities && workspace.capabilities[recognitionID]) || null;
+    }
+
+    function treasuryActiveReceipt_() {
+      var detail = treasuryState.detail;
+      if (!detail || detail.status !== "OK") return null;
+      var activeId = String((detail.exposure && detail.exposure.ActiveReceiptID) || "").split(",")[0];
+      var receipts = Array.isArray(detail.receipts) ? detail.receipts : [];
+      var matches = receipts.filter(function(receipt) {
+        return receipt.treasuryReceiptID === activeId;
+      });
+      return matches[0] || null;
+    }
+
+    function treasuryDestinationLabel_(code) {
+      var workspace = treasuryState.workspace;
+      var destinations = (workspace && workspace.destinations) || [];
+      var matches = destinations.filter(function(destination) {
+        return destination.accountCode === code;
+      });
+      if (matches.length === 1 && String(matches[0].accountName || "") !== "") {
+        return matches[0].accountName + " (" + code + ")";
+      }
+      return String(code || "");
+    }
+
+    function openTreasuryDetail(recognitionID) {
+      var id = String(recognitionID || "");
+      if (!id) return;
+      treasuryClearFailedAction_();
+      treasuryState.selectedRecognitionID = id;
+      treasuryDispatchRead_("detail", "getTreasuryOperatorReceiptDetail", [{ recognitionID: id }],
+        function(detail) {
+          treasuryState.detail = detail;
+          treasuryState.view = "detail";
+          renderTreasuryView_();
+        });
+      renderTreasuryView_();
+    }
+
+    // -----------------------------------------------------------------------
+    // Save workflow: eligible exposure -> destination -> date -> evidence ->
+    // Review -> Save Receipt -> T4 DONE -> immediate T5 reread -> Done.
+    // -----------------------------------------------------------------------
+    function openTreasuryForm(recognitionID) {
+      treasuryClearFailedAction_();
+      var id = String(recognitionID || "");
+      var capability = treasuryCapability_(id);
+      if (!capability || capability.canSave !== true) {
+        // Fail closed: no form for a non-eligible exposure (server T4 is final).
+        logClientEvent("Warning", "Treasury", "Receipt form refused: exposure is not eligible.");
+        openTreasuryDetail(id);
+        return;
+      }
+      treasuryState.selectedRecognitionID = id;
+      treasuryState.form = { destinationAccountCode: "", receiptDate: "", evidenceRef: "" };
+      treasuryState.formError = null;
+      treasuryState.formSeed = true;
+      treasuryState.done = null;
+      treasuryState.view = "saveForm";
+      renderTreasuryView_();
+    }
+
+    function openTreasuryFormFromDetail() {
+      openTreasuryForm(treasuryState.selectedRecognitionID);
+    }
+
+    function closeTreasuryViews() {
+      treasuryClearFailedAction_();
+      treasuryState.view = "list";
+      treasuryReadRetryPendingDetail_ = null;
+      renderTreasuryView_();
+      ensureTreasuryReady(); // fresh server read: no stale action capability
+    }
+
+    function treasuryEvidenceValid_(value) {
+      var text = String(value === undefined || value === null ? "" : value).trim();
+      return text.length >= 3 && text.length <= 200;
+    }
+
+    function treasuryDateValid_(value) {
+      return /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(String(value || ""));
+    }
+
+    function treasuryReasonValid_(value) {
+      return treasuryEvidenceValid_(value);
+    }
+
+    function openTreasurySaveReview() {
+      var form = treasuryState.form;
+      form.destinationAccountCode = getTreasuryElement("treasuryDestination").value;
+      form.receiptDate = getTreasuryElement("treasuryReceiptDate").value;
+      form.evidenceRef = getTreasuryElement("treasuryEvidenceRef").value.trim();
+      var row = treasurySelectedRow_();
+      var capability = row ? treasuryCapability_(row.RecognitionID) : null;
+      var error = "";
+      if (!capability || capability.canSave !== true) {
+        error = "This exposure is not eligible for a receipt.";
+      } else if (!form.destinationAccountCode) {
+        error = "A Destination is required.";
+      } else if (!treasuryDateValid_(form.receiptDate)) {
+        error = "A valid Receipt Date is required.";
+      } else if (!treasuryEvidenceValid_(form.evidenceRef)) {
+        error = "An Evidence Reference of 3–200 characters is required.";
+      } else if (form.destinationAccountCode === "1030") {
+        // Defensive: the server never offers 1030 and always revalidates.
+        error = "The clearing account cannot be a Destination.";
+      }
+      treasuryState.formError = error || null;
+      if (error) { treasuryState.view = "saveForm"; renderTreasuryView_(); return; }
+      treasuryState.view = "saveReview";
+      renderTreasuryView_();
+    }
+
+    function backToTreasuryForm() {
+      treasuryClearFailedAction_();
+      treasuryState.formSeed = true;
+      treasuryState.view = "saveForm";
+      renderTreasuryView_();
+    }
+
+    // -----------------------------------------------------------------------
+    // Mutation dispatch: single-flight per surface, RequestKey fixed for the
+    // whole intent, stale-callback guard, UNKNOWN-safe timeout.
+    // -----------------------------------------------------------------------
+    function treasuryBeginMutation_(kind, payload) {
+      if (treasuryState.action) return false; // double-click => one intent
+      treasuryState.action = {
+        kind: kind, requestKey: payload.requestKey, payload: payload,
+        dispatchId: 0, phase: "inflight", result: null, error: null,
+        startedAt: Date.now(), timeoutId: null
+      };
+      return true;
+    }
+
+    function treasurySendMutation_(method) {
+      var action = treasuryState.action;
+      if (!action) return;
+      var dispatchId = ++action.dispatchId;
+      action.phase = "inflight";
+      action.error = null;
+      action.startedAt = Date.now();
+      persistTreasuryRecovery_();
+      renderTreasuryActionStatus_();
+      syncTreasuryBusy_();
+      if (action.timeoutId) clearTimeout(action.timeoutId);
+      action.timeoutId = setTimeout(function() {
+        var current = treasuryState.action;
+        if (!current || current.dispatchId !== dispatchId || current.phase !== "inflight") return;
+        // Lost mutation callback: outcome unknown -> UNKNOWN recovery with the
+        // SAME RequestKey. No automatic re-dispatch; explicit Retry only.
+        current.phase = "unknown";
+        persistTreasuryRecovery_();
+        renderTreasuryActionStatus_();
+        renderTreasuryView_();
+      }, TREASURY_MUTATION_STALE_TIMEOUT_MS);
+      treasuryRunCall_(method, [action.payload],
+        function(result) { treasuryMutationSuccess_(dispatchId, result); },
+        function(error) { treasuryMutationFailure_(dispatchId, error); });
+    }
+
+    function treasuryMutationSuccess_(dispatchId, result) {
+      var action = treasuryState.action;
+      if (!action || action.dispatchId !== dispatchId) return; // stale guard
+      if (action.timeoutId) clearTimeout(action.timeoutId);
+      var status = result && result.status;
+      if (status === "DONE") {
+        clearTreasuryRecovery_();
+        action.result = result;
+        action.phase = "verify";
+        if (action.kind === "save") {
+          var row = treasurySelectedRow_();
+          treasuryState.done = {
+            receiptID: String(result.receiptID || ""),
+            amount: row ? row.OutstandingAmount : (action.payload.grossAmount || 0),
+            destinationAccountCode: action.payload.destinationAccountCode,
+            receiptDate: action.payload.receiptDate,
+            verified: false, verifying: true, verifyFailed: false
+          };
+          treasuryState.view = "done";
+        }
+        renderTreasuryView_();
+        treasuryVerifyAfterMutation_();
+        return;
+      }
+      if (status === "UNKNOWN") {
+        action.phase = "unknown";
+        persistTreasuryRecovery_();
+        renderTreasuryActionStatus_();
+        renderTreasuryView_();
+        return;
+      }
+      if (status === "REFUSED" || status === "CONFLICT" || status === "RECOVERY_REQUIRED") {
+        clearTreasuryRecovery_();
+        action.phase = "failed";
+        action.result = result;
+        renderTreasuryActionStatus_();
+        renderTreasuryView_();
+        return;
+      }
+      // Unrecognized envelope: fail toward uncertainty, never toward a new key.
+      action.phase = "unknown";
+      persistTreasuryRecovery_();
+      renderTreasuryActionStatus_();
+      renderTreasuryView_();
+    }
+
+    function treasuryMutationFailure_(dispatchId, error) {
+      var action = treasuryState.action;
+      if (!action || action.dispatchId !== dispatchId) return; // stale guard
+      if (action.timeoutId) clearTimeout(action.timeoutId);
+      // Transport failure of a mutation: the server may have executed.
+      // Outcome is UNKNOWN -> same RequestKey recovery, never "failed -> new".
+      action.phase = "unknown";
+      action.error = String((error && error.message) || error || "TRANSPORT_FAILURE");
+      persistTreasuryRecovery_();
+      renderTreasuryActionStatus_();
+      renderTreasuryView_();
+    }
+
+    // Explicit Retry: SAME RequestKey + SAME payload (T4/T6 replay/recovery),
+    // or re-run the post-DONE verification reads. Never a new transaction.
+    function retryTreasuryMutation() {
+      var action = treasuryState.action;
+      if (!action) return;
+      if (action.phase === "unknown") {
+        var method = action.kind === "save" ? "treasuryOperatorSaveReceipt" :
+          action.kind === "reverse" ? "treasuryOperatorReverseReceipt" :
+            "treasuryOperatorCorrectReceipt";
+        treasurySendMutation_(method);
+        return;
+      }
+      if (action.phase === "verifyFailed") treasuryVerifyAfterMutation_();
+    }
+
+    function submitTreasurySaveReceipt() {
+      var row = treasurySelectedRow_();
+      if (!row) return;
+      var capability = treasuryCapability_(row.RecognitionID);
+      if (!capability || capability.canSave !== true) {
+        treasuryState.formError = "This exposure is not eligible for a receipt.";
+        renderTreasuryView_();
+        return;
+      }
+      var form = treasuryState.form;
+      if (!treasuryEvidenceValid_(form.evidenceRef) || !treasuryDateValid_(form.receiptDate) ||
+          !form.destinationAccountCode) {
+        treasuryState.formError = "Complete Destination, Receipt Date, and Evidence Reference before saving.";
+        renderTreasuryView_();
+        return;
+      }
+      var payload = {
+        requestKey: treasuryNewRequestKey_("save"),
+        recognitionID: row.RecognitionID,
+        destinationAccountCode: form.destinationAccountCode,
+        grossAmount: row.OutstandingAmount, // canonical, locked, exact
+        receiptDate: form.receiptDate,
+        evidenceType: "MANUAL_VERIFIED", // fixed: single evidence type, no selector
+        evidenceRef: form.evidenceRef
+      };
+      if (!treasuryBeginMutation_("save", payload)) return; // U4: one intent
+      treasurySendMutation_("treasuryOperatorSaveReceipt");
+    }
+
+    function submitTreasuryReverse() {
+      var reason = getTreasuryElement("treasuryReverseReason").value.trim();
+      treasuryState.reverseReason = reason;
+      if (!treasuryReasonValid_(reason)) {
+        treasuryState.formError = "REASON";
+        renderTreasuryView_();
+        return;
+      }
+      treasuryState.formError = null;
+      var receipt = treasuryActiveReceipt_();
+      if (!receipt) return;
+      var payload = {
+        requestKey: treasuryNewRequestKey_("reverse"),
+        treasuryReceiptID: receipt.treasuryReceiptID,
+        reason: reason
+        // NO ReversalDate field — the server action day is the only reversal
+        // date authority (T2 section 9).
+      };
+      if (!treasuryBeginMutation_("reverse", payload)) return; // U8: one intent
+      treasurySendMutation_("treasuryOperatorReverseReceipt");
+    }
+
+    // Form -> Review: capture + validate correction fields (dispatch is the
+    // separate submitTreasuryCorrect below, reached only from Review).
+    function openTreasuryCorrectReview() {
+      var correct = treasuryState.correct;
+      correct.destinationAccountCode = getTreasuryElement("treasuryCorrectDestination").value;
+      correct.receiptDate = getTreasuryElement("treasuryCorrectDate").value;
+      correct.evidenceRef = getTreasuryElement("treasuryCorrectEvidenceRef").value.trim();
+      correct.reason = getTreasuryElement("treasuryCorrectReason").value.trim();
+      var error = "";
+      if (!correct.destinationAccountCode) error = "A Destination is required.";
+      else if (!treasuryDateValid_(correct.receiptDate)) error = "A valid Receipt Date is required.";
+      else if (!treasuryEvidenceValid_(correct.evidenceRef)) error = "An Evidence Reference of 3–200 characters is required.";
+      else if (!treasuryReasonValid_(correct.reason)) error = "A reason of 3–200 characters is required.";
+      else if (correct.destinationAccountCode === "1030") error = "The clearing account cannot be a Destination.";
+      treasuryState.formError = error || null;
+      if (error) { treasuryState.view = "correct"; renderTreasuryView_(); return; }
+      treasuryState.view = "correctReview";
+      renderTreasuryView_();
+    }
+
+    function submitTreasuryCorrect() {
+      var correct = treasuryState.correct;
+      var receipt = treasuryActiveReceipt_();
+      if (!receipt) return;
+      var payload = {
+        requestKey: treasuryNewRequestKey_("correct"),
+        treasuryReceiptID: receipt.treasuryReceiptID,
+        destinationAccountCode: correct.destinationAccountCode,
+        receiptDate: correct.receiptDate,
+        evidenceType: "MANUAL_VERIFIED",
+        evidenceRef: correct.evidenceRef,
+        reason: correct.reason
+        // Amount is NEVER a client fact: T6 clears the full exposure.
+      };
+      if (!treasuryBeginMutation_("correct", payload)) return; // U10: one intent
+      treasurySendMutation_("treasuryOperatorCorrectReceipt");
+    }
+
+    // -----------------------------------------------------------------------
+    // Post-DONE verification: immediate T5-derived reread. Done status,
+    // post-reverse UNCLEARED, and post-correct replacement CLEARED all come
+    // from this reread — never inferred from the mutation response alone.
+    // -----------------------------------------------------------------------
+    function treasuryVerifyAfterMutation_() {
+      var action = treasuryState.action;
+      if (!action) return;
+      var recognitionID = action.kind === "save" ?
+        action.payload.recognitionID : treasuryState.selectedRecognitionID;
+      treasuryDispatchRead_("verify", "getTreasuryOperatorReceiptDetail",
+        [{ recognitionID: recognitionID }], function(detail) {
+          treasuryVerificationSucceeded_(detail);
+        });
+      renderTreasuryActionStatus_();
+    }
+
+    function treasuryVerificationSucceeded_(detail) {
+      var action = treasuryState.action;
+      if (!action || action.phase !== "verify") return;
+      clearTreasuryRecovery_();
+      if (action.kind === "save") {
+        treasuryState.done.verified = true;
+        treasuryState.done.verifying = false;
+        treasuryState.done.verifyFailed = false;
+        treasuryState.done.clearingStatus = detail && detail.status === "OK" ?
+          detail.exposure.ClearingStatus : "";
+        treasuryState.done.detail = detail || null;
+      } else {
+        treasuryState.detail = detail;
+        treasuryState.view = "detail";
+      }
+      treasuryState.action = null;
+      // Fresh projection so the list reflects the new canonical state.
+      ensureTreasuryReady();
+      renderTreasuryView_();
+    }
+
+    function treasuryVerificationFailed_(message) {
+      var action = treasuryState.action;
+      if (!action) return;
+      if (action.phase === "verify") {
+        action.phase = "verifyFailed";
+        action.error = message;
+        if (action.kind === "save" && treasuryState.done) {
+          treasuryState.done.verifying = false;
+          treasuryState.done.verifyFailed = true;
+        }
+        renderTreasuryActionStatus_();
+        renderTreasuryView_();
+        return;
+      }
+      if (action.phase === "unknown" && treasuryState.done) {
+        // Recovered UNKNOWN intent: verification reread failed — keep the
+        // SAME RequestKey recovery open and surface an explicit retry.
+        treasuryState.done.verifying = false;
+        treasuryState.done.verifyFailed = true;
+        renderTreasuryActionStatus_();
+        renderTreasuryView_();
+      }
+    }
+
+    function retryTreasuryVerification() {
+      var action = treasuryState.action;
+      if (action && action.phase === "verifyFailed") { treasuryVerifyAfterMutation_(); return; }
+      // UNKNOWN/recovered intent: verification is a reread only. A CLEARED
+      // exposure proves the durable Save completed; an uncleared exposure
+      // keeps the SAME RequestKey recovery open (never "failed -> new key").
+      var recognitionID = action && action.payload && action.payload.recognitionID ?
+        action.payload.recognitionID : treasuryState.selectedRecognitionID;
+      if (!recognitionID) return;
+      if (treasuryReadInflight["verify"]) return; // one verification read at a time
+      treasuryDispatchRead_("verify", "getTreasuryOperatorReceiptDetail",
+        [{ recognitionID: recognitionID }], function(detail) {
+          var verified = !!(detail && detail.status === "OK" &&
+            detail.exposure && detail.exposure.ClearingStatus === "CLEARED");
+          if (treasuryState.done) {
+            treasuryState.done.verified = verified;
+            treasuryState.done.verifyFailed = !verified;
+            treasuryState.done.verifying = false;
+            treasuryState.done.clearingStatus = verified ? detail.exposure.ClearingStatus : "";
+          }
+          if (verified && treasuryState.action &&
+              treasuryState.action.payload &&
+              treasuryState.action.payload.recognitionID === String(recognitionID)) {
+            clearTreasuryRecovery_();
+            treasuryState.action = null;
+          }
+          renderTreasuryView_();
+        });
+    }
+
+    function finishTreasuryDone() {
+      var action = treasuryState.action;
+      if (action && (action.phase === "verify" || action.phase === "verifyFailed" ||
+          action.phase === "done")) {
+        treasuryState.action = null;
+      }
+      clearTreasuryRecovery_();
+      treasuryState.view = "list";
+      renderTreasuryView_();
+      ensureTreasuryReady(); // immediate projection refresh after Done
+    }
+
+    function treasuryClearFailedAction_() {
+      var action = treasuryState.action;
+      if (action && (action.phase === "failed" || action.phase === "verifyFailed")) {
+        treasuryState.action = null;
+        clearTreasuryRecovery_();
+      }
+    }
+
+    // -----------------------------------------------------------------------
+    // Reverse / Correct flows (T6 via detail capabilities)
+    // -----------------------------------------------------------------------
+    function openTreasuryReverse() {
+      if (treasuryState.action) return;
+      treasuryState.reverseReason = "";
+      treasuryState.formError = null;
+      treasuryState.reverseSeed = true;
+      treasuryState.view = "reverse";
+      renderTreasuryView_();
+    }
+
+    function openTreasuryReverseReview() {
+      var reason = getTreasuryElement("treasuryReverseReason").value.trim();
+      treasuryState.reverseReason = reason;
+      if (!treasuryReasonValid_(reason)) {
+        treasuryState.formError = "REASON";
+        renderTreasuryView_();
+        return;
+      }
+      treasuryState.formError = null;
+      treasuryState.view = "reverseReview";
+      renderTreasuryView_();
+    }
+
+    function openTreasuryCorrect() {
+      if (treasuryState.action) return;
+      var receipt = treasuryActiveReceipt_();
+      treasuryState.correct = {
+        destinationAccountCode: receipt ? receipt.destinationAccountCode : "",
+        receiptDate: "", evidenceRef: receipt ? receipt.evidenceRef : "", reason: ""
+      };
+      treasuryState.formError = null;
+      treasuryState.correctSeed = true;
+      treasuryState.view = "correct";
+      renderTreasuryView_();
+    }
