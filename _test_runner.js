@@ -108,6 +108,7 @@ var files = [
   '97E.SalesRecognition.V2.Activation.js',
   '99.Treasury.Receipt.Foundation.js',
   '99A.Treasury.Receipt.Durable.Save.js',
+  '99B.Treasury.Clearing.Projection.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -130,7 +131,8 @@ var files = [
   '96.Tests.Inventory.Policy.Evidence.Cases.js',
   '96.Tests.Master.WritePolicy.Cases.js',
   '96.Tests.Treasury.Receipt.Foundation.Cases.js',
-  '96.Tests.Treasury.Receipt.Durable.Save.Cases.js'
+  '96.Tests.Treasury.Receipt.Durable.Save.Cases.js',
+  '96.Tests.Treasury.Clearing.Projection.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -189,7 +191,8 @@ vm.runInContext([
   'var _htmlForms = ' + JSON.stringify(fs.readFileSync('194.View.Transactions.Forms.html', 'utf8')) + ';',
   'var _productionSource = ' + JSON.stringify(fs.readFileSync('95A.Transaction.Production.js', 'utf8')) + ';',
   'var _treasuryFoundationSource = ' + JSON.stringify(fs.readFileSync('99.Treasury.Receipt.Foundation.js', 'utf8')) + ';',
-  'var _treasuryDurableSource = ' + JSON.stringify(fs.readFileSync('99A.Treasury.Receipt.Durable.Save.js', 'utf8')) + ';'
+  'var _treasuryDurableSource = ' + JSON.stringify(fs.readFileSync('99A.Treasury.Receipt.Durable.Save.js', 'utf8')) + ';',
+  'var _treasuryClearingSource = ' + JSON.stringify(fs.readFileSync('99B.Treasury.Clearing.Projection.js', 'utf8')) + ';'
 ].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
@@ -401,6 +404,21 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT4Cache', 'testTreasuryT4Cache()');
   run('testTreasuryT4CashFlowGroupGate', 'testTreasuryT4CashFlowGroupGate()');
   run('testTreasuryT4MutationSensitivity', 'testTreasuryT4MutationSensitivity()');
+
+  // TREASURY_T5: canonical clearing projection + global 1030 reconciliation —
+  // statuses/row contract, integrity gates, orphans + Sales reversal
+  // lifecycle, as-of/Asia-Jakarta semantics, deterministic exception
+  // attribution with unexplained residual, T4 parity, Finance isolation,
+  // read-only source audit, and 25-point mutation sensitivity.
+  run('testTreasuryT5ProjectionStatus', 'testTreasuryT5ProjectionStatus()');
+  run('testTreasuryT5Integrity', 'testTreasuryT5Integrity()');
+  run('testTreasuryT5OrphansReversal', 'testTreasuryT5OrphansReversal()');
+  run('testTreasuryT5AsOf', 'testTreasuryT5AsOf()');
+  run('testTreasuryT5Reconciliation', 'testTreasuryT5Reconciliation()');
+  run('testTreasuryT5ParityFinance', 'testTreasuryT5ParityFinance()');
+  run('testTreasuryT5FinanceIsolation', 'testTreasuryT5FinanceIsolation()');
+  run('testTreasuryT5ReadOnlyAudit', 'testTreasuryT5ReadOnlyAudit()');
+  run('testTreasuryT5MutationSensitivity', 'testTreasuryT5MutationSensitivity()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
