@@ -107,6 +107,7 @@ var files = [
   '97D.SalesRecognition.V2.OperatorGuard.js',
   '97E.SalesRecognition.V2.Activation.js',
   '99.Treasury.Receipt.Foundation.js',
+  '99A.Treasury.Receipt.Durable.Save.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -128,7 +129,8 @@ var files = [
   '96.Tests.Finance.Cases.js',
   '96.Tests.Inventory.Policy.Evidence.Cases.js',
   '96.Tests.Master.WritePolicy.Cases.js',
-  '96.Tests.Treasury.Receipt.Foundation.Cases.js'
+  '96.Tests.Treasury.Receipt.Foundation.Cases.js',
+  '96.Tests.Treasury.Receipt.Durable.Save.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -186,7 +188,8 @@ vm.runInContext([
   'var _htmlActions = ' + JSON.stringify(fs.readFileSync('195.View.Transactions.Actions.html', 'utf8')) + ';',
   'var _htmlForms = ' + JSON.stringify(fs.readFileSync('194.View.Transactions.Forms.html', 'utf8')) + ';',
   'var _productionSource = ' + JSON.stringify(fs.readFileSync('95A.Transaction.Production.js', 'utf8')) + ';',
-  'var _treasuryFoundationSource = ' + JSON.stringify(fs.readFileSync('99.Treasury.Receipt.Foundation.js', 'utf8')) + ';'
+  'var _treasuryFoundationSource = ' + JSON.stringify(fs.readFileSync('99.Treasury.Receipt.Foundation.js', 'utf8')) + ';',
+  'var _treasuryDurableSource = ' + JSON.stringify(fs.readFileSync('99A.Treasury.Receipt.Durable.Save.js', 'utf8')) + ';'
 ].join('\n'), ctx);
 
 var pass = 0, fail = 0, expectedFail = 0;
@@ -383,6 +386,21 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT3JournalSignature', 'testTreasuryT3JournalSignature()');
   run('testTreasuryT3LegacyIsolation', 'testTreasuryT3LegacyIsolation()');
   run('testTreasuryT3MutationSensitivity', 'testTreasuryT3MutationSensitivity()');
+
+  // TREASURY_T4: durable receipt Save core — normal save, refusals,
+  // idempotency, recovery + 20-boundary failure injection, concurrency,
+  // integrity, isolation/financial non-impact, cache, 1030 CashFlowGroup
+  // gate, and 25-point mutation sensitivity.
+  run('testTreasuryT4SaveCore', 'testTreasuryT4SaveCore()');
+  run('testTreasuryT4Refusals', 'testTreasuryT4Refusals()');
+  run('testTreasuryT4Idempotency', 'testTreasuryT4Idempotency()');
+  run('testTreasuryT4Recovery', 'testTreasuryT4Recovery()');
+  run('testTreasuryT4Concurrency', 'testTreasuryT4Concurrency()');
+  run('testTreasuryT4Integrity', 'testTreasuryT4Integrity()');
+  run('testTreasuryT4Isolation', 'testTreasuryT4Isolation()');
+  run('testTreasuryT4Cache', 'testTreasuryT4Cache()');
+  run('testTreasuryT4CashFlowGroupGate', 'testTreasuryT4CashFlowGroupGate()');
+  run('testTreasuryT4MutationSensitivity', 'testTreasuryT4MutationSensitivity()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
