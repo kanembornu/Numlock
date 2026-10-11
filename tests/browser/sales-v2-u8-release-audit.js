@@ -79,8 +79,12 @@ function runSalesV2U8ReleaseAudit() {
   });
   var productionJs = productionFiles.filter(function(file) { return /\.js$/.test(file); });
   // ACTIVE literal only inside the mode routing table / tests / proofs.
+  // ACTIVE literal only inside a mode routing table / tests / proofs. 21 is
+  // the Expense single-commit routing table (T11.2 §4, T11.4 U2): it resolves
+  // SINGLE_COMMIT_TRANSACTION_V1 exactly like 97D resolves the Sales config.
   var activeAllowlist = ["97D.SalesRecognition.V2.OperatorGuard.js",
-    "97E.SalesRecognition.V2.Activation.js"];
+    "97E.SalesRecognition.V2.Activation.js",
+    "21.Transaction.Entry.js"];
   listRootCode_().concat(listTreeCode_("tests")).forEach(function(file) {
     if (!/\.(js|html)$/.test(file)) return;
     var text = read_(file);

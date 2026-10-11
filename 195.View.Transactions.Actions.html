@@ -68,6 +68,27 @@
           else error.innerText = "";
         }
       }
+      // T11.4 U2: the ACTIVE single-commit normal-Expense surface never
+      // requests a payment channel (D1/D2/D15). Every other mode keeps the
+      // legacy "Paid via" selector and its required selection unchanged.
+      var expenseCash = operationalElement("expenseCashAccountFieldset");
+      if (expenseCash) {
+        var hideExpenseCash = Boolean(transactionEntryState &&
+          transactionEntryState.transactionType === "EXPENSE" &&
+          transactionEntryState.mode !== "correction" && !isPurchaseExpenseEntry() &&
+          singleCommitExpenseSurface_() === "ACTIVE");
+        expenseCash.hidden = hideExpenseCash;
+        expenseCash.style.display = hideExpenseCash ? "none" : "";
+        if (hideExpenseCash && transactionEntryState.cashAccountCode) {
+          transactionEntryState.cashAccountCode = null;
+          ["1000", "1010", "1020"].forEach(function(code) {
+            var button = document.getElementById("expenseCashAccount" + code);
+            if (button) button.setAttribute("aria-checked", "false");
+          });
+          var expenseCashError = operationalElement("expenseCashAccountError");
+          if (expenseCashError) expenseCashError.innerText = "";
+        }
+      }
       if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
     }
 
@@ -115,6 +136,7 @@
       });
       // U10C: an authority/config read failure fails closed for new Sales.
       setSalesV2ClientMode_(null);
+      setSingleCommitClientMode_(null);
       applySalesV2OperatorSurface_();
     }
 
@@ -143,6 +165,7 @@
         // U10C: authoritative mode travels with the bootstrap; only a real
         // server value may enable the ACTIVE operator surface.
         setSalesV2ClientMode_(response.data.salesV2Mode);
+        setSingleCommitClientMode_(response.data.singleCommitMode);
         applySalesV2OperatorSurface_();
         if (operationalTransactionState.pendingOpenOrdersRecovery) {
           operationalTransactionState.pendingOpenOrdersRecovery = false;
@@ -400,6 +423,10 @@
         }
         payload.expenseDate = date;
       }
+      // T11.4 U2: one durable client intent key owns the WHOLE Expense
+      // transaction (T11.2 §9). The same key is retained across retries of
+      // the same payload; a changed payload mints a new identity.
+      if (state.transactionType === "EXPENSE") payload.requestKey = expenseIntentRequestKey_(payload);
       state.submitting = true;
       entry.generalError.innerText = "";
       updateTransactionEntrySubmitState();
@@ -407,6 +434,14 @@
         .withSuccessHandler(function(response)
         {
           state.submitting = false;
+          // T11.4 U2: an unresolved durable outcome is never rendered as a
+          // definite failure — the SAME intent stays retryable under the SAME
+          // RequestKey, and the operator is told not to create a new one.
+          if (response && response.unknown === true) {
+            entry.generalError.innerText = "Result belum dapat dipastikan. Sistem akan memeriksa transaksi yang sama; jangan membuat transaksi baru.";
+            updateTransactionEntrySubmitState();
+            return;
+          }
           if (!response || response.success !== true) {
             showTransactionEntryApiError(response && response.error, "submit"); return;
           }

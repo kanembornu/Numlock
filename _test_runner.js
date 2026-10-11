@@ -125,6 +125,7 @@ var files = [
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
   '96.Tests.SingleCommit.SalesMoney.Cases.js',
+  '96.Tests.SingleCommit.Expense.Cases.js',
   '96.Tests.SalesRecognition.V2.Projection.Cases.js',
   '96.Tests.SalesRecognition.V2.U4.Cases.js',
   '96.Tests.SalesRecognition.V2.U5.Cases.js',
@@ -312,7 +313,18 @@ run('testSalesComposedMoneyGateInert', 'testSalesComposedMoneyGateInert()');
 run('testSalesComposedMoneyPreflight1040', 'testSalesComposedMoneyPreflight1040()');
 run('testSalesComposedMoneyPlanBatch', 'testSalesComposedMoneyPlanBatch()');
 run('testSalesComposedMoneyDurability', 'testSalesComposedMoneyDurability()');
-run('testSalesComposedMoneyIsolation', 'testSalesComposedMoneyIsolation()');
+  run('testSalesComposedMoneyIsolation', 'testSalesComposedMoneyIsolation()');
+
+  // T11.4 U2 Expense durable single-commit core (SINGLE_COMMIT_TRANSACTION_V1
+  // gated, inert until authorized activation): gate routing + inert legacy
+  // parity, 1040 preflight matrix, one-plan/one-batch composition, durability
+  // (replay/conflict/UNKNOWN pre+post batch/artifact loss/tamper), isolation
+  // (Treasury, payment fields, historical rows, correction lineage).
+  run('testExpenseSingleCommitGateRouting', 'testExpenseSingleCommitGateRouting()');
+  run('testExpenseSingleCommitPreflight1040', 'testExpenseSingleCommitPreflight1040()');
+  run('testExpenseSingleCommitPlanBatch', 'testExpenseSingleCommitPlanBatch()');
+  run('testExpenseSingleCommitDurability', 'testExpenseSingleCommitDurability()');
+  run('testExpenseSingleCommitIsolation', 'testExpenseSingleCommitIsolation()');
 
 // SALES_RECOGNITION_V2 U3 shared read-only projection (cohorts, signed
 // events, lineage, cross-cohort parity + sensitivity proof).

@@ -361,6 +361,10 @@ function getOperationalTransactionAuthority() { return transactionResponse_(func
   // The client never resolves config itself; an unresolved/invalid config
   // travels as "REJECT" so the client fails closed for new Sales.
   dto.salesV2Mode = salesV2OperatorResolvedRoute_().mode;
+  // T11.4 U2: server-resolved single-commit mode (T11.2 §20) for the Expense
+  // operator surface. The client never resolves config itself; ABSENT and
+  // PREPARED both travel as PREPARED, an unresolved value as REJECT.
+  dto.singleCommitMode = expenseSingleCommitResolvedMode_();
   return dto;
 }); }
 function submitOperationalOrder(payload) {

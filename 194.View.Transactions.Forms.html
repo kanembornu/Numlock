@@ -5,6 +5,7 @@
         costType: "FIXED_COST", transactionType: null, entryOptions: null, selectedProduct: null,
         selectedExpense: null, selectedType: null, qty: 1, amount: null,
         cashAccountCode: null,
+        expenseIntent: null,
         pricing: null, pricingSource: "unknown", lastPriceReadyLatencyMs: null,
         loadingOptions: false, loadingPricing: false,
         submitting: false, optionsLoaded: false, optionsRevision: "", pricingRequestVersion: 0,
@@ -12,6 +13,40 @@
         submissionComplete: false, mode: "create", originalDetail: null,
         correctionReason: "", correctionPreview: null, correctionStage: "edit"
       };
+    }
+
+    // T11.4 U2: server-resolved SINGLE_COMMIT_TRANSACTION_V1 mode for the
+    // Expense operator surface (mirrors salesV2ClientModeState_). The value
+    // only ever arrives from the authority response; an unresolved read fails
+    // closed to the legacy surface instead of exposing an ACTIVE one.
+    var singleCommitClientModeState_ = { status: "UNKNOWN", mode: null };
+
+    function setSingleCommitClientMode_(value)
+    {
+      var ready = typeof value === "string" && value.length > 0;
+      singleCommitClientModeState_.status = ready ? "READY" : "UNKNOWN";
+      singleCommitClientModeState_.mode = ready ? value : null;
+    }
+
+    function singleCommitExpenseSurface_()
+    {
+      var state = singleCommitClientModeState_;
+      if (state.status !== "READY") return "LEGACY";
+      return state.mode === "ACTIVE" ? "ACTIVE" : "LEGACY";
+    }
+
+    // One durable client intent key owns the WHOLE Expense transaction
+    // (T11.2 §9). The same key is retained across retries of the SAME
+    // payload; any payload change deterministically mints a new identity, so
+    // a changed payload can never replay a previous outcome.
+    function expenseIntentRequestKey_(payload)
+    {
+      var state = transactionEntryState;
+      var text = JSON.stringify(payload);
+      if (!state.expenseIntent || state.expenseIntent.text !== text) {
+        state.expenseIntent = { text: text, requestKey: operationalRequestKey_("expense") };
+      }
+      return state.expenseIntent.requestKey;
     }
 
     function formatEntryCurrency(value)
@@ -37,9 +72,15 @@
       var entry = initializeStableDashboardElements().transactionEntry;
       var state = transactionEntryState;
       var validSales = isValidActiveSalesEntry_();
+      // T11.4 U2: ACTIVE single-commit normal Expense never requires a payment
+      // channel. Every other mode — including the Purchase receipt entry and
+      // correction — keeps the exact legacy cash requirement.
+      var singleCommitNormalExpense = state.transactionType === "EXPENSE" &&
+        state.mode !== "correction" && !isPurchaseExpenseEntry() &&
+        singleCommitExpenseSurface_() === "ACTIVE";
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
         (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0) &&
-        state.cashAccountCode;
+        (singleCommitNormalExpense || state.cashAccountCode);
       var correctionReasonValid = state.mode !== "correction" || state.correctionReason.trim().length >= 3;
       entry.submit.disabled = state.receiptUnresolved || state.submitting || state.submissionComplete || state.loadingOptions ||
         !(validSales || validExpense || state.transactionType === "INVENTORY_RECEIPT" && !state.receiptUnresolved) || !correctionReasonValid;
@@ -477,6 +518,8 @@
         INVALID_VOID_REASON: "Enter a meaningful reason.",
         INVALID_CASH_ACCOUNT: "Select a valid cash account.",
         INACTIVE_CASH_ACCOUNT: "The selected cash account is not active.",
+        SINGLE_COMMIT_MODE_PAUSED: "New transactions are paused.",
+        SINGLE_COMMIT_CONFIG_INVALID: "Transaction configuration is unavailable. New transactions are disabled.",
         WRITE_FAILED: "Transaction could not be saved. Please try again."
       }[code] || "Transaction could not be saved. Please try again.";
     }
