@@ -124,6 +124,7 @@ var files = [
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
+  '96.Tests.SingleCommit.SalesMoney.Cases.js',
   '96.Tests.SalesRecognition.V2.Projection.Cases.js',
   '96.Tests.SalesRecognition.V2.U4.Cases.js',
   '96.Tests.SalesRecognition.V2.U5.Cases.js',
@@ -302,6 +303,16 @@ run('testSalesRecognitionV2SaveCore', 'testSalesRecognitionV2SaveCore()');
 run('testSalesRecognitionV2SaveRecovery', 'testSalesRecognitionV2SaveRecovery()');
 run('testSalesRecognitionV2SaveGates', 'testSalesRecognitionV2SaveGates()');
 run('testSalesV2U2MutationProof', 'JSON.stringify(runSalesV2U2MutationProof())');
+
+// T11.3 U1 Sales composed money leg (SINGLE_COMMIT_TRANSACTION_V1 gated,
+// inert until authorized activation): config gate + inert parity, 1040
+// precondition matrix, one-plan/one-batch composition, durability (replay /
+// conflict / UNKNOWN / crash / tamper), isolation audits.
+run('testSalesComposedMoneyGateInert', 'testSalesComposedMoneyGateInert()');
+run('testSalesComposedMoneyPreflight1040', 'testSalesComposedMoneyPreflight1040()');
+run('testSalesComposedMoneyPlanBatch', 'testSalesComposedMoneyPlanBatch()');
+run('testSalesComposedMoneyDurability', 'testSalesComposedMoneyDurability()');
+run('testSalesComposedMoneyIsolation', 'testSalesComposedMoneyIsolation()');
 
 // SALES_RECOGNITION_V2 U3 shared read-only projection (cohorts, signed
 // events, lineage, cross-cohort parity + sensitivity proof).

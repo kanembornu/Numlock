@@ -355,6 +355,142 @@ function salesRecognitionAccountFieldMismatch_(row, expected) {
   });
 }
 
+// ---------------------------------------------------------------------------
+// T11.2 §20 single-commit transaction config (read-only semantics; the
+// activation writer belongs to a later authorized unit). Key and mode names
+// are frozen by T11.2 §20. Pure: no property access, no sheet access, no
+// writer. Absent/blank raw value resolves to ABSENT (= PREPARED semantics:
+// zero behavior change); invalid JSON/mode/configVersion resolves to
+// UNRESOLVED (REJECT — never a fallback).
+// ---------------------------------------------------------------------------
+var SINGLE_COMMIT_TRANSACTION_V1 = Object.freeze({
+  CONFIG_PROPERTY: "SINGLE_COMMIT_TRANSACTION_V1",
+  MODES: Object.freeze(["PREPARED", "ACTIVE", "PAUSED", "REJECT"]),
+  CODES: Object.freeze({
+    SINGLE_COMMIT_CONFIG_INVALID: "SINGLE_COMMIT_CONFIG_INVALID",
+    SINGLE_COMMIT_MODE_PAUSED: "SINGLE_COMMIT_MODE_PAUSED"
+  })
+});
+
+// T11.2 §3/§11/§16 frozen composed-money policy: the dedicated
+// composed-money representation is a BalanceLedger journal pair inside the
+// domain plan/batch (never Treasury receipt rows, never payment/channel
+// concepts). 1040 metadata is the exact §11 Accounts expectation.
+var SINGLE_COMMIT_MONEY_POLICY = Object.freeze({
+  ACCOUNT_CODE: "1040",
+  ACCOUNT_EXPECTATION: Object.freeze({
+    AccountCode: "1040",
+    AccountName: "Operational Funds",
+    AccountType: "Asset",
+    StatementGroup: "Current Assets",
+    CashFlowGroup: "Operating",
+    NormalBalance: "DEBIT"
+  }),
+  SALES_MONEY_MOVEMENT_TYPE: "SALES_MONEY",
+  SALES_MONEY_SOURCE_TYPE: "SALES_MONEY_V2",
+  SALES_MONEY_JOURNAL_PREFIX: "SRV2M-"
+});
+
+// Pure parser for the raw SINGLE_COMMIT_TRANSACTION_V1 value (property string
+// or already-parsed object for injected runtimes). Deterministic three-state
+// result: ABSENT / VALID / UNRESOLVED. Never infers a mode, never repairs.
+function singleCommitTransactionConfigState_(raw) {
+  var contract = SINGLE_COMMIT_TRANSACTION_V1;
+  if (raw === null || raw === undefined ||
+      (typeof raw === "string" && raw.trim() === "")) {
+    return { state: "ABSENT", mode: "PREPARED", detail: "" };
+  }
+  var config = raw;
+  if (typeof raw === "string") {
+    try { config = JSON.parse(raw); }
+    catch (error) {
+      return { state: "UNRESOLVED", mode: "", detail: "CONFIG_JSON_INVALID" };
+    }
+  }
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_SHAPE_INVALID" };
+  }
+  if (typeof config.mode !== "string" || contract.MODES.indexOf(config.mode) === -1) {
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_MODE_INVALID" };
+  }
+  if (typeof config.configVersion !== "number" || !isFinite(config.configVersion) ||
+      config.configVersion < 1 || Math.floor(config.configVersion) !== config.configVersion) {
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_VERSION_INVALID" };
+  }
+  if ((config.activationID !== undefined && typeof config.activationID !== "string") ||
+      (config.activatedAt !== undefined && typeof config.activatedAt !== "string")) {
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_ACTIVATION_INVALID" };
+  }
+  return { state: "VALID", mode: config.mode, detail: "" };
+}
+
+// Pure mode -> Sales U2 new-intent decision (T11.2 §3/§20/§22):
+// ABSENT/PREPARED -> allowed, composed-money leg OFF (byte-identical legacy
+// recognition save); ACTIVE -> allowed, composed-money leg REQUIRED (fail
+// closed on the 1040 precondition); PAUSED -> new saves refuse fail-closed;
+// REJECT mode or UNRESOLVED state -> refuse, never a fallback.
+function singleCommitTransactionSalesGate_(state) {
+  var codes = SINGLE_COMMIT_TRANSACTION_V1.CODES;
+  if (state.state === "UNRESOLVED") {
+    return { allowed: false, composedMoney: false, code: codes.SINGLE_COMMIT_CONFIG_INVALID,
+      detail: state.detail };
+  }
+  if (state.state === "ABSENT" || state.mode === "PREPARED") {
+    return { allowed: true, composedMoney: false, code: "", detail: "" };
+  }
+  if (state.mode === "ACTIVE") {
+    return { allowed: true, composedMoney: true, code: "", detail: "" };
+  }
+  if (state.mode === "PAUSED") {
+    return { allowed: false, composedMoney: false, code: codes.SINGLE_COMMIT_MODE_PAUSED,
+      detail: "" };
+  }
+  return { allowed: false, composedMoney: false, code: codes.SINGLE_COMMIT_CONFIG_INVALID,
+    detail: "MODE_REJECT" };
+}
+
+// Pure 1040 precondition over supplied logical Accounts rows (T11.2 §11),
+// invoked only when the composed-money leg is ACTIVE. Fail closed on absent,
+// duplicate, inactive, or any metadata mismatch (exact match, no blank-value
+// tolerance). Zero writes; the existing 1030/2010/4000 preflight stays
+// byte-identical and independent.
+function preflightSingleCommitMoneyAccount(rows) {
+  var codes = SALES_RECOGNITION_V2_CONTRACT.REFUSAL_CODES, errors = [];
+  var list = Array.isArray(rows) ? rows : [];
+  var expected = SINGLE_COMMIT_MONEY_POLICY.ACCOUNT_EXPECTATION;
+  var invalidRows = list.filter(function(row) {
+    return row === null || typeof row !== "object" || Array.isArray(row);
+  });
+  if (invalidRows.length) {
+    errors.push({ accountCode: expected.AccountCode, code: codes.ACCOUNT_ROW_INVALID });
+  }
+  var matches = list.filter(function(row) {
+    return row && typeof row === "object" && !Array.isArray(row) &&
+      String(row.AccountCode === undefined || row.AccountCode === null ? "" :
+        row.AccountCode).trim() === expected.AccountCode;
+  });
+  if (matches.length === 0) {
+    errors.push({ accountCode: expected.AccountCode, code: codes.ACCOUNT_ABSENT });
+  } else if (matches.length > 1) {
+    errors.push({ accountCode: expected.AccountCode, code: codes.ACCOUNT_DUPLICATE });
+  } else {
+    var row = matches[0];
+    if (!isCanonicalActive(row.IsActive)) {
+      errors.push({ accountCode: expected.AccountCode, code: codes.ACCOUNT_INACTIVE });
+    } else {
+      var mismatch = Object.keys(expected).some(function(field) {
+        if (field === "AccountCode") return false;
+        return String(row[field] === undefined || row[field] === null ? "" : row[field]).trim() !==
+          String(expected[field]);
+      });
+      if (mismatch) {
+        errors.push({ accountCode: expected.AccountCode, code: codes.ACCOUNT_METADATA_MISMATCH });
+      }
+    }
+  }
+  return { status: errors.length ? "FAIL" : "PASS", errors: errors };
+}
+
 // Pure activation preflight over supplied logical Accounts rows, including
 // inactive rows for uniqueness. 2000 (supplier AP) is intentionally out of
 // scope and untouched. Fail closed on absent, duplicate, wrong, or inactive.

@@ -453,6 +453,33 @@ function salesRecognitionV2SavePlan_(input) {
       CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor }
   ];
   var journalSignature = policyCJournalSignature_(journalRows);
+  // T11.2 §3/§7 composed money leg (D5): frozen into the SAME immutable plan
+  // as the recognition pair. Recognition rows/signature above stay byte-
+  // identical; the money pair is a dedicated composed-money journal
+  // (SourceType SALES_MONEY_V2, JournalID SRV2M-<OrderID>) — only present
+  // when the caller resolved the ACTIVE single-commit mode.
+  var moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var composedMoney = input.composedMoney === true;
+  var moneyJournalID = "", moneyRows = null, moneyJournalSignature = "";
+  if (composedMoney) {
+    moneyJournalID = transactionStableBootstrapId_(moneyPolicy.SALES_MONEY_JOURNAL_PREFIX,
+      [order.OrderID]);
+    moneyRows = [
+      { JournalID: moneyJournalID, LineID: moneyJournalID + "-1", Tanggal: economicDate,
+        AccountCode: moneyPolicy.ACCOUNT_CODE, Debit: orderTotal, Credit: 0,
+        MovementType: moneyPolicy.SALES_MONEY_MOVEMENT_TYPE,
+        SourceType: moneyPolicy.SALES_MONEY_SOURCE_TYPE,
+        SourceID: recognitionID, ExternalRef: "", Keterangan: "", IsActive: true,
+        CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor },
+      { JournalID: moneyJournalID, LineID: moneyJournalID + "-2", Tanggal: economicDate,
+        AccountCode: save.JOURNAL_ACCOUNTS.SETTLEMENT, Debit: 0, Credit: orderTotal,
+        MovementType: moneyPolicy.SALES_MONEY_MOVEMENT_TYPE,
+        SourceType: moneyPolicy.SALES_MONEY_SOURCE_TYPE,
+        SourceID: recognitionID, ExternalRef: "", Keterangan: "", IsActive: true,
+        CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor }
+    ];
+    moneyJournalSignature = policyCJournalSignature_(moneyRows);
+  }
   var snapshot = { contractVersion: contract.CONTRACT_VERSION, activationID: config.activationID,
     revisionID: revisionID, journalID: journalID, journalSignature: journalSignature,
     orderTotal: orderTotal, hppTotalSnapshot: hppTotal,
@@ -490,6 +517,15 @@ function salesRecognitionV2SavePlan_(input) {
     journalSignature: journalSignature, orderRow: orderRow, lineRows: lineRows,
     lineAuthority: lineAuthority, journalRows: journalRows, eventRow: eventRow,
     auditRow: auditRow };
+  if (composedMoney) {
+    // Money consequence lives in the same plan, covered by the same digest
+    // authority; legacy plans keep their exact historical shape.
+    plan.composedMoney = true;
+    plan.moneyJournalID = moneyJournalID;
+    plan.moneyRows = moneyRows;
+    plan.moneyJournalSignature = moneyJournalSignature;
+    plan.accounts.money = moneyPolicy.ACCOUNT_CODE;
+  }
   // Canonical immutable integrity digest over the plan without the digest key.
   plan.planDigest = transactionPayloadHash_(plan);
   return plan;
@@ -504,12 +540,17 @@ function salesRecognitionV2SaveValueRanges_(plan) {
   function rowValues(row, headers) {
     return headers.map(function(header) { return row[header] === undefined ? "" : row[header]; });
   }
+  // ONE BalanceLedger subrequest: the frozen recognition pair, plus the
+  // composed money pair when the plan carries it (T11.2 §8: 4 rows in the
+  // same atomic batch — never recognition committed, money second).
+  var ledgerRows = plan.journalRows.concat(
+    Array.isArray(plan.moneyRows) ? plan.moneyRows : []);
   var ranges = [
     { range: t.ORDERS.SHEET, values: [rowValues(plan.orderRow, t.ORDERS.HEADERS)] },
     { range: t.ORDER_LINES.SHEET, values: plan.lineRows.map(function(row) {
       return rowValues(row, t.ORDER_LINES.HEADERS); }) },
     { range: contract.SHEET, values: [rowValues(plan.eventRow, contract.HEADERS)] },
-    { range: "BalanceLedger", values: plan.journalRows.map(function(row) {
+    { range: "BalanceLedger", values: ledgerRows.map(function(row) {
       return rowValues(row, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); }) },
     { range: save.AUDIT_SHEET, values: [rowValues(plan.auditRow, save.AUDIT_HEADERS)] }
   ];
@@ -774,6 +815,77 @@ function salesRecognitionV2SaveVerifyPlan_(plan) {
       policyCJournalSignature_(plan.journalRows) !== plan.journalSignature) {
     return tampered("JOURNAL_SIGNATURE_MISMATCH");
   }
+  // Composed money pair (T11.2 §7): present + fully self-consistent exactly
+  // when plan.composedMoney is true; money fields on any other plan fail
+  // closed. Covers identity derivations, 1040/1030 mapping, amounts, dates,
+  // signature, and the per-Sale 1030 net-zero invariant. A genuine legacy
+  // (pre-T11) plan carries none of these keys and stays untouched; a T11
+  // plan stripped of its money leg fails here or at the digest below.
+  var moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var hasMoneyFields = plan.moneyRows !== undefined || plan.moneyJournalID !== undefined ||
+    plan.moneyJournalSignature !== undefined ||
+    (plan.accounts && plan.accounts.money !== undefined);
+  if (plan.composedMoney === true) {
+    if (typeof plan.moneyJournalID !== "string" || !plan.moneyJournalID ||
+        !Array.isArray(plan.moneyRows) || plan.moneyRows.length !== 2 ||
+        typeof plan.moneyJournalSignature !== "string" || !plan.moneyJournalSignature) {
+      return malformed("MONEY_PLAN_INCOMPLETE");
+    }
+    if (!plan.accounts || plan.accounts.money !== moneyPolicy.ACCOUNT_CODE) {
+      return tampered("MONEY_ACCOUNT_MAPPING_MISMATCH");
+    }
+    if (plan.moneyJournalID !== transactionStableBootstrapId_(
+        moneyPolicy.SALES_MONEY_JOURNAL_PREFIX, [plan.orderID])) {
+      return tampered("MONEY_JOURNAL_ID_DERIVATION_MISMATCH");
+    }
+    var m0 = plan.moneyRows[0], m1 = plan.moneyRows[1];
+    if (ledgerHeaders.some(function(header) {
+        return m0[header] === undefined || m1[header] === undefined; })) {
+      return malformed("MONEY_ROW_INCOMPLETE");
+    }
+    if (m0.JournalID !== plan.moneyJournalID || m1.JournalID !== plan.moneyJournalID) {
+      return tampered("MONEY_JOURNAL_ID_MISMATCH");
+    }
+    if (m0.LineID !== plan.moneyJournalID + "-1" || m1.LineID !== plan.moneyJournalID + "-2") {
+      return tampered("MONEY_JOURNAL_LINE_ID_MISMATCH");
+    }
+    if (m0.SourceID !== plan.recognitionID || m1.SourceID !== plan.recognitionID) {
+      return tampered("MONEY_JOURNAL_SOURCE_MISMATCH");
+    }
+    if (m0.SourceType !== moneyPolicy.SALES_MONEY_SOURCE_TYPE ||
+        m1.SourceType !== moneyPolicy.SALES_MONEY_SOURCE_TYPE ||
+        m0.MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE ||
+        m1.MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE) {
+      return tampered("MONEY_CLASSIFICATION_MISMATCH");
+    }
+    if (m0.AccountCode !== moneyPolicy.ACCOUNT_CODE ||
+        m1.AccountCode !== save.JOURNAL_ACCOUNTS.SETTLEMENT) {
+      return tampered("MONEY_ACCOUNT_MAPPING_MISMATCH");
+    }
+    if (Number(m0.Debit) !== Number(plan.orderTotal) || Number(m0.Credit) !== 0 ||
+        Number(m1.Debit) !== 0 || Number(m1.Credit) !== Number(plan.orderTotal)) {
+      return tampered("MONEY_AMOUNT_MISMATCH");
+    }
+    if (m0.Tanggal !== plan.economicDate || m1.Tanggal !== plan.economicDate) {
+      return tampered("MONEY_DATE_MISMATCH");
+    }
+    if (policyCJournalSignature_(plan.moneyRows) !== plan.moneyJournalSignature) {
+      return tampered("MONEY_SIGNATURE_MISMATCH");
+    }
+    // Per-Sale 1030 invariant: recognition Dr X + money Cr X nets to 0.
+    var planNet1030 = 0;
+    plan.journalRows.concat(plan.moneyRows).forEach(function(row) {
+      if (String(row.AccountCode) === save.JOURNAL_ACCOUNTS.SETTLEMENT) {
+        planNet1030 += Number(row.Debit) - Number(row.Credit);
+      }
+    });
+    if (Math.abs(planNet1030) > 1e-9) return tampered("SALE_1030_NET_NONZERO");
+  } else {
+    if (plan.composedMoney !== undefined && plan.composedMoney !== false) {
+      return malformed("MONEY_MODE_INVALID");
+    }
+    if (hasMoneyFields) return tampered("MONEY_FIELDS_UNEXPECTED");
+  }
   // Event row: complete 20-column header, linkages, signature, snapshot.
   if (!plan.eventRow || typeof plan.eventRow !== "object") return malformed("EVENT_ROW_MISSING");
   if (contract.HEADERS.some(function(header) { return plan.eventRow[header] === undefined; })) {
@@ -862,6 +974,20 @@ function salesRecognitionV2SaveInspect_(plan, ss) {
       conflicts.push("JOURNAL_LINE_CROSS_OWNER");
     }
   });
+  // Composed money line identities (plan-gated): planned money LineIDs bound
+  // to any foreign journal/source claim are cross-owner conflicts.
+  var plannedMoneyLineIds = {};
+  if (plan.composedMoney === true) {
+    plan.moneyRows.forEach(function(row) { plannedMoneyLineIds[row.LineID] = true; });
+    ledger.forEach(function(row) {
+      if (plannedMoneyLineIds[row.LineID] &&
+          !(row.JournalID === plan.moneyJournalID &&
+            row.SourceType === SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_SOURCE_TYPE &&
+            row.SourceID === plan.recognitionID)) {
+        conflicts.push("MONEY_LINE_CROSS_OWNER");
+      }
+    });
+  }
   events.forEach(function(row) {
     if (row.RecognitionID === plan.recognitionID && row.OrderID !== plan.orderID) {
       conflicts.push("RECOGNITION_IDENTITY_CROSSOVER");
@@ -889,10 +1015,31 @@ function salesRecognitionV2SaveInspect_(plan, ss) {
     return row.SourceType === plan.journalRows[0].SourceType && row.SourceID === plan.recognitionID;
   });
   var journalById = ledger.filter(function(row) { return row.JournalID === plan.journalID; });
+  // Composed money groups: SourceType SALES_MONEY_V2 bound to this
+  // recognition, and/or the derived SRV2M journal identity.
+  var moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var moneyBySource = ledger.filter(function(row) {
+    return row.SourceType === moneyPolicy.SALES_MONEY_SOURCE_TYPE &&
+      row.SourceID === plan.recognitionID;
+  });
+  var moneyById = ledger.filter(function(row) {
+    return plan.composedMoney === true && row.JournalID === plan.moneyJournalID;
+  });
+  if (plan.composedMoney !== true) {
+    // A legacy plan must never coexist with a money leg under its identities:
+    // recognition-without-money or a forged money leg fails closed.
+    var legacyMoneyJournalID = transactionStableBootstrapId_(
+      moneyPolicy.SALES_MONEY_JOURNAL_PREFIX, [plan.orderID]);
+    if (moneyBySource.length || ledger.some(function(row) {
+        return row.JournalID === legacyMoneyJournalID; })) {
+      conflicts.push("MONEY_LEG_UNEXPECTED");
+    }
+  }
   var auditById = audits.filter(function(row) { return row.AuditID === plan.auditID; });
   var auditByOperation = audits.filter(function(row) { return row.OperationID === plan.operationID; });
   var present = orderMatches.length || lineMatches.length || eventMatches.length ||
-    journalBySource.length || journalById.length || auditById.length || auditByOperation.length;
+    journalBySource.length || journalById.length || auditById.length || auditByOperation.length ||
+    moneyBySource.length || moneyById.length;
   if (!present) {
     // Our identities claimed elsewhere without any own artifacts: conflict,
     // not NONE (never re-append into a conflicting world).
@@ -964,6 +1111,54 @@ function salesRecognitionV2SaveInspect_(plan, ss) {
     } else conflicts.push("JOURNAL_DUPLICATE");
   } else missing.push("JOURNAL");
 
+  // ---- Composed money pair (only when the frozen plan carries it) ----
+  // Missing money rows => PARTIAL (recognition without money can never reach
+  // COMMITTED); tampered/duplicated rows => CONFLICT (never repaired).
+  if (plan.composedMoney === true) {
+    if (moneyBySource.length || moneyById.length) {
+      var moneySourceSet = moneyBySource.map(function(row) { return String(row.LineID); })
+        .sort().join("");
+      var moneyIdSet = moneyById.map(function(row) { return String(row.LineID); })
+        .sort().join("");
+      if (moneySourceSet !== moneyIdSet) conflicts.push("MONEY_IDENTITY_CROSSOVER");
+      if (moneyBySource.length === 2) {
+        for (var mi = 0; mi < 2; mi++) {
+          if (!salesRecognitionV2SaveRowExact_(moneyBySource[mi], plan.moneyRows[mi],
+              ledgerHeaders)) {
+            conflicts.push("MONEY_TAMPERED");
+          }
+        }
+        if (policyCJournalSignature_(moneyBySource) !== plan.moneyJournalSignature) {
+          conflicts.push("MONEY_SIGNATURE_MISMATCH");
+        }
+        var moneyDebit = 0, moneyCredit = 0;
+        moneyBySource.forEach(function(row) {
+          moneyDebit += Number(row.Debit); moneyCredit += Number(row.Credit);
+        });
+        if (!(moneyDebit === moneyCredit && moneyDebit === Number(plan.orderTotal))) {
+          conflicts.push("MONEY_BALANCE_MISMATCH");
+        }
+        // Per-Sale 1030 invariant across recognition + money artifacts.
+        var saleNet1030 = 0;
+        journalBySource.concat(moneyBySource).forEach(function(row) {
+          if (String(row.AccountCode) === save.JOURNAL_ACCOUNTS.SETTLEMENT) {
+            saleNet1030 += Number(row.Debit) - Number(row.Credit);
+          }
+        });
+        if (Math.abs(saleNet1030) > 1e-9) conflicts.push("SALE_1030_NET_NONZERO");
+      } else if (moneyBySource.length === 1) {
+        var moneyOnly = moneyBySource[0], moneyPlanLine = null;
+        plan.moneyRows.forEach(function(row) {
+          if (row.LineID === moneyOnly.LineID) moneyPlanLine = row;
+        });
+        if (!moneyPlanLine || !salesRecognitionV2SaveRowExact_(moneyOnly, moneyPlanLine,
+            ledgerHeaders)) {
+          conflicts.push("MONEY_TAMPERED");
+        } else missing.push("MONEY_JOURNAL_LINE");
+      } else conflicts.push("MONEY_DUPLICATE");
+    } else missing.push("MONEY_JOURNAL");
+  }
+
   // ---- Audit: content + ID-set vs operation-set membership ----
   if (auditById.length || auditByOperation.length) {
     if (auditById.length > 1) conflicts.push("AUDIT_DUPLICATE");
@@ -1016,10 +1211,13 @@ function salesRecognitionV2SaveApplyBatch_(plan, operation, runtime) {
       recognitionID: plan.recognitionID, journalID: plan.journalID, auditID: plan.auditID
     }, fields || {}));
   }
-  var rows = 1 + plan.lineRows.length + 1 + 2 + 1;
   var ranges = null, batchError = null;
   try { ranges = salesRecognitionV2SaveValueRanges_(plan); }
   catch (error) { return outcome(save.STATUS.RECOVERY_REQUIRED, { code: codes.PLAN_MALFORMED, detail: error.message }); }
+  // Row count derives from the frozen ranges: recognition-only plans keep the
+  // historical count; composed plans include the 2 extra money ledger lines.
+  var rows = 0;
+  ranges.forEach(function(range) { rows += range.values.length; });
   try { runtime.batch(ranges); } catch (error) { batchError = error; }
   if (!batchError && runtime.crash) runtime.crash("V2_AFTER_BATCH");
   var inspection = salesRecognitionV2SaveInspect_(plan, runtime.spreadsheet);
@@ -1160,6 +1358,29 @@ function salesRecognitionV2SaveResume_(operation, hash, normalized, runtime) {
     recognitionID: plan.recognitionID, journalID: plan.journalID, auditID: plan.auditID });
 }
 
+// T11.2 §20 read-only resolution of the single-commit config for a NEW Sales
+// intent. An injected runtime may carry its own raw value; the production path
+// reads the script property exactly once and NEVER writes it (the activation
+// writer belongs to a later authorized unit). Fail closed on read or parse
+// failure: no fallback, no mode inference. Resume paths never call this gate.
+function salesV2SingleCommitGate_(runtime) {
+  var contract = SINGLE_COMMIT_TRANSACTION_V1;
+  var raw = null;
+  if (runtime && Object.prototype.hasOwnProperty.call(runtime, "singleCommitConfig")) {
+    raw = runtime.singleCommitConfig;
+  } else {
+    try {
+      if (typeof PropertiesService !== "undefined") {
+        raw = PropertiesService.getScriptProperties().getProperty(contract.CONFIG_PROPERTY);
+      }
+    } catch (error) {
+      return { allowed: false, composedMoney: false,
+        code: contract.CODES.SINGLE_COMMIT_CONFIG_INVALID, detail: "CONFIG_READ_FAILED" };
+    }
+  }
+  return singleCommitTransactionSalesGate_(singleCommitTransactionConfigState_(raw));
+}
+
 // New intent path. Lookup already returned null; gates, master freeze (rows +
 // analytical authority snapshots + normalized payload + integrity digest),
 // bounds, intent persist + exact ten-field readback, then batch. Every gate
@@ -1175,6 +1396,15 @@ function salesRecognitionV2SaveNewIntent_(normalized, hash, runtime) {
     salesRecognitionV2DefaultConfig() : runtime.config;
   var gate = salesRecognitionV2RequestGate(config);
   if (!gate.allowed) return outcome(save.STATUS.REFUSED, { code: gate.code });
+  // T11.2 §3/§20 composed-money mode gate for NEW intents only. Absent or
+  // PREPARED stays byte-identical legacy recognition (zero behavior change);
+  // ACTIVE requires the frozen 1040 precondition before any write; PAUSED,
+  // REJECT, and unresolved states refuse fail-closed and never fall back.
+  var singleCommit = salesV2SingleCommitGate_(runtime);
+  if (!singleCommit.allowed) {
+    return outcome(save.STATUS.REFUSED, { code: singleCommit.code,
+      detail: singleCommit.detail || "" });
+  }
   var schema = salesRecognitionV2SaveSchemaGate_(runtime.spreadsheet);
   if (schema.status !== "PASS") {
     return outcome(save.STATUS.REFUSED, { code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(",") });
@@ -1187,6 +1417,21 @@ function salesRecognitionV2SaveNewIntent_(normalized, hash, runtime) {
     var first = preflight.errors[0] || {};
     return outcome(save.STATUS.REFUSED, { code: first.code || "ACCOUNT_ABSENT",
       field: first.accountCode || "", detail: "ACCOUNT_PREFLIGHT_FAILED" });
+  }
+  // T11.2 §11 1040 precondition: when the composed-money leg is ACTIVE the
+  // Save fails CLOSED here — before any business mutation — if 1040 is
+  // absent, duplicate, inactive, or inconsistent with the frozen contract.
+  // No fallback to 1000/1010/1020/1030, no name-inferred account. When the
+  // leg is off this block never runs (current Sales V2 exactly).
+  if (singleCommit.composedMoney) {
+    var moneyPreflight = preflightSingleCommitMoneyAccount(accountRows);
+    if (moneyPreflight.status !== "PASS") {
+      var moneyError = moneyPreflight.errors[0] || {};
+      return outcome(save.STATUS.REFUSED, {
+        code: moneyError.code || SALES_RECOGNITION_V2_CONTRACT.REFUSAL_CODES.ACCOUNT_ABSENT,
+        field: moneyError.accountCode || SINGLE_COMMIT_MONEY_POLICY.ACCOUNT_CODE,
+        detail: "MONEY_ACCOUNT_PREFLIGHT_FAILED" });
+    }
   }
   var orderID = transactionStableBusinessID_("ORD-", save.OPERATION_TYPE, normalized.requestKey);
   var operationID = transactionOperationID_(save.OPERATION_TYPE, normalized.requestKey);
@@ -1233,7 +1478,8 @@ function salesRecognitionV2SaveNewIntent_(normalized, hash, runtime) {
   try {
     plan = salesRecognitionV2SavePlan_({ normalized: normalized, hash: hash, order: order,
       config: config, authority: authority, actor: runtime.actor(), now: now,
-      economicDate: economicDate, operationID: operationID });
+      economicDate: economicDate, operationID: operationID,
+      composedMoney: singleCommit.composedMoney });
   } catch (error) {
     return outcome(save.STATUS.REFUSED, Object.assign({ code: error.code || codes.AUTHORITY_SNAPSHOT_MISMATCH,
       field: error.field || "", detail: error.message }, base));
