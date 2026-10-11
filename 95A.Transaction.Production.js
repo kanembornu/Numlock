@@ -388,6 +388,15 @@ function findOperationalOperation(payload) { return transactionResponse_(functio
 function submitOperationalFulfillment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return transitionOperationalFulfillmentWithRepository(payload.orderID, payload.next, r, r.repository).order; } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalPayment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalPayment_(payload.orderID, payload, r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalPurchase(payload) { return transactionResponse_(function() {
+  // T11.5 U3 — gate BEFORE any write (T11.2 §5 adapter convergence). LEGACY
+  // keeps today's writer byte-for-byte; ACTIVE routes into the durable
+  // PURCHASE_SINGLE_COMMIT_SAVE core under this call's own single outer lock;
+  // PAUSED/REJECT/invalid refuse with zero writes and no legacy fallback.
+  var gate = purchaseSingleCommitGate_(null);
+  if (gate.mode === "REFUSE") {
+    throw transactionOperationalError_(gate.code, null, gate.detail || gate.code);
+  }
+  if (gate.mode === "ACTIVE") return purchaseOperationalSingleCommit_(payload, gate);
   var r = transactionProductionRuntime_(), acquired = false;
   try {
     r.lock.waitLock(30000); acquired = true;
@@ -409,6 +418,73 @@ function submitOperationalPurchase(payload) { return transactionResponse_(functi
       inventoryWrites: 0, payableWrites: 0 });
   } finally { if (acquired) r.lock.releaseLock(); }
 }); }
+
+// T11.5 U3 — the operational adapter's ACTIVE branch: maps the flat
+// operational payload into the ONE canonical single-commit shape (backend
+// derives SupplierSource from the supplier master Name — a deterministic
+// authority derivation of the operator's SupplierID selection, D15; the
+// evidence pairing defaults to the honest "document unavailable" state the
+// correction UI already uses) and executes the durable core under this
+// call's own single outer lock. paidVia/paymentStatus/cashAccountCode are
+// forwarded only so the core REFUSES them explicitly (D1/D2/D4/D8) — never
+// silently dropped.
+function purchaseOperationalSingleCommit_(payload, gate) {
+  var r = transactionProductionRuntime_(), acquired = false;
+  try {
+    r.lock.waitLock(30000); acquired = true;
+    var p = payload || {};
+    var expenses = readCanonicalTable(r.spreadsheet, "ExpenseItems",
+      ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]);
+    var corePayload = purchaseOperationalCorePayload_(p, r);
+    var runtime = {
+      now: function() { return new Date(); },
+      uuid: function() { return Utilities.getUuid(); },
+      flush: function() { SpreadsheetApp.flush(); },
+      invalidate: function() { invalidateDashboardCache(); }
+    };
+    var core = purchaseSingleCommitCoreRuntime_(r.spreadsheet, runtime, expenses, gate);
+    var result = purchaseSingleCommitSaveWithRuntime_(corePayload, core);
+    if (result.status !== "DONE") {
+      throw transactionOperationalError_(result.code || result.status, result.field || null,
+        result.detail || result.status);
+    }
+    return result.data;
+  } finally { if (acquired) r.lock.releaseLock(); }
+}
+
+function purchaseOperationalCorePayload_(p, r) {
+  var payload = { transactionType: "EXPENSE",
+    requestKey: transactionOperationalText_(p.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"),
+    expenseItemId: transactionOperationalText_(p.expenseItemID, "EXPENSE_ITEM_REQUIRED", "expenseItemID") };
+  if (p.supplierID !== undefined && p.supplierID !== null) {
+    payload.supplierID = String(p.supplierID).trim();
+  }
+  if (p.paidVia) payload.paidVia = p.paidVia;
+  if (p.paymentStatus) payload.paymentStatus = p.paymentStatus;
+  if (p.cashAccountCode) payload.cashAccountCode = p.cashAccountCode;
+  var supplierSource = "";
+  if (payload.supplierID) {
+    var suppliers = readCanonicalTable(r.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET,
+      SUPPLIER_MASTER_CONTRACT.HEADERS);
+    var supplier = suppliers.filter(function(row) {
+      return String(row.SupplierID || "").trim() === payload.supplierID;
+    })[0];
+    if (!supplier || !masterSelectionEligible(supplier.IsActive)) {
+      throw transactionOperationalError_("SUPPLIER_INACTIVE", "supplierID",
+        "Supplier is missing or inactive.");
+    }
+    supplierSource = String(supplier.Name || "").trim();
+  }
+  var purchaseDate = transactionOperationalText_(p.purchaseDate, "INVALID_PURCHASE_DATE", "purchaseDate");
+  var qty = p.qty === undefined || p.qty === null ? "" : String(p.qty);
+  var uom = p.purchaseUOM === undefined || p.purchaseUOM === null ? "" : String(p.purchaseUOM);
+  var price = p.purchasePrice === undefined || p.purchasePrice === null ? "" : String(p.purchasePrice);
+  payload.input = { ExpenseDate: purchaseDate, ReceiptDate: purchaseDate, PurchaseQty: qty,
+    PurchaseUOM: uom, AcquisitionValue: price, SupplierSource: supplierSource,
+    ExternalRef: "", ExternalDocumentStatus: "EXTERNAL_DOCUMENT_UNAVAILABLE",
+    Attested: true };
+  return payload;
+}
 function submitOperationalExpense(payload) {
   return submitCanonicalTransaction({ transactionType: "EXPENSE", expenseItemId: payload && payload.expenseItemID,
     amount: Number(payload && payload.amount), expenseDate: payload && payload.date, cashAccountCode: payload && payload.paidVia });

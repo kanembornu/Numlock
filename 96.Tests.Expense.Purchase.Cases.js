@@ -2710,9 +2710,16 @@ function testPurchaseUIContracts() {
   check(colWidths[7] + colWidths[6] + colWidths[5] + colWidths[4] + colWidths[3] + colWidths[2] + colWidths[1] + colWidths[0] === 100, 'U132: final allocation sums to 100%');
 
   // === P-1: Purchase payment-status UI → backend handoff regression ===
-  // U137: live receipt payload construction (195 submitReceiptEntry) sends explicit paymentStatus "PAID".
-  check(_htmlActions.indexOf('cashAccountCode: cashAccountCode, paymentStatus: "PAID" }') !== -1,
-    'U137: receipt payload sends explicit paymentStatus PAID');
+  // U137 (T11.5 U3): the ACTIVE single-commit receipt payload carries NO
+  // inline payment fields (the backend derives PaymentStatus=PAID and
+  // CashAccountCode=1040 inside the one Save — D1/D2/D4/D8); every other mode
+  // still attaches the legacy cashAccountCode + paymentStatus "PAID" pair
+  // through the server-resolved mode gate.
+  check(_htmlActions.indexOf('cashAccountCode: cashAccountCode, paymentStatus: "PAID" }') === -1,
+    'U137: ACTIVE receipt payload no longer inlines paymentStatus PAID');
+  check(_htmlActions.indexOf('state.receiptPayload.paymentStatus = "PAID"') !== -1 &&
+    _htmlActions.indexOf('if (singleCommitExpenseSurface_() !== "ACTIVE")') !== -1,
+    'U137b: legacy modes still attach paymentStatus PAID behind the mode gate');
   // U138 POSITIVE: UI-shaped payload (exact live fields from 195 receipt payload) passes the strict write normalizer.
   var uiPayload = { transactionType: 'EXPENSE', expenseItemId: 'OSR04',
     requestKey: 'receipt-0123456789abcdef0123456789abcdef',

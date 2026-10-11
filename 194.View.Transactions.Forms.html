@@ -49,6 +49,20 @@
       return state.expenseIntent.requestKey;
     }
 
+    // T11.5 U3: one durable client intent key owns the WHOLE operational
+    // Purchase transaction (T11.2 §9). Same retention semantics as the
+    // Expense intent key: unchanged payload reuses the key; any payload
+    // change deterministically mints a new identity.
+    function purchaseIntentRequestKey_(payload)
+    {
+      var state = transactionEntryState;
+      var text = JSON.stringify(payload);
+      if (!state.purchaseIntent || state.purchaseIntent.text !== text) {
+        state.purchaseIntent = { text: text, requestKey: operationalRequestKey_("purchase") };
+      }
+      return state.purchaseIntent.requestKey;
+    }
+
     function formatEntryCurrency(value)
     {
       return "Rp " + Number(value || 0).toLocaleString("id-ID");
@@ -672,8 +686,15 @@
       if (!e.Supplier.value.trim()) errors.Supplier = "Enter the supplier or purchase source.";
       if (!e.Unavailable.checked && !e.Reference.value.trim()) errors.Reference = "Enter an evidence reference or declare the document unavailable.";
       if (!e.Attested.checked) errors.Attested = "Confirm that these details reflect what was actually received.";
-      var cashAccount = e.CashAccount ? e.CashAccount.value : "";
-      if (!cashAccount || ["1000", "1010", "1020"].indexOf(cashAccount) === -1) errors.CashAccount = "Select a payment account.";
+      // T11.5 U3: the ACTIVE single-commit Purchase surface never requests a
+      // payment channel (D1/D2/D15); the server derives 1040. Every other
+      // mode keeps the exact legacy cash requirement.
+      var singleCommitPurchaseActive = typeof singleCommitExpenseSurface_ === "function" &&
+        singleCommitExpenseSurface_() === "ACTIVE";
+      if (!singleCommitPurchaseActive) {
+        var cashAccount = e.CashAccount ? e.CashAccount.value : "";
+        if (!cashAccount || ["1000", "1010", "1020"].indexOf(cashAccount) === -1) errors.CashAccount = "Select a payment account.";
+      }
       if (showErrors) ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount", "expenseDate"].forEach(function(key) {
         e[key + "Error"].innerText = errors[key] || ""; e[key].setAttribute("aria-invalid", String(Boolean(errors[key])));
       });

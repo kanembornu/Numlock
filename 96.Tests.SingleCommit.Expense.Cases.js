@@ -293,19 +293,26 @@ function testExpenseSingleCommitGateRouting() {
   check("A4c", active.settlementAttempts === 0 && active.invalidations === 1,
     "no settlement attempt, cache invalidated once");
 
-  // A5: ACTIVE keeps the Purchase route on the legacy path — the legacy cash
-  // gate still applies there (U3 owns Purchase).
+  // A5: ACTIVE routes the Purchase route to the T11.5 U3
+  // PURCHASE_SINGLE_COMMIT_SAVE core (U3 owns Purchase; the U2-era "Purchase
+  // stays legacy" behavior is superseded by the frozen T11.2 §5 convergence).
+  // This payload carries legacy Expense fields (amount/expenseDate) and no
+  // requestKey/input, so the purchase core's strict field allowlist refuses it
+  // zero-write BEFORE the legacy cash gate could ever run: no
+  // INVALID_CASH_ACCOUNT, no operation row, no batch, no mutation.
   var purchaseItem = EXPENSE_PURCHASE_POLICY.rows.filter(function(row) {
     return row.CostType === "VARIABLE_COST" && row.PurchaseRelationship === "DIRECT_HPP_COMPONENT";
   })[0];
   var purchase = t11u2Fixture_({ expenseItemId: purchaseItem.expenseItemId });
+  var purchaseBefore = t11u2Snapshot_(purchase);
   var purchaseResult = purchase.run({ transactionType: "EXPENSE",
     expenseItemId: purchaseItem.expenseItemId, amount: 9000, expenseDate: "2026-10-05" });
   check("A5a", purchaseResult.success === false &&
-    purchaseResult.error.code === "INVALID_CASH_ACCOUNT",
+    purchaseResult.error.code === "PURCHASE_SINGLE_COMMIT_FIELD_REFUSED",
     JSON.stringify(purchaseResult));
-  check("A5b", t11u2Ops_(purchase).length === 0 && purchase.batches.length === 0,
-    "Purchase route never enters EXPENSE_SINGLE_COMMIT_SAVE");
+  check("A5b", t11u2Ops_(purchase).length === 0 && purchase.batches.length === 0 &&
+    t11u2Snapshot_(purchase) === purchaseBefore,
+    "Purchase route never enters EXPENSE_SINGLE_COMMIT_SAVE or the legacy cash gate");
 
   // A6: resolved mode helper (server authority bootstrap) — ABSENT/PREPARED
   // travel as PREPARED, never ACTIVE.

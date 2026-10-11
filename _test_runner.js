@@ -126,6 +126,7 @@ var files = [
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
   '96.Tests.SingleCommit.SalesMoney.Cases.js',
   '96.Tests.SingleCommit.Expense.Cases.js',
+  '96.Tests.SingleCommit.Purchase.Cases.js',
   '96.Tests.SalesRecognition.V2.Projection.Cases.js',
   '96.Tests.SalesRecognition.V2.U4.Cases.js',
   '96.Tests.SalesRecognition.V2.U5.Cases.js',
@@ -325,6 +326,19 @@ run('testSalesComposedMoneyDurability', 'testSalesComposedMoneyDurability()');
   run('testExpenseSingleCommitPlanBatch', 'testExpenseSingleCommitPlanBatch()');
   run('testExpenseSingleCommitDurability', 'testExpenseSingleCommitDurability()');
   run('testExpenseSingleCommitIsolation', 'testExpenseSingleCommitIsolation()');
+
+  // T11.5 U3 Purchase durable single-commit core (SINGLE_COMMIT_TRANSACTION_V1
+  // gated, inert until authorized activation): gate routing + byte-identical
+  // legacy parity, 1040/6210 preflight matrix, one-plan/ONE-batch composition
+  // (final event append + Policy C Dr6210/Cr1040 + Logs), durability
+  // (replay/conflict/UNKNOWN pre+post batch/artifact loss/tamper), isolation
+  // (Treasury/AP/Inventory, payment fields, historical rows, correction
+  // lineage).
+  run('testPurchaseSingleCommitGateRouting', 'testPurchaseSingleCommitGateRouting()');
+  run('testPurchaseSingleCommitPreflightAccounts', 'testPurchaseSingleCommitPreflightAccounts()');
+  run('testPurchaseSingleCommitPlanBatch', 'testPurchaseSingleCommitPlanBatch()');
+  run('testPurchaseSingleCommitDurability', 'testPurchaseSingleCommitDurability()');
+  run('testPurchaseSingleCommitIsolation', 'testPurchaseSingleCommitIsolation()');
 
 // SALES_RECOGNITION_V2 U3 shared read-only projection (cohorts, signed
 // events, lineage, cross-cohort parity + sensitivity proof).

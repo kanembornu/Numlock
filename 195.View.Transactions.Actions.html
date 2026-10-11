@@ -89,6 +89,23 @@
           if (expenseCashError) expenseCashError.innerText = "";
         }
       }
+      // T11.5 U3: the ACTIVE single-commit Purchase receipt surface never
+      // requests a payment channel (D1/D2/D15); the server derives 1040.
+      // Every other mode keeps the legacy "Paid via" selector required.
+      var receiptCashField = operationalElement("receiptCashAccountField");
+      if (receiptCashField) {
+        var hideReceiptCash = Boolean(transactionEntryState &&
+          transactionEntryState.transactionType === "EXPENSE" &&
+          isPurchaseExpenseEntry() && singleCommitExpenseSurface_() === "ACTIVE");
+        receiptCashField.hidden = hideReceiptCash;
+        receiptCashField.style.display = hideReceiptCash ? "none" : "";
+        if (hideReceiptCash) {
+          var receiptCashSelect = operationalElement("receiptCashAccount");
+          if (receiptCashSelect) receiptCashSelect.value = "";
+          var receiptCashError = operationalElement("receiptCashAccountError");
+          if (receiptCashError) receiptCashError.innerText = "";
+        }
+      }
       if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
     }
 
@@ -361,10 +378,14 @@
 
     function saveOperationalPurchase()
     {
-      var payload = { requestKey: "purchase-" + String(Date.now()), purchaseDate: operationalElement("operationalPurchaseDate").value, supplierID: operationalElement("operationalSupplier").value,
+      var payload = { purchaseDate: operationalElement("operationalPurchaseDate").value, supplierID: operationalElement("operationalSupplier").value,
         expenseItemID: operationalElement("operationalPurchaseItem").value, qty: Number(operationalElement("operationalPurchaseQty").value),
-        purchaseUOM: operationalElement("operationalPurchaseUom").value, purchasePrice: Number(operationalElement("operationalPurchasePrice").value),
-        paidVia: operationalElement("operationalPurchasePaidVia").value };
+        purchaseUOM: operationalElement("operationalPurchaseUom").value, purchasePrice: Number(operationalElement("operationalPurchasePrice").value) };
+      // T11.5 U3: the ACTIVE single-commit surface never sends a payment
+      // method; the server derives 1040. Legacy modes keep the exact legacy
+      // payload including paidVia.
+      if (singleCommitExpenseSurface_() !== "ACTIVE") payload.paidVia = operationalElement("operationalPurchasePaidVia").value;
+      payload.requestKey = purchaseIntentRequestKey_(payload);
       var error = validateOperationalTransactionInput(payload); if (error) { operationalElement("operationalPurchaseError").innerText = error; return; }
       operationalServerCall("submitOperationalPurchase", payload, function() { operationalElement("operationalPurchaseError").innerText = "Purchase saved."; }, operationalElement("operationalPurchaseError"));
     }
@@ -384,7 +405,9 @@
       if (!String(value.supplierID || "").trim()) return "Supplier wajib dipilih.";
       if (!(Number(value.qty) > 0)) return "Qty harus lebih besar dari 0.";
       if (!String(value.purchaseUOM || "").trim()) return "UOM tidak valid untuk item ini.";
-      if (!String(value.paidVia || "").trim()) return "Metode pembayaran wajib dipilih.";
+      // T11.5 U3: the ACTIVE single-commit surface never requires a payment
+      // method (D1/D2/D15); every other mode keeps the legacy requirement.
+      if (singleCommitExpenseSurface_() !== "ACTIVE" && !String(value.paidVia || "").trim()) return "Metode pembayaran wajib dipilih.";
       return "";
     }
 
@@ -1074,7 +1097,15 @@
         var cashAccountCode = cashAccountSelect ? cashAccountSelect.value : "";
         state.cashAccountCode = cashAccountCode;
         if (!state.receiptKey) state.receiptKey = "receipt-" + Array.from(crypto.getRandomValues(new Uint8Array(16)), function(byte) { return byte.toString(16).padStart(2, "0"); }).join("");
-        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input, cashAccountCode: cashAccountCode, paymentStatus: "PAID" };
+        // T11.5 U3: on the ACTIVE single-commit surface the payload carries NO
+        // payment fields at all — PaymentStatus=PAID / CashAccountCode=1040 are
+        // backend-derived inside the one Save (D1/D2/D4/D8). Legacy modes keep
+        // the exact legacy-shaped payload.
+        state.receiptPayload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, requestKey: state.receiptKey, input: input };
+        if (singleCommitExpenseSurface_() !== "ACTIVE") {
+          state.receiptPayload.cashAccountCode = cashAccountCode;
+          state.receiptPayload.paymentStatus = "PAID";
+        }
       }
       try {
         window.sessionStorage.setItem("numlock.receipt.pending", JSON.stringify({ payload: state.receiptPayload,

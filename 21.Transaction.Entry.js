@@ -301,9 +301,15 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
           ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]);
         var expensePreRoute = resolveExpensePurchasePolicy_(payload && payload.expenseItemId,
           expensePreResolvedItems);
-        if (!expensePolicyIsPurchase_(expensePreRoute)) {
-          return expenseSingleCommitDispatch_(payload, ss, runtime, expensePreResolvedItems, expenseGate);
+        // T11.5 U3 — an ACTIVE Purchase-routed item now converges into the
+        // PURCHASE_SINGLE_COMMIT_SAVE core (T11.2 §5): the legacy cash gate,
+        // the separate postPolicyCPurchaseEvent_ accounting step and the
+        // PURCHASE_PENDING multistep are unreachable from the ACTIVE path.
+        // ABSENT/PREPARED keeps the exact legacy purchase route below.
+        if (expensePolicyIsPurchase_(expensePreRoute)) {
+          return purchaseSingleCommitDispatch_(payload, ss, runtime, expensePreResolvedItems, expenseGate);
         }
+        return expenseSingleCommitDispatch_(payload, ss, runtime, expensePreResolvedItems, expenseGate);
       }
     }
     // CashAccountCode validation — required for all non-INVENTORY_RECEIPT submissions
@@ -1651,6 +1657,1282 @@ function expenseSingleCommitDispatch_(payload, ss, dispatcherRuntime, items, gat
       if (pending) identity.operationID = pending.OperationID;
     } catch (lookupError) { /* requestKey remains the recoverable identity */ }
     return expenseSingleCommitEnvelope_(expenseSingleCommitResult_(save.STATUS.UNKNOWN,
+      Object.assign({
+        code: save.CODES.SAVE_EXECUTION_UNKNOWN,
+        detail: String(error && error.message || error)
+      }, identity)));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// T11.5 U3 — PURCHASE_SINGLE_COMMIT_SAVE durable core (T11.2 §5/§6/§7/§8/§9).
+//
+// ONE normal Purchase intent -> ONE immutable plan -> ONE atomic
+// spreadsheets.batchUpdate [PurchaseEvents, BalanceLedger(2), Logs] -> DONE.
+// The legacy split (event append with AccountingStatus=PENDING -> separate
+// postPolicyCPurchaseEvent_ ledger append -> AccountingStatus update -> possible
+// PURCHASE_PENDING / AP SETTLEMENT_PENDING) is unreachable from this path: the
+// event row is FINAL at append (PaymentStatus=PAID, CashAccountCode=1040,
+// AccountingStatus=POSTED per Policy C prospective Dr6210/Cr1040), no payment
+// channel is requested or accepted, no Cr2000, no AP lifecycle, no Treasury
+// workflow, no Inventory authority. Inert unless the frozen
+// SINGLE_COMMIT_TRANSACTION_V1 config resolves ACTIVE; ABSENT/PREPARED keeps
+// the legacy purchase writer byte-for-byte, PAUSED/REJECT/invalid fail closed.
+//
+// The dispatcher (or the operational adapter's own single outer lock) owns the
+// single outer ScriptLock; this core never locks, so no nested lock is
+// possible. Intent, batch, readback and commit remain multistep: only the
+// single batchUpdate is atomic.
+// ---------------------------------------------------------------------------
+var PURCHASE_SINGLE_COMMIT_V1 = Object.freeze({
+  OPERATION_TYPE: "PURCHASE_SINGLE_COMMIT_SAVE",
+  PLAN_VERSION: 1,
+  // The ONLY surfaces the single batch may ever touch. Payments, Settlements,
+  // TreasuryReceipts, InventoryReceipts, InventoryLedger, Cash, Fulfillment,
+  // Accounts, tabops and AccountsPayable writes are forbidden artifacts.
+  WRITE_SURFACES: Object.freeze(["PurchaseEvents", "BalanceLedger", "Logs"]),
+  // Policy C prospective journal identity (T11.2 §5): reuses the frozen
+  // Policy C shape with the credit side frozen to 1040 for the normal flow.
+  JOURNAL_ID_PREFIX: "POLICYC-PEXP-PURCHASE-",
+  EVENT_ID_PREFIX: "PE-",
+  RECOVERY_KEY_PREFIX: "pe-receipt-",
+  MOVEMENT_TYPE: "PURCHASE_RECOGNITION",
+  SOURCE_TYPE: "PURCHASE_EVENT",
+  DEBIT_ACCOUNT_CODE: "6210",
+  MONEY_ACCOUNT_CODE: "1040",
+  // PurchaseEvent final state, backend-derived, written directly in the append:
+  // paid-at-Save (D4/D8). NEVER operator choices.
+  PAYMENT_STATUS: "PAID",
+  ACCOUNTING_STATUS: "POSTED",
+  REGIME: "PROSPECTIVE_PURCHASE_EXPENSE",
+  AUDIT_MODULE: "TransactionEntry",
+  AUDIT_ACTION: "CREATE_PURCHASE",
+  // NOTE: the PurchaseEvents headers live in PURCHASE_EVENT_POLICY (47) and
+  // are referenced lazily at call time — Apps Script evaluates top-level
+  // initializers in filename order, so 21 must never dereference 47 at load.
+  ITEM_HEADERS: Object.freeze(["ID_Ops", "Item", "Kategori", "Kind", "Group",
+    "AccountCode", "IsActive"]),
+  // Strict normalizer allowlist. cashAccountCode is tolerated only as an
+  // ABSENT value: the shared legacy-shaped clients always carry payment
+  // fields, and any explicit channel/payment selection is refused on the
+  // ACTIVE path (D1/D2/D4/D8). supplierID is OPTIONAL business metadata
+  // (D9); it never appears in the history-readable NormalizedPayload.
+  ALLOWED_FIELDS: Object.freeze(["transactionType", "requestKey", "expenseItemId",
+    "input", "supplierID", "cashAccountCode"]),
+  PAYMENT_FIELDS: Object.freeze(["paidVia", "paymentMethod", "PaymentMethod",
+    "paymentStatus", "PaymentStatus", "receiveVia", "ReceiveVia",
+    "destination", "destinationAccountCode", "evidenceRef", "EvidenceRef",
+    "settlementId", "SettlementID", "cashAccount", "treasuryReceipt",
+    "evidenceType", "paymentID", "PaymentID", "supplierId"]),
+  MAX_CELL_CHARS: 45000,
+  MAX_BATCH_CELLS: 500,
+  MAX_REQUEST_BYTES: 1000000,
+  REQUEST_OVERHEAD_BYTES: 4096,
+  STATUS: Object.freeze({
+    DONE: "DONE",
+    REFUSED: "REFUSED",
+    CONFLICT: "CONFLICT",
+    UNKNOWN: "UNKNOWN",
+    RECOVERY_REQUIRED: "RECOVERY_REQUIRED"
+  }),
+  CODES: Object.freeze({
+    PAYLOAD_INVALID: "PURCHASE_SINGLE_COMMIT_PAYLOAD_INVALID",
+    PAYMENT_FIELD_REFUSED: "PURCHASE_SINGLE_COMMIT_PAYMENT_FIELD_REFUSED",
+    FIELD_REFUSED: "PURCHASE_SINGLE_COMMIT_FIELD_REFUSED",
+    SCHEMA_NOT_READY: "PURCHASE_SINGLE_COMMIT_SCHEMA_NOT_READY",
+    OPERATION_PAYLOAD_CONFLICT: "OPERATION_PAYLOAD_CONFLICT",
+    DUPLICATE_OPERATION_EVIDENCE: "DUPLICATE_OPERATION_EVIDENCE",
+    BATCH_BOUNDS_EXCEEDED: "PURCHASE_SINGLE_COMMIT_BATCH_BOUNDS_EXCEEDED",
+    ARTIFACTS_INCOMPLETE: "PURCHASE_SINGLE_COMMIT_ARTIFACTS_INCOMPLETE",
+    IDENTITY_CONFLICT: "PURCHASE_SINGLE_COMMIT_IDENTITY_CONFLICT",
+    PLAN_MALFORMED: "PURCHASE_SINGLE_COMMIT_PLAN_MALFORMED",
+    INTENT_READBACK_FAILED: "PURCHASE_SINGLE_COMMIT_INTENT_READBACK_FAILED",
+    BATCH_OUTCOME_UNKNOWN: "PURCHASE_SINGLE_COMMIT_BATCH_OUTCOME_UNKNOWN",
+    READBACK_UNKNOWN: "PURCHASE_SINGLE_COMMIT_READBACK_UNKNOWN",
+    COMMIT_OUTCOME_UNKNOWN: "PURCHASE_SINGLE_COMMIT_COMMIT_OUTCOME_UNKNOWN",
+    SAVE_EXECUTION_UNKNOWN: "PURCHASE_SINGLE_COMMIT_SAVE_EXECUTION_UNKNOWN",
+    INVALID_OPERATION_STATE: "PURCHASE_SINGLE_COMMIT_INVALID_OPERATION_STATE",
+    ACCOUNT_PREFLIGHT_FAILED: "PURCHASE_SINGLE_COMMIT_ACCOUNT_PREFLIGHT_FAILED",
+    JOURNAL_SIGNATURE_INVALID: "PURCHASE_SINGLE_COMMIT_JOURNAL_SIGNATURE_INVALID",
+    REGIME_NOT_PROSPECTIVE: "PURCHASE_SINGLE_COMMIT_REGIME_NOT_PROSPECTIVE",
+    SUPPLIER_INVALID: "PURCHASE_SINGLE_COMMIT_SUPPLIER_INVALID"
+  })
+});
+
+// Envelope result. NEVER a { success: false } DTO without identity: UNKNOWN /
+// RECOVERY_REQUIRED retain requestKey + operation linkage so an uncertain
+// outcome can never collapse into a definite loss of identity.
+function purchaseSingleCommitResult_(status, fields) {
+  return Object.assign({
+    status: status, code: "", requestKey: "", operationID: "", entryID: "",
+    journalID: "", auditID: "", writeCount: 0, replay: false, field: "",
+    detail: "", entry: null
+  }, fields || {});
+}
+
+function purchaseSingleCommitError_(code, field, message) {
+  var error = new Error(message || code);
+  error.purchaseSingleCommitCode = code;
+  error.field = field || "";
+  return error;
+}
+
+// Zero-write refusal envelope for a gate that refuses before any read/write.
+function purchaseSingleCommitRefusal_(gate) {
+  var result = purchaseSingleCommitResult_(PURCHASE_SINGLE_COMMIT_V1.STATUS.REFUSED,
+    { code: gate.code, detail: gate.detail || "", writeCount: 0 });
+  return purchaseSingleCommitEnvelope_(result);
+}
+
+// Dispatcher-shaped envelope. DONE carries the legacy Purchase DTO contract the
+// existing clients expect (success + status OPERATIONAL_POSTED + projected
+// event data); every non-DONE status keeps the legacy
+// { success:false, status, reason, writeCount } shape with `unknown: true`
+// added only for UNKNOWN so the client never renders a definite failure for an
+// unresolved outcome. `accountingPending` is never set; AccountingStatus on
+// the event row is POSTED by the batch itself.
+function purchaseSingleCommitEnvelope_(result) {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  var envelope = {
+    status: result.status,
+    code: result.code,
+    reason: result.status === save.STATUS.DONE ? null : (result.detail || result.code || result.status),
+    writeCount: result.writeCount,
+    requestKey: result.requestKey,
+    operationID: result.operationID,
+    eventId: result.entryID,
+    journalID: result.journalID,
+    accountingStatus: result.status === save.STATUS.DONE ? save.ACCOUNTING_STATUS : undefined
+  };
+  if (result.status === save.STATUS.DONE) {
+    envelope.success = true;
+    envelope.status = "OPERATIONAL_POSTED";
+    envelope.data = result.entry;
+    envelope.accountingStatus = save.ACCOUNTING_STATUS;
+    envelope.singleCommit = { status: "DONE", replay: result.replay === true,
+      writeCount: result.writeCount };
+    return envelope;
+  }
+  envelope.success = false;
+  envelope.error = {
+    code: result.code || result.status,
+    message: result.detail || result.code || result.status,
+    field: result.field || null
+  };
+  if (result.status === save.STATUS.UNKNOWN) envelope.unknown = true;
+  return envelope;
+}
+
+// ---------------------------------------------------------------------------
+// Config gate (T11.2 §20). Read-only: resolves SINGLE_COMMIT_TRANSACTION_V1
+// once per new dispatch, exactly like the Expense/Sales gates. ABSENT/PREPARED
+// => LEGACY (today's writer, byte identical); ACTIVE => the single-commit
+// core; PAUSED => fail closed; REJECT or an unresolved value => fail closed.
+// Never a silent legacy fallback.
+// ---------------------------------------------------------------------------
+function purchaseSingleCommitGate_(runtime) {
+  var contract = SINGLE_COMMIT_TRANSACTION_V1;
+  var raw = null;
+  if (runtime && Object.prototype.hasOwnProperty.call(runtime, "singleCommitConfig")) {
+    raw = runtime.singleCommitConfig;
+  } else {
+    try {
+      if (typeof PropertiesService !== "undefined") {
+        raw = PropertiesService.getScriptProperties().getProperty(contract.CONFIG_PROPERTY);
+      }
+    } catch (error) {
+      return { mode: "REFUSE", code: contract.CODES.SINGLE_COMMIT_CONFIG_INVALID,
+        detail: "CONFIG_READ_FAILED" };
+    }
+  }
+  var state = singleCommitTransactionConfigState_(raw);
+  if (state.state === "UNRESOLVED") {
+    return { mode: "REFUSE", code: contract.CODES.SINGLE_COMMIT_CONFIG_INVALID,
+      detail: state.detail };
+  }
+  if (state.state === "ABSENT" || state.mode === "PREPARED") {
+    return { mode: "LEGACY", code: "", detail: "" };
+  }
+  if (state.mode === "ACTIVE") return { mode: "ACTIVE", code: "", detail: "" };
+  if (state.mode === "PAUSED") {
+    return { mode: "REFUSE", code: contract.CODES.SINGLE_COMMIT_MODE_PAUSED, detail: "" };
+  }
+  return { mode: "REFUSE", code: contract.CODES.SINGLE_COMMIT_CONFIG_INVALID,
+    detail: "MODE_REJECT" };
+}
+
+// ---------------------------------------------------------------------------
+// Pure input normalization (T11.2 §17 minimum input). Definite refusals fail
+// here before any read or write. The receipt-path evidence semantics
+// (SupplierSource + Attested + ExternalRef/ExternalDocumentStatus pairing,
+// 47:151-155) are reused VERBATIM through the history-compatible normalizer,
+// so every produced NormalizedPayload round-trips through
+// purchaseEventHistory_ (the transaction-history read path) byte-exactly.
+// supplierID (D9) is OPTIONAL: validated later against the supplier master
+// when supplied, never failing solely on absence, and never persisted into
+// the history-readable NormalizedPayload (a PAID event with a supplierId
+// payment-authority key is a legacy CONFLICTING_PAYMENT_AUTHORITY shape).
+// ---------------------------------------------------------------------------
+function purchaseSingleCommitNormalize_(payload) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, codes = save.CODES;
+  var p = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  var keys = Object.keys(p);
+  var payment = keys.filter(function(key) {
+    return save.PAYMENT_FIELDS.indexOf(key) !== -1 && p[key] !== undefined &&
+      p[key] !== null && String(p[key]).trim() !== "";
+  });
+  if (payment.length) {
+    throw purchaseSingleCommitError_(codes.PAYMENT_FIELD_REFUSED, payment[0],
+      "PAYMENT_FIELD_REFUSED:" + payment.join(","));
+  }
+  var unknown = keys.filter(function(key) {
+    return save.ALLOWED_FIELDS.indexOf(key) === -1;
+  });
+  if (unknown.length) {
+    throw purchaseSingleCommitError_(codes.FIELD_REFUSED, unknown[0],
+      "FIELD_REFUSED:" + unknown.join(","));
+  }
+  // The legacy-shaped clients always carry cashAccountCode; on the ACTIVE path
+  // it must be absent. An explicit channel selection is refused, never
+  // silently dropped (D1/D2/D8).
+  var cash = p.cashAccountCode;
+  if (cash !== undefined && cash !== null && String(cash).trim() !== "") {
+    throw purchaseSingleCommitError_(codes.PAYMENT_FIELD_REFUSED, "cashAccountCode",
+      "CASH_ACCOUNT_REFUSED");
+  }
+  if (String(p.transactionType === undefined || p.transactionType === null ?
+      "" : p.transactionType) !== "EXPENSE") {
+    throw purchaseSingleCommitError_(codes.PAYLOAD_INVALID, "transactionType",
+      "TRANSACTION_TYPE_MUST_BE_EXPENSE");
+  }
+  var supplierID = p.supplierID === undefined || p.supplierID === null ?
+    "" : String(p.supplierID).trim();
+  var normalized;
+  try {
+    // allowLegacyPaymentStatus=true: the payment-authority KEYS are simply
+    // absent from the constructed payload, so no payment validation runs and
+    // the output is the exact history-compatible structure.
+    normalized = normalizePurchaseEventRequestWithCompatibility_({
+      transactionType: "EXPENSE", requestKey: p.requestKey,
+      expenseItemId: p.expenseItemId, input: p.input
+    }, true);
+  } catch (error) {
+    throw purchaseSingleCommitError_(codes.PAYLOAD_INVALID, "input", error.message);
+  }
+  // T11.2 §17: Qty + purchase UOM are REQUIRED business facts for the normal
+  // Purchase (the legacy "blank quantity" compatibility path stays legacy-only).
+  if (!normalized.input.PurchaseQty || !normalized.input.PurchaseUOM) {
+    throw purchaseSingleCommitError_(codes.PAYLOAD_INVALID, "input",
+      "PURCHASE_QUANTITY_UOM_REQUIRED");
+  }
+  return { requestKey: normalized.requestKey, expenseItemId: normalized.expenseItemId,
+    supplierID: supplierID, input: normalized.input };
+}
+
+// The exact history-compatible NormalizedPayload subset persisted in the
+// PurchaseEvent row (no payment keys, no supplierID): key order is the frozen
+// normalizePurchaseEventRequestWithCompatibility_ construction order, so
+// purchaseEventHistory_ round-trips it byte-exactly.
+function purchaseSingleCommitEventPayload_(normalized) {
+  return { transactionType: "EXPENSE", requestKey: normalized.requestKey,
+    expenseItemId: normalized.expenseItemId, input: normalized.input };
+}
+
+function purchaseSingleCommitPayloadKey_(payload) {
+  return payload && payload.requestKey !== undefined && payload.requestKey !== null ?
+    String(payload.requestKey) : "";
+}
+
+// ---------------------------------------------------------------------------
+// Zero-write schema gate: every surface the save reads or writes must exist
+// with its exact canonical headers before anything else is attempted. Header
+// reads only; never recomputes mutable master rows. Re-run on resume.
+// ---------------------------------------------------------------------------
+function purchaseSingleCommitSchemaGate_(ss) {
+  var exact = [
+    ["PurchaseEvents", PURCHASE_EVENT_POLICY.headers],
+    ["Logs", CANONICAL_ENTRY.LOG_HEADERS],
+    ["BalanceLedger", BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS],
+    [TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS]
+  ];
+  var present = [
+    ["Accounts", CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS],
+    ["ExpenseItems", PURCHASE_SINGLE_COMMIT_V1.ITEM_HEADERS],
+    ["Suppliers", SUPPLIER_MASTER_CONTRACT.HEADERS]
+  ];
+  var bad = [];
+  exact.forEach(function(entry) {
+    try { requireCanonicalHeaders(ss.getSheetByName(entry[0]), entry[1]); }
+    catch (error) { bad.push(entry[0]); }
+  });
+  present.forEach(function(entry) {
+    try { readCanonicalTable(ss, entry[0], entry[1]); }
+    catch (error) { bad.push(entry[0]); }
+  });
+  return { status: bad.length ? "FAIL" : "PASS", badSheets: bad };
+}
+
+// Core runtime assembled from the already-locked context. The
+// `purchaseSingleCommit` object on the runtime is the local fixture seam
+// (repository / batch / crash); production defaults are read-only transport
+// factories.
+function purchaseSingleCommitCoreRuntime_(ss, dispatcherRuntime, items, gate) {
+  var seam = dispatcherRuntime && dispatcherRuntime.purchaseSingleCommit || {};
+  return {
+    spreadsheet: ss,
+    now: dispatcherRuntime.now,
+    uuid: dispatcherRuntime.uuid,
+    flush: dispatcherRuntime.flush,
+    invalidate: dispatcherRuntime.invalidate,
+    items: items,
+    gate: gate,
+    batch: seam.batch || purchaseSingleCommitBatchRequest_,
+    crash: seam.crash,
+    actor: seam.actor || function() {
+      try {
+        return (typeof Session !== "undefined" && Session.getActiveUser &&
+          Session.getActiveUser().getEmail()) || CANONICAL_ENTRY.USER;
+      } catch (error) { return CANONICAL_ENTRY.USER; }
+    },
+    repository: seam.repository ||
+      expenseSingleCommitOperationRepository_(ss, dispatcherRuntime.flush)
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Immutable OperationPlan freeze (T11.2 §7): the exact PurchaseEvent row
+// (backend-derived PaymentStatus=PAID, CashAccountCode=1040,
+// AccountingStatus=POSTED written directly in the append), the Policy C
+// journal pair (Dr6210 / Cr1040), the audit row, the journal signature and a
+// canonical integrity digest — derived once. The plan is the single source of
+// truth for every later step; no mutable master is re-read after freeze.
+// ---------------------------------------------------------------------------
+function purchaseSingleCommitPlan_(input) {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  var normalized = input.normalized, now = input.now, nowISO = now.toISOString();
+  var timestamp = input.timestamp, actor = input.actor;
+  var eventID = save.EVENT_ID_PREFIX + normalized.requestKey;
+  var journalID = save.JOURNAL_ID_PREFIX + eventID;
+  var amount = Number(normalized.input.AcquisitionValue);
+  var economicDate = input.economicDate;
+  var eventPayload = purchaseSingleCommitEventPayload_(normalized);
+  var eventRow = {
+    EventID: eventID,
+    ExpenseID: normalized.expenseItemId,
+    BusinessLabel: input.itemLabel,
+    PolicyVersion: input.policyVersion,
+    PolicyRevision: input.policyRevision,
+    CostType: input.route.CostType,
+    PurchaseRelationship: input.route.PurchaseRelationship,
+    ExpenseDate: normalized.input.ExpenseDate,
+    ReceiptDate: normalized.input.ReceiptDate,
+    PurchaseQty: normalized.input.PurchaseQty,
+    PurchaseUOM: normalized.input.PurchaseUOM,
+    AcquisitionValue: normalized.input.AcquisitionValue,
+    SupplierSource: normalized.input.SupplierSource,
+    ExternalRef: normalized.input.ExternalRef,
+    ExternalDocumentStatus: normalized.input.ExternalDocumentStatus,
+    Attestation: JSON.stringify({ attested: true,
+      conversionEvidenceConfirmed: normalized.input.ConversionEvidenceConfirmed }),
+    AllocationStatus: input.allocationStatus,
+    RequestKey: normalized.requestKey,
+    NormalizedPayload: JSON.stringify(eventPayload),
+    ReceiptPlan: "null",
+    Lifecycle: PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL,
+    RecoveryKey: save.RECOVERY_KEY_PREFIX + normalized.requestKey,
+    CreatedAt: nowISO,
+    CreatedBy: actor,
+    IsActive: true,
+    PaymentStatus: save.PAYMENT_STATUS,
+    CashAccountCode: save.MONEY_ACCOUNT_CODE,
+    SupplierID: normalized.supplierID,
+    AccountingStatus: save.ACCOUNTING_STATUS
+  };
+  var journalRows = [
+    { JournalID: journalID, LineID: journalID + "-1", Tanggal: economicDate,
+      AccountCode: save.DEBIT_ACCOUNT_CODE, Debit: amount, Credit: 0,
+      MovementType: save.MOVEMENT_TYPE, SourceType: save.SOURCE_TYPE,
+      SourceID: eventID, ExternalRef: "", Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor },
+    { JournalID: journalID, LineID: journalID + "-2", Tanggal: economicDate,
+      AccountCode: save.MONEY_ACCOUNT_CODE, Debit: 0, Credit: amount,
+      MovementType: save.MOVEMENT_TYPE, SourceType: save.SOURCE_TYPE,
+      SourceID: eventID, ExternalRef: "", Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor }
+  ];
+  var journalSignature = policyCJournalSignature_(journalRows);
+  var auditRow = {
+    ID_Log: input.auditID,
+    Timestamp: timestamp,
+    Level: "INFO",
+    Module: save.AUDIT_MODULE,
+    Action: save.AUDIT_ACTION,
+    RecordID: eventID,
+    User: CANONICAL_ENTRY.USER,
+    Message: "Purchase single-commit recorded.",
+    Metadata: JSON.stringify({ source: CANONICAL_ENTRY.SOURCE, ledger: "PurchaseEvents",
+      journalID: journalID })
+  };
+  var plan = {
+    planVersion: save.PLAN_VERSION,
+    operationType: save.OPERATION_TYPE,
+    operationID: input.operationID,
+    requestKey: normalized.requestKey,
+    payloadHash: input.hash,
+    normalizedPayload: normalized,
+    eventNormalizedPayload: eventPayload,
+    entryID: eventID,
+    journalID: journalID,
+    auditID: input.auditID,
+    actor: actor,
+    savedAt: nowISO,
+    transactionTimestamp: timestamp,
+    economicDate: economicDate,
+    expenseDate: normalized.input.ExpenseDate,
+    amount: amount,
+    supplierID: normalized.supplierID,
+    expenseItem: {
+      expenseItemId: normalized.expenseItemId,
+      item: input.itemLabel,
+      category: input.category,
+      kind: input.kind,
+      group: input.group,
+      costType: input.route.CostType,
+      purchaseRelationship: input.route.PurchaseRelationship,
+      inventoryItemIds: (input.route.inventoryItemIds || []).slice()
+    },
+    accounts: { purchase: save.DEBIT_ACCOUNT_CODE, money: save.MONEY_ACCOUNT_CODE },
+    regime: save.REGIME,
+    paymentStatus: save.PAYMENT_STATUS,
+    cashAccountCode: save.MONEY_ACCOUNT_CODE,
+    accountingStatus: save.ACCOUNTING_STATUS,
+    movementType: save.MOVEMENT_TYPE,
+    sourceType: save.SOURCE_TYPE,
+    journalSignature: journalSignature,
+    eventRow: eventRow,
+    journalRows: journalRows,
+    auditRow: auditRow
+  };
+  plan.planDigest = transactionPayloadHash_(plan);
+  return plan;
+}
+
+// Plan integrity + shape invariants. Runs at freeze time (definite REFUSED,
+// before any write) and on every resume (fail closed, ZERO additional writes).
+// Malformed shape and derivational/content disagreement both fail closed.
+function purchaseSingleCommitVerifyPlan_(plan) {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  function malformed(reason) { return { ok: false, kind: "MALFORMED", reason: reason }; }
+  function tampered(reason) { return { ok: false, kind: "TAMPERED", reason: reason }; }
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) return malformed("PLAN_NOT_OBJECT");
+  if (plan.planVersion !== save.PLAN_VERSION) return malformed("PLAN_VERSION_MISMATCH");
+  if (plan.operationType !== save.OPERATION_TYPE) return malformed("OPERATION_TYPE_MISMATCH");
+  if (typeof plan.requestKey !== "string" || !plan.requestKey) return malformed("REQUEST_KEY_MISSING");
+  if (plan.operationID !== transactionOperationID_(save.OPERATION_TYPE, plan.requestKey)) {
+    return tampered("OPERATION_ID_MISMATCH");
+  }
+  if (!plan.entryID || plan.entryID !== save.EVENT_ID_PREFIX + plan.requestKey ||
+      plan.journalID !== save.JOURNAL_ID_PREFIX + plan.entryID) {
+    return tampered("JOURNAL_ID_MISMATCH");
+  }
+  if (typeof plan.payloadHash !== "string" ||
+      plan.payloadHash !== transactionPayloadHash_(plan.normalizedPayload)) {
+    return tampered("PAYLOAD_HASH_MISMATCH");
+  }
+  // The normalized payload may never carry a channel/payment fact (D1/D2/D8),
+  // and the history-readable event subset must be the exact derivation.
+  var payload = plan.normalizedPayload || {};
+  var paymentKey = Object.keys(payload).filter(function(key) {
+    return key !== "cashAccountCode" && save.PAYMENT_FIELDS.indexOf(key) !== -1 &&
+      payload[key] !== undefined && payload[key] !== null &&
+      String(payload[key]).trim() !== "";
+  });
+  if (paymentKey.length) return tampered("PAYMENT_FIELD_IN_PLAN");
+  if (payload.cashAccountCode !== undefined && payload.cashAccountCode !== null &&
+      String(payload.cashAccountCode).trim() !== "") {
+    return tampered("CASH_ACCOUNT_IN_PLAN");
+  }
+  if (typeof payload.supplierID !== "string") return malformed("SUPPLIER_ID_MALFORMED");
+  if (JSON.stringify(plan.eventNormalizedPayload) !==
+      JSON.stringify(purchaseSingleCommitEventPayload_(payload))) {
+    return tampered("EVENT_PAYLOAD_MISMATCH");
+  }
+  var amount = plan.amount;
+  if (typeof amount !== "number" || !isFinite(amount) || amount <= 0) {
+    return malformed("AMOUNT_INVALID");
+  }
+  if (Number(payload.input && payload.input.AcquisitionValue) !== amount) {
+    return tampered("ACQUISITION_VALUE_MISMATCH");
+  }
+  if (plan.accounts.money !== save.MONEY_ACCOUNT_CODE) return tampered("MONEY_ACCOUNT_MISMATCH");
+  if (plan.accounts.purchase !== save.DEBIT_ACCOUNT_CODE) return tampered("PURCHASE_ACCOUNT_MISMATCH");
+  if (plan.accounts.purchase === plan.accounts.money) return tampered("PURCHASE_ACCOUNT_IS_MONEY_ACCOUNT");
+  if (plan.paymentStatus !== save.PAYMENT_STATUS || plan.cashAccountCode !== save.MONEY_ACCOUNT_CODE ||
+      plan.accountingStatus !== save.ACCOUNTING_STATUS || plan.regime !== save.REGIME) {
+    return tampered("DERIVED_AUTHORITY_MISMATCH");
+  }
+  if (plan.sourceType !== save.SOURCE_TYPE || plan.movementType !== save.MOVEMENT_TYPE) {
+    return tampered("SOURCE_IDENTITY_MISMATCH");
+  }
+  var row = plan.eventRow;
+  if (!row || row.EventID !== plan.entryID || row.RequestKey !== plan.requestKey ||
+      row.ExpenseID !== plan.expenseItem.expenseItemId ||
+      row.BusinessLabel !== plan.expenseItem.item ||
+      row.PaymentStatus !== save.PAYMENT_STATUS ||
+      row.CashAccountCode !== save.MONEY_ACCOUNT_CODE ||
+      row.AccountingStatus !== save.ACCOUNTING_STATUS ||
+      row.SupplierID !== plan.supplierID ||
+      row.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL ||
+      row.IsActive !== true ||
+      row.RecoveryKey !== save.RECOVERY_KEY_PREFIX + plan.requestKey ||
+      row.NormalizedPayload !== JSON.stringify(plan.eventNormalizedPayload)) {
+    return tampered("EVENT_ROW_MISMATCH");
+  }
+  if (!plan.auditRow || plan.auditRow.ID_Log !== plan.auditID ||
+      plan.auditRow.RecordID !== plan.entryID ||
+      plan.auditRow.Action !== save.AUDIT_ACTION ||
+      plan.auditRow.Module !== save.AUDIT_MODULE) {
+    return tampered("AUDIT_ROW_MISMATCH");
+  }
+  if (!Array.isArray(plan.journalRows) || plan.journalRows.length !== 2) {
+    return malformed("JOURNAL_ROW_COUNT");
+  }
+  var debitRow = plan.journalRows[0], creditRow = plan.journalRows[1];
+  if (debitRow.LineID !== plan.journalID + "-1" || creditRow.LineID !== plan.journalID + "-2") {
+    return tampered("JOURNAL_LINE_ID_MISMATCH");
+  }
+  if (debitRow.JournalID !== plan.journalID || creditRow.JournalID !== plan.journalID) {
+    return tampered("JOURNAL_ID_MISMATCH");
+  }
+  var ok = plan.journalRows.every(function(journalRow) {
+    return journalRow.SourceType === save.SOURCE_TYPE && journalRow.SourceID === plan.entryID &&
+      journalRow.MovementType === save.MOVEMENT_TYPE && journalRow.IsActive === true &&
+      expenseSingleCommitFieldEqual_(journalRow.Tanggal, plan.economicDate);
+  });
+  if (!ok) return tampered("JOURNAL_SOURCE_MISMATCH");
+  if (debitRow.AccountCode !== save.DEBIT_ACCOUNT_CODE || debitRow.Debit !== amount ||
+      Number(debitRow.Credit) !== 0) {
+    return tampered("DEBIT_LEG_MISMATCH");
+  }
+  if (creditRow.AccountCode !== save.MONEY_ACCOUNT_CODE ||
+      Number(creditRow.Debit) !== 0 || creditRow.Credit !== amount) {
+    return tampered("CREDIT_LEG_MISMATCH");
+  }
+  var totalDebit = 0, totalCredit = 0;
+  plan.journalRows.forEach(function(journalRow) {
+    totalDebit += Number(journalRow.Debit || 0);
+    totalCredit += Number(journalRow.Credit || 0);
+  });
+  if (totalDebit !== amount || totalCredit !== amount || totalDebit !== totalCredit) {
+    return tampered("JOURNAL_NOT_BALANCED");
+  }
+  if (policyCJournalSignature_(plan.journalRows) !== plan.journalSignature) {
+    return tampered("JOURNAL_SIGNATURE_MISMATCH");
+  }
+  var digestInput = Object.assign({}, plan);
+  delete digestInput.planDigest;
+  if (plan.planDigest !== transactionPayloadHash_(digestInput)) {
+    return tampered("PLAN_DIGEST_MISMATCH");
+  }
+  return { ok: true, kind: "", reason: "" };
+}
+
+// ---------------------------------------------------------------------------
+// The ONE batch's logical ranges: exactly three value ranges, exact write
+// surfaces, frozen plan order (T11.2 §8).
+// ---------------------------------------------------------------------------
+function purchaseSingleCommitValueRanges_(plan) {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  function rowValues(row, headers) {
+    return headers.map(function(header) { return row[header] === undefined ? "" : row[header]; });
+  }
+  var ranges = [
+    { range: "PurchaseEvents", values: [rowValues(plan.eventRow, PURCHASE_EVENT_POLICY.headers)] },
+    { range: "BalanceLedger", values: plan.journalRows.map(function(row) {
+      return rowValues(row, BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); }) },
+    { range: "Logs", values: [rowValues(plan.auditRow, CANONICAL_ENTRY.LOG_HEADERS)] }
+  ];
+  if (JSON.stringify(ranges.map(function(range) { return range.range; })) !==
+      JSON.stringify(save.WRITE_SURFACES)) {
+    throw new Error("SAVE_SURFACE_MISMATCH");
+  }
+  return ranges;
+}
+
+// ONE spreadsheets.batchUpdate body: exactly three appendCells subrequests
+// (one per write surface, by sheetId). Throws BEFORE issuing any request if a
+// sheetId is missing, so the batch is rejected atomically rather than partly.
+// RAW CellData only (stringValue / numberValue / boolValue), never
+// formulaValue; the boolean IsActive cell is transported as boolValue, the
+// canonical representation the readback verification expects.
+function purchaseSingleCommitBatchBody_(valueRanges, sheetIds) {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  if (valueRanges.length !== save.WRITE_SURFACES.length) throw new Error("SAVE_SURFACE_MISMATCH");
+  var requests = valueRanges.map(function(range) {
+    var sheetId = sheetIds[range.range];
+    if (typeof sheetId !== "number" || !isFinite(sheetId)) {
+      throw new Error("SHEET_ID_UNAVAILABLE:" + range.range);
+    }
+    return { appendCells: { sheetId: sheetId, fields: "userEnteredValue",
+      rows: range.values.map(function(row) {
+        return { values: row.map(function(cell) {
+          return { userEnteredValue: expenseSingleCommitCellValue_(cell) };
+        }) };
+      }) } };
+  });
+  return { requests: requests };
+}
+
+// Cell / request safety bounds: evaluated BEFORE the intent write (an unsafe
+// plan is never persisted) and re-evaluated on resume against the STORED plan.
+function purchaseSingleCommitBounds_(plan) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, ranges;
+  try { ranges = purchaseSingleCommitValueRanges_(plan); }
+  catch (error) { return { ok: false, detail: "SAVE_SURFACE_MISMATCH" }; }
+  var cells = 0;
+  ranges.forEach(function(range) {
+    range.values.forEach(function(row) { cells += row.length; });
+  });
+  var sentinel = {};
+  save.WRITE_SURFACES.forEach(function(name) { sentinel[name] = 2147483647; });
+  var body;
+  try { body = purchaseSingleCommitBatchBody_(ranges, sentinel); }
+  catch (error) { return { ok: false, detail: "UNSAFE_BATCH:" + error.message }; }
+  var bytes = expenseSingleCommitUtf8Bytes_(JSON.stringify(body)) + save.REQUEST_OVERHEAD_BYTES;
+  var planJson = "";
+  try { planJson = JSON.stringify(plan); }
+  catch (error) { return { ok: false, detail: "PLAN_JSON_INVALID" }; }
+  if (planJson.length > save.MAX_CELL_CHARS) {
+    return { ok: false, detail: "UNSAFE_PLAN_CELL_CHARS:" + planJson.length };
+  }
+  var ok = cells <= save.MAX_BATCH_CELLS && bytes <= save.MAX_REQUEST_BYTES;
+  return { ok: ok, cells: cells, bytes: bytes, planChars: planJson.length,
+    detail: ok ? "" : "BATCH_BOUNDS cells=" + cells + " bytes=" + bytes };
+}
+
+// Exact artifact verification against the frozen plan over the three surfaces.
+// Distinguishes NONE (intent only) / PARTIAL (incomplete) / CONFLICT (identity
+// or content disagreement) / EXACT / UNKNOWN (read failure).
+function purchaseSingleCommitInspect_(plan, ss) {
+  var save = PURCHASE_SINGLE_COMMIT_V1,
+    ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
+  var events, ledger, logs;
+  try {
+    events = readCanonicalTable(ss, "PurchaseEvents", PURCHASE_EVENT_POLICY.headers);
+    ledger = readCanonicalTable(ss, "BalanceLedger", ledgerHeaders);
+    logs = readCanonicalTable(ss, "Logs", CANONICAL_ENTRY.LOG_HEADERS);
+  } catch (error) {
+    return { state: "UNKNOWN", detail: "READBACK_FAILED:" + error.message };
+  }
+  var conflicts = [], missing = [];
+  var plannedLineIds = {};
+  plan.journalRows.forEach(function(row) { plannedLineIds[row.LineID] = true; });
+  ledger.forEach(function(row) {
+    if (plannedLineIds[row.LineID] &&
+        !(row.JournalID === plan.journalID && row.SourceType === plan.sourceType &&
+          row.SourceID === plan.entryID)) {
+      conflicts.push("JOURNAL_LINE_CROSS_OWNER");
+    }
+    if (String(row.SourceID) === plan.entryID && String(row.SourceType) !== plan.sourceType) {
+      conflicts.push("JOURNAL_SOURCE_CROSS_OWNER");
+    }
+  });
+  events.forEach(function(row) {
+    if (row.EventID === plan.entryID && row.RequestKey !== plan.requestKey) {
+      conflicts.push("EVENT_ROW_SOURCE_CROSS_OWNER");
+    }
+  });
+  logs.forEach(function(row) {
+    if (row.ID_Log === plan.auditID && row.RecordID !== plan.entryID) {
+      conflicts.push("AUDIT_RECORD_CROSS_OWNER");
+    }
+    if (row.RecordID === plan.entryID && row.Module === save.AUDIT_MODULE &&
+        row.Action === save.AUDIT_ACTION && row.ID_Log !== plan.auditID) {
+      conflicts.push("AUDIT_IDENTITY_CROSSOVER");
+    }
+  });
+  var eventMatches = events.filter(function(row) { return row.EventID === plan.entryID; });
+  var journalBySource = ledger.filter(function(row) {
+    return String(row.SourceType) === plan.sourceType && String(row.SourceID) === plan.entryID;
+  });
+  var journalById = ledger.filter(function(row) { return row.JournalID === plan.journalID; });
+  var auditById = logs.filter(function(row) { return row.ID_Log === plan.auditID; });
+  var present = eventMatches.length || journalBySource.length || journalById.length ||
+    auditById.length;
+  if (!present) {
+    if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
+    return { state: "NONE", detail: "NO_ARTIFACTS" };
+  }
+  if (eventMatches.length > 1) conflicts.push("EVENT_ROW_DUPLICATE");
+  else if (eventMatches.length === 1) {
+    if (!expenseSingleCommitRowExact_(eventMatches[0], plan.eventRow, PURCHASE_EVENT_POLICY.headers)) {
+      conflicts.push("EVENT_ROW_TAMPERED");
+    }
+  } else missing.push("EVENT_ROW");
+  if (journalBySource.length || journalById.length) {
+    var sourceSet = journalBySource.map(function(row) { return String(row.LineID); }).sort().join("");
+    var idSet = journalById.map(function(row) { return String(row.LineID); }).sort().join("");
+    if (sourceSet !== idSet) conflicts.push("JOURNAL_IDENTITY_CROSSOVER");
+    if (journalBySource.length === 1) missing.push("JOURNAL_LINE");
+    else if (journalBySource.length === 2) {
+      var byLine = {};
+      journalBySource.forEach(function(row) { byLine[String(row.LineID)] = row; });
+      var debit = 0, credit = 0;
+      plan.journalRows.forEach(function(expected) {
+        var actual = byLine[expected.LineID];
+        if (!actual || !expenseSingleCommitRowExact_(actual, expected, ledgerHeaders)) {
+          conflicts.push("JOURNAL_TAMPERED");
+          return;
+        }
+        debit += Number(actual.Debit);
+        credit += Number(actual.Credit);
+      });
+      if (!(debit === credit && debit === Number(plan.amount))) {
+        conflicts.push("JOURNAL_BALANCE_MISMATCH");
+      }
+      if (policyCJournalSignature_(journalBySource) !== plan.journalSignature) {
+        conflicts.push("JOURNAL_SIGNATURE_MISMATCH");
+      }
+    } else conflicts.push("JOURNAL_DUPLICATE");
+  } else missing.push("JOURNAL");
+  if (auditById.length) {
+    if (auditById.length > 1) conflicts.push("AUDIT_DUPLICATE");
+    else if (!expenseSingleCommitRowExact_(auditById[0], plan.auditRow, CANONICAL_ENTRY.LOG_HEADERS)) {
+      conflicts.push("AUDIT_TAMPERED");
+    }
+  } else missing.push("AUDIT");
+  if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
+  if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
+  return { state: "EXACT", detail: "" };
+}
+
+// The legacy-shaped Purchase DTO returned to the client on DONE (projected
+// from the frozen plan's event row — the business authority).
+function purchaseSingleCommitEntry_(plan) {
+  return projectPurchaseEventTransaction_(plan.eventRow);
+}
+
+// COMMITTED transition: full ten-field readback of the committed operation
+// against the expected in-memory row. Lost or mismatched readback after a
+// successful update returns UNKNOWN (never DONE); the next retry verifies again.
+function purchaseSingleCommitCommit_(operation, runtime) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, codes = save.CODES,
+    schema = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS;
+  var expected = Object.assign({}, operation, {
+    State: "COMMITTED", UpdatedAt: runtime.now(), LastError: ""
+  });
+  try { runtime.repository.updateOperation(expected); }
+  catch (error) {
+    return { ok: false, status: save.STATUS.UNKNOWN, code: codes.COMMIT_OUTCOME_UNKNOWN,
+      detail: "COMMIT_WRITE_FAILED:" + error.message };
+  }
+  var committed = null;
+  try {
+    committed = runtime.repository.findOperation(operation.OperationType, operation.RequestKey);
+  } catch (error) {
+    return { ok: false, status: save.STATUS.UNKNOWN, code: codes.COMMIT_OUTCOME_UNKNOWN,
+      detail: "COMMIT_READBACK_FAILED:" + error.message };
+  }
+  if (!committed) {
+    return { ok: false, status: save.STATUS.UNKNOWN, code: codes.COMMIT_OUTCOME_UNKNOWN,
+      detail: "COMMIT_ROW_MISSING" };
+  }
+  if (committed.State !== "COMMITTED" ||
+      !expenseSingleCommitFieldsExact_(committed, expected, schema.HEADERS)) {
+    return { ok: false, status: save.STATUS.UNKNOWN, code: codes.COMMIT_OUTCOME_UNKNOWN,
+      detail: "COMMIT_READBACK_MISMATCH" };
+  }
+  operation.State = "COMMITTED";
+  operation.UpdatedAt = expected.UpdatedAt;
+  operation.LastError = "";
+  return { ok: true, status: save.STATUS.DONE, code: "", detail: "" };
+}
+
+// Batch -> exact inspect -> COMMITTED + exact readback. Never retries a failed
+// batch inside one call: an unknown batch outcome is inspected once and, if
+// unresolved, reported as UNKNOWN with the request identity preserved.
+function purchaseSingleCommitApplyBatch_(plan, operation, runtime) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, codes = save.CODES;
+  function outcome(status, fields) {
+    return purchaseSingleCommitResult_(status, Object.assign({
+      requestKey: plan.requestKey, operationID: plan.operationID, entryID: plan.entryID,
+      journalID: plan.journalID, auditID: plan.auditID
+    }, fields || {}));
+  }
+  var ranges = null;
+  try { ranges = purchaseSingleCommitValueRanges_(plan); }
+  catch (error) {
+    return outcome(save.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: error.message, writeCount: "UNKNOWN" });
+  }
+  var rows = 0;
+  ranges.forEach(function(range) { rows += range.values.length; });
+  if (runtime.crash) runtime.crash("PURCHASE_BEFORE_BATCH");
+  var batchError = null;
+  try { runtime.batch(ranges); } catch (error) { batchError = error; }
+  if (!batchError && runtime.crash) runtime.crash("PURCHASE_AFTER_BATCH");
+  var inspection = purchaseSingleCommitInspect_(plan, runtime.spreadsheet);
+  if (inspection.state === "UNKNOWN") {
+    return outcome(save.STATUS.UNKNOWN,
+      { code: codes.READBACK_UNKNOWN, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state === "NONE") {
+    if (batchError) {
+      return outcome(save.STATUS.UNKNOWN,
+        { code: codes.BATCH_OUTCOME_UNKNOWN, writeCount: "UNKNOWN", detail: inspection.detail });
+    }
+    return outcome(save.STATUS.RECOVERY_REQUIRED,
+      { code: codes.ARTIFACTS_INCOMPLETE, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state === "PARTIAL") {
+    return outcome(save.STATUS.RECOVERY_REQUIRED,
+      { code: codes.ARTIFACTS_INCOMPLETE, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state === "CONFLICT") {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: inspection.detail.indexOf("SIGNATURE") !== -1 ?
+        codes.JOURNAL_SIGNATURE_INVALID : codes.IDENTITY_CONFLICT,
+      writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_AFTER_READBACK");
+  if (runtime.crash) runtime.crash("PURCHASE_BEFORE_COMMIT");
+  var commit = purchaseSingleCommitCommit_(operation, runtime);
+  if (!commit.ok) {
+    return outcome(commit.status,
+      { code: commit.code, writeCount: rows, detail: commit.detail });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_AFTER_COMMIT");
+  return outcome(save.STATUS.DONE, { writeCount: rows, entry: purchaseSingleCommitEntry_(plan) });
+}
+
+// Resume path: exact (OperationType, RequestKey) lookup hit. Compares the
+// payload hash AND the exact persisted normalized structure; verifies the
+// stored plan digest + shape; validates State; re-checks schema + stored
+// bounds (no mutable master recomputation) before touching artifacts. A
+// tampered or partial state fails closed with ZERO additional writes.
+function purchaseSingleCommitResume_(operation, hash, normalized, runtime) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, codes = save.CODES;
+  function outcome(status, fields) {
+    return purchaseSingleCommitResult_(status, Object.assign({
+      requestKey: normalized.requestKey, operationID: operation.OperationID || "",
+      entryID: operation.BusinessID || ""
+    }, fields || {}));
+  }
+  if (operation.OperationType !== save.OPERATION_TYPE || !operation.BusinessID ||
+      operation.RequestKey !== normalized.requestKey || operation.PayloadHash !== hash) {
+    return outcome(save.STATUS.CONFLICT, { code: codes.OPERATION_PAYLOAD_CONFLICT });
+  }
+  var plan = null;
+  try { plan = JSON.parse(operation.OperationPlan); }
+  catch (error) {
+    return outcome(save.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: "PLAN_JSON:" + error.message });
+  }
+  if (!plan || plan.requestKey !== normalized.requestKey || plan.payloadHash !== hash ||
+      plan.operationID !== operation.OperationID || plan.entryID !== operation.BusinessID) {
+    return outcome(save.STATUS.CONFLICT,
+      { code: codes.OPERATION_PAYLOAD_CONFLICT, detail: "PLAN_IDENTITY_MISMATCH" });
+  }
+  if (!plan.normalizedPayload ||
+      JSON.stringify(plan.normalizedPayload) !== JSON.stringify(normalized)) {
+    return outcome(save.STATUS.CONFLICT,
+      { code: codes.OPERATION_PAYLOAD_CONFLICT, detail: "NORMALIZED_PAYLOAD_MISMATCH" });
+  }
+  var verify = purchaseSingleCommitVerifyPlan_(plan);
+  if (!verify.ok) {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: verify.kind === "TAMPERED" ? codes.IDENTITY_CONFLICT : codes.PLAN_MALFORMED,
+      detail: verify.reason, entryID: plan.entryID || "", journalID: plan.journalID || "",
+      auditID: plan.auditID || "" });
+  }
+  if (operation.State !== "IN_PROGRESS" && operation.State !== "COMMITTED") {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: codes.INVALID_OPERATION_STATE, detail: "STATE:" + String(operation.State),
+      entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  var schema = purchaseSingleCommitSchemaGate_(runtime.spreadsheet);
+  if (schema.status !== "PASS") {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(","),
+      entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  var bounds = purchaseSingleCommitBounds_(plan);
+  if (!bounds.ok) {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: codes.BATCH_BOUNDS_EXCEEDED, detail: bounds.detail,
+      entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  var inspection = purchaseSingleCommitInspect_(plan, runtime.spreadsheet);
+  if (inspection.state === "UNKNOWN") {
+    return outcome(save.STATUS.UNKNOWN, {
+      code: codes.READBACK_UNKNOWN, detail: inspection.detail,
+      entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  var closedCode = inspection.state === "CONFLICT" ?
+    (inspection.detail.indexOf("SIGNATURE") !== -1 ?
+      codes.JOURNAL_SIGNATURE_INVALID : codes.IDENTITY_CONFLICT) :
+    codes.ARTIFACTS_INCOMPLETE;
+  if (inspection.state === "EXACT") {
+    if (operation.State === "COMMITTED") {
+      // COMMITTED + exactly verified artifacts => replay DONE (response lost).
+      if (runtime.crash) runtime.crash("PURCHASE_AFTER_COMMIT");
+      return outcome(save.STATUS.DONE, {
+        replay: true, writeCount: 0, entry: purchaseSingleCommitEntry_(plan),
+        entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+    }
+    if (runtime.crash) runtime.crash("PURCHASE_AFTER_READBACK");
+    if (runtime.crash) runtime.crash("PURCHASE_BEFORE_COMMIT");
+    var commit = purchaseSingleCommitCommit_(operation, runtime);
+    if (!commit.ok) {
+      return outcome(commit.status, {
+        code: commit.code, detail: commit.detail,
+        entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+    }
+    if (runtime.crash) runtime.crash("PURCHASE_AFTER_COMMIT");
+    return outcome(save.STATUS.DONE, {
+      replay: true, writeCount: 0, entry: purchaseSingleCommitEntry_(plan),
+      entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  if (operation.State === "COMMITTED") {
+    // COMMITTED without exact artifacts: fail closed, no repair, no rewrite.
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: closedCode, detail: inspection.detail,
+      entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  if (inspection.state === "NONE") {
+    // Intent-only: recover from the stored frozen plan exactly once.
+    return purchaseSingleCommitApplyBatch_(plan, operation, runtime);
+  }
+  // Partial or conflicting uncommitted artifacts: fail closed, never append.
+  return outcome(save.STATUS.RECOVERY_REQUIRED, {
+    code: closedCode, detail: inspection.detail,
+    entryID: plan.entryID, journalID: plan.journalID, auditID: plan.auditID });
+}
+
+// New-intent path (outer lock held, lookup returned absent). Every gate is
+// re-validated inside the lock immediately before plan freeze; every refusal
+// writes zero and no legacy fallback exists on any refusal path.
+function purchaseSingleCommitNewIntent_(normalized, hash, runtime) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, codes = save.CODES;
+  function outcome(status, fields) {
+    return purchaseSingleCommitResult_(status,
+      Object.assign({ requestKey: normalized.requestKey }, fields || {}));
+  }
+  var gate = runtime.gate || purchaseSingleCommitGate_(runtime);
+  if (gate.mode !== "ACTIVE") {
+    return outcome(save.STATUS.REFUSED, { code: gate.code || codes.PAYLOAD_INVALID,
+      detail: gate.detail || "SINGLE_COMMIT_NOT_ACTIVE" });
+  }
+  var schema = purchaseSingleCommitSchemaGate_(runtime.spreadsheet);
+  if (schema.status !== "PASS") {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(",") });
+  }
+  var accountRows;
+  try {
+    accountRows = readCanonicalTable(runtime.spreadsheet, "Accounts",
+      CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS);
+  } catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: "ACCOUNTS:" + error.message });
+  }
+  // T11.2 §11: 1040 preflight BEFORE any business mutation. Absent, duplicate,
+  // inactive or metadata-inconsistent => REFUSED zero writes. No fallback to
+  // 1000/1010/1020/1030/2000 and no name-inferred account.
+  var moneyPreflight = preflightSingleCommitMoneyAccount(accountRows);
+  if (moneyPreflight.status !== "PASS") {
+    var moneyError = moneyPreflight.errors[0] || {};
+    return outcome(save.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED,
+      field: moneyError.accountCode || save.MONEY_ACCOUNT_CODE,
+      detail: "MONEY_ACCOUNT_PREFLIGHT_FAILED:" + String(moneyError.code || "") });
+  }
+  // Policy C debit account 6210 validated per the existing account/master
+  // contract BEFORE any mutation: present, unique, active, Expense/DEBIT.
+  // Fail closed; never created, never inferred; no Policy C weakening.
+  var purchaseAccounts = accountRows.filter(function(row) {
+    return row && typeof row === "object" &&
+      String(row.AccountCode === undefined || row.AccountCode === null ? "" :
+        row.AccountCode).trim() === save.DEBIT_ACCOUNT_CODE;
+  });
+  if (purchaseAccounts.length !== 1) {
+    return outcome(save.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: save.DEBIT_ACCOUNT_CODE,
+      detail: purchaseAccounts.length ? "PURCHASE_ACCOUNT_DUPLICATE" : "PURCHASE_ACCOUNT_ABSENT" });
+  }
+  var purchaseAccount = purchaseAccounts[0];
+  if (!isCanonicalActive(purchaseAccount.IsActive)) {
+    return outcome(save.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: save.DEBIT_ACCOUNT_CODE,
+      detail: "PURCHASE_ACCOUNT_INACTIVE" });
+  }
+  if (String(purchaseAccount.AccountType || "").trim() !== "Expense" ||
+      String(purchaseAccount.NormalBalance || "").trim() !== "DEBIT") {
+    return outcome(save.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: save.DEBIT_ACCOUNT_CODE,
+      detail: "PURCHASE_ACCOUNT_METADATA_MISMATCH" });
+  }
+  // Prospective Policy C regime only: a pre-transition economic date is
+  // LEGACY_PRE_TRANSITION authority and never enters this normal flow.
+  var economicDate = capitalEquityDateKey(normalized.input.ExpenseDate);
+  var regime = resolvePolicyCAccountingRegime_(normalized.input.ExpenseDate);
+  if (regime.status !== "RESOLVED" || regime.regime !== save.REGIME) {
+    return outcome(save.STATUS.REFUSED, {
+      code: codes.REGIME_NOT_PROSPECTIVE, field: "ExpenseDate",
+      detail: String(regime.reason || regime.regime || "") });
+  }
+  var now = runtime.now();
+  var timestamp = new Date(normalized.input.ExpenseDate + "T00:00:00+07:00");
+  // Business authority: ExpenseItems master -> Policy C route (CostType /
+  // PurchaseRelationship / business label). Never operator-derived.
+  var items = runtime.items || readCanonicalTable(runtime.spreadsheet,
+    "ExpenseItems", save.ITEM_HEADERS);
+  var itemRow = items.filter(function(row) {
+    return String(row.ID_Ops).trim() === normalized.expenseItemId &&
+      isCanonicalActive(row.IsActive);
+  })[0];
+  if (!itemRow) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, field: "expenseItemId",
+        detail: "EXPENSE_ITEM_NOT_ACTIVE_OR_MAPPED" });
+  }
+  var route;
+  try { route = resolveExpensePurchasePolicy_(normalized.expenseItemId, items); }
+  catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: error.message });
+  }
+  if (!expensePolicyIsPurchase_(route)) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: "NOT_PURCHASE_POLICY" });
+  }
+  var itemLabel = String(itemRow.Item || "").trim();
+  if (!itemLabel) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: "ITEM_LABEL_MISSING" });
+  }
+  // SupplierID (D9): OPTIONAL business metadata. Supplied => validated against
+  // the existing supplier master authority; absent => never a refusal reason.
+  if (normalized.supplierID) {
+    var supplierRows;
+    try {
+      supplierRows = readCanonicalTable(runtime.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET,
+        SUPPLIER_MASTER_CONTRACT.HEADERS);
+    } catch (error) {
+      return outcome(save.STATUS.REFUSED,
+        { code: codes.SUPPLIER_INVALID, field: "supplierID", detail: "SUPPLIERS_NOT_READY" });
+    }
+    var supplier = supplierRows.filter(function(row) {
+      return String(row.SupplierID || "").trim() === normalized.supplierID;
+    })[0];
+    if (!supplier || !masterSelectionEligible(supplier.IsActive)) {
+      return outcome(save.STATUS.REFUSED,
+        { code: codes.SUPPLIER_INVALID, field: "supplierID", detail: "SUPPLIER_INACTIVE" });
+    }
+  }
+  var eventID = save.EVENT_ID_PREFIX + normalized.requestKey;
+  // Foreign-artifact defenses (dedupe before any write): a PurchaseEvent row
+  // or a Policy C journal already bound to this identity without an operation
+  // row is a conflict, never a second append.
+  var existingEvents;
+  try {
+    existingEvents = readCanonicalTable(runtime.spreadsheet, "PurchaseEvents", PURCHASE_EVENT_POLICY.headers);
+  } catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: "PURCHASE_EVENTS:" + error.message });
+  }
+  if (existingEvents.some(function(row) {
+      return String(row.RequestKey || "") === normalized.requestKey ||
+        String(row.EventID || "") === eventID; })) {
+    return outcome(save.STATUS.CONFLICT,
+      { code: codes.IDENTITY_CONFLICT, detail: "EVENT_IDENTITY_EXISTS" });
+  }
+  var ledgerRows;
+  try {
+    ledgerRows = readCanonicalTable(runtime.spreadsheet, "BalanceLedger",
+      BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+  } catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: "BALANCE_LEDGER:" + error.message });
+  }
+  var journalState = policyCExistingJournalState_(ledgerRows, save.SOURCE_TYPE, eventID);
+  if (journalState.status !== "NONE") {
+    return outcome(save.STATUS.CONFLICT,
+      { code: codes.IDENTITY_CONFLICT, detail: "JOURNAL_IDENTITY_EXISTS:" + journalState.status });
+  }
+  // Deterministic identity: (OperationType, RequestKey) -> operation; the
+  // business ID keeps the exact PE-<requestKey> shape (T11.2 §6).
+  var operationID = transactionOperationID_(save.OPERATION_TYPE, normalized.requestKey);
+  var auditID = "LOG-ENTRY-" + runtime.uuid();
+  var allocationStatus = route.PurchaseRelationship.indexOf("HPP_COST_POOL") === 0 ?
+    "COST_POOL_ALLOCATION_UNDEFINED" : "QUANTITY_PACKAGE_UNRESOLVED";
+  var plan;
+  try {
+    plan = purchaseSingleCommitPlan_({
+      normalized: normalized, hash: hash, operationID: operationID, auditID: auditID,
+      actor: runtime.actor(), now: now, timestamp: timestamp, economicDate: economicDate,
+      itemLabel: itemLabel, category: String(itemRow.Kategori || ""),
+      kind: String(itemRow.Kind || ""), group: String(itemRow.Group || ""),
+      policyVersion: EXPENSE_PURCHASE_POLICY.version,
+      policyRevision: EXPENSE_PURCHASE_POLICY.revision,
+      route: route, allocationStatus: allocationStatus
+    });
+  } catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, detail: "PLAN_BUILD:" + error.message });
+  }
+  var verify = purchaseSingleCommitVerifyPlan_(plan);
+  if (!verify.ok) {
+    return outcome(save.STATUS.REFUSED, {
+      code: verify.kind === "TAMPERED" ? codes.IDENTITY_CONFLICT : codes.PLAN_MALFORMED,
+      detail: verify.reason });
+  }
+  var bounds = purchaseSingleCommitBounds_(plan);
+  if (!bounds.ok) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.BATCH_BOUNDS_EXCEEDED, detail: bounds.detail });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_BEFORE_INTENT");
+  var operation;
+  try {
+    operation = transactionResolveOperation_(runtime.repository, save.OPERATION_TYPE,
+      normalized.requestKey, hash, eventID, plan, runtime.now());
+  } catch (error) {
+    return outcome(error.code === "OPERATION_PAYLOAD_CONFLICT" ?
+      save.STATUS.CONFLICT : save.STATUS.RECOVERY_REQUIRED, {
+      code: error.code === "OPERATION_PAYLOAD_CONFLICT" ?
+        codes.OPERATION_PAYLOAD_CONFLICT : codes.DUPLICATE_OPERATION_EVIDENCE,
+      detail: error.message, entryID: eventID, journalID: plan.journalID,
+      auditID: plan.auditID });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_AFTER_INTENT_PERSIST");
+  // Exact readback of all ten operation fields (Date-safe) BEFORE any
+  // business write.
+  var readback = null;
+  try { readback = runtime.repository.findOperation(save.OPERATION_TYPE, normalized.requestKey); }
+  catch (error) {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: codes.INTENT_READBACK_FAILED, detail: "INTENT_READBACK_FAILED:" + error.message,
+      entryID: eventID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  if (!readback) {
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: codes.INTENT_READBACK_FAILED, detail: "INTENT_ROW_MISSING",
+      entryID: eventID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  if (readback.State !== "IN_PROGRESS" ||
+      !expenseSingleCommitFieldsExact_(readback, operation,
+        TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS)) {
+    var mismatch = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS.filter(function(header) {
+      return !expenseSingleCommitFieldEqual_(readback[header], operation[header]);
+    });
+    return outcome(save.STATUS.RECOVERY_REQUIRED, {
+      code: codes.INTENT_READBACK_FAILED, detail: "INTENT_ROW_MISMATCH:" + mismatch.join(","),
+      entryID: eventID, journalID: plan.journalID, auditID: plan.auditID });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_AFTER_INTENT");
+  return purchaseSingleCommitApplyBatch_(plan, operation, runtime);
+}
+
+// Durable save core. Fixed order: normalize -> exact (OperationType,
+// RequestKey) lookup BEFORE any mutable master read -> resume or new intent.
+// Never acquires a lock (the dispatcher/adapter owns the single outer lock).
+function purchaseSingleCommitSaveWithRuntime_(payload, runtime) {
+  var save = PURCHASE_SINGLE_COMMIT_V1, codes = save.CODES;
+  var normalized;
+  try { normalized = purchaseSingleCommitNormalize_(payload); }
+  catch (error) {
+    return purchaseSingleCommitResult_(save.STATUS.REFUSED, {
+      code: error.purchaseSingleCommitCode || codes.PAYLOAD_INVALID,
+      requestKey: purchaseSingleCommitPayloadKey_(payload),
+      field: error.field || "", detail: error.message });
+  }
+  var existing = null;
+  try {
+    existing = runtime.repository.findOperation(save.OPERATION_TYPE, normalized.requestKey);
+  } catch (error) {
+    return purchaseSingleCommitResult_(save.STATUS.RECOVERY_REQUIRED, {
+      code: error && error.message === "DUPLICATE_OPERATION" ?
+        codes.DUPLICATE_OPERATION_EVIDENCE : codes.IDENTITY_CONFLICT,
+      requestKey: normalized.requestKey,
+      detail: error && error.message ? error.message : "" });
+  }
+  var hash = transactionPayloadHash_(normalized);
+  var result = existing ?
+    purchaseSingleCommitResume_(existing, hash, normalized, runtime) :
+    purchaseSingleCommitNewIntent_(normalized, hash, runtime);
+  // Post-commit freshness: ONLY a DONE result (fresh commit or COMMITTED
+  // replay) may invalidate the shared dashboard cache. Ephemeral best-effort
+  // maintenance: never retried, never allowed to contradict the durable DONE.
+  if (result.status === save.STATUS.DONE && typeof runtime.invalidate === "function") {
+    try { runtime.invalidate(); }
+    catch (cacheError) {
+      Logger.log("Purchase single-commit post-commit cache invalidation skipped: " +
+        String(cacheError && cacheError.message || cacheError));
+    }
+  }
+  return result;
+}
+
+// Resolve the three write-surface sheetIds from spreadsheet metadata
+// (read-only). A missing sheetId throws BEFORE the batchUpdate is issued:
+// atomic rejection, no partial batch.
+function purchaseSingleCommitSheetIdsRequest_() {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  var response = inventoryReceiptMigrationRequest_("get",
+    "?fields=" + encodeURIComponent("spreadsheetId,sheets.properties(sheetId,title)"));
+  if (!response || response.spreadsheetId !== NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID) {
+    throw new Error("PRODUCTION_IDENTITY_MISMATCH");
+  }
+  var ids = {};
+  (response.sheets || []).forEach(function(sheet) {
+    var properties = sheet && sheet.properties;
+    if (properties && save.WRITE_SURFACES.indexOf(properties.title) !== -1 &&
+        typeof properties.sheetId === "number") {
+      ids[properties.title] = properties.sheetId;
+    }
+  });
+  var missing = save.WRITE_SURFACES.filter(function(name) { return typeof ids[name] !== "number"; });
+  if (missing.length) throw new Error("SHEET_ID_UNAVAILABLE:" + missing.join(","));
+  return ids;
+}
+
+// ONE Sheets REST mutation: spreadsheets.batchUpdate with exactly three
+// appendCells subrequests over the Purchase write surfaces, reusing the
+// sanitized migration transport (43). The single batchUpdate is atomic (all
+// three subrequests or none); intent/batch/readback/commit remain multistep —
+// no database-global atomicity is claimed.
+function purchaseSingleCommitBatchRequest_(valueRanges) {
+  var sheetIds = purchaseSingleCommitSheetIdsRequest_();
+  var body = purchaseSingleCommitBatchBody_(valueRanges, sheetIds);
+  return inventoryReceiptMigrationRequest_("post", ":batchUpdate", body);
+}
+
+// Dispatcher seam: builds the core runtime from the already-locked context and
+// maps the envelope. An unexpected failure AFTER a durable intent may exist is
+// UNKNOWN (identity preserved), never a definite failure.
+function purchaseSingleCommitDispatch_(payload, ss, dispatcherRuntime, items, gate) {
+  var save = PURCHASE_SINGLE_COMMIT_V1;
+  var core;
+  try {
+    core = purchaseSingleCommitCoreRuntime_(ss, dispatcherRuntime, items, gate);
+  } catch (error) {
+    return purchaseSingleCommitEnvelope_(purchaseSingleCommitResult_(save.STATUS.REFUSED, {
+      code: save.CODES.SCHEMA_NOT_READY, requestKey: purchaseSingleCommitPayloadKey_(payload),
+      detail: "RUNTIME_UNAVAILABLE:" + String(error && error.message || error) }));
+  }
+  try {
+    return purchaseSingleCommitEnvelope_(purchaseSingleCommitSaveWithRuntime_(payload, core));
+  } catch (error) {
+    // Unknown only after a durable intent may exist: retain the request
+    // identity AND resolve the operation linkage read-only so the client can
+    // re-check the SAME intent instead of minting a new one.
+    var identity = { requestKey: purchaseSingleCommitPayloadKey_(payload), operationID: "" };
+    try {
+      var pending = core.repository.findOperation(save.OPERATION_TYPE, identity.requestKey);
+      if (pending) identity.operationID = pending.OperationID;
+    } catch (lookupError) { /* requestKey remains the recoverable identity */ }
+    return purchaseSingleCommitEnvelope_(purchaseSingleCommitResult_(save.STATUS.UNKNOWN,
       Object.assign({
         code: save.CODES.SAVE_EXECUTION_UNKNOWN,
         detail: String(error && error.message || error)

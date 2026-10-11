@@ -3640,7 +3640,7 @@
                 <div class="transaction-entry-control"><label for="receiptReference">Purchase evidence/reference</label><input id="receiptReference" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptReferenceError"><p id="receiptReferenceError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptUnavailable">Document unavailable</label><input id="receiptUnavailable" type="checkbox" onchange="updateReceiptEntryEvidence()" aria-describedby="receiptUnavailableError"><p id="receiptUnavailableError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptAttested">I confirm this purchase information reflects what was actually received.</label><input id="receiptAttested" type="checkbox" onchange="validateReceiptEntry(true)" aria-describedby="receiptAttestedError"><p id="receiptAttestedError" class="transaction-entry-error" role="alert"></p></div>
-                <div class="transaction-entry-control transaction-entry-cash-account">
+                <div id="receiptCashAccountField" class="transaction-entry-control transaction-entry-cash-account">
                   <label for="receiptCashAccount">Paid via</label>
                   <select id="receiptCashAccount" aria-describedby="receiptCashAccountError">
                     <option value="">Select payment account…</option>
