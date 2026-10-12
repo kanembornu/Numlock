@@ -70,7 +70,10 @@ function getFinanceDataWithRuntime(runtime, filter, customStart, customEnd) {
 }
 
 function buildCashFlowStatement(ledgerRows, accounts, period, openingContext) {
-  var cashAccountCodes = ["1000", "1010", "1020"];
+  // T11.2 §14.1 mechanical list extension: 1040 joins the money-line universe
+  // (1040 opening starts at 0 and legacy rows never carry the code, so
+  // pre-activation outputs are unchanged).
+  var cashAccountCodes = ["1000", "1010", "1020", "1040"];
   var accountMap = {};
   (accounts || []).forEach(function(account) {
     var code = String(account.AccountCode || "").trim();
@@ -109,7 +112,19 @@ function buildCashFlowStatement(ledgerRows, accounts, period, openingContext) {
           if (g && !group) group = g;
         }
       });
-      if (!group) { ambiguous.push({ JournalID: jid, amount: cashMovement, reason: "UNCLASSIFIED_COUNTERPART" }); return; }
+      if (!group) {
+        // T11.2 §14.3 composition classification (D11): ONLY a 1040 money
+        // line with no counterpart CashFlowGroup classifies by composition —
+        // 1040 debit → Operating inflow, 1040 credit → Operating outflow.
+        // 1030/counterpart CashFlowGroup is never required; all non-1040
+        // journals keep today's counterpart-group rule and anything else
+        // unresolvable stays ambiguous (fail-visible, no silent guessing).
+        if (String(cashLine.AccountCode || "").trim() === "1040") {
+          operating += cashMovement;
+          return;
+        }
+        ambiguous.push({ JournalID: jid, amount: cashMovement, reason: "UNCLASSIFIED_COUNTERPART" }); return;
+      }
       if (group === "Operating") operating += cashMovement;
       else if (group === "Investing") investing += cashMovement;
       else if (group === "Financing") financing += cashMovement;
@@ -152,7 +167,9 @@ function getCashFlowData(filter, customStart, customEnd) {
   var openingContext = null;
   try {
     var openingRows = readFinanceOpeningBalancesCompat(ss);
-    var cashAccountCodes = ["1000", "1010", "1020"];
+    // T11.2 §14.1: opening-cash sum matches the statement money universe
+    // (the 1040 opening row starts at 0; absent row contributes nothing).
+    var cashAccountCodes = ["1000", "1010", "1020", "1040"];
     var sum = 0;
     (openingRows || []).forEach(function(row) {
       var code = String(row.AccountCode || "").trim();
@@ -227,6 +244,24 @@ function scopeFinanceDepreciation(source, period) {
     unresolvedAssetReferences: quality.unresolvedAssetReferences || [] } };
 }
 
+// T11.2 §13 Finance validator gate (read side): 1040 evidence is demanded
+// from the readiness reader ONLY while SINGLE_COMMIT_TRANSACTION_V1 resolves
+// VALID+ACTIVE. ABSENT/PREPARED/PAUSED or an unreadable/invalid config never
+// demands the row — read/report authority is mode-independent (PAUSED blocks
+// writes, never committed-data reads), and this helper never throws.
+function financeSingleCommitActive_() {
+  try {
+    if (typeof PropertiesService === "undefined" || typeof SINGLE_COMMIT_TRANSACTION_V1 === "undefined") {
+      return false;
+    }
+    var state = singleCommitTransactionConfigState_(
+      PropertiesService.getScriptProperties().getProperty(SINGLE_COMMIT_TRANSACTION_V1.CONFIG_PROPERTY));
+    return state.state === "VALID" && state.mode === "ACTIVE";
+  } catch (error) {
+    return false;
+  }
+}
+
 function buildFinanceFinalReadinessEvidence_(runtime) {
   var ss = runtime.spreadsheet;
   var canonicalData = getCanonicalTransactionData(ss);
@@ -237,6 +272,8 @@ function buildFinanceFinalReadinessEvidence_(runtime) {
   var settlements = readCanonicalTable(ss, "Settlements", CASH_FOUNDATION_POLICY.SETTLEMENT_HEADERS);
   var depreciation = getFinanceDepreciationSource(ss);
   var wanted = ["6210", "2000", "1000", "1010", "1020"], accountMap = {};
+  // §13: extend account evidence with 1040 only under ACTIVE config.
+  if (financeSingleCommitActive_()) wanted.push("1040");
   accounts.forEach(function(row) { accountMap[String(row.AccountCode || "").trim()] = row; });
   var accountEvidence = {};
   wanted.forEach(function(code) {

@@ -457,7 +457,11 @@ function buildPolicyCStatementReconciliation(ledgerRows, gateState) {
       issues: [!prospective && inventory < 0 ? "NEGATIVE_INVENTORY_BOOK_BASIS" :
         debits !== credits ? "UNBALANCED_LEDGER" : "PROHIBITED_ACCOUNT"] };
   }
-  var cash = ["1000", "1010", "1020"].reduce(function(sum, code) { return sum + (balances[code] || 0); }, 0);
+  // T11.2 §12/§13: Balance Position cash asset = canonical TotalFunds over
+  // AGGREGATE_MONEY_ACCOUNT_CODES (historical 1000/1010/1020 + live 1040).
+  // Legacy-absent 1040 contributes 0 (baseline byte-stable); no channel
+  // breakdown; 1030/1100/2000/4000/6210 never enter this sum.
+  var cash = AGGREGATE_MONEY_ACCOUNT_CODES.reduce(function(sum, code) { return sum + (balances[code] || 0); }, 0);
   return { status: "FINAL", finalValues: { inventoryBookValue: prospective ? null : inventory,
     inventoryStatus: prospective ? "OMITTED_UNPROVEN" : "FINAL",
     accountsPayable: -(balances["2000"] || 0), hpp: prospective ? null : balances["5000"] || 0,

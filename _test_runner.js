@@ -151,7 +151,8 @@ var files = [
   '96.Tests.Treasury.Receipt.Lifecycle.Cases.js',
   '96.Tests.Treasury.Operator.Cases.js',
   '96.Tests.Treasury.Receipt.Preparation.Cases.js',
-  '96.Tests.Treasury.Activation.Cases.js'
+  '96.Tests.Treasury.Activation.Cases.js',
+  '96.Tests.SingleCommit.Readers.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -573,6 +574,24 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testTreasuryT105ActivationAmbiguousRecovery', 'testTreasuryT105ActivationAmbiguousRecovery()');
   run('testTreasuryT105ActivationSourceAudit', 'testTreasuryT105ActivationSourceAudit()');
   run('testTreasuryT105ActivationMutationSensitivity', 'JSON.stringify(runTreasuryT105ActivationMutationProof())');
+
+  // T11.6/U4 — canonical readers + aggregate funds (T11.2 §12-§15): the
+  // aggregate-funds projection, Balance Position, Cash Flow
+  // anti-double-count, Revenue/P&L isolation, Transaction one-business-row,
+  // Dashboard semantics, T5 composed SALES_MONEY_V2 clearing, global 1030
+  // (transitional 24k + combined), date authority, read-mode/cache
+  // coherence, and regression pins. Local read-only fixtures only.
+  run('testSingleCommitAggregateFunds', 'testSingleCommitAggregateFunds()');
+  run('testSingleCommitBalancePosition', 'testSingleCommitBalancePosition()');
+  run('testSingleCommitCashFlow', 'testSingleCommitCashFlow()');
+  run('testSingleCommitRevenuePAndL', 'testSingleCommitRevenuePAndL()');
+  run('testSingleCommitTransactionOneRow', 'testSingleCommitTransactionOneRow()');
+  run('testSingleCommitDashboardSemantics', 'testSingleCommitDashboardSemantics()');
+  run('testSingleCommitT5ComposedClearing', 'testSingleCommitT5ComposedClearing()');
+  run('testSingleCommitGlobal1030', 'testSingleCommitGlobal1030()');
+  run('testSingleCommitDateAuthority', 'testSingleCommitDateAuthority()');
+  run('testSingleCommitReadModeCache', 'testSingleCommitReadModeCache()');
+  run('testSingleCommitRegressionPins', 'testSingleCommitRegressionPins()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

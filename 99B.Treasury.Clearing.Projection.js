@@ -126,6 +126,157 @@ function treasuryClearingInPeriod_(dateKey, start, end) {
   return true;
 }
 
+// T11.2 §15 clearing-source index: active BalanceLedger lines with
+// SourceType SALES_MONEY_V2 (composed money leg) or
+// TRANSITIONAL_CLEARING_CLOSE (§18 close), grouped by bound SourceID
+// (RecognitionID), as-of bounded exactly like receipt money. Read-only;
+// no TreasuryReceipts row is ever synthesized for a composed leg.
+function treasuryClearingMoneyIndex_(ledgerAll, bounds) {
+  var moneyType = SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_SOURCE_TYPE,
+    closeType = "TRANSITIONAL_CLEARING_CLOSE";
+  var money = Object.create(null), close = Object.create(null);
+  ledgerAll.forEach(function(line) {
+    var sourceType = String(line.SourceType || "");
+    if (sourceType !== moneyType && sourceType !== closeType) return;
+    if (!treasuryClearingIncludedAsOf_(line.Tanggal, bounds.asOf)) return;
+    var bucket = sourceType === moneyType ? money : close;
+    var key = String(line.SourceID || "");
+    (bucket[key] = bucket[key] || []).push(line);
+  });
+  return { money: money, close: close };
+}
+
+// T11.2 §15 composed-money expectation: committed
+// SALES_RECOGNITION_V2_SAVE operation rows whose frozen plan carries
+// composedMoney:true. Only these commits EXPECT a money leg — a legacy or
+// PREPARED save never demands one, so legacy exposures stay untouched.
+function treasuryClearingComposedPlanIndex_(operationRows) {
+  var byRecognition = Object.create(null);
+  (operationRows || []).forEach(function(row) {
+    if (String(row.OperationType || "") !== SALES_RECOGNITION_V2_SAVE.OPERATION_TYPE) return;
+    var plan = null;
+    try { plan = JSON.parse(String(row.OperationPlan || "")); } catch (error) { plan = null; }
+    if (!plan || typeof plan !== "object" || Array.isArray(plan)) return;
+    if (plan.composedMoney !== true) return;
+    var id = String(plan.recognitionID || "");
+    if (!id) return;
+    (byRecognition[id] = byRecognition[id] || []).push({ operation: row, plan: plan });
+  });
+  return byRecognition;
+}
+
+// T11.2 §15 per-exposure composed clearing state. Validates every bound
+// clearing group (exact two-line journal, one 1040 + one 1030, balanced,
+// SALES_MONEY movement, amount equal to the canonical event amount, plan
+// journal identity + signature when a composed plan exists) and returns the
+// debit-positive 1030 net. ONLY a fully valid state contributes clearing —
+// malformed, duplicate, missing-leg, identity, or signature disagreement
+// surfaces as frozen quality codes (EXCEPTION) and clears nothing. The
+// transitional close (§18) uses the same shape rules without plan
+// expectations. A valid void whose money fully reversed leaves the exposure
+// through the pre-existing voided path; reversal-bound groups (SourceID =
+// void recognitionID) are included so U6 money reversals net correctly.
+function treasuryClearingExposureClearingState_(ids, recognitionById, eventVerdicts,
+    indexes, planIndex) {
+  var codes = [], groups = [];
+  ids.forEach(function(id) {
+    var moneyLines = indexes.money[id] || [];
+    var closeLines = indexes.close[id] || [];
+    if (moneyLines.length) groups.push({ id: id, kind: "money", lines: moneyLines });
+    else if ((planIndex[id] || []).length) treasuryClearingPushCode_(codes, "JOURNAL_MISSING");
+    if (closeLines.length) groups.push({ id: id, kind: "close", lines: closeLines });
+  });
+  var net1030 = 0, seenJournals = Object.create(null);
+  groups.forEach(function(group) {
+    var byJournal = Object.create(null);
+    group.lines.forEach(function(line) {
+      var jid = String(line.JournalID || "");
+      (byJournal[jid] = byJournal[jid] || []).push(line);
+    });
+    var journalIDs = Object.keys(byJournal);
+    if (journalIDs.length > 1) treasuryClearingPushCode_(codes, "JOURNAL_DUPLICATE");
+    journalIDs.forEach(function(jid) {
+      if (seenJournals[jid]) treasuryClearingPushCode_(codes, "JOURNAL_DUPLICATE");
+      seenJournals[jid] = true;
+      var lines = byJournal[jid];
+      if (lines.length !== 2) {
+        treasuryClearingPushCode_(codes, "JOURNAL_AMOUNT_MISMATCH");
+        return;
+      }
+      var money = lines.filter(function(line) {
+        return String(line.AccountCode || "") === SINGLE_COMMIT_MONEY_POLICY.ACCOUNT_CODE;
+      });
+      var clearing = lines.filter(function(line) {
+        return String(line.AccountCode || "") ===
+          TREASURY_RECEIPT_V1_CONTRACT.CLEARING_ACCOUNT_CODE;
+      });
+      if (money.length !== 1 || clearing.length !== 1) {
+        treasuryClearingPushCode_(codes, "JOURNAL_ACCOUNT_MISMATCH");
+        return;
+      }
+      if (group.kind === "money" && !lines.every(function(line) {
+        return String(line.MovementType || "") ===
+          SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_MOVEMENT_TYPE;
+      })) {
+        treasuryClearingPushCode_(codes, "JOURNAL_IDENTITY_MISMATCH");
+        return;
+      }
+      var moneyDebit = Number(money[0].Debit), moneyCredit = Number(money[0].Credit),
+        clearDebit = Number(clearing[0].Debit), clearCredit = Number(clearing[0].Credit);
+      if (!isFinite(moneyDebit) || !isFinite(moneyCredit) ||
+          !isFinite(clearDebit) || !isFinite(clearCredit)) {
+        treasuryClearingPushCode_(codes, "JOURNAL_AMOUNT_MISMATCH");
+        return;
+      }
+      var forward = moneyDebit > 0 && moneyCredit === 0 &&
+        clearCredit === moneyDebit && clearDebit === 0;
+      var reverse = clearDebit > 0 && clearCredit === 0 &&
+        moneyCredit === clearDebit && moneyDebit === 0;
+      if (!forward && !reverse) {
+        treasuryClearingPushCode_(codes, "JOURNAL_AMOUNT_MISMATCH");
+        return;
+      }
+      var amount = forward ? moneyDebit : clearDebit;
+      if (group.kind === "money") {
+        var verdict = eventVerdicts[group.id];
+        if (verdict && isFinite(verdict.amount) && verdict.amount > 0 &&
+            amount !== verdict.amount) {
+          treasuryClearingPushCode_(codes, "JOURNAL_AMOUNT_MISMATCH");
+          return;
+        }
+        var plans = planIndex[group.id] || [];
+        if (plans.length) {
+          var plan = plans[0].plan;
+          if (String(plan.moneyJournalID || "") !== jid) {
+            treasuryClearingPushCode_(codes, "JOURNAL_IDENTITY_MISMATCH");
+          }
+          if (String(plan.moneyJournalSignature || "") !== "" &&
+              policyCJournalSignature_(lines) !== String(plan.moneyJournalSignature)) {
+            treasuryClearingPushCode_(codes, "SIGNATURE_MISMATCH");
+          }
+          var planTotal = Number(plan.orderTotal);
+          if (isFinite(planTotal) && planTotal > 0 && planTotal !== amount) {
+            treasuryClearingPushCode_(codes, "JOURNAL_AMOUNT_MISMATCH");
+          }
+        } else {
+          var event = recognitionById[group.id];
+          if (event && String(event.EventType || "") === "RECOGNITION") {
+            var expectedJournal = transactionStableBootstrapId_(
+              SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_JOURNAL_PREFIX,
+              [String(event.OrderID || "")]);
+            if (expectedJournal && jid !== expectedJournal) {
+              treasuryClearingPushCode_(codes, "JOURNAL_IDENTITY_MISMATCH");
+            }
+          }
+        }
+      }
+      net1030 += clearDebit - clearCredit;
+    });
+  });
+  return { present: groups.length > 0, codes: codes, valid: codes.length === 0,
+    net1030: net1030, clearing: codes.length === 0 ? -net1030 : 0 };
+}
+
 // Narrow read helper: T4's read-only exposure source reader (six authority
 // tables) plus the three independent Treasury sheets and the Accounts master.
 // All reads; no sheet is ever created or mutated here.
@@ -479,6 +630,9 @@ function treasuryClearingAnalyze_(sources, request) {
   var ledgerAll = sources.BalanceLedger.filter(function(line) {
     return isCanonicalActive(line.IsActive);
   });
+  // T11.2 §15 composed clearing sources + plan expectations (read-only).
+  var clearingIndexes = treasuryClearingMoneyIndex_(ledgerAll, bounds);
+  var composedPlans = treasuryClearingComposedPlanIndex_(sources.TransactionOperations);
   var operationRowsById = Object.create(null), operationKeyCounts = Object.create(null);
   sources.TreasuryOperations.forEach(function(operation) {
     var id = String(operation.TreasuryOperationID || "");
@@ -730,6 +884,18 @@ function treasuryClearingAnalyze_(sources, request) {
     (opCodesByRecognition[recognitionID] || []).forEach(function(code) {
       treasuryClearingPushCode_(codes, code);
     });
+    // T11.2 §15: composed SALES_MONEY_V2 (and §18 transitional-close) lines
+    // bound to this recognition family. A valid group is AUTHORITATIVE
+    // clearing (no receipt row, no synthesis); every malformed/missing leg
+    // pushes frozen quality codes here so the row fails visible as
+    // EXCEPTION and clears nothing — never silently clear 1030.
+    var clearingState = treasuryClearingExposureClearingState_(
+      [recognitionID].concat(voidEvents.map(function(reversal) {
+        return String(reversal.RecognitionID);
+      })), recognitionById, eventVerdicts, clearingIndexes, composedPlans);
+    clearingState.codes.forEach(function(code) {
+      treasuryClearingPushCode_(codes, code);
+    });
     var recognizedActive = (eventState.valid ? recognizedAmount : 0) - validVoidAmount;
     // Receipts attached to this exposure (visible, RecognitionID resolved).
     var attachedEntries = visibleReceiptByRecognition[recognitionID] || [];
@@ -801,8 +967,10 @@ function treasuryClearingAnalyze_(sources, request) {
     }, 0);
     // Net Treasury clearing: every posted ordinary receipt is subtracted
     // (including one later reversed), committed receipt reversals add back —
-    // the T2 section 7.2 formula with the double-count trap avoided.
-    var cleared = ordinarySum - reversalSum;
+    // the T2 section 7.2 formula with the double-count trap avoided — plus
+    // T11.2 §15 composed money / transitional-close clearing (valid groups
+    // only; invalid groups were coded EXCEPTION above and clear nothing).
+    var cleared = ordinarySum - reversalSum + clearingState.clearing;
     // Outstanding = RecognizedActive - ActiveReceiptClearings + CommittedReversals
     // (single canonical formula; T4 parity proven on healthy fixtures).
     var outstanding = recognizedActive - cleared;
@@ -843,7 +1011,11 @@ function treasuryClearingAnalyze_(sources, request) {
     } else if (outstanding > 0) {
       status = "UNCLEARED";
     } else if (recognizedActive > 0 && cleared === recognizedActive &&
-        activeOrdinary.length >= 1) {
+        (activeOrdinary.length >= 1 ||
+         (clearingState.present && clearingState.valid))) {
+      // T11.2 §15.2: receipt-based rows keep the ActiveReceiptCount >= 1
+      // rule; a composed-cleared row (no receipt identity) is CLEARED on
+      // exact full clearing alone.
       status = "CLEARED";
     } else {
       treasuryClearingPushCode_(codes, "AMOUNT_RESIDUAL");
@@ -975,6 +1147,21 @@ function treasuryClearingAttributeGroup_(group, expected, analysis, ctx) {
         "SALES_AUTHORITY_INVALID";
     }
     entry.provenance = "SALES_RECOGNITION_V2 ledger movement not mirrored by valid canonical events";
+  } else if (group.sourceType === SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_SOURCE_TYPE ||
+      group.sourceType === "TRANSITIONAL_CLEARING_CLOSE") {
+    // T11.2 §15.3/§15.5: known writer identities — a composed-money or
+    // transitional-close group disagreeing with its canonical expectation is
+    // a deterministic lifecycle conflict, never an unexplained residual and
+    // never a HISTORICAL_NON_V2 misclassification.
+    var recState = ctx.eventVerdicts[group.sourceID];
+    entry.category = categories[2]; // LIFECYCLE_CONFLICT
+    entry.identity = group.sourceID;
+    entry.qualityCode = recState && recState.valid ? "AMOUNT_MISMATCH" :
+      "JOURNAL_IDENTITY_MISMATCH";
+    entry.provenance = group.sourceType ===
+      SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_SOURCE_TYPE ?
+      "composed-money 1030 movement disagreeing with its canonical expectation" :
+      "transitional clearing close 1030 movement disagreeing with its canonical expectation";
   } else {
     var movementTypes = group.movementTypes;
     var sourceID = group.sourceID;
@@ -1098,6 +1285,18 @@ function buildTreasury1030Reconciliation_(ss, request) {
       var state = analysis.eventVerdicts[group.sourceID];
       if (state && state.included && state.valid) {
         expected = state.eventType === "RECOGNITION" ? state.amount : -state.amount;
+      }
+    } else if (group.sourceType === SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_SOURCE_TYPE ||
+        group.sourceType === "TRANSITIONAL_CLEARING_CLOSE") {
+      // T11.2 §15.3/§15.5: expected 1030 net = negative of the expectation
+      // of the (SALES_RECOGNITION_V2, same SourceID) group — recognition
+      // +amount ⇒ clearing −amount; void reversal −amount ⇒ +amount. A
+      // healthy composed sale therefore contributes net 0 to the residual.
+      var recState = analysis.eventVerdicts[group.sourceID];
+      if (recState && recState.included && recState.valid) {
+        var recExpected = recState.eventType === "RECOGNITION" ?
+          recState.amount : -recState.amount;
+        expected = -recExpected;
       }
     }
     var entry = treasuryClearingAttributeGroup_(group, expected, analysis, ctx);

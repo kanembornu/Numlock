@@ -1242,10 +1242,12 @@ function testTreasuryT4CashFlowGroupGate() {
   // classified by the counterpart account's CashFlowGroup; blank counterpart
   // group => UNCLASSIFIED_COUNTERPART (movement dropped) => hard gate.
   var cashFlowSource = buildCashFlowStatement.toString();
+  // T11.2 §20 lists `36:73 cashAccountCodes + "1040"` as a mechanical
+  // contract-required enumeration change — the pin tracks the frozen literal.
   check("I1a", cashFlowSource.indexOf("CashFlowGroup") !== -1 &&
     cashFlowSource.indexOf("UNCLASSIFIED_COUNTERPART") !== -1 &&
     cashFlowSource.indexOf('"Operating"') !== -1 &&
-    cashFlowSource.indexOf('["1000", "1010", "1020"]') !== -1);
+    cashFlowSource.indexOf('["1000", "1010", "1020", "1040"]') !== -1);
   // I2 correct group => gate passes and the receipt posts.
   var runtime = treasuryT4Runtime_();
   var result = treasuryReceiptSaveWithRuntime_(treasuryT4Payload_("t4-i-02"), runtime);

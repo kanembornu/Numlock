@@ -20,6 +20,51 @@ var CASH_FOUNDATION_POLICY = Object.freeze({
   CUTOVER_DATE: "2026-09-30"
 });
 
+// T11.2 §11/§12 frozen canonical aggregate-funds account universe (D12).
+// Semantically DISTINCT from CASH_FOUNDATION_POLICY.ACCOUNT_CODES above: that
+// list stays the historical channel universe (openings classification,
+// legacy settlement validation, Treasury destination eligibility) and is NOT
+// redefined here; this list is READ-ONLY aggregation for TotalFunds
+// projections. 1040 joins ONLY this reader list — never a writer/destination
+// eligibility list. Historical 1000/1010/1020 semantics stay intact; no
+// normal T11 writer posts to them merely because readers aggregate them.
+var AGGREGATE_MONEY_ACCOUNT_CODES = Object.freeze(["1000", "1010", "1020", "1040"]);
+
+// T11.2 §12 canonical aggregate operational-funds projection — the ONE
+// TotalFunds definition. Debit-positive BalanceLedger net per aggregate
+// account, summed; journal pairs net out by construction (same JournalID
+// debits equal credits), so composed recognition+money legs can never
+// double count here; 1030/1100/2000/4000/6210 are never part of TotalFunds.
+// A missing/legacy-absent 1040 contributes 0 (legacy compatibility); any
+// structurally invalid amount fails visibly (MALFORMED), never silently.
+function buildAggregateFundsReadModel_(ledgerRows) {
+  var balances = {}, malformed = [];
+  AGGREGATE_MONEY_ACCOUNT_CODES.forEach(function(code) { balances[code] = 0; });
+  (ledgerRows || []).forEach(function(row) {
+    if (!isCanonicalActive(row.IsActive)) return;
+    var code = String(row.AccountCode || "").trim();
+    if (!Object.prototype.hasOwnProperty.call(balances, code)) return;
+    var debit = Number(row.Debit), credit = Number(row.Credit);
+    if (!isFinite(debit) || !isFinite(credit)) {
+      malformed.push({ lineID: String(row.LineID || ""), journalID: String(row.JournalID || ""),
+        accountCode: code, detail: "NON_FINITE_AMOUNT" });
+      return;
+    }
+    balances[code] += debit - credit;
+  });
+  var detail = AGGREGATE_MONEY_ACCOUNT_CODES.map(function(code) {
+    return { AccountCode: code, balance: balances[code],
+      present: balances[code] !== 0 || code !== "1040" };
+  });
+  var totalFunds = AGGREGATE_MONEY_ACCOUNT_CODES.reduce(function(sum, code) {
+    return sum + balances[code];
+  }, 0);
+  return { status: malformed.length ? "MALFORMED" : "OK",
+    contract: "AGGREGATE_FUNDS_PROJECTION_V1", accountCodes: AGGREGATE_MONEY_ACCOUNT_CODES.slice(),
+    detail: detail, totalFunds: totalFunds, malformedRows: malformed,
+    readOnly: true, writeCount: 0 };
+}
+
 var CASH_SCHEMA_MIGRATION = Object.freeze({
   VERSION: "10F.1",
   MIGRATION_ID: "CASH-SCHEMA-20260930",
@@ -603,13 +648,35 @@ function cashSettleAndPersist(request, runtime) {
 function buildCashBalanceReadModel(accounts, openingRows, ledgerRows, observedBalances) {
   var accountIndex = cashAccountMap(accounts), observed = observedBalances || {}, results = [];
   var openingValidation = validateCashOpeningRows(openingRows, accounts);
-  CASH_FOUNDATION_POLICY.ACCOUNT_CODES.forEach(function(code) {
+  // T11.2 §13/§20: iterate the aggregate universe (legacy ∪ 1040). Legacy
+  // rows keep their strict single-opening contract byte-for-byte; a
+  // legacy-absent 1040 is skipped by the same account guard (baseline
+  // fixtures unbroken), and a present 1040 starts at opening 0 when no
+  // opening row exists (§12), failing visibly (UNAVAILABLE) on malformed
+  // duplicate/one-sided 1040 openings rather than silently balancing.
+  AGGREGATE_MONEY_ACCOUNT_CODES.forEach(function(code) {
     var account = accountIndex.accounts[code];
     if (!account || !isCanonicalActive(account.IsActive) || accountIndex.duplicates[code]) return;
     var openings = (openingRows || []).filter(function(row) {
       return isCanonicalActive(row.IsActive) && String(row.AccountCode || "").trim() === code;
     });
-    var validOpening = openingValidation.status === "PASS" && openings.length === 1;
+    var aggregate1040 = code === "1040";
+    var opening = 0, validOpening;
+    if (aggregate1040) {
+      if (openings.length === 0) {
+        validOpening = true;
+        opening = 0;
+      } else if (openings.length === 1 && isFinite(Number(openings[0].Debit)) &&
+          Number(openings[0].Debit) >= 0 && Number(openings[0].Credit) === 0) {
+        validOpening = true;
+        opening = Number(openings[0].Debit);
+      } else {
+        validOpening = false;
+      }
+    } else {
+      validOpening = openingValidation.status === "PASS" && openings.length === 1;
+      if (validOpening) opening = Number(openings[0].Debit);
+    }
     if (!validOpening) {
       results.push({ AccountCode: code, AccountName: String(account.AccountName || ""), OpeningBalance: null,
         Debits: null, Credits: null, ClosingBalance: null, CutoverDate: CASH_FOUNDATION_POLICY.CUTOVER_DATE,
@@ -624,14 +691,22 @@ function buildCashBalanceReadModel(accounts, openingRows, ledgerRows, observedBa
         debits += Number(row.Debit); credits += Number(row.Credit);
       }
     });
-    var opening = Number(openings[0].Debit), closing = opening + debits - credits;
+    var closing = opening + debits - credits;
     var hasObserved = Object.prototype.hasOwnProperty.call(observed, code) && isFinite(Number(observed[code]));
     results.push({ AccountCode: code, AccountName: String(account.AccountName || ""), OpeningBalance: opening,
       Debits: debits, Credits: credits, ClosingBalance: closing, CutoverDate: CASH_FOUNDATION_POLICY.CUTOVER_DATE,
       ReconciliationStatus: !hasObserved ? "UNRECONCILED" : Number(observed[code]) === closing ? "RECONCILED" : "MISMATCH" });
   });
-  return { status: results.some(function(row) { return row.ReconciliationStatus === "UNAVAILABLE"; }) ?
-    "UNAVAILABLE" : "AVAILABLE", readOnly: true, writeCount: 0, accounts: results };
+  var status = results.some(function(row) { return row.ReconciliationStatus === "UNAVAILABLE"; }) ?
+    "UNAVAILABLE" : "AVAILABLE";
+  // T11.2 §12 presentation: per-account legacy/1040 rows stay visible AND an
+  // aggregate TotalFunds line is added — one number, no channel breakdown.
+  return { status: status, readOnly: true, writeCount: 0, accounts: results,
+    aggregate: { contract: "AGGREGATE_FUNDS_PROJECTION_V1",
+      accountCodes: AGGREGATE_MONEY_ACCOUNT_CODES.slice(),
+      totalFunds: status === "AVAILABLE" ? results.reduce(function(sum, row) {
+        return sum + (Number(row.ClosingBalance) || 0);
+      }, 0) : null } };
 }
 
 function cashExactHeaders(values, headers) {
