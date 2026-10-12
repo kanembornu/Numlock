@@ -1776,11 +1776,12 @@ function testSingleCommitCorrectionsRegression() {
     purchasePaused.code === "SINGLE_COMMIT_MODE_PAUSED",
     JSON.stringify({ salesPaused: salesPaused, expensePaused: expensePaused }));
 
-  // GR108: package manifest untouched — the allowlist still carries exactly
-  // the 76 registered deployment files and never lists this test file.
+  // GR108: package manifest — the allowlist carries exactly the 77
+  // registered deployment files (76 + control plane, U8 gate) and never
+  // lists this test file.
   var allowlist = fs.readFileSync(".claspignore", "utf8").split(/\r?\n/)
     .filter(function(line) { return line.indexOf("!") === 0; });
-  check("GR108", allowlist.length === 76 &&
+  check("GR108", allowlist.length === 77 &&
     allowlist.indexOf("!96.Tests.SingleCommit.Corrections.Cases.js") === -1 &&
     allowlist.indexOf("!_test_runner.js") === -1,
     String(allowlist.length));

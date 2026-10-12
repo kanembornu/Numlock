@@ -428,7 +428,9 @@ function treasuryT9PackageCheck_(allowlistText, t8ManifestText) {
     "99C.Treasury.Receipt.Reversal.Correction.js", "99D.Treasury.Operator.Api.js",
     "202.View.Treasury.State.html", "203.View.Treasury.Render.html",
     "204.View.Treasury.Controller.html"];
-  treasuryT9Check_("T9Q1", allowlist.length === 76, String(allowlist.length));
+  // T9Q1: 77 since the T11.10/U8 authorized gate registered the control
+  // plane (76 T9/T10.5 files + 101.SingleCommit.Config.Control.js).
+  treasuryT9Check_("T9Q1", allowlist.length === 77, String(allowlist.length));
   pending.forEach(function(file) {
     treasuryT9Check_("T9Q2-" + file, allowlist.indexOf(file) !== -1, "not registered");
     treasuryT9Check_("T9Q3-" + file, fsFileReader.existsSync(file), "registered file missing");
@@ -441,7 +443,9 @@ function treasuryT9PackageCheck_(allowlistText, t8ManifestText) {
     return /^96\.Tests\.|^92\.Tests\.|^94\.Tests\.|^95\.Tests\./.test(path);
   }).length === 0, "test file allowlisted");
   var t8 = JSON.parse(String(t8ManifestText));
-  treasuryT9Check_("T9Q6", t8.prospective.count === 76, String(t8.prospective.count));
+  // T9Q6: prospective closure == current closure (77) since the T11.10/U8
+  // gate registered the last pending runtime file (control plane).
+  treasuryT9Check_("T9Q6", t8.prospective.count === 77, String(t8.prospective.count));
   pending.forEach(function(file) {
     treasuryT9Check_("T9Q7-" + file, t8.prospective.files.some(function(entry) {
       return entry.path === file;

@@ -1,7 +1,7 @@
 {
   "note": "T9 upload-manifest state (local .claspignore allowlist; no push). The eight Treasury runtime files (99/99A-99D + 202-204) are REGISTERED per the T9 authorized gate (T3-T7 documented deferral, U8->U9 precedent); 'prospective' = current + any still-pending Treasury files (none after T9).",
   "current": {
-    "count": 76,
+    "count": 77,
     "files": [
       {
         "path": "00.Project.Spec.js",
@@ -14,6 +14,10 @@
       {
         "path": "100.Code.js",
         "sha256": "e1f468ef9ebcbdab2b2976a20d728b087338fff25fbfcc62463da1e76cf47d9b"
+      },
+      {
+        "path": "101.SingleCommit.Config.Control.js",
+        "sha256": "cd052ff2b4fb59037c82baf4b13d45fa6512c8a686270c8a61d9f34dd9e1fb2c"
       },
       {
         "path": "12A.Depreciation.Report.Service.js",
@@ -308,10 +312,10 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "b6c4644e8074f686850eb9756d094da4c521aee65a45e7062f8d7b48cce2dc83"
+    "aggregateHash": "e7a1b36e89efeef512b99b51a3654a2e5a6fbae67603fe5e7faf36c8f397ef60"
   },
   "prospective": {
-    "count": 76,
+    "count": 77,
     "files": [
       {
         "path": "00.Project.Spec.js",
@@ -324,6 +328,10 @@
       {
         "path": "100.Code.js",
         "sha256": "e1f468ef9ebcbdab2b2976a20d728b087338fff25fbfcc62463da1e76cf47d9b"
+      },
+      {
+        "path": "101.SingleCommit.Config.Control.js",
+        "sha256": "cd052ff2b4fb59037c82baf4b13d45fa6512c8a686270c8a61d9f34dd9e1fb2c"
       },
       {
         "path": "12A.Depreciation.Report.Service.js",
@@ -618,7 +626,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "b6c4644e8074f686850eb9756d094da4c521aee65a45e7062f8d7b48cce2dc83"
+    "aggregateHash": "e7a1b36e89efeef512b99b51a3654a2e5a6fbae67603fe5e7faf36c8f397ef60"
   },
   "treasuryRuntimePendingRegistration": [
     "99.Treasury.Receipt.Foundation.js",

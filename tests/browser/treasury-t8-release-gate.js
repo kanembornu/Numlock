@@ -71,9 +71,10 @@ function t8BuildPackageManifest_() {
   });
   var current = t8ManifestFor_(allowlist);
   // T9 upload-manifest gate: the eight T3-T7 Treasury runtime files are now
-  // REGISTERED (U8->U9 precedent). Pre-T9 count was 68; the closure is 76 and
-  // the prospective set equals the current set.
-  t8Check("PKG_CURRENT_COUNT", current.count === 76, String(current.count));
+  // REGISTERED (U8->U9 precedent). Pre-T9 count was 68; the closure was 76.
+  // T11.10/U8 gate: the control plane (101.SingleCommit.Config.Control.js)
+  // is registered, so the closure is 77 and prospective == current.
+  t8Check("PKG_CURRENT_COUNT", current.count === 77, String(current.count));
   t8Check("PKG_TREASURY_REGISTERED", T8_TREASURY_RUNTIME.every(function(path) {
     return allowlist.indexOf(path) !== -1;
   }), "Treasury runtime files must be registered after the T9 gate");
@@ -81,7 +82,7 @@ function t8BuildPackageManifest_() {
     return allowlist.indexOf(path) === -1;
   })).sort();
   var prospective = t8ManifestFor_(prospectivePaths);
-  t8Check("PKG_PROSPECTIVE_COUNT", prospective.count === 76, String(prospective.count));
+  t8Check("PKG_PROSPECTIVE_COUNT", prospective.count === 77, String(prospective.count));
   t8Check("PKG_TREASURY_IN_PROSPECTIVE", T8_TREASURY_RUNTIME.every(function(path) {
     return prospective.files.some(function(e) { return e.path === path; });
   }));

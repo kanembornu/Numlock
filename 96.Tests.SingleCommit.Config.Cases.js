@@ -1198,40 +1198,43 @@ function testSingleCommitPackageMeasurement() {
     .map(function(line) { return line.slice(1); })
     .filter(function(path) { return path !== ""; });
 
-  // P1 current package: 76 allowlisted runtime files, tests/docs excluded.
-  check("P1", manifest.current.count === 76 && allowlist.length === 76 &&
+  // P1 current package: 77 allowlisted runtime files (control plane
+  // registered by the authorized U8 upload unit), tests/docs excluded.
+  check("P1", manifest.current.count === 77 && allowlist.length === 77 &&
     manifest.current.files.every(function(entry) {
       return entry.path.indexOf("tests/") !== 0 && entry.path.indexOf("docs/") !== 0;
     }), String(manifest.current.count));
 
-  // P2 the new control-plane file is EXCLUDED today (not allowlisted) —
-  // registration belongs to the future authorized upload unit.
-  check("P2", allowlist.indexOf("101.SingleCommit.Config.Control.js") === -1 &&
-    !manifest.current.files.some(function(entry) {
-      return entry.path === "101.SingleCommit.Config.Control.js"; }) &&
+  // P2 the control-plane file IS registered now (U5 §17 / U7 §4 deferral
+  // resolved by the T11.10/U8 authorized upload gate) and hashed in the
+  // manifest exactly once.
+  check("P2", allowlist.indexOf("101.SingleCommit.Config.Control.js") !== -1 &&
+    manifest.current.files.filter(function(entry) {
+      return entry.path === "101.SingleCommit.Config.Control.js"; }).length === 1 &&
     fs.existsSync("101.SingleCommit.Config.Control.js"));
 
-  // P3 prospective manifest (allowlist + control plane) with exact hashes —
-  // measured for the future authorized upload gate, never pushed.
+  // P3 registered package aggregate: recomputed from the manifest entries
+  // must equal the stored aggregate (no hash drift, exactly 77 entries).
   var nodeCrypto = globalThis.nodeCrypto;
   var controlHash = nodeCrypto.createHash("sha256")
     .update(fs.readFileSync("101.SingleCommit.Config.Control.js")).digest("hex");
-  var prospectiveEntries = manifest.current.files.concat([
-    { path: "101.SingleCommit.Config.Control.js", sha256: controlHash }
-  ]).sort(function(a, b) { return a.path < b.path ? -1 : (a.path > b.path ? 1 : 0); });
-  var prospectiveAggregate = nodeCrypto.createHash("sha256").update(
-    prospectiveEntries.map(function(entry) {
+  var registeredEntries = manifest.current.files
+    .slice()
+    .sort(function(a, b) { return a.path < b.path ? -1 : (a.path > b.path ? 1 : 0); });
+  var registeredAggregate = nodeCrypto.createHash("sha256").update(
+    registeredEntries.map(function(entry) {
       return entry.sha256 + "  " + entry.path + "\n"; }).join("")
   ).digest("hex");
-  check("P3", prospectiveEntries.length === 77 &&
-    prospectiveAggregate.length === 64 &&
-    manifest.prospective.count === 76, String(prospectiveEntries.length));
+  check("P3", registeredEntries.length === 77 &&
+    registeredAggregate === manifest.current.aggregateHash &&
+    registeredAggregate === "e7a1b36e89efeef512b99b51a3654a2e5a6fbae67603fe5e7faf36c8f397ef60",
+    registeredAggregate);
 
   console.log("T11_7_U5_PACKAGE current=" + manifest.current.count +
     " currentHash=" + manifest.current.aggregateHash +
-    " prospective=77 prospectiveHash=" + prospectiveAggregate +
+    " registered=77 registeredHash=" + registeredAggregate +
     " controlSha256=" + controlHash);
   console.log("T11_7_U5_PACKAGE checks=" + counter.pass);
   return { status: "PASS", checks: counter.pass,
-    prospectiveHash: prospectiveAggregate, controlSha256: controlHash };
+    registeredHash: registeredAggregate, controlSha256: controlHash };
 }
