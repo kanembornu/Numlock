@@ -88,6 +88,12 @@ function normalizeCanonicalLifecycleDetail(record, ss) {
   else { detail.item = String(master.Item); detail.category = String(master.Kategori); detail.kind = String(master.Kind); detail.group = String(master.Group); }
   detail.status = mutability.isActive ? "ACTIVE" : "VOIDED";
   detail.canCorrect = mutability.canCorrect; detail.canVoid = mutability.canVoid; detail.immutableReason = mutability.immutableReason;
+  if (record.spec.type === "EXPENSE" &&
+      singleCommitExpenseLifecycleTarget_(ss, detail.id)) {
+    // T11.8/U6: cohort flag — the client routes Correct/Void to the durable
+    // single-commit correction endpoints. Absent for every legacy row.
+    detail.singleCommit = true;
+  }
   var relation = lifecycleAuditRelations(ss, detail.id);
   detail.originalId = relation.originalId; detail.replacementId = relation.replacementId;
   return detail;
@@ -113,6 +119,34 @@ function serializeCanonicalLifecycleTransport(value) {
 
 function canonicalLifecycleSuccess(data) {
   return { success: true, data: serializeCanonicalLifecycleTransport(data) };
+}
+
+// T11.8/U6 cohort guard: a T11 single-commit Expense (its durable
+// EXPENSE_SINGLE_COMMIT_SAVE operation row exists in TransactionOperations)
+// is NEVER handled by the legacy in-place lifecycle writers — cancel/correct
+// must run through the durable single-commit correction cores (append-only
+// reversal + ONE atomic batch). Legacy rows (no operation row) keep the
+// exact legacy behavior. Read-only; a failed read leaves legacy behavior
+// unchanged (the legacy path performs its own authoritative reads).
+function singleCommitExpenseLifecycleTarget_(ss, transactionId) {
+  try {
+    var rows = readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET,
+      TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS);
+    return rows.some(function(op) {
+      return String(op.OperationType) === EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE &&
+        String(op.BusinessID) === String(transactionId);
+    });
+  } catch (error) {
+    return false;
+  }
+}
+
+function requireSingleCommitCorrectionRoute_(ss, transactionId) {
+  if (singleCommitExpenseLifecycleTarget_(ss, transactionId)) {
+    throw canonicalEntryError("SINGLE_COMMIT_COHORT_ROUTED",
+      "This single-commit transaction is corrected through the single-commit correction flow.",
+      "transactionId");
+  }
 }
 
 function getCanonicalTransactionDetail(transactionId) {
@@ -172,6 +206,19 @@ function getCanonicalTransactionDetails(transactionIds) {
     var projection = ordered.some(function(id) {
       return id.indexOf("SAL-") === 0 || isSalesRecognitionOrderIdentity_(id);
     }) ? buildRecognizedSalesProjectionFromSpreadsheet_(ss) : null;
+    // T11.8/U6: one operations read for the batch cohort flag (key absent
+    // for every legacy row so the existing transport shape is unchanged).
+    var singleCommitIds = {};
+    if (ordered.some(function(id) { return id.indexOf("OPS-") === 0; })) {
+      try {
+        readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET,
+          TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS).forEach(function(op) {
+            if (String(op.OperationType) === EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+              singleCommitIds[String(op.BusinessID)] = true;
+            }
+          });
+      } catch (error) { singleCommitIds = {}; }
+    }
     var details = ordered.map(function(id) {
       if (isSalesRecognitionOrderIdentity_(id)) {
         return buildSalesRecognitionOrderDetail_(id, projection);
@@ -201,6 +248,7 @@ function getCanonicalTransactionDetails(transactionIds) {
       detail.canCorrect = mutable;
       detail.canVoid = mutable;
       detail.immutableReason = source !== CANONICAL_ENTRY.SOURCE ? (source === "LEGACY_GOOGLE" ? "LEGACY_TRANSACTION" : "HISTORICAL_TRANSACTION") : (!active ? "ALREADY_VOIDED" : null);
+      if (!sales && singleCommitIds[id]) detail.singleCommit = true;
       var relation = relations[id] || { originalId: null, replacementId: null };
       detail.originalId = relation.originalId;
       detail.replacementId = relation.replacementId;
@@ -227,6 +275,7 @@ function lifecycleFinancialSummary(type, detail) {
 function previewCanonicalTransactionCorrection(payload) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet(), original = findCanonicalLifecycleRecord(ss, payload && payload.transactionId);
+    requireSingleCommitCorrectionRoute_(ss, payload && payload.transactionId);
     requireMutableLifecycleRecord(original); requireLifecycleReason(payload && payload.reason);
     var timestamp = new Date(), before = normalizeCanonicalLifecycleDetail(original, ss);
     var after = buildLifecycleReplacement(payload, original, ss, timestamp);
@@ -285,6 +334,7 @@ function voidCanonicalTransaction(payload) {
     var reason = requireLifecycleReason(payload && payload.reason);
     lock.waitLock(30000); acquired = true;
     var ss = SpreadsheetApp.getActiveSpreadsheet(), original = findCanonicalLifecycleRecord(ss, payload && payload.transactionId);
+    requireSingleCommitCorrectionRoute_(ss, payload && payload.transactionId);
     requireMutableLifecycleRecord(original);
     var timestamp = new Date(), runtime = { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };
     persistCanonicalVoid(ss, original, reason, timestamp, runtime);
@@ -339,6 +389,7 @@ function correctCanonicalTransaction(payload) {
     var reason = requireLifecycleReason(payload && payload.reason);
     lock.waitLock(30000); acquired = true;
     var ss = SpreadsheetApp.getActiveSpreadsheet(), original = findCanonicalLifecycleRecord(ss, payload && payload.transactionId);
+    requireSingleCommitCorrectionRoute_(ss, payload && payload.transactionId);
     requireMutableLifecycleRecord(original);
     var timestamp = new Date(), replacement = buildLifecycleReplacement(payload, original, ss, timestamp);
     var runtime = { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };

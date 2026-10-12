@@ -41,6 +41,10 @@ var SALES_RECOGNITION_V2_MUTATION = Object.freeze({
   // fresh U2 Save would derive its identities.
   REVERSAL_PREFIXES: Object.freeze({ recognition: "SCRV-", revision: "REVV-",
     journal: "SRV2JV-", audit: "SRAV-" }),
+  // T11.8/U6 composed-money identities. The money reversal derives from the
+  // target OrderID exactly like the U1 save leg derives SRV2M-<OrderID>; the
+  // replacement money leg reuses the U1 prefix over the NEW OrderID.
+  MONEY_REVERSAL_JOURNAL_PREFIX: "SRV2MV-",
   MAX_ORDER_LINES: 50,
   MAX_BATCH_CELLS: 4000,
   MAX_REQUEST_BYTES: 1000000,
@@ -62,6 +66,7 @@ var SALES_RECOGNITION_V2_MUTATION = Object.freeze({
     TARGET_NOT_CLEAN: "SALES_V2_TARGET_NOT_CLEAN",
     TARGET_AMBIGUOUS: "SALES_V2_TARGET_AMBIGUOUS",
     TARGET_ALREADY_VOIDED: "SALES_V2_TARGET_ALREADY_VOIDED",
+    TARGET_ALREADY_CORRECTED: "SALES_V2_TARGET_ALREADY_CORRECTED",
     MUTATION_EXISTS: "SALES_V2_MUTATION_EXISTS",
     MUTATION_INTENT_MALFORMED: "SALES_V2_MUTATION_INTENT_MALFORMED",
     LEGACY_IDENTITY_REJECTED: "SALES_V2_LEGACY_IDENTITY_REJECTED",
@@ -264,6 +269,21 @@ function salesRecognitionV2MutationResolveTarget_(operationType, normalized, run
     return { ok: false, code: codes.TARGET_AMBIGUOUS,
       detail: "RECOGNITIONS=" + recognitions.length };
   }
+  // One active correction branch per original (T11.8/U6): a NEW Correct
+  // intent on an original whose replacement already exists is refused (zero
+  // writes) instead of minting a second branch. Void keeps its terminal /
+  // MUTATION_EXISTS gates below; correcting the ACTIVE replacement itself
+  // stays allowed (single chain, never a second branch).
+  if (operationType === SALES_RECOGNITION_V2_MUTATION.CORRECT) {
+    var supersededBy = (projection.events || []).filter(function(event) {
+      return event.eventType === "RECOGNITION" &&
+        String(event.originalId || "") === String(targetEvent.recognitionId);
+    });
+    if (supersededBy.length) {
+      return { ok: false, code: codes.TARGET_ALREADY_CORRECTED,
+        detail: String(supersededBy[0].recognitionId) };
+    }
+  }
   var terminal = reversals.some(function(reversal) {
     return String(reversal.reversalOfRecognitionId) === String(targetEvent.recognitionId);
   });
@@ -316,12 +336,45 @@ function salesRecognitionV2MutationResolveTarget_(operationType, normalized, run
   if (!isFinite(target.amount) || target.amount <= 0) {
     return { ok: false, code: codes.TARGET_NOT_CLEAN, detail: "TARGET_AMOUNT" };
   }
+  // T11.8/U6: composed-money lineage. The original money leg (U1
+  // SALES_MONEY_V2 bound to the target recognition) is read from persisted
+  // ledger evidence only — never from mutable masters or config. Present but
+  // malformed money evidence fails closed; absent money evidence keeps the
+  // recognition-only lineage exactly as U6 has always handled it.
+  var moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var moneyRows = (sources.rows.BalanceLedger || []).filter(function(row) {
+    return String(row.SourceType) === moneyPolicy.SALES_MONEY_SOURCE_TYPE &&
+      String(row.SourceID) === String(eventRow.RecognitionID) &&
+      isCanonicalActive(row.IsActive);
+  });
+  var composedMoney = false;
+  if (moneyRows.length) {
+    if (moneyRows.length !== 2 || moneyRows[0].JournalID !== moneyRows[1].JournalID ||
+        moneyRows[0].MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE ||
+        moneyRows[1].MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE ||
+        String(moneyRows[0].Tanggal) !== String(eventRow.EconomicDate) ||
+        String(moneyRows[1].Tanggal) !== String(eventRow.EconomicDate)) {
+      return { ok: false, code: codes.TARGET_NOT_CLEAN, detail: "TARGET_MONEY_SHAPE" };
+    }
+    var moneyByAccount = {};
+    moneyRows.forEach(function(row) { moneyByAccount[String(row.AccountCode)] = row; });
+    var moneyDebit = moneyByAccount[moneyPolicy.ACCOUNT_CODE],
+      moneyCredit = moneyByAccount[String(SALES_RECOGNITION_V2_SAVE.JOURNAL_ACCOUNTS.SETTLEMENT)];
+    if (!moneyDebit || !moneyCredit ||
+        Number(moneyDebit.Debit) !== target.amount || Number(moneyDebit.Credit) !== 0 ||
+        Number(moneyCredit.Debit) !== 0 || Number(moneyCredit.Credit) !== target.amount) {
+      return { ok: false, code: codes.TARGET_NOT_CLEAN, detail: "TARGET_MONEY_AMOUNT" };
+    }
+    composedMoney = true;
+  }
+  target.composedMoney = composedMoney;
   return { ok: true, target: target,
     targetEvidence: { event: transactionPayloadHash_(eventRow),
       journal: transactionPayloadHash_(journalRows),
       audit: transactionPayloadHash_(auditRows[0]),
       order: transactionPayloadHash_(orderRows[0]),
-      orderLines: transactionPayloadHash_(lineRows) },
+      orderLines: transactionPayloadHash_(lineRows),
+      money: composedMoney ? transactionPayloadHash_(moneyRows) : "" },
     projection: projection, sources: sources };
 }
 
@@ -390,10 +443,67 @@ function salesRecognitionV2MutationReversalRows_(input) {
     eventRow: eventRow, auditRow: auditRow };
 }
 
+// ---------------------------------------------------------------------------
+// T11.8/U6 composed-money legs. Money reversal identity
+// SRV2MV-<OrderID> (U1 lineage) reverses the original SRV2M-<OrderID> leg in
+// full: Dr1030 / Cr1040 of the exact original amount, bound (SourceType
+// SALES_MONEY_V2) to the reversal recognitionID so U4/T5 group it as its own
+// clearing group. The replacement money leg is an ordinary U1 leg over the
+// NEW OrderID (Dr1040 / Cr1030, SourceID = replacement recognitionID).
+// ---------------------------------------------------------------------------
+function salesRecognitionV2MutationMoneyReversalRows_(reversalRecognitionID,
+  targetOrderID, amount, economicDate, nowISO, actor) {
+  var save = SALES_RECOGNITION_V2_SAVE, moneyPolicy = SINGLE_COMMIT_MONEY_POLICY,
+    mutation = SALES_RECOGNITION_V2_MUTATION;
+  var journalID = transactionStableBootstrapId_(mutation.MONEY_REVERSAL_JOURNAL_PREFIX,
+    [targetOrderID]);
+  var rows = [
+    { JournalID: journalID, LineID: journalID + "-1", Tanggal: economicDate,
+      AccountCode: save.JOURNAL_ACCOUNTS.SETTLEMENT, Debit: amount, Credit: 0,
+      MovementType: moneyPolicy.SALES_MONEY_MOVEMENT_TYPE,
+      SourceType: moneyPolicy.SALES_MONEY_SOURCE_TYPE,
+      SourceID: reversalRecognitionID, ExternalRef: "", Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor },
+    { JournalID: journalID, LineID: journalID + "-2", Tanggal: economicDate,
+      AccountCode: moneyPolicy.ACCOUNT_CODE, Debit: 0, Credit: amount,
+      MovementType: moneyPolicy.SALES_MONEY_MOVEMENT_TYPE,
+      SourceType: moneyPolicy.SALES_MONEY_SOURCE_TYPE,
+      SourceID: reversalRecognitionID, ExternalRef: "", Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor }
+    ];
+  return { journalID: journalID, rows: rows, signature: policyCJournalSignature_(rows) };
+}
+
+function salesRecognitionV2MutationReplacementMoneyRows_(replacementOrderID,
+  replacementRecognitionID, amount, economicDate, nowISO, actor) {
+  var save = SALES_RECOGNITION_V2_SAVE, moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var journalID = transactionStableBootstrapId_(moneyPolicy.SALES_MONEY_JOURNAL_PREFIX,
+    [replacementOrderID]);
+  var rows = [
+    { JournalID: journalID, LineID: journalID + "-1", Tanggal: economicDate,
+      AccountCode: moneyPolicy.ACCOUNT_CODE, Debit: amount, Credit: 0,
+      MovementType: moneyPolicy.SALES_MONEY_MOVEMENT_TYPE,
+      SourceType: moneyPolicy.SALES_MONEY_SOURCE_TYPE,
+      SourceID: replacementRecognitionID, ExternalRef: "", Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor },
+    { JournalID: journalID, LineID: journalID + "-2", Tanggal: economicDate,
+      AccountCode: save.JOURNAL_ACCOUNTS.SETTLEMENT, Credit: amount, Debit: 0,
+      MovementType: moneyPolicy.SALES_MONEY_MOVEMENT_TYPE,
+      SourceType: moneyPolicy.SALES_MONEY_SOURCE_TYPE,
+      SourceID: replacementRecognitionID, ExternalRef: "", Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: actor, UpdatedAt: nowISO, UpdatedBy: actor }
+    ];
+  return { journalID: journalID, rows: rows, signature: policyCJournalSignature_(rows) };
+}
+
 function salesRecognitionV2MutationVoidPlan_(input) {
   var mutation = SALES_RECOGNITION_V2_MUTATION, save = SALES_RECOGNITION_V2_SAVE,
     contract = SALES_RECOGNITION_V2_CONTRACT;
   var reversal = salesRecognitionV2MutationReversalRows_(input);
+  var money = input.target.composedMoney === true ?
+    salesRecognitionV2MutationMoneyReversalRows_(reversal.recognitionID,
+      input.target.orderID, input.target.amount, input.economicDate,
+      input.now.toISOString(), input.actor) : null;
   var plan = { planVersion: mutation.PLAN_VERSION,
     contractVersion: contract.CONTRACT_VERSION, mode: input.config.mode,
     activationID: input.config.activationID, activatedAt: input.config.activatedAt,
@@ -416,6 +526,12 @@ function salesRecognitionV2MutationVoidPlan_(input) {
     reversalJournalRows: reversal.journalRows,
     reversalAuditRow: reversal.auditRow,
     replacement: null };
+  if (money) {
+    plan.composedMoney = true;
+    plan.reversalMoneyJournalID = money.journalID;
+    plan.reversalMoneyRows = money.rows;
+    plan.reversalMoneyJournalSignature = money.signature;
+  }
   plan.planDigest = transactionPayloadHash_(plan);
   return plan;
 }
@@ -489,6 +605,18 @@ function salesRecognitionV2MutationCorrectPlan_(input) {
   // points at the replacement recognition inside the same intent.
   var reversal = salesRecognitionV2MutationReversalRows_(Object.assign({}, input,
     { replacementRecognitionID: replacementIds.recognitionID }));
+  // T11.8/U6 composed-money Correct: reverse the original money leg in full
+  // (Dr1030/Cr1040 of the original amount) and append the replacement money
+  // leg (Dr1040/Cr1030 of the replacement amount) inside the SAME plan and
+  // batch. Only for targets with persisted composed-money lineage.
+  var reversalMoney = input.target.composedMoney === true ?
+    salesRecognitionV2MutationMoneyReversalRows_(reversal.recognitionID,
+      input.target.orderID, input.target.amount, input.economicDate,
+      nowISO, input.actor) : null;
+  var replacementMoney = input.target.composedMoney === true ?
+    salesRecognitionV2MutationReplacementMoneyRows_(replacementIds.orderID,
+      replacementIds.recognitionID, orderTotal, input.economicDate,
+      nowISO, input.actor) : null;
   var plan = { planVersion: mutation.PLAN_VERSION,
     contractVersion: contract.CONTRACT_VERSION, mode: input.config.mode,
     activationID: input.config.activationID, activatedAt: input.config.activatedAt,
@@ -521,6 +649,15 @@ function salesRecognitionV2MutationCorrectPlan_(input) {
       orderRow: orderRow, lineRows: lineRows, lineAuthority: lineAuthority,
       journalRows: journalRows, journalSignature: journalSignature,
       eventRow: replacementEventRow, auditRow: replacementAuditRow } };
+  if (reversalMoney && replacementMoney) {
+    plan.composedMoney = true;
+    plan.reversalMoneyJournalID = reversalMoney.journalID;
+    plan.reversalMoneyRows = reversalMoney.rows;
+    plan.reversalMoneyJournalSignature = reversalMoney.signature;
+    plan.replacementMoneyJournalID = replacementMoney.journalID;
+    plan.replacementMoneyRows = replacementMoney.rows;
+    plan.replacementMoneyJournalSignature = replacementMoney.signature;
+  }
   plan.planDigest = transactionPayloadHash_(plan);
   return plan;
 }
@@ -919,6 +1056,109 @@ function salesRecognitionV2MutationVerifyPlan_(plan) {
       return tampered("REPLACEMENT_AUDIT_ROW_MISMATCH");
     }
   }
+  // T11.8/U6 composed-money plan invariants. Present only when the target
+  // carries persisted composed-money lineage; absent for recognition-only
+  // targets so legacy plans keep their exact historical shape.
+  var moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var composed = plan.composedMoney === true;
+  if (composed !== (plan.target.composedMoney === true)) {
+    return tampered("MONEY_LINEAGE_MISMATCH");
+  }
+  if (composed) {
+    if (typeof plan.reversalMoneyJournalID !== "string" || !plan.reversalMoneyJournalID ||
+        !Array.isArray(plan.reversalMoneyRows) || plan.reversalMoneyRows.length !== 2 ||
+        typeof plan.reversalMoneyJournalSignature !== "string" ||
+        !plan.reversalMoneyJournalSignature) {
+      return malformed("MONEY_PLAN_INCOMPLETE");
+    }
+    if (plan.reversalMoneyJournalID !== transactionStableBootstrapId_(
+        mutation.MONEY_REVERSAL_JOURNAL_PREFIX, [plan.targetOrderID])) {
+      return tampered("MONEY_JOURNAL_ID_DERIVATION_MISMATCH");
+    }
+    if (typeof plan.targetEvidence.money !== "string" || !plan.targetEvidence.money) {
+      return malformed("TARGET_EVIDENCE_MONEY_MISSING");
+    }
+    var rm0 = plan.reversalMoneyRows[0], rm1 = plan.reversalMoneyRows[1];
+    if (ledgerHeaders.some(function(header) {
+        return rm0[header] === undefined || rm1[header] === undefined;
+      })) {
+      return malformed("MONEY_ROW_INCOMPLETE");
+    }
+    if (rm0.LineID === rm1.LineID ||
+        rm0.JournalID !== plan.reversalMoneyJournalID ||
+        rm1.JournalID !== plan.reversalMoneyJournalID ||
+        rm0.LineID !== plan.reversalMoneyJournalID + "-1" ||
+        rm1.LineID !== plan.reversalMoneyJournalID + "-2") {
+      return tampered("MONEY_JOURNAL_LINE_MISMATCH");
+    }
+    if (rm0.SourceID !== plan.reversalRecognitionID ||
+        rm1.SourceID !== plan.reversalRecognitionID ||
+        rm0.SourceType !== moneyPolicy.SALES_MONEY_SOURCE_TYPE ||
+        rm1.SourceType !== moneyPolicy.SALES_MONEY_SOURCE_TYPE ||
+        rm0.MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE ||
+        rm1.MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE) {
+      return tampered("MONEY_CLASSIFICATION_MISMATCH");
+    }
+    if (rm0.AccountCode !== save.JOURNAL_ACCOUNTS.SETTLEMENT ||
+        rm1.AccountCode !== moneyPolicy.ACCOUNT_CODE) {
+      return tampered("MONEY_ACCOUNT_MAPPING_MISMATCH");
+    }
+    if (Number(rm0.Debit) !== Number(plan.amount) || Number(rm0.Credit) !== 0 ||
+        Number(rm1.Debit) !== 0 || Number(rm1.Credit) !== Number(plan.amount)) {
+      return tampered("MONEY_AMOUNT_MISMATCH");
+    }
+    if (rm0.Tanggal !== plan.economicDate || rm1.Tanggal !== plan.economicDate) {
+      return tampered("MONEY_DATE_MISMATCH");
+    }
+    if (policyCJournalSignature_(plan.reversalMoneyRows) !== plan.reversalMoneyJournalSignature) {
+      return tampered("MONEY_SIGNATURE_MISMATCH");
+    }
+  } else if (plan.reversalMoneyRows !== undefined ||
+      plan.reversalMoneyJournalID !== undefined ||
+      plan.reversalMoneyJournalSignature !== undefined) {
+    return tampered("MONEY_FIELDS_UNEXPECTED");
+  }
+  if (plan.operationType === mutation.CORRECT && composed) {
+    if (typeof plan.replacementMoneyJournalID !== "string" ||
+        !plan.replacementMoneyJournalID ||
+        !Array.isArray(plan.replacementMoneyRows) ||
+        plan.replacementMoneyRows.length !== 2 ||
+        typeof plan.replacementMoneyJournalSignature !== "string" ||
+        !plan.replacementMoneyJournalSignature) {
+      return malformed("REPLACEMENT_MONEY_PLAN_INCOMPLETE");
+    }
+    if (plan.replacementMoneyJournalID !== transactionStableBootstrapId_(
+        moneyPolicy.SALES_MONEY_JOURNAL_PREFIX, [plan.replacement.orderID])) {
+      return tampered("REPLACEMENT_MONEY_JOURNAL_ID_MISMATCH");
+    }
+    var pm0 = plan.replacementMoneyRows[0], pm1 = plan.replacementMoneyRows[1];
+    if (pm0.LineID === pm1.LineID ||
+        pm0.JournalID !== plan.replacementMoneyJournalID ||
+        pm1.JournalID !== plan.replacementMoneyJournalID ||
+        pm0.LineID !== plan.replacementMoneyJournalID + "-1" ||
+        pm1.LineID !== plan.replacementMoneyJournalID + "-2" ||
+        pm0.SourceID !== plan.replacement.recognitionID ||
+        pm1.SourceID !== plan.replacement.recognitionID ||
+        pm0.SourceType !== moneyPolicy.SALES_MONEY_SOURCE_TYPE ||
+        pm1.SourceType !== moneyPolicy.SALES_MONEY_SOURCE_TYPE ||
+        pm0.MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE ||
+        pm1.MovementType !== moneyPolicy.SALES_MONEY_MOVEMENT_TYPE ||
+        pm0.AccountCode !== moneyPolicy.ACCOUNT_CODE ||
+        pm1.AccountCode !== save.JOURNAL_ACCOUNTS.SETTLEMENT ||
+        Number(pm0.Debit) !== Number(plan.replacement.orderTotal) ||
+        Number(pm0.Credit) !== 0 || Number(pm1.Debit) !== 0 ||
+        Number(pm1.Credit) !== Number(plan.replacement.orderTotal) ||
+        pm0.Tanggal !== plan.economicDate || pm1.Tanggal !== plan.economicDate) {
+      return tampered("REPLACEMENT_MONEY_MISMATCH");
+    }
+    if (policyCJournalSignature_(plan.replacementMoneyRows) !==
+        plan.replacementMoneyJournalSignature) {
+      return tampered("REPLACEMENT_MONEY_SIGNATURE_MISMATCH");
+    }
+  } else if (plan.operationType === mutation.CORRECT &&
+      plan.replacementMoneyRows !== undefined) {
+    return tampered("REPLACEMENT_MONEY_FIELDS_UNEXPECTED");
+  }
   if (typeof plan.planDigest !== "string" || !plan.planDigest) return malformed("PLAN_DIGEST_MISSING");
   var copy = Object.assign({}, plan);
   delete copy.planDigest;
@@ -943,9 +1183,11 @@ function salesRecognitionV2MutationValueRanges_(plan) {
     ranges = [
       { range: contract.SHEET, values: [salesRecognitionV2MutationRowValues_(
         plan.reversalEventRow, contract.HEADERS)] },
-      { range: "BalanceLedger", values: plan.reversalJournalRows.map(function(row) {
-        return salesRecognitionV2MutationRowValues_(row,
-          BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); }) },
+      { range: "BalanceLedger", values: plan.reversalJournalRows.concat(
+        Array.isArray(plan.reversalMoneyRows) ? plan.reversalMoneyRows : [])
+        .map(function(row) {
+          return salesRecognitionV2MutationRowValues_(row,
+            BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); }) },
       { range: save.AUDIT_SHEET, values: [salesRecognitionV2MutationRowValues_(
         plan.reversalAuditRow, save.AUDIT_HEADERS)] }
     ];
@@ -960,6 +1202,8 @@ function salesRecognitionV2MutationValueRanges_(plan) {
         salesRecognitionV2MutationRowValues_(plan.reversalEventRow, contract.HEADERS),
         salesRecognitionV2MutationRowValues_(rep.eventRow, contract.HEADERS)] },
       { range: "BalanceLedger", values: plan.reversalJournalRows.concat(rep.journalRows)
+        .concat(Array.isArray(plan.reversalMoneyRows) ? plan.reversalMoneyRows : [])
+        .concat(Array.isArray(plan.replacementMoneyRows) ? plan.replacementMoneyRows : [])
         .map(function(row) {
           return salesRecognitionV2MutationRowValues_(row,
             BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS); }) },
@@ -1093,6 +1337,19 @@ function salesRecognitionV2MutationInspect_(plan, ss) {
   if (transactionPayloadHash_(targetLineRows) !== plan.targetEvidence.orderLines) {
     conflicts.push("TARGET_ORDER_LINES_TAMPERED");
   }
+  // Original composed-money leg (T11.8/U6) must stay byte-identical: it is
+  // append-only evidence this operation reverses, never edits.
+  if (plan.target.composedMoney === true) {
+    var targetMoneyRows = ledger.filter(function(row) {
+      return String(row.SourceType) === SINGLE_COMMIT_MONEY_POLICY.SALES_MONEY_SOURCE_TYPE &&
+        String(row.SourceID) === String(plan.target.recognitionID) &&
+        isCanonicalActive(row.IsActive);
+    });
+    if (!targetMoneyRows.length) conflicts.push("TARGET_MONEY_MISSING");
+    else if (transactionPayloadHash_(targetMoneyRows) !== plan.targetEvidence.money) {
+      conflicts.push("TARGET_MONEY_TAMPERED");
+    }
+  }
   // ---- Cross-owner / double-claim scans ----
   var replacement = plan.replacement;
   var plannedLineIds = {};
@@ -1149,6 +1406,18 @@ function salesRecognitionV2MutationInspect_(plan, ss) {
         replacement.recognitionID;
     });
   }
+  if (plan.composedMoney === true) {
+    plan.reversalMoneyRows.forEach(function(row) {
+      plannedJournalLineIds[row.LineID] = plan.reversalMoneyJournalID + "|" +
+        plan.reversalRecognitionID;
+    });
+  }
+  if (plan.replacementMoneyRows) {
+    plan.replacementMoneyRows.forEach(function(row) {
+      plannedJournalLineIds[row.LineID] = plan.replacementMoneyJournalID + "|" +
+        plan.replacement.recognitionID;
+    });
+  }
   ledger.forEach(function(row) {
     var expected = plannedJournalLineIds[String(row.LineID)];
     if (!expected) return;
@@ -1202,11 +1471,29 @@ function salesRecognitionV2MutationInspect_(plan, ss) {
   var replacementAuditById = replacement ? audits.filter(function(row) {
     return String(row.AuditID) === replacement.auditID;
   }) : [];
+  var moneyPolicy = SINGLE_COMMIT_MONEY_POLICY;
+  var reversalMoneyById = plan.composedMoney === true ? ledger.filter(function(row) {
+    return String(row.JournalID) === plan.reversalMoneyJournalID;
+  }) : [];
+  var reversalMoneyBySource = plan.composedMoney === true ? ledger.filter(function(row) {
+    return String(row.JournalID) === plan.reversalMoneyJournalID &&
+      String(row.SourceID) === plan.reversalRecognitionID &&
+      String(row.SourceType) === moneyPolicy.SALES_MONEY_SOURCE_TYPE;
+  }) : [];
+  var replacementMoneyById = plan.replacementMoneyRows ? ledger.filter(function(row) {
+    return String(row.JournalID) === plan.replacementMoneyJournalID;
+  }) : [];
+  var replacementMoneyBySource = plan.replacementMoneyRows ? ledger.filter(function(row) {
+    return String(row.JournalID) === plan.replacementMoneyJournalID &&
+      String(row.SourceID) === plan.replacement.recognitionID &&
+      String(row.SourceType) === moneyPolicy.SALES_MONEY_SOURCE_TYPE;
+  }) : [];
   var present = reversalEventMatches.length || reversalJournalById.length ||
-    reversalAuditById.length ||
+    reversalAuditById.length || reversalMoneyById.length ||
     (replacement && (replacementOrderMatches.length || replacementLineMatches.length ||
       replacementEventMatches.length || replacementJournalById.length ||
-      replacementAuditById.length));
+      replacementAuditById.length)) ||
+    replacementMoneyById.length;
   if (!present) return { state: "NONE", detail: "" };
   // Reversal event
   if (!reversalEventMatches.length) missing.push("EVENT");
@@ -1253,6 +1540,47 @@ function salesRecognitionV2MutationInspect_(plan, ss) {
   else if (reversalAuditById.length > 1) conflicts.push("AUDIT_DUPLICATE");
   else if (!rowExact(reversalAuditById[0], plan.reversalAuditRow, save.AUDIT_HEADERS)) {
     conflicts.push("AUDIT_TAMPERED");
+  }
+  // Composed-money journals (T11.8/U6): reversal money + replacement money.
+  function verifyMoneyJournal_(byId, bySource, expectedRows, expectedSignature, label) {
+    if (!byId.length && !bySource.length) { missing.push(label); return; }
+    var idSet = byId.map(function(row) { return String(row.LineID); }).sort().join("");
+    var sourceSet = bySource.map(function(row) { return String(row.LineID); }).sort().join("");
+    if (idSet !== sourceSet) { conflicts.push(label + "_IDENTITY_CROSSOVER"); return; }
+    if (bySource.length === 2) {
+      var sorted = bySource.slice().sort(function(left, right) {
+        return String(left.LineID) < String(right.LineID) ? -1 : 1;
+      });
+      for (var m = 0; m < 2; m++) {
+        if (!rowExact(sorted[m], expectedRows[m], ledgerHeaders)) {
+          conflicts.push(label + "_TAMPERED");
+        }
+      }
+      if (policyCJournalSignature_(bySource) !== expectedSignature) {
+        conflicts.push(label + "_SIGNATURE_MISMATCH");
+      }
+      var mDebit = 0, mCredit = 0;
+      bySource.forEach(function(row) {
+        mDebit += Number(row.Debit); mCredit += Number(row.Credit);
+      });
+      if (mDebit !== mCredit) conflicts.push(label + "_BALANCE_MISMATCH");
+    } else if (bySource.length === 1) {
+      var mOnly = bySource[0], mPlanned = null;
+      expectedRows.forEach(function(row) {
+        if (String(row.LineID) === String(mOnly.LineID)) mPlanned = row;
+      });
+      if (!mPlanned || !rowExact(mOnly, mPlanned, ledgerHeaders)) conflicts.push(label + "_TAMPERED");
+      else missing.push(label + "_LINE");
+    } else conflicts.push(label + "_DUPLICATE");
+  }
+  if (plan.composedMoney === true) {
+    verifyMoneyJournal_(reversalMoneyById, reversalMoneyBySource,
+      plan.reversalMoneyRows, plan.reversalMoneyJournalSignature, "MONEY_JOURNAL");
+  }
+  if (plan.replacementMoneyRows) {
+    verifyMoneyJournal_(replacementMoneyById, replacementMoneyBySource,
+      plan.replacementMoneyRows, plan.replacementMoneyJournalSignature,
+      "REPLACEMENT_MONEY_JOURNAL");
   }
   // Replacement sections
   if (replacement) {
@@ -1571,6 +1899,25 @@ function salesRecognitionV2MutationNewIntent_(operationType, normalized, hash, r
     return outcome(mutation.STATUS.REFUSED, { code: resolved.code, detail: resolved.detail });
   }
   var target = resolved.target;
+  // T11.8/U6 admission (NEW intents only): the single-commit config decides
+  // new-mutation admission (PAUSED/REJECT/invalid refuse fail-closed; never a
+  // legacy fallback), and a composed-money target additionally demands the
+  // exact §11 1040 precondition. Resume/recovery never re-evaluates this gate.
+  var singleCommit = salesV2SingleCommitGate_(runtime);
+  if (!singleCommit.allowed) {
+    return outcome(mutation.STATUS.REFUSED,
+      { code: singleCommit.code, detail: singleCommit.detail || "" });
+  }
+  if (target.composedMoney === true) {
+    var moneyPreflight = preflightSingleCommitMoneyAccount(accountRows);
+    if (moneyPreflight.status !== "PASS") {
+      var moneyError = moneyPreflight.errors[0] || {};
+      return outcome(mutation.STATUS.REFUSED, {
+        code: moneyError.code || "ACCOUNT_ABSENT",
+        field: moneyError.accountCode || SINGLE_COMMIT_MONEY_POLICY.ACCOUNT_CODE,
+        detail: "MONEY_ACCOUNT_PREFLIGHT_FAILED" });
+    }
+  }
   var now = runtime.now();
   var economicDate = capitalEquityDateKey(now);
   if (!economicDate) {

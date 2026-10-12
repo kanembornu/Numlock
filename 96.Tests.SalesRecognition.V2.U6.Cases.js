@@ -1034,13 +1034,14 @@ function testSalesRecognitionV2U6Lifecycle() {
   check("L3b", correct3.result.status === "REFUSED" &&
     correct3.result.code === "SALES_V2_TARGET_ALREADY_VOIDED" &&
     correct3.runtime.events.batches.length === 0, JSON.stringify(correct3.result));
-  // L4: double Correct on the superseded ORIGINAL fails closed.
+  // L4: double Correct on the superseded ORIGINAL fails closed — one active
+  // correction branch per original (T11.8/U6: ALREADY_CORRECTED label).
   var f4 = correctFixture_("u6-life-double-correct");
   var c4a = correct_(f4, "u6-life-c-4a");
   check("L4a", c4a.result.status === "DONE");
   var c4b = correct_(f4, "u6-life-c-4b");
   check("L4b", c4b.result.status === "REFUSED" &&
-    c4b.result.code === "SALES_V2_TARGET_ALREADY_VOIDED" &&
+    c4b.result.code === "SALES_V2_TARGET_ALREADY_CORRECTED" &&
     c4b.runtime.events.batches.length === 0, JSON.stringify(c4b.result));
   // L5: the corrected REPLACEMENT is targetable again — Void succeeds.
   var f5 = correctFixture_("u6-life-void-replacement");

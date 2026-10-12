@@ -377,7 +377,7 @@ function projectPurchaseEventTransaction_(row, resolution) {
   }
   var isActive = row.IsActive === true;
   var canVoid = isActive && row.Lifecycle === PURCHASE_EVENT_ACTIVE_LIFECYCLE;
-  return { id: row.EventID, transactionType: 'PurchaseEvent', canonicalTransactionType: 'PurchaseEvent',
+  var projection = { id: row.EventID, transactionType: 'PurchaseEvent', canonicalTransactionType: 'PurchaseEvent',
     date: row.ExpenseDate, dateKey: row.ExpenseDate, item: row.BusinessLabel, expenseId: row.ExpenseID,
     purchaseQuantity: row.PurchaseQty, purchaseUOM: row.PurchaseUOM, acquisitionValue: Number(row.AcquisitionValue),
     supplier: row.SupplierSource, reference: row.ExternalRef || 'Document unavailable', isActive: isActive,
@@ -387,6 +387,30 @@ function projectPurchaseEventTransaction_(row, resolution) {
       'Purchase recorded. Stock tracking requires separate verification.',
     receiptPlan: receiptPlan, allocationStatus: allocationStatus,
     financialTotalsIncluded: false, accountingStatus: 'NOT_POSTED', canEdit: false, canVoid: canVoid, canCorrect: canVoid, canResolveEvidence: canVoid && allocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' };
+  // T11.8/U6 cohort flag: only T11 single-commit events (backend-derived
+  // PAID/1040/POSTED) carry it — legacy events keep the exact legacy shape.
+  if (row.CashAccountCode === '1040' && row.AccountingStatus === 'POSTED') {
+    projection.singleCommit = true;
+  }
+  return projection;
+}
+
+// T11.8/U6 cohort guard: a T11 single-commit PurchaseEvent (durable
+// PURCHASE_SINGLE_COMMIT_SAVE operation row exists) is NEVER handled by the
+// legacy in-place void/correct writers — those mutate lifecycle without the
+// Policy C reversal. The durable PURCHASE_EVENT_VOID/CORRECT cores own it.
+// Read-only; a failed read leaves legacy behavior unchanged.
+function purchaseSingleCommitEventGuard_(ss, eventId) {
+  try {
+    var rows = readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET,
+      TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS);
+    return rows.some(function(op) {
+      return String(op.OperationType) === PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE &&
+        String(op.BusinessID) === String(eventId);
+    });
+  } catch (error) {
+    return false;
+  }
 }
 
 // Purchase lookup canonical requestKey: receipt- prefix + 32 hex chars from crypto.getRandomValues.
@@ -830,6 +854,11 @@ function voidPurchaseEventUnderLock_(identity, reason, ss, runtime) {
   }
   if (!match) return { status: 'NOT_FOUND', writeCount: 0 };
 
+  // T11.8/U6: single-commit cohort never enters the legacy in-place void.
+  if (purchaseSingleCommitEventGuard_(ss, match.EventID)) {
+    return { status: 'REFUSED', reason: 'SINGLE_COMMIT_COHORT_ROUTED', writeCount: 0 };
+  }
+
   // Snapshot before-values for readback and rollback
   var before = headers.map(function(h) { return match[h]; });
 
@@ -972,6 +1001,12 @@ function correctPurchaseEventUnderLock_(payload, ss, runtime) {
     if (rows[i].EventID === identity || rows[i].RequestKey === identity) { original = rows[i]; break; }
   }
   if (!original) return { status: 'NOT_FOUND', writeCount: 0 };
+
+  // T11.8/U6: single-commit cohort never enters the legacy in-place
+  // correction (it would mutate lifecycle without the Policy C reversal).
+  if (purchaseSingleCommitEventGuard_(ss, original.EventID)) {
+    return { status: 'REFUSED', reason: 'SINGLE_COMMIT_COHORT_ROUTED', writeCount: 0 };
+  }
 
   var replacementRequestKey = 'corr-' + correctionKey;
   var replacementPayload = { transactionType: 'EXPENSE', requestKey: replacementRequestKey,

@@ -489,6 +489,26 @@
       var state = transactionEntryState;
       var entry = initializeStableDashboardElements().transactionEntry;
       if (state.mode !== "correction" || !state.originalDetail) return;
+      if (state.originalDetail.singleCommit === true) {
+        // T11.8/U6: the durable correction core owns its own validation — the
+        // local review mirrors the legacy before/after comparison without
+        // entering the legacy preview writer (which refuses this cohort).
+        var beforePreview = { id: state.originalDetail.id,
+          item: state.originalDetail.item, amount: Number(state.originalDetail.amount) };
+        var afterPreview = { id: state.originalDetail.id,
+          item: state.selectedExpense ? state.selectedExpense.item : beforePreview.item,
+          amount: Number(state.amount) };
+        state.correctionPreview = { transactionType: "EXPENSE",
+          before: beforePreview, after: afterPreview,
+          delta: { amount: afterPreview.amount - beforePreview.amount } };
+        state.correctionStage = "review";
+        renderCorrectionComparison(state.correctionPreview);
+        entry.correctionReview.hidden = false;
+        entry.correctionReview.parentElement.classList.add("has-review");
+        entry.correctionReview.scrollIntoView({ block: "nearest" });
+        updateTransactionEntrySubmitState();
+        return;
+      }
       state.submitting = true;
       entry.generalError.innerText = "";
       updateTransactionEntrySubmitState();
@@ -538,6 +558,50 @@
       var entry = initializeStableDashboardElements().transactionEntry;
       state.submitting = true;
       updateTransactionEntrySubmitState();
+      if (state.originalDetail && state.originalDetail.singleCommit === true) {
+        // T11.8/U6: durable single-commit correction — ONE intent, ONE atomic
+        // batch (full reversal + complete replacement, never reverse-then-save).
+        var correctionPayload = {
+          requestKey: singleCommitPendingKey_("EXPENSE_SINGLE_COMMIT_CORRECT", state.originalDetail.id),
+          transactionId: state.originalDetail.id,
+          reason: String(payload && payload.reason || "").trim(),
+          expenseItemId: String(payload && payload.expenseItemId || ""),
+          amount: Number(payload && payload.amount)
+        };
+        google.script.run.withSuccessHandler(function(response) {
+          state.submitting = false;
+          if (response && response.status === "DONE") {
+            clearSingleCommitPending_();
+            state.submissionComplete = true;
+            state.successResult = { original: { id: response.targetID },
+              replacement: { id: response.replacementID } };
+            showTransactionCorrectionSuccess(state.successResult);
+            invalidateTransactionsClientCaches();
+            refreshTransactionEntryAfterSuccess();
+            return;
+          }
+          if (response && (response.status === "UNKNOWN" || response.status === "RECOVERY_REQUIRED")) {
+            singleCommitUnknownOutcome_({ type: "correct",
+              operationType: "EXPENSE_SINGLE_COMMIT_CORRECT",
+              requestKey: correctionPayload.requestKey,
+              transactionId: correctionPayload.transactionId }, entry.generalError);
+            updateTransactionEntrySubmitState();
+            return;
+          }
+          if (response && response.status === "CONFLICT") clearSingleCommitPending_();
+          showLifecycleConcurrencyError({ code: (response && response.code) || (response && response.status) || "REFUSED" }, entry.generalError);
+          updateTransactionEntrySubmitState();
+        }).withFailureHandler(function(error) {
+          console.error("Single-commit transaction correction failed", error);
+          state.submitting = false;
+          singleCommitUnknownOutcome_({ type: "correct",
+            operationType: "EXPENSE_SINGLE_COMMIT_CORRECT",
+            requestKey: correctionPayload.requestKey,
+            transactionId: correctionPayload.transactionId }, entry.generalError);
+          updateTransactionEntrySubmitState();
+        }).expenseSingleCommitDurableCorrect(correctionPayload);
+        return;
+      }
       google.script.run.withSuccessHandler(function(response) {
         state.submitting = false;
         if (!response || response.success !== true) { showLifecycleConcurrencyError(response && response.error, entry.generalError); return; }
@@ -697,6 +761,79 @@
     }
 
     function salesV2MutationKey_(mode) { return (mode === "correct" ? "v2corr-" : "v2void-") + String(Date.now()) + "-" + Math.random().toString(36).slice(2); }
+
+    // === T11.8/U6: single-commit Expense/Purchase Correct/Void dispatch ===
+    // Cohort routing only: detail.singleCommit (server) / row.singleCommit
+    // (Purchase projection) resolves to expenseSingleCommitDurableVoid /
+    // expenseSingleCommitDurableCorrect / purchaseEventDurableVoid /
+    // purchaseEventDurableCorrect (EXPENSE_SINGLE_COMMIT_VOID/CORRECT,
+    // PURCHASE_EVENT_VOID/CORRECT). One stable RequestKey per intent: it
+    // survives unknown outcomes and retries; only a definitively resolved
+    // intent rotates it. Genuine correction inputs only (reason + business
+    // replacement fields) — no account/payment/EvidenceRef/internal IDs.
+    var SINGLE_COMMIT_PENDING_STORAGE_KEY = "numlock.singlecommit.pending";
+
+    function singleCommitMutationRequestKey_(prefix) {
+      return prefix + String(Date.now()) + "-" + Math.random().toString(36).slice(2);
+    }
+
+    function saveSingleCommitPending_(state) {
+      try { localStorage.setItem(SINGLE_COMMIT_PENDING_STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+    }
+
+    function loadSingleCommitPending_() {
+      try {
+        var raw = localStorage.getItem(SINGLE_COMMIT_PENDING_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+
+    function clearSingleCommitPending_() {
+      try { localStorage.removeItem(SINGLE_COMMIT_PENDING_STORAGE_KEY); } catch (e) {}
+    }
+
+    function singleCommitPendingKey_(operationType, transactionId) {
+      var pending = loadSingleCommitPending_();
+      if (pending && pending.operationType === operationType &&
+          pending.transactionId === transactionId && pending.requestKey) {
+        return pending.requestKey;
+      }
+      var prefix = operationType.indexOf("VOID") !== -1 ? "scvoid-" : "sccorr-";
+      return singleCommitMutationRequestKey_(prefix);
+    }
+
+    function singleCommitUnknownOutcome_(pendingState, stateTarget) {
+      // Possible-write outcome for the durable correction cores: keep the
+      // SAME RequestKey, never a new identity, never a definite failure.
+      saveSingleCommitPending_(pendingState);
+      if (stateTarget) {
+        stateTarget.innerText = "Result belum dapat dipastikan. Sistem akan memeriksa transaksi yang sama (RequestKey " + pendingState.requestKey + "); jangan membuat transaksi baru.";
+      }
+    }
+
+    function checkSingleCommitPending() {
+      var pending = loadSingleCommitPending_();
+      var lifecycle = initializeStableDashboardElements().lifecycle;
+      if (!pending || !pending.requestKey || !pending.operationType) return;
+      lifecycle.state.innerText = "Checking the same request…";
+      operationalServerCall("findOperationalOperation",
+        { operationType: pending.operationType, requestKey: pending.requestKey },
+        function(result) {
+          if (result && result.operation && result.operation.State === "COMMITTED") {
+            clearSingleCommitPending_();
+            lifecycle.voidRegion.hidden = true;
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Confirmed</h3><p class="ui-theme-secondary">' + escapeUiHtml(pending.transactionId || "") + ' was committed (RequestKey ' + escapeUiHtml(pending.requestKey) + ').</p></section>';
+            lifecycle.state.innerText = "Confirmed.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            invalidateTransactionsClientCaches();
+            refreshTransactionEntryAfterSuccess();
+            return;
+          }
+          lifecycle.state.innerText = "Result belum dapat dipastikan. Periksa lagi transaksi yang sama (RequestKey " + pending.requestKey + ").";
+        },
+        function() { lifecycle.state.innerText = "Result belum dapat dipastikan. Periksa lagi transaksi yang sama (RequestKey " + pending.requestKey + ")."; },
+        function() { lifecycle.state.innerText = "Result belum dapat dipastikan. Periksa lagi transaksi yang sama (RequestKey " + pending.requestKey + ")."; });
+    }
 
     function persistSalesV2MutationRecovery_() { try { if (salesV2MutationState.requestKey) localStorage.setItem("numlock.sales.v2pending", JSON.stringify(salesV2MutationState)); else localStorage.removeItem("numlock.sales.v2pending"); } catch (error) {} }
 
@@ -1003,6 +1140,44 @@
       if (reason.length < 3) { updateVoidReason(); return; }
       transactionLifecycleState.submitting = true;
       lifecycle.state.innerText = "Voiding transaction…";
+      var singleCommitDetail = transactionLifecycleState.detail;
+      if (singleCommitDetail && singleCommitDetail.singleCommit === true) {
+        // T11.8/U6: durable single-commit cancel — ONE intent, ONE atomic
+        // batch (reversal Dr1040/Cr expense + lifecycle marker + signed Logs).
+        var voidRequestKey = singleCommitPendingKey_("EXPENSE_SINGLE_COMMIT_VOID", singleCommitDetail.id);
+        google.script.run.withSuccessHandler(function(response) {
+          transactionLifecycleState.submitting = false;
+          if (response && response.status === "DONE") {
+            clearSingleCommitPending_();
+            lifecycle.voidRegion.hidden = true;
+            lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Transaction voided</h3><p class="ui-theme-secondary">' + escapeUiHtml((response && response.targetID) || singleCommitDetail.id) + ' remains available in audit history.</p></section>';
+            lifecycle.state.innerText = "Transaction voided successfully.";
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+            invalidateTransactionsClientCaches();
+            refreshTransactionEntryAfterSuccess();
+            return;
+          }
+          if (response && (response.status === "UNKNOWN" || response.status === "RECOVERY_REQUIRED")) {
+            singleCommitUnknownOutcome_({ type: "void", operationType: "EXPENSE_SINGLE_COMMIT_VOID",
+              requestKey: voidRequestKey, transactionId: singleCommitDetail.id }, lifecycle.state);
+            lifecycle.voidRegion.hidden = true;
+            lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="checkSingleCommitPending()">Check Status</button>';
+            return;
+          }
+          if (response && response.status === "CONFLICT") clearSingleCommitPending_();
+          showLifecycleConcurrencyError({ code: (response && response.code) || (response && response.status) || "REFUSED" }, lifecycle.state);
+          transactionLifecycleState.submitting = false;
+        }).withFailureHandler(function(error) {
+          console.error("Single-commit transaction void failed", error);
+          transactionLifecycleState.submitting = false;
+          singleCommitUnknownOutcome_({ type: "void", operationType: "EXPENSE_SINGLE_COMMIT_VOID",
+            requestKey: voidRequestKey, transactionId: singleCommitDetail.id }, lifecycle.state);
+          lifecycle.voidRegion.hidden = true;
+          lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="checkSingleCommitPending()">Check Status</button>';
+        }).expenseSingleCommitDurableVoid({ requestKey: voidRequestKey,
+          transactionId: singleCommitDetail.id, reason: reason });
+        return;
+      }
       google.script.run.withSuccessHandler(function(response) {
         transactionLifecycleState.submitting = false;
         if (!response || response.success !== true) {
@@ -1280,6 +1455,7 @@
         ["Purchase evidence/reference", detail.reference], ["Status", detail.operationalStatus || "Cost recorded"],
         ["Evidence status", detail.allocationStatus === 'SINGLE_COMPONENT_EVIDENCED' ? "Resolved" : "Unresolved"]]) + '</dl></section>';
       var actionsHtml = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+      purchaseDetailSingleCommit = detail.singleCommit === true;
       if (detail.canResolveEvidence) {
         actionsHtml += ' <button type="button" class="transaction-entry-primary" onclick="openPurchaseResolveDialog(\'' + escapeUiHtml(detail.id) + '\',\'' + escapeUiHtml((detail.id || '').replace('PE-', '')) + '\')">Resolve Evidence</button>';
       }
@@ -1294,10 +1470,12 @@
     }
 
     var purchaseVoidState = { eventOrRequestKey: null, reason: "" };
+    var purchaseDetailSingleCommit = false;
 
     function openPurchaseVoidDialog(eventId) {
       openTransactionLifecycleDialog("void");
       purchaseVoidState.eventOrRequestKey = eventId;
+      purchaseVoidState.singleCommit = purchaseDetailSingleCommit === true;
       purchaseVoidState.reason = "";
       var lifecycle = initializeStableDashboardElements().lifecycle;
       lifecycle.title.innerText = "Void Purchase";
@@ -1326,6 +1504,41 @@
       transactionLifecycleState.submitting = true;
       var lifecycle = initializeStableDashboardElements().lifecycle;
       lifecycle.state.innerText = "Voiding Purchase…";
+      if (purchaseVoidState.singleCommit === true) {
+        // T11.8/U6: durable single-commit cancel — Policy C reversal pair
+        // (Dr1040/Cr6210) + lifecycle marker + signed Logs in ONE batch.
+        var purchaseVoidKey = singleCommitPendingKey_("PURCHASE_EVENT_VOID", purchaseVoidState.eventOrRequestKey);
+        var purchaseUnknownFooter = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="checkSingleCommitPending()">Check Status</button>';
+        google.script.run
+          .withSuccessHandler(function(response) {
+            transactionLifecycleState.submitting = false;
+            if (response && response.status === "DONE") {
+              clearSingleCommitPending_();
+              lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Purchase voided</h3><p class="ui-theme-secondary">' + escapeUiHtml((response && response.targetID) || purchaseVoidState.eventOrRequestKey) + ' remains available in audit history.</p></section>';
+              lifecycle.state.innerText = "Purchase voided successfully.";
+              lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+              refreshTransactionsAfterPurchaseMutation();
+              return;
+            }
+            if (response && (response.status === "UNKNOWN" || response.status === "RECOVERY_REQUIRED")) {
+              singleCommitUnknownOutcome_({ type: "void", operationType: "PURCHASE_EVENT_VOID",
+                requestKey: purchaseVoidKey, transactionId: purchaseVoidState.eventOrRequestKey }, lifecycle.state);
+              lifecycle.footer.innerHTML = purchaseUnknownFooter;
+              return;
+            }
+            if (response && response.status === "CONFLICT") clearSingleCommitPending_();
+            showLifecycleConcurrencyError({ code: (response && response.code) || (response && response.status) || "REFUSED" }, lifecycle.state);
+          })
+          .withFailureHandler(function(error) {
+            transactionLifecycleState.submitting = false;
+            singleCommitUnknownOutcome_({ type: "void", operationType: "PURCHASE_EVENT_VOID",
+              requestKey: purchaseVoidKey, transactionId: purchaseVoidState.eventOrRequestKey }, lifecycle.state);
+            lifecycle.footer.innerHTML = purchaseUnknownFooter;
+          })
+          .purchaseEventDurableVoid({ requestKey: purchaseVoidKey,
+            transactionId: purchaseVoidState.eventOrRequestKey, reason: reason.trim() });
+        return;
+      }
       google.script.run
         .withSuccessHandler(function(response) {
           transactionLifecycleState.submitting = false;
@@ -1370,6 +1583,7 @@
     function openPurchaseCorrectDialog(eventId) {
       openTransactionLifecycleDialog("void");
       purchaseCorrectState.originalEventOrRequestKey = eventId;
+      purchaseCorrectState.singleCommit = purchaseDetailSingleCommit === true;
       purchaseCorrectState.correctionRequestKey = generateCorrectionRequestKey();
       purchaseCorrectState.reason = "";
       var lifecycle = initializeStableDashboardElements().lifecycle;
@@ -1426,6 +1640,47 @@
           }
         }
       };
+
+      if (purchaseCorrectState.singleCommit === true) {
+        // T11.8/U6: durable single-commit correction — linked exact reversal
+        // + complete replacement event (PAID/1040/POSTED) in ONE intent and
+        // ONE atomic batch; never reverse() then replacementSave().
+        var purchaseCorrectKey = purchaseCorrectState.correctionRequestKey;
+        var purchaseCorrectUnknownFooter = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="checkSingleCommitPending()">Check Status</button>';
+        google.script.run
+          .withSuccessHandler(function(response) {
+            transactionLifecycleState.submitting = false;
+            if (response && response.status === "DONE") {
+              clearSingleCommitPending_();
+              lifecycle.content.innerHTML = '<section class="transaction-entry-success" role="status" aria-live="polite" tabindex="-1"><i class="fas fa-circle-check" aria-hidden="true"></i><h3>Purchase corrected</h3><p class="ui-theme-secondary">Original: ' + escapeUiHtml((response && response.targetID) || purchaseCorrectState.originalEventOrRequestKey) + '<br>Replacement: ' + escapeUiHtml((response && response.replacementID) || "unknown") + '</p></section>';
+              lifecycle.state.innerText = "Correction completed successfully.";
+              lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button>';
+              refreshTransactionsAfterPurchaseMutation();
+              return;
+            }
+            if (response && (response.status === "UNKNOWN" || response.status === "RECOVERY_REQUIRED")) {
+              singleCommitUnknownOutcome_({ type: "correct", operationType: "PURCHASE_EVENT_CORRECT",
+                requestKey: purchaseCorrectKey,
+                transactionId: purchaseCorrectState.originalEventOrRequestKey }, lifecycle.state);
+              lifecycle.footer.innerHTML = purchaseCorrectUnknownFooter;
+              return;
+            }
+            if (response && response.status === "CONFLICT") clearSingleCommitPending_();
+            showLifecycleConcurrencyError({ code: (response && response.code) || (response && response.status) || "REFUSED" }, lifecycle.state);
+          })
+          .withFailureHandler(function(error) {
+            transactionLifecycleState.submitting = false;
+            singleCommitUnknownOutcome_({ type: "correct", operationType: "PURCHASE_EVENT_CORRECT",
+              requestKey: purchaseCorrectKey,
+              transactionId: purchaseCorrectState.originalEventOrRequestKey }, lifecycle.state);
+            lifecycle.footer.innerHTML = purchaseCorrectUnknownFooter;
+          })
+          .purchaseEventDurableCorrect({ requestKey: purchaseCorrectKey,
+            transactionId: purchaseCorrectState.originalEventOrRequestKey,
+            reason: reason.trim(), expenseItemId: expenseItemId.trim(),
+            input: payload.replacement.input });
+        return;
+      }
 
       google.script.run
         .withSuccessHandler(function(response) {

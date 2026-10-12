@@ -1140,6 +1140,24 @@ function expenseSingleCommitBounds_(plan) {
     detail: ok ? "" : "BATCH_BOUNDS cells=" + cells + " bytes=" + bytes };
 }
 
+// T11.8/U6 original-content equality for the business row: the original's
+// content is immutable, and the ONLY tolerated delta after a committed
+// correction is the canonical lifecycle marker (IsActive true -> false with
+// UpdatedAt/UpdatedBy). Any other field change is tampering.
+function expenseSingleCommitBusinessContentEqual_(actual, expected) {
+  var expectedActive = isCanonicalActive(expected.IsActive);
+  var actualActive = isCanonicalActive(actual.IsActive);
+  var lifecycleFlipped = expectedActive && !actualActive;
+  var contentEqual = CANONICAL_ENTRY.EXPENSE_HEADERS.every(function(header) {
+    if (lifecycleFlipped && (header === "IsActive" || header === "UpdatedAt" ||
+        header === "UpdatedBy")) {
+      return true;
+    }
+    return expenseSingleCommitFieldEqual_(actual[header], expected[header]);
+  });
+  return contentEqual && (actualActive === expectedActive || lifecycleFlipped);
+}
+
 // Exact artifact verification against the frozen plan over the three surfaces.
 // Distinguishes NONE (intent only) / PARTIAL (incomplete) / CONFLICT (identity
 // or content disagreement) / EXACT / UNKNOWN (read failure).
@@ -1182,8 +1200,19 @@ function expenseSingleCommitInspect_(plan, ss) {
     }
   });
   var businessMatches = tabops.filter(function(row) { return row.ID_Trx === plan.entryID; });
+  // T11.8/U6: a committed EXPENSE_SINGLE_COMMIT_VOID/CORRECT appends its
+  // mirror journal under the SAME (SourceType, SourceID) with the dedicated
+  // reversal JournalID EXPJV-<ID_Trx>. That legitimate sibling is owned by the
+  // correction operation's plan, not this save plan, so the save's
+  // source-set identity check excludes exactly that journal — replay of the
+  // committed save stays zero-write after a later cancel/correct, while any
+  // other foreign journal still fails closed.
+  var reversalJournalID = EXPENSE_SINGLE_COMMIT_CORRECTION.JOURNAL_ID_PREFIX +
+    plan.entryID;
   var journalBySource = ledger.filter(function(row) {
-    return String(row.SourceType) === plan.sourceType && String(row.SourceID) === plan.entryID;
+    return String(row.SourceType) === plan.sourceType &&
+      String(row.SourceID) === plan.entryID &&
+      String(row.JournalID) !== reversalJournalID;
   });
   var journalById = ledger.filter(function(row) { return row.JournalID === plan.journalID; });
   var auditById = logs.filter(function(row) { return row.ID_Log === plan.auditID; });
@@ -1195,8 +1224,7 @@ function expenseSingleCommitInspect_(plan, ss) {
   }
   if (businessMatches.length > 1) conflicts.push("BUSINESS_ROW_DUPLICATE");
   else if (businessMatches.length === 1) {
-    if (!expenseSingleCommitRowExact_(businessMatches[0], plan.businessRow,
-        CANONICAL_ENTRY.EXPENSE_HEADERS)) {
+    if (!expenseSingleCommitBusinessContentEqual_(businessMatches[0], plan.businessRow)) {
       conflicts.push("BUSINESS_ROW_TAMPERED");
     }
   } else missing.push("BUSINESS_ROW");
@@ -2347,6 +2375,26 @@ function purchaseSingleCommitBounds_(plan) {
     detail: ok ? "" : "BATCH_BOUNDS cells=" + cells + " bytes=" + bytes };
 }
 
+// T11.8/U6 original-content equality for a PurchaseEvent row: financial
+// truth (PaymentStatus/CashAccountCode/AccountingStatus/amount/dates/keys)
+// is immutable; the ONLY tolerated delta after a committed cancel/correct is
+// the canonical lifecycle marker (CAPTURED_OPERATIONAL+active -> VOIDED or
+// CORRECTED+inactive).
+function purchaseSingleCommitEventContentEqual_(actual, expected) {
+  var transitioned = expected.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL &&
+    isCanonicalActive(expected.IsActive) &&
+    (actual.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED ||
+      actual.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED) &&
+    !isCanonicalActive(actual.IsActive);
+  var contentEqual = PURCHASE_EVENT_POLICY.headers.every(function(header) {
+    if (transitioned && (header === "Lifecycle" || header === "IsActive")) return true;
+    return expenseSingleCommitFieldEqual_(actual[header], expected[header]);
+  });
+  return contentEqual && (transitioned ||
+    (actual.Lifecycle === expected.Lifecycle &&
+      isCanonicalActive(actual.IsActive) === isCanonicalActive(expected.IsActive)));
+}
+
 // Exact artifact verification against the frozen plan over the three surfaces.
 // Distinguishes NONE (intent only) / PARTIAL (incomplete) / CONFLICT (identity
 // or content disagreement) / EXACT / UNKNOWN (read failure).
@@ -2389,8 +2437,20 @@ function purchaseSingleCommitInspect_(plan, ss) {
     }
   });
   var eventMatches = events.filter(function(row) { return row.EventID === plan.entryID; });
+  // T11.8/U6: PURCHASE_EVENT_VOID/CORRECT append their Policy C reversal pair
+  // under the SAME (PURCHASE_EVENT, EventID) with dedicated reversal
+  // JournalIDs. Those rows belong to the correction plan; the save's
+  // source-set identity check excludes exactly them so a committed save
+  // replays zero-write after a later cancel/correct.
+  var reversalJournalIds = {};
+  reversalJournalIds[PURCHASE_EVENT_CORRECTION.VOID_JOURNAL_ID_PREFIX +
+    plan.entryID] = true;
+  reversalJournalIds[PURCHASE_EVENT_CORRECTION.CORRECT_JOURNAL_ID_PREFIX +
+    plan.entryID] = true;
   var journalBySource = ledger.filter(function(row) {
-    return String(row.SourceType) === plan.sourceType && String(row.SourceID) === plan.entryID;
+    return String(row.SourceType) === plan.sourceType &&
+      String(row.SourceID) === plan.entryID &&
+      reversalJournalIds[String(row.JournalID)] !== true;
   });
   var journalById = ledger.filter(function(row) { return row.JournalID === plan.journalID; });
   var auditById = logs.filter(function(row) { return row.ID_Log === plan.auditID; });
@@ -2402,7 +2462,7 @@ function purchaseSingleCommitInspect_(plan, ss) {
   }
   if (eventMatches.length > 1) conflicts.push("EVENT_ROW_DUPLICATE");
   else if (eventMatches.length === 1) {
-    if (!expenseSingleCommitRowExact_(eventMatches[0], plan.eventRow, PURCHASE_EVENT_POLICY.headers)) {
+    if (!purchaseSingleCommitEventContentEqual_(eventMatches[0], plan.eventRow)) {
       conflicts.push("EVENT_ROW_TAMPERED");
     }
   } else missing.push("EVENT_ROW");
@@ -2975,4 +3035,2827 @@ function purchaseSingleCommitDispatch_(payload, ss, dispatcherRuntime, items, ga
         detail: String(error && error.message || error)
       }, identity)));
   }
+}
+
+// ---------------------------------------------------------------------------
+// T11.8/U6 — Expense corrections (T11.2 §10, T11.4 §16):
+//   EXPENSE_SINGLE_COMMIT_VOID   = Cancel
+//   EXPENSE_SINGLE_COMMIT_CORRECT = Correct
+//
+// One operator action -> one durable intent -> one outer lock -> ONE
+// immutable plan -> ONE atomic batch per operation. Originals are immutable:
+// Cancel appends the mirror journal Dr1040 / Cr expenseAccount
+// (JournalID EXPJV-<ID_Trx>, same MovementType/SourceType/SourceID per
+// T11.2 §10) + the canonical lifecycle marker + one signed Logs entry; the
+// cancel marker's event authority is the append-only Logs row and the
+// committed operation plan. Correct appends that FULL reversal plus a
+// complete replacement single-commit Expense (deterministic RequestKey-
+// derived identity, own EXPJ- journal Dr expense/Cr1040, lineage in Logs)
+// in the SAME plan and batch — never reverse()->success then a second
+// durable replacementSave(). No Treasury workflow, no EvidenceRef, no
+// PaymentMethod/cash account, no 2010/2000, no legacy settlement, no
+// historical rewrite; tabops business/accounting content is never edited
+// in place (only the canonical IsActive/UpdatedAt/UpdatedBy lifecycle
+// marker changes, inside the same atomic batch).
+//
+// Admission (NEW intents only): SINGLE_COMMIT_TRANSACTION_V1 must resolve
+// ACTIVE (T11.7 §3 routing: ABSENT/PREPARED/PAUSED/REJECT/invalid all refuse
+// fail-closed with zero writes; never a legacy fallback). Persisted
+// IN_PROGRESS intents resume from the frozen plan regardless of a later
+// PAUSED config — recovery never re-evaluates admission.
+// ---------------------------------------------------------------------------
+var EXPENSE_SINGLE_COMMIT_CORRECTION = Object.freeze({
+  VOID: "EXPENSE_SINGLE_COMMIT_VOID",
+  CORRECT: "EXPENSE_SINGLE_COMMIT_CORRECT",
+  OPERATION_TYPES: Object.freeze(["EXPENSE_SINGLE_COMMIT_VOID",
+    "EXPENSE_SINGLE_COMMIT_CORRECT"]),
+  PLAN_VERSION: 1,
+  // Mirror-journal identity (T11.2 §10 / T11.4 §16): EXPJV-<ID_Trx>.
+  JOURNAL_ID_PREFIX: "EXPJV-",
+  MOVEMENT_TYPE: "EXPENSE_SINGLE_COMMIT",
+  SOURCE_TYPE: "EXPENSE_SINGLE_COMMIT_V1",
+  MONEY_ACCOUNT_CODE: "1040",
+  AUDIT_MODULE: "TransactionLifecycle",
+  AUDIT_ACTIONS: Object.freeze({
+    VOID: "VOID_EXPENSE_SINGLE_COMMIT",
+    CORRECT_VOID: "CORRECT_VOID_EXPENSE_SINGLE_COMMIT",
+    CORRECT_CREATE: "CORRECT_CREATE_EXPENSE_SINGLE_COMMIT"
+  }),
+  WRITE_SURFACES: Object.freeze(["tabops", "BalanceLedger", "Logs"]),
+  ALLOWED_FIELDS: Object.freeze(["requestKey", "transactionId", "reason",
+    "expenseItemId", "amount", "expenseDate"]),
+  VOID_FIELDS: Object.freeze(["requestKey", "transactionId", "reason"]),
+  STATUS: Object.freeze({
+    DONE: "DONE",
+    REFUSED: "REFUSED",
+    CONFLICT: "CONFLICT",
+    UNKNOWN: "UNKNOWN",
+    RECOVERY_REQUIRED: "RECOVERY_REQUIRED"
+  }),
+  CODES: Object.freeze({
+    PAYLOAD_INVALID: "EXPENSE_SINGLE_COMMIT_PAYLOAD_INVALID",
+    PAYMENT_FIELD_REFUSED: "EXPENSE_SINGLE_COMMIT_PAYMENT_FIELD_REFUSED",
+    FIELD_REFUSED: "EXPENSE_SINGLE_COMMIT_FIELD_REFUSED",
+    REASON_INVALID: "EXPENSE_SINGLE_COMMIT_REASON_INVALID",
+    SCHEMA_NOT_READY: "EXPENSE_SINGLE_COMMIT_SCHEMA_NOT_READY",
+    ACCOUNT_PREFLIGHT_FAILED: "EXPENSE_SINGLE_COMMIT_ACCOUNT_PREFLIGHT_FAILED",
+    CORRECTION_NOT_ACTIVE: "EXPENSE_SINGLE_COMMIT_CORRECTION_NOT_ACTIVE",
+    TARGET_NOT_FOUND: "EXPENSE_SINGLE_COMMIT_TARGET_NOT_FOUND",
+    TARGET_NOT_SUPPORTED: "EXPENSE_SINGLE_COMMIT_TARGET_NOT_SUPPORTED",
+    TARGET_ALREADY_VOIDED: "EXPENSE_SINGLE_COMMIT_TARGET_ALREADY_VOIDED",
+    TARGET_ALREADY_CORRECTED: "EXPENSE_SINGLE_COMMIT_TARGET_ALREADY_CORRECTED",
+    TARGET_NOT_CLEAN: "EXPENSE_SINGLE_COMMIT_TARGET_NOT_CLEAN",
+    OPERATION_PAYLOAD_CONFLICT: "OPERATION_PAYLOAD_CONFLICT",
+    DUPLICATE_OPERATION_EVIDENCE: "DUPLICATE_OPERATION_EVIDENCE",
+    BATCH_BOUNDS_EXCEEDED: "EXPENSE_SINGLE_COMMIT_BATCH_BOUNDS_EXCEEDED",
+    ARTIFACTS_INCOMPLETE: "EXPENSE_SINGLE_COMMIT_ARTIFACTS_INCOMPLETE",
+    IDENTITY_CONFLICT: "EXPENSE_SINGLE_COMMIT_IDENTITY_CONFLICT",
+    PLAN_MALFORMED: "EXPENSE_SINGLE_COMMIT_PLAN_MALFORMED",
+    INTENT_READBACK_FAILED: "EXPENSE_SINGLE_COMMIT_INTENT_READBACK_FAILED",
+    BATCH_OUTCOME_UNKNOWN: "EXPENSE_SINGLE_COMMIT_BATCH_OUTCOME_UNKNOWN",
+    READBACK_UNKNOWN: "EXPENSE_SINGLE_COMMIT_READBACK_UNKNOWN",
+    COMMIT_OUTCOME_UNKNOWN: "EXPENSE_SINGLE_COMMIT_COMMIT_OUTCOME_UNKNOWN",
+    INVALID_OPERATION_STATE: "EXPENSE_SINGLE_COMMIT_INVALID_OPERATION_STATE",
+    CORRECTION_EXECUTION_UNKNOWN: "EXPENSE_SINGLE_COMMIT_CORRECTION_EXECUTION_UNKNOWN",
+    OUTER_LOCK_UNAVAILABLE: "OUTER_LOCK_UNAVAILABLE",
+    CORRECTION_RUNTIME_UNAVAILABLE: "EXPENSE_SINGLE_COMMIT_CORRECTION_RUNTIME_UNAVAILABLE"
+  })
+});
+
+function expenseCorrectionResult_(status, fields) {
+  return Object.assign({
+    status: status, code: "", requestKey: "", operationID: "", targetID: "",
+    replacementID: "", writeCount: 0, replay: false, field: "", detail: ""
+  }, fields || {});
+}
+
+function expenseCorrectionPayloadKey_(payload) {
+  return payload && payload.requestKey !== undefined && payload.requestKey !== null ?
+    String(payload.requestKey) : "";
+}
+
+// Pure normalization for a correction intent. Strict allowlist per operation;
+// payment/channel/evidence fields and unknown fields refuse before any read.
+function expenseCorrectionNormalize_(operationType, payload) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, save = EXPENSE_SINGLE_COMMIT_V1;
+  var p = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  var keys = Object.keys(p);
+  var payment = keys.filter(function(key) {
+    return save.PAYMENT_FIELDS.indexOf(key) !== -1 && p[key] !== undefined &&
+      p[key] !== null && String(p[key]).trim() !== "";
+  });
+  if (payment.length) {
+    throw expenseSingleCommitError_(c.CODES.PAYMENT_FIELD_REFUSED, payment[0],
+      "PAYMENT_FIELD_REFUSED:" + payment.join(","));
+  }
+  var allowed = operationType === c.VOID ? c.VOID_FIELDS : c.ALLOWED_FIELDS;
+  var unknown = keys.filter(function(key) { return allowed.indexOf(key) === -1; });
+  if (unknown.length) {
+    throw expenseSingleCommitError_(c.CODES.FIELD_REFUSED, unknown[0],
+      "FIELD_REFUSED:" + unknown.join(","));
+  }
+  var requestKey = p.requestKey === undefined || p.requestKey === null ?
+    "" : String(p.requestKey).trim();
+  if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{3,127}$/.test(requestKey)) {
+    throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "requestKey",
+      "REQUEST_KEY_REQUIRED");
+  }
+  var transactionId = p.transactionId === undefined || p.transactionId === null ?
+    "" : String(p.transactionId).trim();
+  if (!transactionId) {
+    throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "transactionId",
+      "TRANSACTION_ID_REQUIRED");
+  }
+  var reason = typeof p.reason === "string" ? p.reason.trim() : "";
+  if (reason.length < 3 || reason.length > 500 || !/[A-Za-z0-9]/.test(reason)) {
+    throw expenseSingleCommitError_(c.CODES.REASON_INVALID, "reason",
+      "REASON_INVALID");
+  }
+  var normalized = { requestKey: requestKey, transactionId: transactionId,
+    reason: reason };
+  if (operationType === c.CORRECT) {
+    var expenseItemId = p.expenseItemId === undefined || p.expenseItemId === null ?
+      "" : String(p.expenseItemId).trim();
+    if (!expenseItemId) {
+      throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "expenseItemId",
+        "EXPENSE_ITEM_REQUIRED");
+    }
+    var amount = p.amount;
+    if (typeof amount !== "number" || !isFinite(amount) || amount <= 0) {
+      throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "amount", "INVALID_AMOUNT");
+    }
+    var expenseDate = "";
+    if (p.expenseDate !== undefined) {
+      expenseDate = p.expenseDate === null ? "" : String(p.expenseDate).trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(expenseDate) || !capitalEquityDateKey(expenseDate)) {
+        throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "expenseDate",
+          "EXPENSE_DATE_INVALID");
+      }
+    }
+    normalized.expenseItemId = expenseItemId;
+    normalized.amount = amount;
+    normalized.expenseDate = expenseDate;
+  }
+  return normalized;
+}
+
+// All operation rows (read-only). Corrections need cross-key scans: committed
+// save lineage for the target and every other correction bound to it.
+function expenseCorrectionOperationRows_(ss) {
+  try {
+    return readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET,
+      TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS);
+  } catch (error) {
+    throw expenseSingleCommitError_(EXPENSE_SINGLE_COMMIT_CORRECTION.CODES.SCHEMA_NOT_READY,
+      "", "OPERATIONS_READ_FAILED:" + error.message);
+  }
+}
+
+// Eligibility + immutable target evidence. Fail closed on anything that is
+// not a genuine committed T11 single-commit Expense: legacy/historical rows,
+// uncommitted saves, already-voided/corrected targets, malformed evidence —
+// each a zero-write REFUSED with a distinct code.
+function expenseCorrectionResolveTarget_(operationType, normalized, runtime) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, save = EXPENSE_SINGLE_COMMIT_V1,
+    codes = c.CODES, ss = runtime.spreadsheet;
+  function refuse(code, detail) { return { ok: false, code: code, detail: detail }; }
+  var ops;
+  try { ops = expenseCorrectionOperationRows_(ss); }
+  catch (error) { return refuse(codes.SCHEMA_NOT_READY, error.message); }
+  var saveOps = ops.filter(function(op) {
+    return String(op.OperationType) === save.OPERATION_TYPE &&
+      String(op.BusinessID) === normalized.transactionId;
+  });
+  if (!saveOps.length) {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "NOT_SINGLE_COMMIT");
+  }
+  if (saveOps.length > 1) {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "DUPLICATE_SAVE_OPS");
+  }
+  var saveOp = saveOps[0];
+  if (String(saveOp.State) !== "COMMITTED") {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_STATE:" + String(saveOp.State));
+  }
+  var savePlan = null;
+  try { savePlan = JSON.parse(String(saveOp.OperationPlan || "")); }
+  catch (error) { return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_PLAN_JSON"); }
+  if (!savePlan || typeof savePlan !== "object" || Array.isArray(savePlan) ||
+      String(savePlan.entryID) !== normalized.transactionId) {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_PLAN_MISMATCH");
+  }
+  // One active correction branch per original: any other committed or
+  // in-progress correction intent already bound to this target decides the
+  // refusal code (VOID lineage -> ALREADY_VOIDED, CORRECT lineage ->
+  // ALREADY_CORRECTED). Zero writes.
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i];
+    if (c.OPERATION_TYPES.indexOf(String(op.OperationType)) === -1) continue;
+    if (String(op.OperationType) === operationType &&
+        String(op.RequestKey) === normalized.requestKey) continue;
+    var opPlan = null;
+    try { opPlan = JSON.parse(String(op.OperationPlan || "")); }
+    catch (error) { return refuse(codes.TARGET_NOT_CLEAN, "CORRECTION_PLAN_JSON"); }
+    if (!opPlan || String(opPlan.targetID) !== normalized.transactionId) continue;
+    return refuse(String(op.OperationType) === c.VOID ?
+      codes.TARGET_ALREADY_VOIDED : codes.TARGET_ALREADY_CORRECTED,
+      String(op.OperationType) + ":" + String(op.RequestKey) + ":" + String(op.State));
+  }
+  var tabops = null;
+  try {
+    tabops = readCanonicalTable(ss, "tabops", CANONICAL_ENTRY.EXPENSE_HEADERS);
+  } catch (error) { return refuse(codes.SCHEMA_NOT_READY, "tabops:" + error.message); }
+  var rows = tabops.filter(function(row) {
+    return String(row.ID_Trx) === normalized.transactionId;
+  });
+  if (!rows.length) return refuse(codes.TARGET_NOT_FOUND, "TABOPS");
+  if (rows.length > 1) return refuse(codes.TARGET_NOT_CLEAN, "DUPLICATE_BUSINESS_ROW");
+  var row = rows[0];
+  if (String(row.Source) !== CANONICAL_ENTRY.SOURCE) {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "SOURCE:" + String(row.Source));
+  }
+  if (!isCanonicalActive(row.IsActive)) {
+    return refuse(codes.TARGET_ALREADY_VOIDED, "INACTIVE");
+  }
+  var ledger = null;
+  try {
+    ledger = readCanonicalTable(ss, "BalanceLedger",
+      BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+  } catch (error) { return refuse(codes.SCHEMA_NOT_READY, "BalanceLedger:" + error.message); }
+  var originalJournalID = save.JOURNAL_ID_PREFIX + normalized.transactionId;
+  var journalRows = ledger.filter(function(r) {
+    return String(r.JournalID) === originalJournalID;
+  });
+  var amount = Number(row.Nilai);
+  var debitRow = journalRows.filter(function(r) {
+    return Number(r.Debit) === amount && Number(r.Credit) === 0;
+  })[0];
+  var creditRow = journalRows.filter(function(r) {
+    return String(r.AccountCode) === c.MONEY_ACCOUNT_CODE &&
+      Number(r.Credit) === amount && Number(r.Debit) === 0;
+  })[0];
+  if (journalRows.length !== 2 || !debitRow || !creditRow ||
+      String(debitRow.SourceType) !== save.SOURCE_TYPE ||
+      String(debitRow.SourceID) !== normalized.transactionId ||
+      String(creditRow.SourceType) !== save.SOURCE_TYPE ||
+      String(creditRow.SourceID) !== normalized.transactionId ||
+      !isFinite(amount) || amount <= 0 ||
+      Number(savePlan.amount) !== amount) {
+    return refuse(codes.TARGET_NOT_CLEAN, "ORIGINAL_JOURNAL");
+  }
+  var target = {
+    transactionId: normalized.transactionId,
+    rowNumber: row.sourceRowIndex + 1,
+    amount: amount,
+    expenseAccount: String(debitRow.AccountCode),
+    originalJournalID: originalJournalID,
+    originalEconomicDate: String(debitRow.Tanggal),
+    saveOperationID: String(saveOp.OperationID),
+    saveRequestKey: String(saveOp.RequestKey),
+    row: row
+  };
+  if (target.expenseAccount === c.MONEY_ACCOUNT_CODE || !target.expenseAccount) {
+    return refuse(codes.TARGET_NOT_CLEAN, "ORIGINAL_EXPENSE_ACCOUNT");
+  }
+  return { ok: true, target: target, targetEvidence: {
+    businessRow: transactionPayloadHash_(row),
+    journal: transactionPayloadHash_(journalRows),
+    savePlan: transactionPayloadHash_(savePlan)
+  } };
+}
+
+// Immutable plan freeze. Every identity, row, signature and digest is
+// derived once; the plan (persisted in OperationPlan) is the single source
+// of truth for every later step — recovery never re-plans from masters.
+function expenseCorrectionPlan_(operationType, input) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, save = EXPENSE_SINGLE_COMMIT_V1;
+  var normalized = input.normalized, target = input.target,
+    now = input.now, nowISO = now.toISOString();
+  var reversalJournalID = c.JOURNAL_ID_PREFIX + target.transactionId;
+  // Cancel/Correct reversal: exact mirror of the original journal at ACTION
+  // date — Dr1040 / Cr original expense account, bound to the original
+  // (same MovementType/SourceType/SourceID), ExternalRef = original journal.
+  var reversalJournalRows = [
+    { JournalID: reversalJournalID, LineID: reversalJournalID + "-1",
+      Tanggal: input.economicDate, AccountCode: c.MONEY_ACCOUNT_CODE,
+      Debit: target.amount, Credit: 0, MovementType: c.MOVEMENT_TYPE,
+      SourceType: c.SOURCE_TYPE, SourceID: target.transactionId,
+      ExternalRef: target.originalJournalID, Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: input.actor, UpdatedAt: nowISO,
+      UpdatedBy: input.actor },
+    { JournalID: reversalJournalID, LineID: reversalJournalID + "-2",
+      Tanggal: input.economicDate, AccountCode: target.expenseAccount,
+      Debit: 0, Credit: target.amount, MovementType: c.MOVEMENT_TYPE,
+      SourceType: c.SOURCE_TYPE, SourceID: target.transactionId,
+      ExternalRef: target.originalJournalID, Keterangan: "", IsActive: true,
+      CreatedAt: nowISO, CreatedBy: input.actor, UpdatedAt: nowISO,
+      UpdatedBy: input.actor }
+  ];
+  var reversalJournalSignature = policyCJournalSignature_(reversalJournalRows);
+  // Canonical lifecycle marker (the only original-row delta; same atomic
+  // batch): IsActive=false + UpdatedAt/UpdatedBy. Content stays byte-true.
+  var lifecycleRow = {};
+  CANONICAL_ENTRY.EXPENSE_HEADERS.forEach(function(header) {
+    lifecycleRow[header] = target.row[header];
+  });
+  lifecycleRow.IsActive = false;
+  lifecycleRow.UpdatedAt = now;
+  lifecycleRow.UpdatedBy = CANONICAL_ENTRY.USER;
+  var auditAction = operationType === c.VOID ? c.AUDIT_ACTIONS.VOID :
+    c.AUDIT_ACTIONS.CORRECT_VOID;
+  var auditMetadata = { reason: normalized.reason,
+    requestKey: normalized.requestKey, operationID: input.operationID,
+    transactionType: "EXPENSE", singleCommit: true,
+    targetJournalID: target.originalJournalID,
+    reversalJournalID: reversalJournalID };
+  if (input.replacement) auditMetadata.replacementId = input.replacement.entryID;
+  var auditRow = {
+    ID_Log: input.auditID, Timestamp: now, Level: "INFO",
+    Module: c.AUDIT_MODULE, Action: auditAction, RecordID: target.transactionId,
+    User: CANONICAL_ENTRY.USER,
+    Message: operationType === c.VOID ?
+      "Single-commit expense cancelled." : "Single-commit expense correction reversal recorded.",
+    Metadata: JSON.stringify(auditMetadata)
+  };
+  var plan = {
+    planVersion: c.PLAN_VERSION, operationType: operationType,
+    operationID: input.operationID, requestKey: normalized.requestKey,
+    payloadHash: input.hash, normalizedPayload: normalized,
+    targetID: target.transactionId,
+    businessID: operationType === c.VOID ? target.transactionId : "",
+    reason: normalized.reason, actor: input.actor, actionAt: nowISO,
+    economicDate: input.economicDate, amount: target.amount,
+    accounts: { expense: target.expenseAccount, money: c.MONEY_ACCOUNT_CODE },
+    sourceType: c.SOURCE_TYPE, movementType: c.MOVEMENT_TYPE,
+    target: target, targetEvidence: input.targetEvidence,
+    reversalJournalID: reversalJournalID,
+    reversalJournalRows: reversalJournalRows,
+    reversalJournalSignature: reversalJournalSignature,
+    lifecycle: { rowNumber: target.rowNumber, afterRow: lifecycleRow },
+    auditID: input.auditID, auditRow: auditRow,
+    replacement: null
+  };
+  if (operationType === c.CORRECT) {
+    var replacement = input.replacement;
+    plan.businessID = replacement.entryID;
+    plan.replacement = replacement;
+  }
+  plan.planDigest = transactionPayloadHash_(plan);
+  return plan;
+}
+
+// Plan integrity + shape invariants. Runs at freeze time (definite REFUSED,
+// before any write) and on every resume (fail closed, ZERO additional writes).
+function expenseCorrectionVerifyPlan_(plan) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, save = EXPENSE_SINGLE_COMMIT_V1;
+  function malformed(reason) { return { ok: false, kind: "MALFORMED", reason: reason }; }
+  function tampered(reason) { return { ok: false, kind: "TAMPERED", reason: reason }; }
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) return malformed("PLAN_NOT_OBJECT");
+  if (plan.planVersion !== c.PLAN_VERSION) return malformed("PLAN_VERSION_MISMATCH");
+  if (plan.operationType !== c.VOID && plan.operationType !== c.CORRECT) {
+    return malformed("OPERATION_TYPE_MISMATCH");
+  }
+  if (typeof plan.requestKey !== "string" || !plan.requestKey) return malformed("REQUEST_KEY_MISSING");
+  if (plan.operationID !== transactionOperationID_(plan.operationType, plan.requestKey)) {
+    return tampered("OPERATION_ID_MISMATCH");
+  }
+  if (typeof plan.payloadHash !== "string" ||
+      plan.payloadHash !== transactionPayloadHash_(plan.normalizedPayload)) {
+    return tampered("PAYLOAD_HASH_MISMATCH");
+  }
+  if (typeof plan.targetID !== "string" || !plan.targetID) return malformed("TARGET_ID_MISSING");
+  var payload = plan.normalizedPayload || {};
+  if (payload.transactionId !== plan.targetID) return tampered("TARGET_ID_MISMATCH");
+  if (typeof payload.reason !== "string" || !payload.reason) return malformed("REASON_MISSING");
+  if (plan.reason !== payload.reason) return tampered("REASON_MISMATCH");
+  var amount = plan.amount;
+  if (typeof amount !== "number" || !isFinite(amount) || amount <= 0) {
+    return malformed("AMOUNT_INVALID");
+  }
+  if (plan.accounts.money !== c.MONEY_ACCOUNT_CODE) return tampered("MONEY_ACCOUNT_MISMATCH");
+  if (!plan.accounts.expense || plan.accounts.expense === c.MONEY_ACCOUNT_CODE) {
+    return tampered("EXPENSE_ACCOUNT_MISMATCH");
+  }
+  if (plan.sourceType !== c.SOURCE_TYPE || plan.movementType !== c.MOVEMENT_TYPE) {
+    return tampered("SOURCE_IDENTITY_MISMATCH");
+  }
+  if (typeof plan.economicDate !== "string" || !capitalEquityDateKey(plan.economicDate)) {
+    return malformed("ECONOMIC_DATE_INVALID");
+  }
+  if (typeof plan.actor !== "string" || !plan.actor || typeof plan.actionAt !== "string" ||
+      !plan.actionAt) {
+    return malformed("ACTOR_OR_TIMESTAMP_MISSING");
+  }
+  // Target evidence + original row (pre-state) + lifecycle marker.
+  var target = plan.target;
+  if (!target || typeof target !== "object") return malformed("TARGET_MISSING");
+  if (String(target.transactionId) !== plan.targetID) return tampered("TARGET_TRANSACTION_MISMATCH");
+  if (typeof target.expenseAccount !== "string" || target.expenseAccount !== plan.accounts.expense) {
+    return tampered("TARGET_ACCOUNT_MISMATCH");
+  }
+  if (String(target.originalJournalID) !== save.JOURNAL_ID_PREFIX + plan.targetID) {
+    return tampered("TARGET_JOURNAL_MISMATCH");
+  }
+  if (Number(target.amount) !== amount) return tampered("TARGET_AMOUNT_MISMATCH");
+  if (!isFinite(Number(target.rowNumber)) || Number(target.rowNumber) < 2 ||
+      Number(target.rowNumber) !== Number(plan.lifecycle.rowNumber)) {
+    return tampered("TARGET_ROW_NUMBER_MISMATCH");
+  }
+  if (!target.row || target.row.ID_Trx !== plan.targetID ||
+      Number(target.row.Nilai) !== amount ||
+      String(target.row.Source) !== CANONICAL_ENTRY.SOURCE ||
+      !isCanonicalActive(target.row.IsActive) ||
+      Number(target.row.sourceRowIndex) + 1 !== Number(target.rowNumber)) {
+    return tampered("TARGET_ROW_MISMATCH");
+  }
+  ["businessRow", "journal", "savePlan"].forEach(function(key) {
+    if (typeof plan.targetEvidence[key] !== "string" || !plan.targetEvidence[key]) {
+      throw new Error("TARGET_EVIDENCE_" + key.toUpperCase() + "_MISSING");
+    }
+  });
+  var after = plan.lifecycle.afterRow;
+  if (!after || typeof after !== "object") return malformed("LIFECYCLE_ROW_MISSING");
+  if (after.ID_Trx !== plan.targetID || after.ID_Ops !== target.row.ID_Ops ||
+      Number(after.Nilai) !== amount || String(after.Source) !== CANONICAL_ENTRY.SOURCE ||
+      after.IsActive !== false || after.UpdatedBy !== CANONICAL_ENTRY.USER ||
+      after.UpdatedAt === undefined || after.UpdatedAt === null || after.UpdatedAt === "" ||
+      !expenseSingleCommitFieldEqual_(after.Tanggal, target.row.Tanggal) ||
+      !expenseSingleCommitFieldEqual_(after.CreatedAt, target.row.CreatedAt) ||
+      !expenseSingleCommitFieldEqual_(after.CreatedBy, target.row.CreatedBy)) {
+    return tampered("LIFECYCLE_ROW_MISMATCH");
+  }
+  // Reversal journal: exact mirror, balanced, signed, at ACTION date.
+  var rows = plan.reversalJournalRows;
+  if (!Array.isArray(rows) || rows.length !== 2) return malformed("REVERSAL_JOURNAL_ROW_COUNT");
+  var r0 = rows[0], r1 = rows[1];
+  if (r0.LineID !== plan.reversalJournalID + "-1" || r1.LineID !== plan.reversalJournalID + "-2" ||
+      r0.JournalID !== plan.reversalJournalID || r1.JournalID !== plan.reversalJournalID ||
+      plan.reversalJournalID !== c.JOURNAL_ID_PREFIX + plan.targetID) {
+    return tampered("REVERSAL_JOURNAL_ID_MISMATCH");
+  }
+  var rowsOk = rows.every(function(row) {
+    return row.SourceType === c.SOURCE_TYPE && row.SourceID === plan.targetID &&
+      row.MovementType === c.MOVEMENT_TYPE && row.IsActive === true &&
+      row.ExternalRef === target.originalJournalID &&
+      expenseSingleCommitFieldEqual_(row.Tanggal, plan.economicDate);
+  });
+  if (!rowsOk) return tampered("REVERSAL_JOURNAL_SOURCE_MISMATCH");
+  if (r0.AccountCode !== c.MONEY_ACCOUNT_CODE || Number(r0.Debit) !== amount ||
+      Number(r0.Credit) !== 0 || r1.AccountCode !== plan.accounts.expense ||
+      Number(r1.Debit) !== 0 || Number(r1.Credit) !== amount) {
+    return tampered("REVERSAL_JOURNAL_MAPPING_MISMATCH");
+  }
+  if (policyCJournalSignature_(rows) !== plan.reversalJournalSignature) {
+    return tampered("REVERSAL_JOURNAL_SIGNATURE_MISMATCH");
+  }
+  // Audit row: append-only cancel/correction marker (event authority).
+  var audit = plan.auditRow;
+  var expectedAction = plan.operationType === c.VOID ? c.AUDIT_ACTIONS.VOID :
+    c.AUDIT_ACTIONS.CORRECT_VOID;
+  if (!audit || audit.ID_Log !== plan.auditID || audit.RecordID !== plan.targetID ||
+      audit.Module !== c.AUDIT_MODULE || audit.Action !== expectedAction) {
+    return tampered("AUDIT_ROW_MISMATCH");
+  }
+  var auditMeta = null;
+  try { auditMeta = JSON.parse(String(audit.Metadata || "{}")); }
+  catch (error) { return malformed("AUDIT_METADATA_JSON_INVALID"); }
+  if (!auditMeta || auditMeta.requestKey !== plan.requestKey ||
+      auditMeta.operationID !== plan.operationID || auditMeta.singleCommit !== true ||
+      auditMeta.targetJournalID !== target.originalJournalID ||
+      auditMeta.reversalJournalID !== plan.reversalJournalID) {
+    return tampered("AUDIT_METADATA_MISMATCH");
+  }
+  // Replacement sections (CORRECT only): complete replacement save in-plan.
+  if (plan.operationType === c.VOID) {
+    if (plan.replacement !== null && plan.replacement !== undefined) {
+      return malformed("REPLACEMENT_IN_VOID");
+    }
+    if (plan.businessID !== plan.targetID) return tampered("BUSINESS_ID_MISMATCH");
+    if (payload.expenseItemId !== undefined || payload.amount !== undefined ||
+        payload.expenseDate !== undefined) {
+      return tampered("REPLACEMENT_FIELDS_IN_VOID");
+    }
+  } else {
+    var rep = plan.replacement;
+    if (!rep || typeof rep !== "object") return malformed("REPLACEMENT_MISSING");
+    var expectedEntryID = transactionStableBusinessID_("OPS-APP-", plan.operationType,
+      plan.requestKey);
+    if (rep.entryID !== expectedEntryID || plan.businessID !== rep.entryID) {
+      return tampered("REPLACEMENT_ID_DERIVATION_MISMATCH");
+    }
+    if (payload.expenseItemId !== rep.expenseItem.expenseItemId ||
+        Number(payload.amount) !== Number(rep.amount)) {
+      return tampered("REPLACEMENT_PAYLOAD_MISMATCH");
+    }
+    if ((payload.expenseDate || plan.economicDate) !== rep.economicDate) {
+      return tampered("REPLACEMENT_DATE_MISMATCH");
+    }
+    if (!rep.businessRow || rep.businessRow.ID_Trx !== rep.entryID ||
+        Number(rep.businessRow.Nilai) !== Number(rep.amount) ||
+        String(rep.businessRow.Source) !== CANONICAL_ENTRY.SOURCE ||
+        rep.businessRow.IsActive !== true ||
+        !expenseSingleCommitFieldEqual_(rep.businessRow.ID_Ops, rep.expenseItem.expenseItemId)) {
+      return tampered("REPLACEMENT_BUSINESS_ROW_MISMATCH");
+    }
+    if (!rep.expenseItem || !rep.expenseItem.accountCode ||
+        rep.expenseItem.accountCode === c.MONEY_ACCOUNT_CODE) {
+      return tampered("REPLACEMENT_ACCOUNT_MISMATCH");
+    }
+    if (rep.journalID !== save.JOURNAL_ID_PREFIX + rep.entryID) {
+      return tampered("REPLACEMENT_JOURNAL_ID_MISMATCH");
+    }
+    if (!Array.isArray(rep.journalRows) || rep.journalRows.length !== 2) {
+      return malformed("REPLACEMENT_JOURNAL_ROW_COUNT");
+    }
+    var j0 = rep.journalRows[0], j1 = rep.journalRows[1];
+    var replOk = rep.journalRows.every(function(row) {
+      return row.SourceType === save.SOURCE_TYPE && row.SourceID === rep.entryID &&
+        row.MovementType === save.MOVEMENT_TYPE && row.IsActive === true &&
+        expenseSingleCommitFieldEqual_(row.Tanggal, rep.economicDate);
+    });
+    if (!replOk || j0.LineID !== rep.journalID + "-1" || j1.LineID !== rep.journalID + "-2" ||
+        j0.JournalID !== rep.journalID || j1.JournalID !== rep.journalID) {
+      return tampered("REPLACEMENT_JOURNAL_SOURCE_MISMATCH");
+    }
+    if (j0.AccountCode !== rep.expenseItem.accountCode || Number(j0.Debit) !== Number(rep.amount) ||
+        Number(j0.Credit) !== 0 || j1.AccountCode !== c.MONEY_ACCOUNT_CODE ||
+        Number(j1.Debit) !== 0 || Number(j1.Credit) !== Number(rep.amount)) {
+      return tampered("REPLACEMENT_JOURNAL_MAPPING_MISMATCH");
+    }
+    if (policyCJournalSignature_(rep.journalRows) !== rep.journalSignature) {
+      return tampered("REPLACEMENT_JOURNAL_SIGNATURE_MISMATCH");
+    }
+    var repAudit = rep.auditRow;
+    var repMeta = null;
+    try { repMeta = JSON.parse(String(repAudit && repAudit.Metadata || "{}")); }
+    catch (error) { return malformed("REPLACEMENT_AUDIT_METADATA_JSON_INVALID"); }
+    if (!repAudit || repAudit.ID_Log !== rep.auditID || repAudit.RecordID !== rep.entryID ||
+        repAudit.Module !== c.AUDIT_MODULE ||
+        repAudit.Action !== c.AUDIT_ACTIONS.CORRECT_CREATE || !repMeta ||
+        repMeta.originalId !== plan.targetID || repMeta.requestKey !== plan.requestKey ||
+        repMeta.operationID !== plan.operationID) {
+      return tampered("REPLACEMENT_AUDIT_MISMATCH");
+    }
+    if (!isFinite(Number(rep.amount)) || Number(rep.amount) <= 0) {
+      return malformed("REPLACEMENT_AMOUNT_INVALID");
+    }
+  }
+  var digestInput = Object.assign({}, plan);
+  delete digestInput.planDigest;
+  if (plan.planDigest !== transactionPayloadHash_(digestInput)) {
+    return tampered("PLAN_DIGEST_MISMATCH");
+  }
+  return { ok: true, kind: "", reason: "" };
+}
+
+function expenseCorrectionRowValues_(row, headers) {
+  return headers.map(function(header) {
+    return row[header] === undefined ? "" : row[header];
+  });
+}
+
+// The ONE batch's logical ranges (frozen plan order). tabops may appear twice
+// on CORRECT (lifecycle update of the original + append of the replacement);
+// surfaces stay exactly {tabops, BalanceLedger, Logs}.
+function expenseCorrectionValueRanges_(plan) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION;
+  var ranges = [
+    { range: "tabops", updateRow: plan.lifecycle.rowNumber,
+      values: [expenseCorrectionRowValues_(plan.lifecycle.afterRow,
+        CANONICAL_ENTRY.EXPENSE_HEADERS)] }
+  ];
+  if (plan.replacement) {
+    ranges.push({ range: "tabops",
+      values: [expenseCorrectionRowValues_(plan.replacement.businessRow,
+        CANONICAL_ENTRY.EXPENSE_HEADERS)] });
+  }
+  ranges.push({ range: "BalanceLedger",
+    values: plan.reversalJournalRows
+      .concat(plan.replacement ? plan.replacement.journalRows : [])
+      .map(function(row) {
+        return expenseCorrectionRowValues_(row,
+          BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+      }) });
+  var auditRows = [plan.auditRow];
+  if (plan.replacement) auditRows.push(plan.replacement.auditRow);
+  ranges.push({ range: "Logs", values: auditRows.map(function(row) {
+    return expenseCorrectionRowValues_(row, CANONICAL_ENTRY.LOG_HEADERS);
+  }) });
+  var unique = [];
+  ranges.forEach(function(range) {
+    if (unique.indexOf(range.range) === -1) unique.push(range.range);
+  });
+  unique.sort();
+  var expected = c.WRITE_SURFACES.slice().sort();
+  if (JSON.stringify(unique) !== JSON.stringify(expected)) {
+    throw new Error("CORRECTION_SURFACE_MISMATCH");
+  }
+  return ranges;
+}
+
+// ONE spreadsheets.batchUpdate body: appendCells for appended rows,
+// updateCells for the canonical lifecycle marker — all subrequests inside ONE
+// atomic batchUpdate. Throws BEFORE issuing any request if a sheetId is
+// missing, so the batch is rejected atomically rather than partly. RAW
+// CellData only (stringValue/numberValue/boolValue), never formulaValue.
+function expenseCorrectionBatchBody_(valueRanges, sheetIds) {
+  var requests = valueRanges.map(function(range) {
+    var sheetId = sheetIds[range.range];
+    if (typeof sheetId !== "number" || !isFinite(sheetId)) {
+      throw new Error("SHEET_ID_UNAVAILABLE:" + range.range);
+    }
+    var rows = range.values.map(function(row) {
+      return { values: row.map(function(cell) {
+        return { userEnteredValue: expenseSingleCommitCellValue_(cell) };
+      }) };
+    });
+    if (range.updateRow !== undefined) {
+      if (!isFinite(range.updateRow) || range.updateRow < 2) {
+        throw new Error("UNSAFE_UPDATE_ROW:" + range.range);
+      }
+      return { updateCells: { start: { sheetId: sheetId,
+        rowIndex: range.updateRow - 1, columnIndex: 0 },
+        rows: rows, fields: "userEnteredValue" } };
+    }
+    return { appendCells: { sheetId: sheetId, fields: "userEnteredValue", rows: rows } };
+  });
+  return { requests: requests };
+}
+
+function expenseCorrectionBounds_(plan) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, ranges;
+  try { ranges = expenseCorrectionValueRanges_(plan); }
+  catch (error) { return { ok: false, detail: "CORRECTION_SURFACE_MISMATCH" }; }
+  var cells = 0;
+  ranges.forEach(function(range) {
+    range.values.forEach(function(row) { cells += row.length; });
+  });
+  var sentinel = {};
+  c.WRITE_SURFACES.forEach(function(name) { sentinel[name] = 2147483647; });
+  var body;
+  try { body = expenseCorrectionBatchBody_(ranges, sentinel); }
+  catch (error) { return { ok: false, detail: "UNSAFE_BATCH:" + error.message }; }
+  var bytes = expenseSingleCommitUtf8Bytes_(JSON.stringify(body)) +
+    EXPENSE_SINGLE_COMMIT_V1.REQUEST_OVERHEAD_BYTES;
+  var planJson = "";
+  try { planJson = JSON.stringify(plan); }
+  catch (error) { return { ok: false, detail: "PLAN_JSON_INVALID" }; }
+  if (planJson.length > EXPENSE_SINGLE_COMMIT_V1.MAX_CELL_CHARS) {
+    return { ok: false, detail: "UNSAFE_PLAN_CELL_CHARS:" + planJson.length };
+  }
+  var ok = cells <= EXPENSE_SINGLE_COMMIT_V1.MAX_BATCH_CELLS &&
+    bytes <= EXPENSE_SINGLE_COMMIT_V1.MAX_REQUEST_BYTES;
+  return { ok: ok, cells: cells, bytes: bytes, planChars: planJson.length,
+    detail: ok ? "" : "BATCH_BOUNDS cells=" + cells + " bytes=" + bytes };
+}
+
+// Exact artifact verification against the frozen plan over the three
+// surfaces. NONE / PARTIAL / CONFLICT / EXACT / UNKNOWN. The original is
+// verified in BOTH its pre-state (frozen content) and its post-lifecycle
+// state; the append-only reversal + Logs marker must match the plan exactly.
+function expenseCorrectionInspect_(plan, ss) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, save = EXPENSE_SINGLE_COMMIT_V1,
+    ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
+  var tabops, ledger, logs, ops;
+  try {
+    tabops = readCanonicalTable(ss, "tabops", CANONICAL_ENTRY.EXPENSE_HEADERS);
+    ledger = readCanonicalTable(ss, "BalanceLedger", ledgerHeaders);
+    logs = readCanonicalTable(ss, "Logs", CANONICAL_ENTRY.LOG_HEADERS);
+    ops = expenseCorrectionOperationRows_(ss);
+  } catch (error) {
+    return { state: "UNKNOWN", detail: "READBACK_FAILED:" + error.message };
+  }
+  var conflicts = [], missing = [];
+  var lifecycleApplied = false;
+  var rows = tabops.filter(function(row) {
+    return String(row.ID_Trx) === plan.targetID;
+  });
+  if (rows.length !== 1) {
+    conflicts.push(rows.length ? "TARGET_ROW_DUPLICATE" : "TARGET_ROW_MISSING");
+  } else if (rows[0].sourceRowIndex + 1 !== Number(plan.lifecycle.rowNumber)) {
+    conflicts.push("TARGET_ROW_DRIFT");
+  } else {
+    var post = expenseSingleCommitRowExact_(rows[0], plan.lifecycle.afterRow,
+      CANONICAL_ENTRY.EXPENSE_HEADERS);
+    var pre = expenseSingleCommitRowExact_(rows[0], plan.target.row,
+      CANONICAL_ENTRY.EXPENSE_HEADERS);
+    if (post) lifecycleApplied = true;
+    else if (!pre) conflicts.push("TARGET_ROW_TAMPERED");
+  }
+  // Save lineage must remain the immutable authority this plan reverses.
+  var saveOps = ops.filter(function(op) {
+    return String(op.OperationType) === save.OPERATION_TYPE &&
+      String(op.BusinessID) === plan.targetID;
+  });
+  if (saveOps.length !== 1 || String(saveOps[0].State) !== "COMMITTED") {
+    conflicts.push("SAVE_LINEAGE_MISSING");
+  } else {
+    var lineagePlan = null;
+    try { lineagePlan = JSON.parse(String(saveOps[0].OperationPlan || "")); }
+    catch (error) { lineagePlan = null; }
+    if (!lineagePlan || transactionPayloadHash_(lineagePlan) !== plan.targetEvidence.savePlan) {
+      conflicts.push("SAVE_LINEAGE_TAMPERED");
+    }
+  }
+  // Reversal journal identity + exactness.
+  var reversalById = ledger.filter(function(row) {
+    return String(row.JournalID) === plan.reversalJournalID;
+  });
+  var reversalBySource = reversalById.filter(function(row) {
+    return String(row.SourceID) === plan.targetID &&
+      String(row.SourceType) === plan.sourceType &&
+      String(row.MovementType) === plan.movementType;
+  });
+  if (reversalById.length || reversalBySource.length) {
+    var idSet = reversalById.map(function(row) { return String(row.LineID); }).sort().join("");
+    var sourceSet = reversalBySource.map(function(row) { return String(row.LineID); }).sort().join("");
+    if (idSet !== sourceSet) conflicts.push("REVERSAL_IDENTITY_CROSSOVER");
+    if (reversalBySource.length === 2) {
+      var sorted = reversalBySource.slice().sort(function(left, right) {
+        return String(left.LineID) < String(right.LineID) ? -1 : 1;
+      });
+      for (var i = 0; i < 2; i++) {
+        if (!expenseSingleCommitRowExact_(sorted[i], plan.reversalJournalRows[i],
+            ledgerHeaders)) {
+          conflicts.push("REVERSAL_JOURNAL_TAMPERED");
+        }
+      }
+      if (policyCJournalSignature_(reversalBySource) !== plan.reversalJournalSignature) {
+        conflicts.push("REVERSAL_JOURNAL_SIGNATURE_MISMATCH");
+      }
+      var debit = 0, credit = 0;
+      reversalBySource.forEach(function(row) {
+        debit += Number(row.Debit); credit += Number(row.Credit);
+      });
+      if (!(debit === credit && debit === Number(plan.amount))) {
+        conflicts.push("REVERSAL_JOURNAL_BALANCE_MISMATCH");
+      }
+    } else if (reversalBySource.length === 1) {
+      var only = reversalBySource[0], planned = null;
+      plan.reversalJournalRows.forEach(function(row) {
+        if (String(row.LineID) === String(only.LineID)) planned = row;
+      });
+      if (!planned || !expenseSingleCommitRowExact_(only, planned, ledgerHeaders)) {
+        conflicts.push("REVERSAL_JOURNAL_TAMPERED");
+      } else missing.push("REVERSAL_JOURNAL_LINE");
+    } else if (reversalBySource.length === 0) missing.push("REVERSAL_JOURNAL_LINE");
+    else conflicts.push("REVERSAL_JOURNAL_DUPLICATE");
+  } else missing.push("REVERSAL_JOURNAL");
+  // No foreign journal may claim the target's source identity.
+  ledger.forEach(function(row) {
+    if (String(row.SourceType) === plan.sourceType &&
+        String(row.SourceID) === plan.targetID &&
+        String(row.JournalID) !== plan.target.originalJournalID &&
+        String(row.JournalID) !== plan.reversalJournalID) {
+      conflicts.push("FOREIGN_JOURNAL_CLAIM");
+    }
+  });
+  // Cancel / correction marker (append-only Logs event authority).
+  var auditById = logs.filter(function(row) { return row.ID_Log === plan.auditID; });
+  if (auditById.length) {
+    if (auditById.length > 1) conflicts.push("AUDIT_DUPLICATE");
+    else if (!expenseSingleCommitRowExact_(auditById[0], plan.auditRow,
+        CANONICAL_ENTRY.LOG_HEADERS)) {
+      conflicts.push("AUDIT_TAMPERED");
+    }
+  } else missing.push("AUDIT");
+  // Nothing written yet (intent only) — the resume path applies the frozen
+  // plan exactly once; checked before the replacement branches so a CORRECT
+  // plan with zero artifacts classifies NONE, never PARTIAL.
+  if (!lifecycleApplied && !reversalById.length && !auditById.length) {
+    return { state: "NONE", detail: "NO_ARTIFACTS" };
+  }
+  // Replacement sections (CORRECT).
+  var replacement = plan.replacement;
+  if (replacement) {
+    var repRows = tabops.filter(function(row) {
+      return String(row.ID_Trx) === replacement.entryID;
+    });
+    if (repRows.length !== 1) {
+      if (repRows.length) conflicts.push("REPLACEMENT_ROW_DUPLICATE");
+      else missing.push("REPLACEMENT_ROW");
+    } else if (!expenseSingleCommitRowExact_(repRows[0], replacement.businessRow,
+        CANONICAL_ENTRY.EXPENSE_HEADERS)) {
+      conflicts.push("REPLACEMENT_ROW_TAMPERED");
+    }
+    var repJournal = ledger.filter(function(row) {
+      return String(row.JournalID) === replacement.journalID;
+    });
+    var repJournalBySource = repJournal.filter(function(row) {
+      return String(row.SourceID) === replacement.entryID &&
+        String(row.SourceType) === save.SOURCE_TYPE;
+    });
+    if (repJournal.length !== 2 || repJournalBySource.length !== 2) {
+      if (!repJournal.length && !repJournalBySource.length) missing.push("REPLACEMENT_JOURNAL");
+      else if (repJournal.length === 1 || repJournalBySource.length === 1) {
+        missing.push("REPLACEMENT_JOURNAL_LINE");
+      } else conflicts.push("REPLACEMENT_JOURNAL_DUPLICATE");
+    } else {
+      var repSorted = repJournalBySource.slice().sort(function(left, right) {
+        return String(left.LineID) < String(right.LineID) ? -1 : 1;
+      });
+      for (var j = 0; j < 2; j++) {
+        if (!expenseSingleCommitRowExact_(repSorted[j], replacement.journalRows[j],
+            ledgerHeaders)) {
+          conflicts.push("REPLACEMENT_JOURNAL_TAMPERED");
+        }
+      }
+      if (policyCJournalSignature_(repJournalBySource) !== replacement.journalSignature) {
+        conflicts.push("REPLACEMENT_JOURNAL_SIGNATURE_MISMATCH");
+      }
+    }
+    var repAudit = logs.filter(function(row) { return row.ID_Log === replacement.auditID; });
+    if (repAudit.length !== 1) {
+      if (!repAudit.length) missing.push("REPLACEMENT_AUDIT");
+      else conflicts.push("REPLACEMENT_AUDIT_DUPLICATE");
+    } else if (!expenseSingleCommitRowExact_(repAudit[0], replacement.auditRow,
+        CANONICAL_ENTRY.LOG_HEADERS)) {
+      conflicts.push("REPLACEMENT_AUDIT_TAMPERED");
+    }
+    if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
+    if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
+    if (!lifecycleApplied) return { state: "PARTIAL", detail: "LIFECYCLE" };
+    return { state: "EXACT", detail: "" };
+  }
+  if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
+  var present = lifecycleApplied || reversalById.length || auditById.length;
+  if (!present) return { state: "NONE", detail: "NO_ARTIFACTS" };
+  if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
+  if (!lifecycleApplied) return { state: "PARTIAL", detail: "LIFECYCLE" };
+  return { state: "EXACT", detail: "" };
+}
+
+// Pre-batch guard: the frozen plan's original row must still exist exactly
+// at its planned row (append-only sheets keep row numbers stable). A drifted
+// or externally changed target fails closed BEFORE any batch — the frozen
+// plan is never re-planned against changed rows.
+function expenseCorrectionRowGuard_(plan, ss) {
+  var tabops;
+  try {
+    tabops = readCanonicalTable(ss, "tabops", CANONICAL_ENTRY.EXPENSE_HEADERS);
+  } catch (error) { return { ok: false, detail: "READ_FAILED:" + error.message }; }
+  var rows = tabops.filter(function(row) {
+    return String(row.ID_Trx) === plan.targetID;
+  });
+  if (rows.length !== 1) return { ok: false, detail: "ROW_COUNT:" + rows.length };
+  if (rows[0].sourceRowIndex + 1 !== Number(plan.lifecycle.rowNumber)) {
+    return { ok: false, detail: "ROW_DRIFT" };
+  }
+  if (!expenseSingleCommitRowExact_(rows[0], plan.target.row, CANONICAL_ENTRY.EXPENSE_HEADERS)) {
+    return { ok: false, detail: "ROW_CHANGED" };
+  }
+  return { ok: true, detail: "" };
+}
+
+function expenseCorrectionOutcome_(plan, status, fields) {
+  return expenseCorrectionResult_(status, Object.assign({
+    requestKey: plan.requestKey, operationID: plan.operationID, targetID: plan.targetID,
+    replacementID: plan.replacement ? plan.replacement.entryID : ""
+  }, fields || {}));
+}
+
+// Batch -> exact inspect -> COMMITTED + exact readback. Never retries a
+// failed batch inside one call; an unknown outcome is inspected once and, if
+// unresolved, reported as UNKNOWN with the request identity preserved.
+function expenseCorrectionApplyBatch_(plan, operation, runtime) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, codes = c.CODES;
+  function outcome(status, fields) {
+    return expenseCorrectionOutcome_(plan, status, fields);
+  }
+  var guard = expenseCorrectionRowGuard_(plan, runtime.spreadsheet);
+  if (!guard.ok) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.ARTIFACTS_INCOMPLETE, detail: "TARGET_ROW_" + guard.detail,
+        writeCount: "UNKNOWN" });
+  }
+  var ranges = null;
+  try { ranges = expenseCorrectionValueRanges_(plan); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: error.message, writeCount: "UNKNOWN" });
+  }
+  var rows = 0;
+  ranges.forEach(function(range) { rows += range.values.length; });
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_BEFORE_BATCH");
+  var batchError = null;
+  try { runtime.batch(ranges); } catch (error) { batchError = error; }
+  if (!batchError && runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_BATCH");
+  var inspection = expenseCorrectionInspect_(plan, runtime.spreadsheet);
+  if (inspection.state === "UNKNOWN") {
+    return outcome(c.STATUS.UNKNOWN,
+      { code: codes.READBACK_UNKNOWN, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state === "NONE" && batchError) {
+    return outcome(c.STATUS.UNKNOWN,
+      { code: codes.BATCH_OUTCOME_UNKNOWN, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state !== "EXACT") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED, {
+      code: inspection.state === "CONFLICT" ?
+        (inspection.detail.indexOf("SIGNATURE") !== -1 ?
+          codes.ARTIFACTS_INCOMPLETE : codes.IDENTITY_CONFLICT) :
+        codes.ARTIFACTS_INCOMPLETE,
+      writeCount: "UNKNOWN", detail: inspection.state + ":" + inspection.detail });
+  }
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_READBACK");
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_BEFORE_COMMIT");
+  var commit = expenseSingleCommitCommit_(operation, runtime);
+  if (!commit.ok) {
+    return outcome(commit.status, { code: commit.code, writeCount: rows, detail: commit.detail });
+  }
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_COMMIT");
+  return outcome(c.STATUS.DONE, { writeCount: rows });
+}
+
+// Resume path: exact (OperationType, RequestKey) lookup hit. Digest +
+// normalized structure + shape + state + schema + stored bounds, then exact
+// artifact inspection. NEVER re-evaluates admission (a later PAUSED config
+// cannot block recovery of a persisted intent — T11.7 §3).
+function expenseCorrectionResume_(operationType, operation, hash, normalized, runtime) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, codes = c.CODES;
+  function outcome(status, fields) {
+    return expenseCorrectionResult_(status, Object.assign({
+      requestKey: normalized.requestKey, operationID: operation.OperationID || "",
+      targetID: operation.BusinessID || ""
+    }, fields || {}));
+  }
+  if (operation.OperationType !== operationType || !operation.BusinessID ||
+      operation.RequestKey !== normalized.requestKey || operation.PayloadHash !== hash) {
+    return outcome(c.STATUS.CONFLICT, { code: codes.OPERATION_PAYLOAD_CONFLICT });
+  }
+  var plan = null;
+  try { plan = JSON.parse(operation.OperationPlan); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: "PLAN_JSON:" + error.message });
+  }
+  if (!plan || plan.requestKey !== normalized.requestKey || plan.payloadHash !== hash ||
+      plan.operationID !== operation.OperationID ||
+      plan.businessID !== operation.BusinessID ||
+      plan.targetID !== normalized.transactionId) {
+    return outcome(c.STATUS.CONFLICT,
+      { code: codes.OPERATION_PAYLOAD_CONFLICT, detail: "PLAN_IDENTITY_MISMATCH" });
+  }
+  if (!plan.normalizedPayload ||
+      JSON.stringify(plan.normalizedPayload) !== JSON.stringify(normalized)) {
+    return outcome(c.STATUS.CONFLICT,
+      { code: codes.OPERATION_PAYLOAD_CONFLICT, detail: "NORMALIZED_PAYLOAD_MISMATCH" });
+  }
+  var verify;
+  try { verify = expenseCorrectionVerifyPlan_(plan); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: error.message });
+  }
+  if (!verify.ok) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED, {
+      code: verify.kind === "TAMPERED" ? codes.IDENTITY_CONFLICT : codes.PLAN_MALFORMED,
+      detail: verify.reason });
+  }
+  if (operation.State !== "IN_PROGRESS" && operation.State !== "COMMITTED") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED, {
+      code: codes.INVALID_OPERATION_STATE, detail: "STATE:" + String(operation.State) });
+  }
+  var schema = expenseSingleCommitSchemaGate_(runtime.spreadsheet);
+  if (schema.status !== "PASS") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(",") });
+  }
+  var bounds = expenseCorrectionBounds_(plan);
+  if (!bounds.ok) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.BATCH_BOUNDS_EXCEEDED, detail: bounds.detail });
+  }
+  var inspection = expenseCorrectionInspect_(plan, runtime.spreadsheet);
+  if (inspection.state === "UNKNOWN") {
+    return outcome(c.STATUS.UNKNOWN,
+      { code: codes.READBACK_UNKNOWN, detail: inspection.detail });
+  }
+  var closedCode = inspection.state === "CONFLICT" ?
+    (inspection.detail.indexOf("SIGNATURE") !== -1 ?
+      codes.ARTIFACTS_INCOMPLETE : codes.IDENTITY_CONFLICT) :
+    codes.ARTIFACTS_INCOMPLETE;
+  if (inspection.state === "EXACT") {
+    if (operation.State === "COMMITTED") {
+      if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_COMMIT");
+      return outcome(c.STATUS.DONE, { replay: true, writeCount: 0,
+        targetID: plan.targetID,
+        replacementID: plan.replacement ? plan.replacement.entryID : "" });
+    }
+    if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_READBACK");
+    if (runtime.crash) runtime.crash("EXPENSE_CORR_BEFORE_COMMIT");
+    var commit = expenseSingleCommitCommit_(operation, runtime);
+    if (!commit.ok) {
+      return outcome(commit.status, { code: commit.code, detail: commit.detail });
+    }
+    if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_COMMIT");
+    return outcome(c.STATUS.DONE, { replay: true, writeCount: 0,
+      targetID: plan.targetID,
+      replacementID: plan.replacement ? plan.replacement.entryID : "" });
+  }
+  if (operation.State === "COMMITTED") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: closedCode, detail: inspection.detail });
+  }
+  if (inspection.state === "NONE") {
+    return expenseCorrectionApplyBatch_(plan, operation, runtime);
+  }
+  return outcome(c.STATUS.RECOVERY_REQUIRED,
+    { code: closedCode, detail: inspection.detail });
+}
+
+// New-intent path (outer lock held, lookup returned absent). Admission first
+// (ACTIVE only, fail closed, zero writes), then schema/account/target
+// eligibility, complete immutable plan freeze, bounds, durable IN_PROGRESS
+// intent + exact ten-field readback, then the ONE atomic batch.
+function expenseCorrectionNewIntent_(operationType, normalized, hash, runtime) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, save = EXPENSE_SINGLE_COMMIT_V1,
+    codes = c.CODES;
+  function outcome(status, fields) {
+    return expenseCorrectionResult_(status,
+      Object.assign({ requestKey: normalized.requestKey, targetID: normalized.transactionId },
+        fields || {}));
+  }
+  var gate = runtime.gate === undefined || runtime.gate === null ?
+    expenseSingleCommitGate_(runtime) : runtime.gate;
+  if (gate.mode !== "ACTIVE") {
+    return outcome(c.STATUS.REFUSED, {
+      code: gate.code || codes.CORRECTION_NOT_ACTIVE,
+      detail: gate.detail || "SINGLE_COMMIT_NOT_ACTIVE" });
+  }
+  var schema = expenseSingleCommitSchemaGate_(runtime.spreadsheet);
+  if (schema.status !== "PASS") {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(",") });
+  }
+  var accountRows;
+  try {
+    accountRows = readCanonicalTable(runtime.spreadsheet, "Accounts",
+      CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS);
+  } catch (error) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: "ACCOUNTS:" + error.message });
+  }
+  // T11.2 §11: 1040 precondition for every correction (the reversal moves
+  // 1040). Absent/duplicate/inactive/mismatched => REFUSED zero writes; no
+  // fallback to 1000/1010/1020/1030.
+  var moneyPreflight = preflightSingleCommitMoneyAccount(accountRows);
+  if (moneyPreflight.status !== "PASS") {
+    var moneyError = moneyPreflight.errors[0] || {};
+    return outcome(c.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED,
+      field: moneyError.accountCode || c.MONEY_ACCOUNT_CODE,
+      detail: "MONEY_ACCOUNT_PREFLIGHT_FAILED:" + String(moneyError.code || "") });
+  }
+  var resolved = expenseCorrectionResolveTarget_(operationType, normalized, runtime);
+  if (!resolved.ok) {
+    return outcome(c.STATUS.REFUSED, { code: resolved.code, detail: resolved.detail });
+  }
+  var target = resolved.target;
+  var accountMap = buildCanonicalMasterMap(accountRows, "AccountCode", "Accounts");
+  var originalAccount = accountMap[target.expenseAccount];
+  if (!originalAccount || !isCanonicalActive(originalAccount.IsActive)) {
+    return outcome(c.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: target.expenseAccount,
+      detail: "ORIGINAL_EXPENSE_ACCOUNT_INACTIVE" });
+  }
+  var now = runtime.now();
+  var economicDate = capitalEquityDateKey(now);
+  if (!economicDate) {
+    return outcome(c.STATUS.REFUSED, { code: codes.PAYLOAD_INVALID,
+      detail: "ACTION_DATE_INVALID" });
+  }
+  var operationID = transactionOperationID_(operationType, normalized.requestKey);
+  var input = { operationType: operationType, requestKey: normalized.requestKey,
+    normalized: normalized, hash: hash, target: target,
+    targetEvidence: resolved.targetEvidence, actor: runtime.actor(), now: now,
+    economicDate: economicDate, operationID: operationID,
+    auditID: "LOG-ENTRY-" + runtime.uuid() };
+  if (operationType === c.CORRECT) {
+    // Replacement resolved ONCE for this intent (accounts re-derived here,
+    // then frozen in the plan); retries use the stored plan and never
+    // re-read masters.
+    var items = runtime.items || readCanonicalTable(runtime.spreadsheet,
+      "ExpenseItems", save.ITEM_HEADERS);
+    var replacementTimestamp = normalized.expenseDate ?
+      new Date(normalized.expenseDate + "T00:00:00+07:00") : now;
+    var replacementEconomicDate = capitalEquityDateKey(replacementTimestamp);
+    if (!replacementEconomicDate) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.PAYLOAD_INVALID, detail: "REPLACEMENT_DATE_INVALID" });
+    }
+    var replacementEntry;
+    try {
+      replacementEntry = prepareCanonicalExpenseEntry(
+        { expenseItemId: normalized.expenseItemId, amount: normalized.amount },
+        { timestamp: replacementTimestamp, expenseItems: items, accounts: accountRows });
+    } catch (error) {
+      return outcome(c.STATUS.REFUSED, {
+        code: error.expenseSingleCommitCode || error.entryCode || codes.ACCOUNT_PREFLIGHT_FAILED,
+        field: error.entryField || error.field || "expenseItemId",
+        detail: error.message });
+    }
+    var itemRow = items.filter(function(row) {
+      return String(row.ID_Ops).trim() === replacementEntry.expenseItemId;
+    })[0];
+    var replacementAccountCode = itemRow ? String(itemRow.AccountCode || "").trim() : "";
+    if (!replacementAccountCode) {
+      return outcome(c.STATUS.REFUSED, {
+        code: codes.ACCOUNT_PREFLIGHT_FAILED, field: "expenseItemId",
+        detail: "REPLACEMENT_EXPENSE_ACCOUNT_CODE_MISSING" });
+    }
+    var replacementAccount = accountMap[replacementAccountCode];
+    if (!replacementAccount || !isCanonicalActive(replacementAccount.IsActive)) {
+      return outcome(c.STATUS.REFUSED, {
+        code: codes.ACCOUNT_PREFLIGHT_FAILED, field: replacementAccountCode,
+        detail: "REPLACEMENT_EXPENSE_ACCOUNT_INACTIVE" });
+    }
+    var replacementEntryID = transactionStableBusinessID_("OPS-APP-", operationType,
+      normalized.requestKey);
+    var replacementJournalID = save.JOURNAL_ID_PREFIX + replacementEntryID;
+    var replacementNowISO = replacementTimestamp.toISOString();
+    var replacementJournalRows = [
+      { JournalID: replacementJournalID, LineID: replacementJournalID + "-1",
+        Tanggal: replacementEconomicDate, AccountCode: replacementAccountCode,
+        Debit: normalized.amount, Credit: 0, MovementType: save.MOVEMENT_TYPE,
+        SourceType: save.SOURCE_TYPE, SourceID: replacementEntryID,
+        ExternalRef: "", Keterangan: "", IsActive: true,
+        CreatedAt: replacementNowISO, CreatedBy: input.actor,
+        UpdatedAt: replacementNowISO, UpdatedBy: input.actor },
+      { JournalID: replacementJournalID, LineID: replacementJournalID + "-2",
+        Tanggal: replacementEconomicDate, AccountCode: c.MONEY_ACCOUNT_CODE,
+        Debit: 0, Credit: normalized.amount, MovementType: save.MOVEMENT_TYPE,
+        SourceType: save.SOURCE_TYPE, SourceID: replacementEntryID,
+        ExternalRef: "", Keterangan: "", IsActive: true,
+        CreatedAt: replacementNowISO, CreatedBy: input.actor,
+        UpdatedAt: replacementNowISO, UpdatedBy: input.actor }
+    ];
+    var replacementBusinessRow = {
+      ID_Trx: replacementEntryID, Tanggal: replacementTimestamp,
+      ID_Ops: replacementEntry.expenseItemId, Nilai: normalized.amount,
+      Source: CANONICAL_ENTRY.SOURCE, IsActive: true,
+      CreatedAt: replacementTimestamp, CreatedBy: CANONICAL_ENTRY.USER,
+      UpdatedAt: "", UpdatedBy: ""
+    };
+    var replacementAuditID = "LOG-ENTRY-" + runtime.uuid();
+    var replacementAuditRow = {
+      ID_Log: replacementAuditID, Timestamp: now, Level: "INFO",
+      Module: c.AUDIT_MODULE, Action: c.AUDIT_ACTIONS.CORRECT_CREATE,
+      RecordID: replacementEntryID, User: CANONICAL_ENTRY.USER,
+      Message: "Single-commit expense correction replacement recorded.",
+      Metadata: JSON.stringify({ reason: normalized.reason,
+        requestKey: normalized.requestKey, operationID: operationID,
+        originalId: target.transactionId, transactionType: "EXPENSE",
+        singleCommit: true })
+    };
+    input.replacement = {
+      entryID: replacementEntryID, amount: normalized.amount,
+      economicDate: replacementEconomicDate, timestamp: replacementTimestamp,
+      expenseItem: { expenseItemId: replacementEntry.expenseItemId,
+        item: replacementEntry.item, category: replacementEntry.category,
+        kind: replacementEntry.kind, group: replacementEntry.group,
+        accountCode: replacementAccountCode },
+      businessRow: replacementBusinessRow, journalID: replacementJournalID,
+      journalRows: replacementJournalRows,
+      journalSignature: policyCJournalSignature_(replacementJournalRows),
+      auditID: replacementAuditID, auditRow: replacementAuditRow
+    };
+  }
+  var plan;
+  try { plan = expenseCorrectionPlan_(operationType, input); }
+  catch (error) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.PLAN_MALFORMED, detail: "PLAN_BUILD:" + error.message });
+  }
+  var verify;
+  try { verify = expenseCorrectionVerifyPlan_(plan); }
+  catch (error) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.PLAN_MALFORMED, detail: error.message });
+  }
+  if (!verify.ok) {
+    return outcome(c.STATUS.REFUSED, {
+      code: verify.kind === "TAMPERED" ? codes.IDENTITY_CONFLICT : codes.PLAN_MALFORMED,
+      detail: verify.reason });
+  }
+  var bounds = expenseCorrectionBounds_(plan);
+  if (!bounds.ok) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.BATCH_BOUNDS_EXCEEDED, detail: bounds.detail });
+  }
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_BEFORE_INTENT");
+  var operation;
+  try {
+    operation = transactionResolveOperation_(runtime.repository, operationType,
+      normalized.requestKey, hash, plan.businessID, plan, runtime.now());
+  } catch (error) {
+    return outcome(error.code === "OPERATION_PAYLOAD_CONFLICT" ?
+      c.STATUS.CONFLICT : c.STATUS.RECOVERY_REQUIRED, {
+      code: error.code === "OPERATION_PAYLOAD_CONFLICT" ?
+        codes.OPERATION_PAYLOAD_CONFLICT : codes.DUPLICATE_OPERATION_EVIDENCE,
+      detail: error.message });
+  }
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_INTENT_PERSIST");
+  var readback = null;
+  try { readback = runtime.repository.findOperation(operationType, normalized.requestKey); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.INTENT_READBACK_FAILED, detail: "INTENT_READBACK_FAILED:" + error.message });
+  }
+  if (!readback) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.INTENT_READBACK_FAILED, detail: "INTENT_ROW_MISSING" });
+  }
+  if (readback.State !== "IN_PROGRESS" ||
+      !expenseSingleCommitFieldsExact_(readback, operation,
+        TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS)) {
+    var mismatch = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS.filter(function(header) {
+      return !expenseSingleCommitFieldEqual_(readback[header], operation[header]);
+    });
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.INTENT_READBACK_FAILED, detail: "INTENT_ROW_MISMATCH:" + mismatch.join(",") });
+  }
+  if (runtime.crash) runtime.crash("EXPENSE_CORR_AFTER_INTENT");
+  return expenseCorrectionApplyBatch_(plan, operation, runtime);
+}
+
+// Durable correction core. Fixed order: normalize -> exact (OperationType,
+// RequestKey) lookup BEFORE any mutable target read -> resume or new intent.
+// Never acquires a lock (the public entry owns the single outer ScriptLock).
+function expenseCorrectionRun_(operationType, normalized, runtime) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, codes = c.CODES;
+  var existing = null;
+  try {
+    existing = runtime.repository.findOperation(operationType, normalized.requestKey);
+  } catch (error) {
+    return expenseCorrectionResult_(c.STATUS.RECOVERY_REQUIRED, {
+      code: error && error.message === "DUPLICATE_OPERATION" ?
+        codes.DUPLICATE_OPERATION_EVIDENCE : codes.IDENTITY_CONFLICT,
+      requestKey: normalized.requestKey,
+      detail: error && error.message ? error.message : "" });
+  }
+  var hash = transactionPayloadHash_(normalized);
+  var result = existing ?
+    expenseCorrectionResume_(operationType, existing, hash, normalized, runtime) :
+    expenseCorrectionNewIntent_(operationType, normalized, hash, runtime);
+  if (result.status === c.STATUS.DONE && typeof runtime.invalidate === "function") {
+    try { runtime.invalidate(); }
+    catch (cacheError) {
+      Logger.log("Expense correction post-commit cache invalidation skipped: " +
+        String(cacheError && cacheError.message || cacheError));
+    }
+  }
+  return result;
+}
+
+// Dispatcher seam: normalize first (definite refusals write zero), then the
+// durable core over the already-assembled runtime. An unresolved gate is
+// resolved from the DISPATCHER runtime (which owns the injected
+// single-commit config seam) exactly once here; production dispatchers
+// without the seam fall through to the read-only config property.
+function expenseCorrectionDispatch_(operationType, payload, ss, dispatcherRuntime, gate) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION;
+  var normalized;
+  try { normalized = expenseCorrectionNormalize_(operationType, payload); }
+  catch (error) {
+    return expenseCorrectionResult_(c.STATUS.REFUSED, {
+      code: error.expenseSingleCommitCode || c.CODES.PAYLOAD_INVALID,
+      requestKey: expenseCorrectionPayloadKey_(payload),
+      field: error.field || "", detail: error.message });
+  }
+  if (gate === undefined || gate === null) {
+    gate = expenseSingleCommitGate_(dispatcherRuntime);
+  }
+  var core;
+  try {
+    core = expenseSingleCommitCoreRuntime_(ss, dispatcherRuntime, null, gate);
+  } catch (error) {
+    return expenseCorrectionResult_(c.STATUS.REFUSED, {
+      code: c.CODES.CORRECTION_RUNTIME_UNAVAILABLE, requestKey: normalized.requestKey,
+      detail: "RUNTIME_UNAVAILABLE:" + String(error && error.message || error) });
+  }
+  try {
+    return expenseCorrectionRun_(operationType, normalized, core);
+  } catch (error) {
+    var identity = { requestKey: normalized.requestKey, operationID: "" };
+    try {
+      var pending = core.repository.findOperation(operationType, normalized.requestKey);
+      if (pending) identity.operationID = pending.OperationID;
+    } catch (lookupError) { /* requestKey remains the recoverable identity */ }
+    return expenseCorrectionResult_(c.STATUS.UNKNOWN, Object.assign({
+      code: c.CODES.CORRECTION_EXECUTION_UNKNOWN,
+      detail: String(error && error.message || error),
+      targetID: normalized.transactionId
+    }, identity));
+  }
+}
+
+// Production transport: ONE spreadsheets.batchUpdate (appendCells +
+// updateCells subrequests) over the correction's own write surfaces. The
+// single batchUpdate is atomic; intent/batch/readback/commit remain
+// multistep — no database-global atomicity is claimed.
+function expenseCorrectionBatchRequest_(valueRanges) {
+  var sheetIds = expenseSingleCommitSheetIdsRequest_();
+  var body = expenseCorrectionBatchBody_(valueRanges, sheetIds);
+  return inventoryReceiptMigrationRequest_("post", ":batchUpdate", body);
+}
+
+// Public operator entries: the ONLY outer lock, acquired BEFORE
+// normalize/lookup and released exactly once. Lock or runtime failure happens
+// before any durable intent (definite REFUSED); only post-intent execution
+// uncertainty is UNKNOWN. Zero production invocation in local tests.
+function expenseCorrectionPublic_(operationType, payload) {
+  var c = EXPENSE_SINGLE_COMMIT_CORRECTION, codes = c.CODES;
+  var requestKey = expenseCorrectionPayloadKey_(payload);
+  var ss = null, dispatcher = null, gate = null;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+    dispatcher = {
+      now: function() { return new Date(); },
+      uuid: function() { return Utilities.getUuid(); },
+      flush: function() { SpreadsheetApp.flush(); },
+      invalidate: function() { invalidateDashboardCache(); },
+      expenseSingleCommit: { batch: function(ranges) {
+        return expenseCorrectionBatchRequest_(ranges);
+      } }
+    };
+    gate = expenseSingleCommitGate_(dispatcher);
+  } catch (error) {
+    return expenseCorrectionResult_(c.STATUS.REFUSED, {
+      code: codes.CORRECTION_RUNTIME_UNAVAILABLE, requestKey: requestKey,
+      detail: String(error && error.message || error) });
+  }
+  var lock = null, acquired = false;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    acquired = true;
+  } catch (error) {
+    return expenseCorrectionResult_(c.STATUS.REFUSED, {
+      code: codes.OUTER_LOCK_UNAVAILABLE, requestKey: requestKey,
+      detail: String(error && error.message || error) });
+  }
+  try {
+    return expenseCorrectionDispatch_(operationType, payload, ss, dispatcher, gate);
+  } catch (error) {
+    return expenseCorrectionResult_(c.STATUS.UNKNOWN, {
+      code: codes.CORRECTION_EXECUTION_UNKNOWN, requestKey: requestKey,
+      detail: String(error && error.message || error) });
+  } finally {
+    if (acquired) {
+      try { lock.releaseLock(); } catch (lockError) { /* lock auto-expires */ }
+    }
+  }
+}
+
+function expenseSingleCommitDurableVoid(payload) {
+  return expenseCorrectionPublic_(EXPENSE_SINGLE_COMMIT_CORRECTION.VOID, payload);
+}
+
+function expenseSingleCommitDurableCorrect(payload) {
+  return expenseCorrectionPublic_(EXPENSE_SINGLE_COMMIT_CORRECTION.CORRECT, payload);
+}
+
+// ---------------------------------------------------------------------------
+// T11.8/U6 — Purchase corrections (T11.2 §10, T11.5 §26):
+//   PURCHASE_EVENT_VOID   = Cancel
+//   PURCHASE_EVENT_CORRECT = Correct
+//
+// One operator action -> one durable intent -> one outer lock -> ONE
+// immutable plan -> ONE atomic batch per operation. Cancel appends the
+// signed Policy C reversal pair (MovementType POLICY_C_REVERSAL via the
+// frozen policyCReverseJournal shape: exact inverse Dr1040 / Cr6210 of the
+// original journal, ExternalRef = original JournalID, bound to the original
+// SourceID) + the canonical lifecycle marker (VOIDED + IsActive=false) + one
+// signed Logs entry — all inside ONE atomic batch. Correct appends that full
+// reversal + a complete replacement event (deterministic corr- identity,
+// final PaymentStatus=PAID / CashAccountCode=1040 / AccountingStatus=POSTED,
+// composed Dr6210/Cr1040 journal) with original lifecycle -> CORRECTED in
+// the SAME plan and batch — never reverse() then replacementSave(). Original
+// financial truth (PAID/1040/POSTED, amount, dates, keys, payload) is never
+// edited; only the canonical Lifecycle/IsActive marker changes, atomically.
+// No AP/2000, no Inventory, no 5000/1100, no Treasury, no payment-status
+// change (backend-derived PAID only), no historical rewrite.
+//
+// Admission (NEW intents only): SINGLE_COMMIT_TRANSACTION_V1 must resolve
+// ACTIVE (T11.7 §3 routing — ABSENT/PREPARED/PAUSED/REJECT/invalid refuse
+// fail-closed, zero writes, never a legacy fallback). Persisted IN_PROGRESS
+// intents resume from the frozen plan regardless of a later PAUSED config.
+// ---------------------------------------------------------------------------
+var PURCHASE_EVENT_CORRECTION = Object.freeze({
+  VOID: "PURCHASE_EVENT_VOID",
+  CORRECT: "PURCHASE_EVENT_CORRECT",
+  OPERATION_TYPES: Object.freeze(["PURCHASE_EVENT_VOID", "PURCHASE_EVENT_CORRECT"]),
+  PLAN_VERSION: 1,
+  VOID_JOURNAL_ID_PREFIX: "POLICYC-PEXP-VOID-",
+  CORRECT_JOURNAL_ID_PREFIX: "POLICYC-PEXP-CORRECT-",
+  REVERSAL_MOVEMENT_TYPE: "POLICY_C_REVERSAL",
+  REVERSAL_SOURCE_TYPE: "PURCHASE_EVENT",
+  MONEY_ACCOUNT_CODE: "1040",
+  DEBIT_ACCOUNT_CODE: "6210",
+  AUDIT_MODULE: "TransactionLifecycle",
+  AUDIT_ACTIONS: Object.freeze({
+    VOID: "VOID_PURCHASE_SINGLE_COMMIT",
+    CORRECT_VOID: "CORRECT_VOID_PURCHASE_SINGLE_COMMIT",
+    CORRECT_CREATE: "CORRECT_CREATE_PURCHASE_SINGLE_COMMIT"
+  }),
+  WRITE_SURFACES: Object.freeze(["PurchaseEvents", "BalanceLedger", "Logs"]),
+  ALLOWED_FIELDS: Object.freeze(["requestKey", "transactionId", "reason",
+    "expenseItemId", "input", "supplierID"]),
+  VOID_FIELDS: Object.freeze(["requestKey", "transactionId", "reason"]),
+  STATUS: Object.freeze({
+    DONE: "DONE",
+    REFUSED: "REFUSED",
+    CONFLICT: "CONFLICT",
+    UNKNOWN: "UNKNOWN",
+    RECOVERY_REQUIRED: "RECOVERY_REQUIRED"
+  }),
+  CODES: Object.freeze({
+    PAYLOAD_INVALID: "PURCHASE_EVENT_CORRECTION_PAYLOAD_INVALID",
+    PAYMENT_FIELD_REFUSED: "PURCHASE_EVENT_CORRECTION_PAYMENT_FIELD_REFUSED",
+    FIELD_REFUSED: "PURCHASE_EVENT_CORRECTION_FIELD_REFUSED",
+    REASON_INVALID: "PURCHASE_EVENT_CORRECTION_REASON_INVALID",
+    SCHEMA_NOT_READY: "PURCHASE_EVENT_CORRECTION_SCHEMA_NOT_READY",
+    ACCOUNT_PREFLIGHT_FAILED: "PURCHASE_EVENT_CORRECTION_ACCOUNT_PREFLIGHT_FAILED",
+    CORRECTION_NOT_ACTIVE: "PURCHASE_EVENT_CORRECTION_NOT_ACTIVE",
+    TARGET_NOT_FOUND: "PURCHASE_EVENT_CORRECTION_TARGET_NOT_FOUND",
+    TARGET_NOT_SUPPORTED: "PURCHASE_EVENT_CORRECTION_TARGET_NOT_SUPPORTED",
+    TARGET_ALREADY_VOIDED: "PURCHASE_EVENT_CORRECTION_TARGET_ALREADY_VOIDED",
+    TARGET_ALREADY_CORRECTED: "PURCHASE_EVENT_CORRECTION_TARGET_ALREADY_CORRECTED",
+    TARGET_NOT_CLEAN: "PURCHASE_EVENT_CORRECTION_TARGET_NOT_CLEAN",
+    OPERATION_PAYLOAD_CONFLICT: "OPERATION_PAYLOAD_CONFLICT",
+    DUPLICATE_OPERATION_EVIDENCE: "DUPLICATE_OPERATION_EVIDENCE",
+    BATCH_BOUNDS_EXCEEDED: "PURCHASE_EVENT_CORRECTION_BATCH_BOUNDS_EXCEEDED",
+    ARTIFACTS_INCOMPLETE: "PURCHASE_EVENT_CORRECTION_ARTIFACTS_INCOMPLETE",
+    IDENTITY_CONFLICT: "PURCHASE_EVENT_CORRECTION_IDENTITY_CONFLICT",
+    PLAN_MALFORMED: "PURCHASE_EVENT_CORRECTION_PLAN_MALFORMED",
+    INTENT_READBACK_FAILED: "PURCHASE_EVENT_CORRECTION_INTENT_READBACK_FAILED",
+    BATCH_OUTCOME_UNKNOWN: "PURCHASE_EVENT_CORRECTION_BATCH_OUTCOME_UNKNOWN",
+    READBACK_UNKNOWN: "PURCHASE_EVENT_CORRECTION_READBACK_UNKNOWN",
+    COMMIT_OUTCOME_UNKNOWN: "PURCHASE_EVENT_CORRECTION_COMMIT_OUTCOME_UNKNOWN",
+    INVALID_OPERATION_STATE: "PURCHASE_EVENT_CORRECTION_INVALID_OPERATION_STATE",
+    CORRECTION_EXECUTION_UNKNOWN: "PURCHASE_EVENT_CORRECTION_EXECUTION_UNKNOWN",
+    OUTER_LOCK_UNAVAILABLE: "OUTER_LOCK_UNAVAILABLE",
+    CORRECTION_RUNTIME_UNAVAILABLE: "PURCHASE_EVENT_CORRECTION_RUNTIME_UNAVAILABLE"
+  })
+});
+
+function purchaseCorrectionResult_(status, fields) {
+  return Object.assign({
+    status: status, code: "", requestKey: "", operationID: "", targetID: "",
+    replacementID: "", writeCount: 0, replay: false, field: "", detail: ""
+  }, fields || {});
+}
+
+function purchaseCorrectionPayloadKey_(payload) {
+  return payload && payload.requestKey !== undefined && payload.requestKey !== null ?
+    String(payload.requestKey) : "";
+}
+
+// Pure normalization for a Purchase correction intent. Strict per-operation
+// allowlist; payment/channel/evidence fields refuse before any read. CORRECT
+// keys must satisfy the existing corr- contract (8-64, no corr- prefix) so
+// the deterministic replacement key "corr-<requestKey>" stays legacy-valid.
+function purchaseCorrectionNormalize_(operationType, payload) {
+  var c = PURCHASE_EVENT_CORRECTION;
+  var p = payload && typeof payload === "object" && !Array.isArray(payload) ? payload : {};
+  var keys = Object.keys(p);
+  var payment = keys.filter(function(key) {
+    return PURCHASE_SINGLE_COMMIT_V1.PAYMENT_FIELDS.indexOf(key) !== -1 &&
+      p[key] !== undefined && p[key] !== null && String(p[key]).trim() !== "";
+  });
+  if (payment.length) {
+    throw expenseSingleCommitError_(c.CODES.PAYMENT_FIELD_REFUSED, payment[0],
+      "PAYMENT_FIELD_REFUSED:" + payment.join(","));
+  }
+  var allowed = operationType === c.VOID ? c.VOID_FIELDS : c.ALLOWED_FIELDS;
+  var unknown = keys.filter(function(key) { return allowed.indexOf(key) === -1; });
+  if (unknown.length) {
+    throw expenseSingleCommitError_(c.CODES.FIELD_REFUSED, unknown[0],
+      "FIELD_REFUSED:" + unknown.join(","));
+  }
+  var requestKey = p.requestKey === undefined || p.requestKey === null ?
+    "" : String(p.requestKey).trim();
+  if (!requestKey) {
+    throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "requestKey",
+      "REQUEST_KEY_REQUIRED");
+  }
+  if (operationType === c.CORRECT && !validatePurchaseCorrectionKey_(requestKey)) {
+    throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "requestKey",
+      "CORRECTION_KEY_INVALID");
+  }
+  if (operationType === c.VOID &&
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{3,127}$/.test(requestKey)) {
+    throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "requestKey",
+      "REQUEST_KEY_INVALID");
+  }
+  var transactionId = p.transactionId === undefined || p.transactionId === null ?
+    "" : String(p.transactionId).trim();
+  if (!transactionId) {
+    throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "transactionId",
+      "TRANSACTION_ID_REQUIRED");
+  }
+  var reason = typeof p.reason === "string" ? p.reason.trim() : "";
+  if (reason.length < 3 || reason.length > 500 || !/[A-Za-z0-9]/.test(reason)) {
+    throw expenseSingleCommitError_(c.CODES.REASON_INVALID, "reason", "REASON_INVALID");
+  }
+  var normalized = { requestKey: requestKey, transactionId: transactionId,
+    reason: reason };
+  if (operationType === c.CORRECT) {
+    var expenseItemId = p.expenseItemId === undefined || p.expenseItemId === null ?
+      "" : String(p.expenseItemId).trim();
+    if (!expenseItemId) {
+      throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "expenseItemId",
+        "EXPENSE_ITEM_REQUIRED");
+    }
+    if (!p.input || typeof p.input !== "object" || Array.isArray(p.input)) {
+      throw expenseSingleCommitError_(c.CODES.PAYLOAD_INVALID, "input",
+        "REPLACEMENT_INPUT_REQUIRED");
+    }
+    var supplierID = p.supplierID === undefined || p.supplierID === null ?
+      "" : String(p.supplierID).trim();
+    normalized.expenseItemId = expenseItemId;
+    normalized.input = p.input;
+    normalized.supplierID = supplierID;
+  }
+  return normalized;
+}
+
+// Eligibility + immutable target evidence for a Purchase correction. Genuine
+// committed T11 single-commit lineage only (exact PURCHASE_SINGLE_COMMIT_SAVE
+// operation + committed Policy C prospective journal); legacy/UNPAID/AP/
+// historical events fail closed with a distinct zero-write code.
+function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
+  var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1,
+    codes = c.CODES, ss = runtime.spreadsheet;
+  function refuse(code, detail) { return { ok: false, code: code, detail: detail }; }
+  var ops;
+  try { ops = expenseCorrectionOperationRows_(ss); }
+  catch (error) { return refuse(codes.SCHEMA_NOT_READY, error.message); }
+  var saveOps = ops.filter(function(op) {
+    return String(op.OperationType) === save.OPERATION_TYPE &&
+      String(op.BusinessID) === normalized.transactionId;
+  });
+  if (!saveOps.length) return refuse(codes.TARGET_NOT_SUPPORTED, "NOT_SINGLE_COMMIT");
+  if (saveOps.length > 1) return refuse(codes.TARGET_NOT_SUPPORTED, "DUPLICATE_SAVE_OPS");
+  var saveOp = saveOps[0];
+  if (String(saveOp.State) !== "COMMITTED") {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_STATE:" + String(saveOp.State));
+  }
+  var savePlan = null;
+  try { savePlan = JSON.parse(String(saveOp.OperationPlan || "")); }
+  catch (error) { return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_PLAN_JSON"); }
+  if (!savePlan || typeof savePlan !== "object" || Array.isArray(savePlan) ||
+      String(savePlan.entryID) !== normalized.transactionId) {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_PLAN_MISMATCH");
+  }
+  // One active correction branch per original (same rule as Sales/Expense).
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i];
+    if (c.OPERATION_TYPES.indexOf(String(op.OperationType)) === -1) continue;
+    if (String(op.OperationType) === operationType &&
+        String(op.RequestKey) === normalized.requestKey) continue;
+    var opPlan = null;
+    try { opPlan = JSON.parse(String(op.OperationPlan || "")); }
+    catch (error) { return refuse(codes.TARGET_NOT_CLEAN, "CORRECTION_PLAN_JSON"); }
+    if (!opPlan || String(opPlan.targetID) !== normalized.transactionId) continue;
+    return refuse(String(op.OperationType) === c.VOID ?
+      codes.TARGET_ALREADY_VOIDED : codes.TARGET_ALREADY_CORRECTED,
+      String(op.OperationType) + ":" + String(op.RequestKey) + ":" + String(op.State));
+  }
+  var events = null;
+  try {
+    events = readCanonicalTable(ss, "PurchaseEvents", PURCHASE_EVENT_POLICY.headers);
+  } catch (error) { return refuse(codes.SCHEMA_NOT_READY, "PurchaseEvents:" + error.message); }
+  var rows = events.filter(function(row) {
+    return String(row.EventID) === normalized.transactionId;
+  });
+  if (!rows.length) return refuse(codes.TARGET_NOT_FOUND, "PURCHASE_EVENT");
+  if (rows.length > 1) return refuse(codes.TARGET_NOT_CLEAN, "DUPLICATE_EVENT_ROW");
+  var row = rows[0];
+  if (row.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL ||
+      !isCanonicalActive(row.IsActive)) {
+    return refuse(String(row.Lifecycle) === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED ?
+      codes.TARGET_ALREADY_VOIDED :
+      (String(row.Lifecycle) === PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED ?
+        codes.TARGET_ALREADY_CORRECTED : codes.TARGET_NOT_CLEAN),
+      "LIFECYCLE:" + String(row.Lifecycle));
+  }
+  // Financial truth of a T11 event: PAID / 1040 / POSTED exactly.
+  if (String(row.PaymentStatus) !== save.PAYMENT_STATUS ||
+      String(row.CashAccountCode) !== save.MONEY_ACCOUNT_CODE ||
+      String(row.AccountingStatus) !== save.ACCOUNTING_STATUS) {
+    return refuse(codes.TARGET_NOT_SUPPORTED, "PAYMENT_AUTHORITY");
+  }
+  var ledger = null;
+  try {
+    ledger = readCanonicalTable(ss, "BalanceLedger",
+      BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+  } catch (error) { return refuse(codes.SCHEMA_NOT_READY, "BalanceLedger:" + error.message); }
+  var originalJournalID = String(savePlan.journalID);
+  var journalRows = ledger.filter(function(r) {
+    return String(r.JournalID) === originalJournalID;
+  });
+  var amount = Number(row.AcquisitionValue);
+  var debitRow = journalRows.filter(function(r) {
+    return String(r.AccountCode) === c.DEBIT_ACCOUNT_CODE &&
+      Number(r.Debit) === amount && Number(r.Credit) === 0;
+  })[0];
+  var creditRow = journalRows.filter(function(r) {
+    return String(r.AccountCode) === c.MONEY_ACCOUNT_CODE &&
+      Number(r.Credit) === amount && Number(r.Debit) === 0;
+  })[0];
+  if (journalRows.length !== 2 || !debitRow || !creditRow ||
+      String(debitRow.SourceType) !== save.SOURCE_TYPE ||
+      String(debitRow.SourceID) !== normalized.transactionId ||
+      String(debitRow.MovementType) !== save.MOVEMENT_TYPE ||
+      String(creditRow.SourceType) !== save.SOURCE_TYPE ||
+      String(creditRow.SourceID) !== normalized.transactionId ||
+      !isFinite(amount) || amount <= 0 || Number(savePlan.amount) !== amount) {
+    return refuse(codes.TARGET_NOT_CLEAN, "ORIGINAL_JOURNAL");
+  }
+  return { ok: true, target: {
+    transactionId: normalized.transactionId,
+    rowNumber: row.sourceRowIndex + 1,
+    amount: amount,
+    purchaseAccount: c.DEBIT_ACCOUNT_CODE,
+    originalJournalID: originalJournalID,
+    originalEconomicDate: String(debitRow.Tanggal),
+    originalJournalRows: journalRows,
+    saveOperationID: String(saveOp.OperationID),
+    saveRequestKey: String(saveOp.RequestKey),
+    row: row
+  }, targetEvidence: {
+    eventRow: transactionPayloadHash_(row),
+    journal: transactionPayloadHash_(journalRows),
+    savePlan: transactionPayloadHash_(savePlan)
+  } };
+}
+
+// Immutable plan freeze: Policy C reversal pair (exact inverse, ACTION date,
+// ExternalRef linkage) + canonical lifecycle marker + signed Logs marker +
+// optional complete replacement (event row + composed journal + audit) — all
+// derived once and owned by ONE plan digest.
+function purchaseCorrectionPlan_(operationType, input) {
+  var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1;
+  var normalized = input.normalized, target = input.target,
+    now = input.now, nowISO = now.toISOString();
+  var journalIDPrefix = operationType === c.VOID ? c.VOID_JOURNAL_ID_PREFIX :
+    c.CORRECT_JOURNAL_ID_PREFIX;
+  var reversalJournalID = journalIDPrefix + target.transactionId;
+  var reversal = policyCReverseJournal(target.originalJournalRows, reversalJournalID,
+    input.economicDate, c.REVERSAL_SOURCE_TYPE, target.transactionId);
+  if (reversal.status !== "READY" || !reversal.rows || reversal.rows.length !== 2) {
+    throw expenseSingleCommitError_(c.CODES.TARGET_NOT_CLEAN, "",
+      "REVERSAL_BUILD_FAILED:" + String(reversal.reason || reversal.status));
+  }
+  var reversalJournalRows = reversal.rows.map(function(row) {
+    row.CreatedAt = nowISO; row.CreatedBy = input.actor;
+    row.UpdatedAt = nowISO; row.UpdatedBy = input.actor;
+    return row;
+  });
+  var reversalJournalSignature = policyCJournalSignature_(reversalJournalRows);
+  var lifecycleRow = {};
+  PURCHASE_EVENT_POLICY.headers.forEach(function(header) {
+    lifecycleRow[header] = target.row[header];
+  });
+  lifecycleRow.Lifecycle = operationType === c.VOID ?
+    PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED :
+    PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED;
+  lifecycleRow.IsActive = false;
+  var auditAction = operationType === c.VOID ? c.AUDIT_ACTIONS.VOID :
+    c.AUDIT_ACTIONS.CORRECT_VOID;
+  var auditMetadata = { reason: normalized.reason,
+    requestKey: normalized.requestKey, operationID: input.operationID,
+    transactionType: "PURCHASE", singleCommit: true,
+    targetJournalID: target.originalJournalID,
+    reversalJournalID: reversalJournalID };
+  if (input.replacement) {
+    auditMetadata.replacementId = input.replacement.eventRow.EventID;
+  }
+  var auditRow = {
+    ID_Log: input.auditID, Timestamp: now, Level: "INFO",
+    Module: c.AUDIT_MODULE, Action: auditAction, RecordID: target.transactionId,
+    User: CANONICAL_ENTRY.USER,
+    Message: operationType === c.VOID ?
+      "Single-commit purchase cancelled." :
+      "Single-commit purchase correction reversal recorded.",
+    Metadata: JSON.stringify(auditMetadata)
+  };
+  var plan = {
+    planVersion: c.PLAN_VERSION, operationType: operationType,
+    operationID: input.operationID, requestKey: normalized.requestKey,
+    payloadHash: input.hash, normalizedPayload: normalized,
+    targetID: target.transactionId,
+    businessID: operationType === c.VOID ? target.transactionId : "",
+    reason: normalized.reason, actor: input.actor, actionAt: nowISO,
+    economicDate: input.economicDate, amount: target.amount,
+    accounts: { purchase: c.DEBIT_ACCOUNT_CODE, money: c.MONEY_ACCOUNT_CODE },
+    sourceType: c.REVERSAL_SOURCE_TYPE, movementType: c.REVERSAL_MOVEMENT_TYPE,
+    target: target, targetEvidence: input.targetEvidence,
+    reversalJournalID: reversalJournalID,
+    reversalJournalRows: reversalJournalRows,
+    reversalJournalSignature: reversalJournalSignature,
+    lifecycle: { rowNumber: target.rowNumber, afterRow: lifecycleRow },
+    auditID: input.auditID, auditRow: auditRow,
+    replacement: null
+  };
+  if (operationType === c.CORRECT) {
+    plan.businessID = input.replacement.eventRow.EventID;
+    plan.replacement = input.replacement;
+  }
+  plan.planDigest = transactionPayloadHash_(plan);
+  return plan;
+}
+
+// Plan integrity + shape invariants (freeze time + every resume, zero writes).
+function purchaseCorrectionVerifyPlan_(plan) {
+  var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1;
+  function malformed(reason) { return { ok: false, kind: "MALFORMED", reason: reason }; }
+  function tampered(reason) { return { ok: false, kind: "TAMPERED", reason: reason }; }
+  if (!plan || typeof plan !== "object" || Array.isArray(plan)) return malformed("PLAN_NOT_OBJECT");
+  if (plan.planVersion !== c.PLAN_VERSION) return malformed("PLAN_VERSION_MISMATCH");
+  if (plan.operationType !== c.VOID && plan.operationType !== c.CORRECT) {
+    return malformed("OPERATION_TYPE_MISMATCH");
+  }
+  if (typeof plan.requestKey !== "string" || !plan.requestKey) return malformed("REQUEST_KEY_MISSING");
+  if (plan.operationID !== transactionOperationID_(plan.operationType, plan.requestKey)) {
+    return tampered("OPERATION_ID_MISMATCH");
+  }
+  if (typeof plan.payloadHash !== "string" ||
+      plan.payloadHash !== transactionPayloadHash_(plan.normalizedPayload)) {
+    return tampered("PAYLOAD_HASH_MISMATCH");
+  }
+  if (typeof plan.targetID !== "string" || !plan.targetID) return malformed("TARGET_ID_MISSING");
+  var payload = plan.normalizedPayload || {};
+  if (payload.transactionId !== plan.targetID) return tampered("TARGET_ID_MISMATCH");
+  if (typeof payload.reason !== "string" || !payload.reason || plan.reason !== payload.reason) {
+    return tampered("REASON_MISMATCH");
+  }
+  var amount = plan.amount;
+  if (typeof amount !== "number" || !isFinite(amount) || amount <= 0) {
+    return malformed("AMOUNT_INVALID");
+  }
+  if (plan.accounts.money !== c.MONEY_ACCOUNT_CODE ||
+      plan.accounts.purchase !== c.DEBIT_ACCOUNT_CODE) {
+    return tampered("ACCOUNT_MAPPING_MISMATCH");
+  }
+  if (plan.sourceType !== c.REVERSAL_SOURCE_TYPE ||
+      plan.movementType !== c.REVERSAL_MOVEMENT_TYPE) {
+    return tampered("SOURCE_IDENTITY_MISMATCH");
+  }
+  if (typeof plan.economicDate !== "string" || !capitalEquityDateKey(plan.economicDate)) {
+    return malformed("ECONOMIC_DATE_INVALID");
+  }
+  if (typeof plan.actor !== "string" || !plan.actor || typeof plan.actionAt !== "string" ||
+      !plan.actionAt) {
+    return malformed("ACTOR_OR_TIMESTAMP_MISSING");
+  }
+  var target = plan.target;
+  if (!target || typeof target !== "object") return malformed("TARGET_MISSING");
+  if (String(target.transactionId) !== plan.targetID) return tampered("TARGET_TRANSACTION_MISMATCH");
+  if (String(target.originalJournalID) !== save.JOURNAL_ID_PREFIX + plan.targetID &&
+      String(target.originalJournalID).indexOf(save.JOURNAL_ID_PREFIX) !== 0) {
+    return tampered("TARGET_JOURNAL_MISMATCH");
+  }
+  if (Number(target.amount) !== amount) return tampered("TARGET_AMOUNT_MISMATCH");
+  if (!isFinite(Number(target.rowNumber)) || Number(target.rowNumber) < 2 ||
+      Number(target.rowNumber) !== Number(plan.lifecycle.rowNumber)) {
+    return tampered("TARGET_ROW_NUMBER_MISMATCH");
+  }
+  if (!target.row || target.row.EventID !== plan.targetID ||
+      Number(target.row.AcquisitionValue) !== amount ||
+      target.row.PaymentStatus !== save.PAYMENT_STATUS ||
+      target.row.CashAccountCode !== save.MONEY_ACCOUNT_CODE ||
+      target.row.AccountingStatus !== save.ACCOUNTING_STATUS ||
+      target.row.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL ||
+      !isCanonicalActive(target.row.IsActive) ||
+      Number(target.row.sourceRowIndex) + 1 !== Number(target.rowNumber)) {
+    return tampered("TARGET_ROW_MISMATCH");
+  }
+  ["eventRow", "journal", "savePlan"].forEach(function(key) {
+    if (typeof plan.targetEvidence[key] !== "string" || !plan.targetEvidence[key]) {
+      throw new Error("TARGET_EVIDENCE_" + key.toUpperCase() + "_MISSING");
+    }
+  });
+  var after = plan.lifecycle.afterRow;
+  if (!after || typeof after !== "object") return malformed("LIFECYCLE_ROW_MISSING");
+  var expectedLifecycle = plan.operationType === c.VOID ?
+    PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED : PURCHASE_EVENT_LIFECYCLE_STATES.CORRECTED;
+  if (after.EventID !== plan.targetID || after.Lifecycle !== expectedLifecycle ||
+      after.IsActive !== false ||
+      after.PaymentStatus !== save.PAYMENT_STATUS ||
+      after.CashAccountCode !== save.MONEY_ACCOUNT_CODE ||
+      after.AccountingStatus !== save.ACCOUNTING_STATUS ||
+      Number(after.AcquisitionValue) !== amount ||
+      after.RequestKey !== target.row.RequestKey ||
+      after.NormalizedPayload !== target.row.NormalizedPayload ||
+      after.RecoveryKey !== target.row.RecoveryKey) {
+    return tampered("LIFECYCLE_ROW_MISMATCH");
+  }
+  // Reversal pair: exact Policy C inverse (6210 credit + 1040 debit).
+  var rows = plan.reversalJournalRows;
+  if (!Array.isArray(rows) || rows.length !== 2) return malformed("REVERSAL_JOURNAL_ROW_COUNT");
+  var r0 = rows[0], r1 = rows[1];
+  if (r0.LineID !== plan.reversalJournalID + "-1" || r1.LineID !== plan.reversalJournalID + "-2" ||
+      r0.JournalID !== plan.reversalJournalID || r1.JournalID !== plan.reversalJournalID ||
+      plan.reversalJournalID !== (plan.operationType === c.VOID ?
+        c.VOID_JOURNAL_ID_PREFIX : c.CORRECT_JOURNAL_ID_PREFIX) + plan.targetID) {
+    return tampered("REVERSAL_JOURNAL_ID_MISMATCH");
+  }
+  var rowsOk = rows.every(function(row) {
+    return row.SourceType === c.REVERSAL_SOURCE_TYPE && row.SourceID === plan.targetID &&
+      row.MovementType === c.REVERSAL_MOVEMENT_TYPE && row.IsActive === true &&
+      row.ExternalRef === target.originalJournalID &&
+      expenseSingleCommitFieldEqual_(row.Tanggal, plan.economicDate);
+  });
+  if (!rowsOk) return tampered("REVERSAL_JOURNAL_SOURCE_MISMATCH");
+  if (r0.AccountCode !== c.DEBIT_ACCOUNT_CODE || Number(r0.Debit) !== 0 ||
+      Number(r0.Credit) !== amount || r1.AccountCode !== c.MONEY_ACCOUNT_CODE ||
+      Number(r1.Debit) !== amount || Number(r1.Credit) !== 0) {
+    return tampered("REVERSAL_JOURNAL_MAPPING_MISMATCH");
+  }
+  if (policyCJournalSignature_(rows) !== plan.reversalJournalSignature) {
+    return tampered("REVERSAL_JOURNAL_SIGNATURE_MISMATCH");
+  }
+  var audit = plan.auditRow;
+  var expectedAction = plan.operationType === c.VOID ? c.AUDIT_ACTIONS.VOID :
+    c.AUDIT_ACTIONS.CORRECT_VOID;
+  if (!audit || audit.ID_Log !== plan.auditID || audit.RecordID !== plan.targetID ||
+      audit.Module !== c.AUDIT_MODULE || audit.Action !== expectedAction) {
+    return tampered("AUDIT_ROW_MISMATCH");
+  }
+  var auditMeta = null;
+  try { auditMeta = JSON.parse(String(audit.Metadata || "{}")); }
+  catch (error) { return malformed("AUDIT_METADATA_JSON_INVALID"); }
+  if (!auditMeta || auditMeta.requestKey !== plan.requestKey ||
+      auditMeta.operationID !== plan.operationID || auditMeta.singleCommit !== true ||
+      auditMeta.targetJournalID !== target.originalJournalID ||
+      auditMeta.reversalJournalID !== plan.reversalJournalID) {
+    return tampered("AUDIT_METADATA_MISMATCH");
+  }
+  if (plan.operationType === c.VOID) {
+    if (plan.replacement !== null && plan.replacement !== undefined) {
+      return malformed("REPLACEMENT_IN_VOID");
+    }
+    if (plan.businessID !== plan.targetID) return tampered("BUSINESS_ID_MISMATCH");
+    if (payload.expenseItemId !== undefined || payload.input !== undefined ||
+        payload.supplierID !== undefined) {
+      return tampered("REPLACEMENT_FIELDS_IN_VOID");
+    }
+  } else {
+    var rep = plan.replacement;
+    if (!rep || typeof rep !== "object") return malformed("REPLACEMENT_MISSING");
+    var expectedRequestKey = "corr-" + plan.requestKey;
+    var expectedEventID = save.EVENT_ID_PREFIX + expectedRequestKey;
+    if (rep.eventRow.EventID !== expectedEventID ||
+        rep.eventRow.RequestKey !== expectedRequestKey ||
+        plan.businessID !== expectedEventID) {
+      return tampered("REPLACEMENT_ID_DERIVATION_MISMATCH");
+    }
+    if (payload.expenseItemId !== rep.eventRow.ExpenseID ||
+        payload.supplierID !== String(rep.eventRow.SupplierID || "")) {
+      return tampered("REPLACEMENT_PAYLOAD_MISMATCH");
+    }
+    var repEvent = rep.eventRow;
+    if (repEvent.PaymentStatus !== save.PAYMENT_STATUS ||
+        repEvent.CashAccountCode !== save.MONEY_ACCOUNT_CODE ||
+        repEvent.AccountingStatus !== save.ACCOUNTING_STATUS ||
+        repEvent.Lifecycle !== PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL ||
+        repEvent.IsActive !== true ||
+        repEvent.RecoveryKey !== save.RECOVERY_KEY_PREFIX + expectedRequestKey ||
+        Number(repEvent.AcquisitionValue) !== Number(rep.amount)) {
+      return tampered("REPLACEMENT_EVENT_AUTHORITY_MISMATCH");
+    }
+    if (!rep.eventNormalizedPayload ||
+        JSON.stringify(rep.eventNormalizedPayload) !== String(repEvent.NormalizedPayload) ||
+        rep.eventNormalizedPayload.requestKey !== expectedRequestKey ||
+        rep.eventNormalizedPayload.transactionType !== "EXPENSE") {
+      return tampered("REPLACEMENT_EVENT_PAYLOAD_MISMATCH");
+    }
+    // Re-derive the replacement save normalization from the persisted raw
+    // payload: a redigested plan can never smuggle a different input.
+    if (!rep.saveNormalized || typeof payload.input !== "object" || !payload.input) {
+      return malformed("REPLACEMENT_INPUT_MISSING");
+    }
+    var rederived;
+    try {
+      rederived = purchaseSingleCommitNormalize_({ transactionType: "EXPENSE",
+        requestKey: expectedRequestKey, expenseItemId: payload.expenseItemId,
+        input: payload.input, supplierID: payload.supplierID });
+    } catch (error) {
+      return malformed("REPLACEMENT_INPUT_INVALID");
+    }
+    if (JSON.stringify(rederived) !== JSON.stringify(rep.saveNormalized) ||
+        JSON.stringify(purchaseSingleCommitEventPayload_(rederived)) !==
+          JSON.stringify(rep.eventNormalizedPayload)) {
+      return tampered("REPLACEMENT_INPUT_MISMATCH");
+    }
+    if (rep.journalID !== save.JOURNAL_ID_PREFIX + expectedEventID) {
+      return tampered("REPLACEMENT_JOURNAL_ID_MISMATCH");
+    }
+    if (!Array.isArray(rep.journalRows) || rep.journalRows.length !== 2) {
+      return malformed("REPLACEMENT_JOURNAL_ROW_COUNT");
+    }
+    var j0 = rep.journalRows[0], j1 = rep.journalRows[1];
+    var replOk = rep.journalRows.every(function(row) {
+      return row.SourceType === save.SOURCE_TYPE && row.SourceID === expectedEventID &&
+        row.MovementType === save.MOVEMENT_TYPE && row.IsActive === true &&
+        expenseSingleCommitFieldEqual_(row.Tanggal, rep.economicDate);
+    });
+    if (!replOk || j0.LineID !== rep.journalID + "-1" || j1.LineID !== rep.journalID + "-2" ||
+        j0.JournalID !== rep.journalID || j1.JournalID !== rep.journalID) {
+      return tampered("REPLACEMENT_JOURNAL_SOURCE_MISMATCH");
+    }
+    if (j0.AccountCode !== c.DEBIT_ACCOUNT_CODE || Number(j0.Debit) !== Number(rep.amount) ||
+        Number(j0.Credit) !== 0 || j1.AccountCode !== c.MONEY_ACCOUNT_CODE ||
+        Number(j1.Debit) !== 0 || Number(j1.Credit) !== Number(rep.amount)) {
+      return tampered("REPLACEMENT_JOURNAL_MAPPING_MISMATCH");
+    }
+    if (policyCJournalSignature_(rep.journalRows) !== rep.journalSignature) {
+      return tampered("REPLACEMENT_JOURNAL_SIGNATURE_MISMATCH");
+    }
+    var repAudit = rep.auditRow;
+    var repMeta = null;
+    try { repMeta = JSON.parse(String(repAudit && repAudit.Metadata || "{}")); }
+    catch (error) { return malformed("REPLACEMENT_AUDIT_METADATA_JSON_INVALID"); }
+    if (!repAudit || repAudit.ID_Log !== rep.auditID ||
+        repAudit.RecordID !== expectedEventID ||
+        repAudit.Module !== c.AUDIT_MODULE ||
+        repAudit.Action !== c.AUDIT_ACTIONS.CORRECT_CREATE || !repMeta ||
+        repMeta.originalId !== plan.targetID ||
+        repMeta.requestKey !== plan.requestKey ||
+        repMeta.operationID !== plan.operationID) {
+      return tampered("REPLACEMENT_AUDIT_MISMATCH");
+    }
+    if (!isFinite(Number(rep.amount)) || Number(rep.amount) <= 0) {
+      return malformed("REPLACEMENT_AMOUNT_INVALID");
+    }
+  }
+  var digestInput = Object.assign({}, plan);
+  delete digestInput.planDigest;
+  if (plan.planDigest !== transactionPayloadHash_(digestInput)) {
+    return tampered("PLAN_DIGEST_MISMATCH");
+  }
+  return { ok: true, kind: "", reason: "" };
+}
+
+function purchaseCorrectionRowValues_(row, headers) {
+  return headers.map(function(header) {
+    return row[header] === undefined ? "" : row[header];
+  });
+}
+
+// The ONE batch's logical ranges (frozen plan order). PurchaseEvents may
+// appear twice on CORRECT (lifecycle update of the original + append of the
+// replacement); surfaces stay exactly {PurchaseEvents, BalanceLedger, Logs}.
+function purchaseCorrectionValueRanges_(plan) {
+  var c = PURCHASE_EVENT_CORRECTION;
+  var ranges = [
+    { range: "PurchaseEvents", updateRow: plan.lifecycle.rowNumber,
+      values: [purchaseCorrectionRowValues_(plan.lifecycle.afterRow,
+        PURCHASE_EVENT_POLICY.headers)] }
+  ];
+  if (plan.replacement) {
+    ranges.push({ range: "PurchaseEvents",
+      values: [purchaseCorrectionRowValues_(plan.replacement.eventRow,
+        PURCHASE_EVENT_POLICY.headers)] });
+  }
+  ranges.push({ range: "BalanceLedger",
+    values: plan.reversalJournalRows
+      .concat(plan.replacement ? plan.replacement.journalRows : [])
+      .map(function(row) {
+        return purchaseCorrectionRowValues_(row,
+          BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+      }) });
+  var auditRows = [plan.auditRow];
+  if (plan.replacement) auditRows.push(plan.replacement.auditRow);
+  ranges.push({ range: "Logs", values: auditRows.map(function(row) {
+    return purchaseCorrectionRowValues_(row, CANONICAL_ENTRY.LOG_HEADERS);
+  }) });
+  var unique = [];
+  ranges.forEach(function(range) {
+    if (unique.indexOf(range.range) === -1) unique.push(range.range);
+  });
+  unique.sort();
+  var expected = c.WRITE_SURFACES.slice().sort();
+  if (JSON.stringify(unique) !== JSON.stringify(expected)) {
+    throw new Error("CORRECTION_SURFACE_MISMATCH");
+  }
+  return ranges;
+}
+
+function purchaseCorrectionBounds_(plan) {
+  var c = PURCHASE_EVENT_CORRECTION, ranges;
+  try { ranges = purchaseCorrectionValueRanges_(plan); }
+  catch (error) { return { ok: false, detail: "CORRECTION_SURFACE_MISMATCH" }; }
+  var cells = 0;
+  ranges.forEach(function(range) {
+    range.values.forEach(function(row) { cells += row.length; });
+  });
+  var sentinel = {};
+  c.WRITE_SURFACES.forEach(function(name) { sentinel[name] = 2147483647; });
+  var body;
+  try { body = expenseCorrectionBatchBody_(ranges, sentinel); }
+  catch (error) { return { ok: false, detail: "UNSAFE_BATCH:" + error.message }; }
+  var bytes = expenseSingleCommitUtf8Bytes_(JSON.stringify(body)) +
+    PURCHASE_SINGLE_COMMIT_V1.REQUEST_OVERHEAD_BYTES;
+  var planJson = "";
+  try { planJson = JSON.stringify(plan); }
+  catch (error) { return { ok: false, detail: "PLAN_JSON_INVALID" }; }
+  if (planJson.length > PURCHASE_SINGLE_COMMIT_V1.MAX_CELL_CHARS) {
+    return { ok: false, detail: "UNSAFE_PLAN_CELL_CHARS:" + planJson.length };
+  }
+  var ok = cells <= PURCHASE_SINGLE_COMMIT_V1.MAX_BATCH_CELLS &&
+    bytes <= PURCHASE_SINGLE_COMMIT_V1.MAX_REQUEST_BYTES;
+  return { ok: ok, cells: cells, bytes: bytes, planChars: planJson.length,
+    detail: ok ? "" : "BATCH_BOUNDS cells=" + cells + " bytes=" + bytes };
+}
+
+// Exact artifact verification against the frozen plan over the three
+// surfaces. NONE / PARTIAL / CONFLICT / EXACT / UNKNOWN.
+function purchaseCorrectionInspect_(plan, ss) {
+  var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1,
+    ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
+  var events, ledger, logs, ops;
+  try {
+    events = readCanonicalTable(ss, "PurchaseEvents", PURCHASE_EVENT_POLICY.headers);
+    ledger = readCanonicalTable(ss, "BalanceLedger", ledgerHeaders);
+    logs = readCanonicalTable(ss, "Logs", CANONICAL_ENTRY.LOG_HEADERS);
+    ops = expenseCorrectionOperationRows_(ss);
+  } catch (error) {
+    return { state: "UNKNOWN", detail: "READBACK_FAILED:" + error.message };
+  }
+  var conflicts = [], missing = [];
+  var lifecycleApplied = false;
+  var rows = events.filter(function(row) {
+    return String(row.EventID) === plan.targetID;
+  });
+  if (rows.length !== 1) {
+    conflicts.push(rows.length ? "TARGET_ROW_DUPLICATE" : "TARGET_ROW_MISSING");
+  } else if (rows[0].sourceRowIndex + 1 !== Number(plan.lifecycle.rowNumber)) {
+    conflicts.push("TARGET_ROW_DRIFT");
+  } else {
+    var post = expenseSingleCommitRowExact_(rows[0], plan.lifecycle.afterRow,
+      PURCHASE_EVENT_POLICY.headers);
+    var pre = expenseSingleCommitRowExact_(rows[0], plan.target.row,
+      PURCHASE_EVENT_POLICY.headers);
+    if (post) lifecycleApplied = true;
+    else if (!pre) conflicts.push("TARGET_ROW_TAMPERED");
+  }
+  var saveOps = ops.filter(function(op) {
+    return String(op.OperationType) === save.OPERATION_TYPE &&
+      String(op.BusinessID) === plan.targetID;
+  });
+  if (saveOps.length !== 1 || String(saveOps[0].State) !== "COMMITTED") {
+    conflicts.push("SAVE_LINEAGE_MISSING");
+  } else {
+    var lineagePlan = null;
+    try { lineagePlan = JSON.parse(String(saveOps[0].OperationPlan || "")); }
+    catch (error) { lineagePlan = null; }
+    if (!lineagePlan || transactionPayloadHash_(lineagePlan) !== plan.targetEvidence.savePlan) {
+      conflicts.push("SAVE_LINEAGE_TAMPERED");
+    }
+  }
+  var reversalById = ledger.filter(function(row) {
+    return String(row.JournalID) === plan.reversalJournalID;
+  });
+  var reversalBySource = reversalById.filter(function(row) {
+    return String(row.SourceID) === plan.targetID &&
+      String(row.SourceType) === plan.sourceType &&
+      String(row.MovementType) === plan.movementType;
+  });
+  if (reversalById.length || reversalBySource.length) {
+    var idSet = reversalById.map(function(row) { return String(row.LineID); }).sort().join("");
+    var sourceSet = reversalBySource.map(function(row) { return String(row.LineID); }).sort().join("");
+    if (idSet !== sourceSet) conflicts.push("REVERSAL_IDENTITY_CROSSOVER");
+    if (reversalBySource.length === 2) {
+      var sorted = reversalBySource.slice().sort(function(left, right) {
+        return String(left.LineID) < String(right.LineID) ? -1 : 1;
+      });
+      for (var i = 0; i < 2; i++) {
+        if (!expenseSingleCommitRowExact_(sorted[i], plan.reversalJournalRows[i],
+            ledgerHeaders)) {
+          conflicts.push("REVERSAL_JOURNAL_TAMPERED");
+        }
+      }
+      if (policyCJournalSignature_(reversalBySource) !== plan.reversalJournalSignature) {
+        conflicts.push("REVERSAL_JOURNAL_SIGNATURE_MISMATCH");
+      }
+      var debit = 0, credit = 0;
+      reversalBySource.forEach(function(row) {
+        debit += Number(row.Debit); credit += Number(row.Credit);
+      });
+      if (debit !== credit) conflicts.push("REVERSAL_JOURNAL_BALANCE_MISMATCH");
+    } else if (reversalBySource.length === 1) {
+      var only = reversalBySource[0], planned = null;
+      plan.reversalJournalRows.forEach(function(row) {
+        if (String(row.LineID) === String(only.LineID)) planned = row;
+      });
+      if (!planned || !expenseSingleCommitRowExact_(only, planned, ledgerHeaders)) {
+        conflicts.push("REVERSAL_JOURNAL_TAMPERED");
+      } else missing.push("REVERSAL_JOURNAL_LINE");
+    } else if (reversalBySource.length === 0) missing.push("REVERSAL_JOURNAL_LINE");
+    else conflicts.push("REVERSAL_JOURNAL_DUPLICATE");
+  } else missing.push("REVERSAL_JOURNAL");
+  ledger.forEach(function(row) {
+    if (String(row.SourceType) === plan.sourceType &&
+        String(row.SourceID) === plan.targetID &&
+        String(row.JournalID) !== plan.target.originalJournalID &&
+        String(row.JournalID) !== plan.reversalJournalID) {
+      conflicts.push("FOREIGN_JOURNAL_CLAIM");
+    }
+  });
+  var auditById = logs.filter(function(row) { return row.ID_Log === plan.auditID; });
+  if (auditById.length) {
+    if (auditById.length > 1) conflicts.push("AUDIT_DUPLICATE");
+    else if (!expenseSingleCommitRowExact_(auditById[0], plan.auditRow,
+        CANONICAL_ENTRY.LOG_HEADERS)) {
+      conflicts.push("AUDIT_TAMPERED");
+    }
+  } else missing.push("AUDIT");
+  // Nothing written yet (intent only) — checked before the replacement
+  // branches so a CORRECT plan with zero artifacts classifies NONE, never
+  // PARTIAL (the resume path then applies the frozen plan exactly once).
+  if (!lifecycleApplied && !reversalById.length && !auditById.length) {
+    return { state: "NONE", detail: "NO_ARTIFACTS" };
+  }
+  var replacement = plan.replacement;
+  if (replacement) {
+    var expectedEventID = save.EVENT_ID_PREFIX + "corr-" + plan.requestKey;
+    var repRows = events.filter(function(row) {
+      return String(row.EventID) === expectedEventID;
+    });
+    if (repRows.length !== 1) {
+      if (repRows.length) conflicts.push("REPLACEMENT_ROW_DUPLICATE");
+      else missing.push("REPLACEMENT_ROW");
+    } else if (!expenseSingleCommitRowExact_(repRows[0], replacement.eventRow,
+        PURCHASE_EVENT_POLICY.headers)) {
+      conflicts.push("REPLACEMENT_ROW_TAMPERED");
+    }
+    var repJournal = ledger.filter(function(row) {
+      return String(row.JournalID) === replacement.journalID;
+    });
+    var repJournalBySource = repJournal.filter(function(row) {
+      return String(row.SourceID) === expectedEventID &&
+        String(row.SourceType) === save.SOURCE_TYPE;
+    });
+    if (repJournal.length !== 2 || repJournalBySource.length !== 2) {
+      if (!repJournal.length && !repJournalBySource.length) missing.push("REPLACEMENT_JOURNAL");
+      else if (repJournal.length === 1 || repJournalBySource.length === 1) {
+        missing.push("REPLACEMENT_JOURNAL_LINE");
+      } else conflicts.push("REPLACEMENT_JOURNAL_DUPLICATE");
+    } else {
+      var repSorted = repJournalBySource.slice().sort(function(left, right) {
+        return String(left.LineID) < String(right.LineID) ? -1 : 1;
+      });
+      for (var j = 0; j < 2; j++) {
+        if (!expenseSingleCommitRowExact_(repSorted[j], replacement.journalRows[j],
+            ledgerHeaders)) {
+          conflicts.push("REPLACEMENT_JOURNAL_TAMPERED");
+        }
+      }
+      if (policyCJournalSignature_(repJournalBySource) !== replacement.journalSignature) {
+        conflicts.push("REPLACEMENT_JOURNAL_SIGNATURE_MISMATCH");
+      }
+    }
+    var repAudit = logs.filter(function(row) { return row.ID_Log === replacement.auditID; });
+    if (repAudit.length !== 1) {
+      if (!repAudit.length) missing.push("REPLACEMENT_AUDIT");
+      else conflicts.push("REPLACEMENT_AUDIT_DUPLICATE");
+    } else if (!expenseSingleCommitRowExact_(repAudit[0], replacement.auditRow,
+        CANONICAL_ENTRY.LOG_HEADERS)) {
+      conflicts.push("REPLACEMENT_AUDIT_TAMPERED");
+    }
+    if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
+    if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
+    if (!lifecycleApplied) return { state: "PARTIAL", detail: "LIFECYCLE" };
+    return { state: "EXACT", detail: "" };
+  }
+  if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
+  var present = lifecycleApplied || reversalById.length || auditById.length;
+  if (!present) return { state: "NONE", detail: "NO_ARTIFACTS" };
+  if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
+  if (!lifecycleApplied) return { state: "PARTIAL", detail: "LIFECYCLE" };
+  return { state: "EXACT", detail: "" };
+}
+
+// Pre-batch guard: the frozen target row must still exist exactly at its
+// planned row before the ONE batch is issued (never re-plan changed rows).
+function purchaseCorrectionRowGuard_(plan, ss) {
+  var events;
+  try {
+    events = readCanonicalTable(ss, "PurchaseEvents", PURCHASE_EVENT_POLICY.headers);
+  } catch (error) { return { ok: false, detail: "READ_FAILED:" + error.message }; }
+  var rows = events.filter(function(row) {
+    return String(row.EventID) === plan.targetID;
+  });
+  if (rows.length !== 1) return { ok: false, detail: "ROW_COUNT:" + rows.length };
+  if (rows[0].sourceRowIndex + 1 !== Number(plan.lifecycle.rowNumber)) {
+    return { ok: false, detail: "ROW_DRIFT" };
+  }
+  if (!expenseSingleCommitRowExact_(rows[0], plan.target.row, PURCHASE_EVENT_POLICY.headers)) {
+    return { ok: false, detail: "ROW_CHANGED" };
+  }
+  return { ok: true, detail: "" };
+}
+
+function purchaseCorrectionOutcome_(plan, status, fields) {
+  return purchaseCorrectionResult_(status, Object.assign({
+    requestKey: plan.requestKey, operationID: plan.operationID, targetID: plan.targetID,
+    replacementID: plan.replacement ? plan.replacement.eventRow.EventID : ""
+  }, fields || {}));
+}
+
+function purchaseCorrectionApplyBatch_(plan, operation, runtime) {
+  var c = PURCHASE_EVENT_CORRECTION, codes = c.CODES;
+  function outcome(status, fields) {
+    return purchaseCorrectionOutcome_(plan, status, fields);
+  }
+  var guard = purchaseCorrectionRowGuard_(plan, runtime.spreadsheet);
+  if (!guard.ok) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.ARTIFACTS_INCOMPLETE, detail: "TARGET_ROW_" + guard.detail,
+        writeCount: "UNKNOWN" });
+  }
+  var ranges = null;
+  try { ranges = purchaseCorrectionValueRanges_(plan); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: error.message, writeCount: "UNKNOWN" });
+  }
+  var rows = 0;
+  ranges.forEach(function(range) { rows += range.values.length; });
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_BEFORE_BATCH");
+  var batchError = null;
+  try { runtime.batch(ranges); } catch (error) { batchError = error; }
+  if (!batchError && runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_BATCH");
+  var inspection = purchaseCorrectionInspect_(plan, runtime.spreadsheet);
+  if (inspection.state === "UNKNOWN") {
+    return outcome(c.STATUS.UNKNOWN,
+      { code: codes.READBACK_UNKNOWN, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state === "NONE" && batchError) {
+    return outcome(c.STATUS.UNKNOWN,
+      { code: codes.BATCH_OUTCOME_UNKNOWN, writeCount: "UNKNOWN", detail: inspection.detail });
+  }
+  if (inspection.state !== "EXACT") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED, {
+      code: inspection.state === "CONFLICT" ?
+        (inspection.detail.indexOf("SIGNATURE") !== -1 ?
+          codes.ARTIFACTS_INCOMPLETE : codes.IDENTITY_CONFLICT) :
+        codes.ARTIFACTS_INCOMPLETE,
+      writeCount: "UNKNOWN", detail: inspection.state + ":" + inspection.detail });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_READBACK");
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_BEFORE_COMMIT");
+  var commit = expenseSingleCommitCommit_(operation, runtime);
+  if (!commit.ok) {
+    return outcome(commit.status, { code: commit.code, writeCount: rows, detail: commit.detail });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_COMMIT");
+  return outcome(c.STATUS.DONE, { writeCount: rows });
+}
+
+// Resume path: admission is NEVER re-evaluated here — a persisted
+// IN_PROGRESS intent recovers from its frozen plan regardless of a later
+// PAUSED config (T11.7 §3).
+function purchaseCorrectionResume_(operationType, operation, hash, normalized, runtime) {
+  var c = PURCHASE_EVENT_CORRECTION, codes = c.CODES;
+  function outcome(status, fields) {
+    return purchaseCorrectionResult_(status, Object.assign({
+      requestKey: normalized.requestKey, operationID: operation.OperationID || "",
+      targetID: operation.BusinessID || ""
+    }, fields || {}));
+  }
+  if (operation.OperationType !== operationType || !operation.BusinessID ||
+      operation.RequestKey !== normalized.requestKey || operation.PayloadHash !== hash) {
+    return outcome(c.STATUS.CONFLICT, { code: codes.OPERATION_PAYLOAD_CONFLICT });
+  }
+  var plan = null;
+  try { plan = JSON.parse(operation.OperationPlan); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: "PLAN_JSON:" + error.message });
+  }
+  if (!plan || plan.requestKey !== normalized.requestKey || plan.payloadHash !== hash ||
+      plan.operationID !== operation.OperationID ||
+      plan.businessID !== operation.BusinessID ||
+      plan.targetID !== normalized.transactionId) {
+    return outcome(c.STATUS.CONFLICT,
+      { code: codes.OPERATION_PAYLOAD_CONFLICT, detail: "PLAN_IDENTITY_MISMATCH" });
+  }
+  if (!plan.normalizedPayload ||
+      JSON.stringify(plan.normalizedPayload) !== JSON.stringify(normalized)) {
+    return outcome(c.STATUS.CONFLICT,
+      { code: codes.OPERATION_PAYLOAD_CONFLICT, detail: "NORMALIZED_PAYLOAD_MISMATCH" });
+  }
+  var verify;
+  try { verify = purchaseCorrectionVerifyPlan_(plan); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.PLAN_MALFORMED, detail: error.message });
+  }
+  if (!verify.ok) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED, {
+      code: verify.kind === "TAMPERED" ? codes.IDENTITY_CONFLICT : codes.PLAN_MALFORMED,
+      detail: verify.reason });
+  }
+  if (operation.State !== "IN_PROGRESS" && operation.State !== "COMMITTED") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED, {
+      code: codes.INVALID_OPERATION_STATE, detail: "STATE:" + String(operation.State) });
+  }
+  var schema = purchaseSingleCommitSchemaGate_(runtime.spreadsheet);
+  if (schema.status !== "PASS") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(",") });
+  }
+  var bounds = purchaseCorrectionBounds_(plan);
+  if (!bounds.ok) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.BATCH_BOUNDS_EXCEEDED, detail: bounds.detail });
+  }
+  var inspection = purchaseCorrectionInspect_(plan, runtime.spreadsheet);
+  if (inspection.state === "UNKNOWN") {
+    return outcome(c.STATUS.UNKNOWN,
+      { code: codes.READBACK_UNKNOWN, detail: inspection.detail });
+  }
+  var closedCode = inspection.state === "CONFLICT" ?
+    (inspection.detail.indexOf("SIGNATURE") !== -1 ?
+      codes.ARTIFACTS_INCOMPLETE : codes.IDENTITY_CONFLICT) :
+    codes.ARTIFACTS_INCOMPLETE;
+  if (inspection.state === "EXACT") {
+    if (operation.State === "COMMITTED") {
+      if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_COMMIT");
+      return outcome(c.STATUS.DONE, { replay: true, writeCount: 0,
+        targetID: plan.targetID,
+        replacementID: plan.replacement ? plan.replacement.eventRow.EventID : "" });
+    }
+    if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_READBACK");
+    if (runtime.crash) runtime.crash("PURCHASE_CORR_BEFORE_COMMIT");
+    var commit = expenseSingleCommitCommit_(operation, runtime);
+    if (!commit.ok) {
+      return outcome(commit.status, { code: commit.code, detail: commit.detail });
+    }
+    if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_COMMIT");
+    return outcome(c.STATUS.DONE, { replay: true, writeCount: 0,
+      targetID: plan.targetID,
+      replacementID: plan.replacement ? plan.replacement.eventRow.EventID : "" });
+  }
+  if (operation.State === "COMMITTED") {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: closedCode, detail: inspection.detail });
+  }
+  if (inspection.state === "NONE") {
+    return purchaseCorrectionApplyBatch_(plan, operation, runtime);
+  }
+  return outcome(c.STATUS.RECOVERY_REQUIRED,
+    { code: closedCode, detail: inspection.detail });
+}
+
+// New-intent path (outer lock held, lookup returned absent): admission,
+// schema, {1040, 6210} preflight, target eligibility, ONE immutable plan
+// (reversal + optional complete replacement), bounds, durable IN_PROGRESS
+// intent + exact readback, then the ONE atomic batch.
+function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) {
+  var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1,
+    codes = c.CODES;
+  function outcome(status, fields) {
+    return purchaseCorrectionResult_(status,
+      Object.assign({ requestKey: normalized.requestKey, targetID: normalized.transactionId },
+        fields || {}));
+  }
+  var gate = runtime.gate === undefined || runtime.gate === null ?
+    purchaseSingleCommitGate_(runtime) : runtime.gate;
+  if (gate.mode !== "ACTIVE") {
+    return outcome(c.STATUS.REFUSED, {
+      code: gate.code || codes.CORRECTION_NOT_ACTIVE,
+      detail: gate.detail || "SINGLE_COMMIT_NOT_ACTIVE" });
+  }
+  var schema = purchaseSingleCommitSchemaGate_(runtime.spreadsheet);
+  if (schema.status !== "PASS") {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: schema.badSheets.join(",") });
+  }
+  var accountRows;
+  try {
+    accountRows = readCanonicalTable(runtime.spreadsheet, "Accounts",
+      CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS);
+  } catch (error) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.SCHEMA_NOT_READY, detail: "ACCOUNTS:" + error.message });
+  }
+  // Preflight {1040, 6210} — no fallback, no inference (T11.2 §11 + Policy C).
+  var moneyPreflight = preflightSingleCommitMoneyAccount(accountRows);
+  if (moneyPreflight.status !== "PASS") {
+    var moneyError = moneyPreflight.errors[0] || {};
+    return outcome(c.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED,
+      field: moneyError.accountCode || c.MONEY_ACCOUNT_CODE,
+      detail: "MONEY_ACCOUNT_PREFLIGHT_FAILED:" + String(moneyError.code || "") });
+  }
+  var purchaseAccounts = accountRows.filter(function(row) {
+    return row && typeof row === "object" &&
+      String(row.AccountCode === undefined || row.AccountCode === null ? "" :
+        row.AccountCode).trim() === c.DEBIT_ACCOUNT_CODE;
+  });
+  if (purchaseAccounts.length !== 1) {
+    return outcome(c.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: c.DEBIT_ACCOUNT_CODE,
+      detail: purchaseAccounts.length ? "PURCHASE_ACCOUNT_DUPLICATE" :
+        "PURCHASE_ACCOUNT_ABSENT" });
+  }
+  var purchaseAccount = purchaseAccounts[0];
+  if (!isCanonicalActive(purchaseAccount.IsActive)) {
+    return outcome(c.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: c.DEBIT_ACCOUNT_CODE,
+      detail: "PURCHASE_ACCOUNT_INACTIVE" });
+  }
+  if (String(purchaseAccount.AccountType || "").trim() !== "Expense" ||
+      String(purchaseAccount.NormalBalance || "").trim() !== "DEBIT") {
+    return outcome(c.STATUS.REFUSED, {
+      code: codes.ACCOUNT_PREFLIGHT_FAILED, field: c.DEBIT_ACCOUNT_CODE,
+      detail: "PURCHASE_ACCOUNT_METADATA_MISMATCH" });
+  }
+  var resolved = purchaseCorrectionResolveTarget_(operationType, normalized, runtime);
+  if (!resolved.ok) {
+    return outcome(c.STATUS.REFUSED, { code: resolved.code, detail: resolved.detail });
+  }
+  var target = resolved.target;
+  var now = runtime.now();
+  var economicDate = capitalEquityDateKey(now);
+  if (!economicDate) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, detail: "ACTION_DATE_INVALID" });
+  }
+  var operationID = transactionOperationID_(operationType, normalized.requestKey);
+  var input = { operationType: operationType, requestKey: normalized.requestKey,
+    normalized: normalized, hash: hash, target: target,
+    targetEvidence: resolved.targetEvidence, actor: runtime.actor(), now: now,
+    economicDate: economicDate, operationID: operationID,
+    auditID: "LOG-ENTRY-" + runtime.uuid() };
+  if (operationType === c.CORRECT) {
+    // Complete replacement purchase resolved ONCE for this intent, then
+    // frozen in the plan (accounts/authority re-derived here only).
+    var replacementRequestKey = "corr-" + normalized.requestKey;
+    var replacementSaveNormalized;
+    try {
+      replacementSaveNormalized = purchaseSingleCommitNormalize_({
+        transactionType: "EXPENSE", requestKey: replacementRequestKey,
+        expenseItemId: normalized.expenseItemId, input: normalized.input,
+        supplierID: normalized.supplierID });
+    } catch (error) {
+      return outcome(c.STATUS.REFUSED, {
+        code: error.purchaseSingleCommitCode || codes.PAYLOAD_INVALID,
+        field: error.field || "input",
+        detail: "REPLACEMENT_PAYLOAD:" + error.message });
+    }
+    var replacementEconomicDate = capitalEquityDateKey(
+      replacementSaveNormalized.input.ExpenseDate);
+    var regime = resolvePolicyCAccountingRegime_(replacementSaveNormalized.input.ExpenseDate);
+    if (regime.status !== "RESOLVED" || regime.regime !== save.REGIME) {
+      return outcome(c.STATUS.REFUSED, {
+        code: save.CODES.REGIME_NOT_PROSPECTIVE, field: "ExpenseDate",
+        detail: String(regime.reason || regime.regime || "") });
+    }
+    if (!replacementEconomicDate) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.PAYLOAD_INVALID, detail: "REPLACEMENT_DATE_INVALID" });
+    }
+    var items = runtime.items || readCanonicalTable(runtime.spreadsheet,
+      "ExpenseItems", save.ITEM_HEADERS);
+    var itemRow = items.filter(function(row) {
+      return String(row.ID_Ops).trim() === replacementSaveNormalized.expenseItemId &&
+        isCanonicalActive(row.IsActive);
+    })[0];
+    if (!itemRow) {
+      return outcome(c.STATUS.REFUSED, {
+        code: codes.PAYLOAD_INVALID, field: "expenseItemId",
+        detail: "EXPENSE_ITEM_NOT_ACTIVE_OR_MAPPED" });
+    }
+    var route;
+    try {
+      route = resolveExpensePurchasePolicy_(replacementSaveNormalized.expenseItemId, items);
+    } catch (error) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: error.message });
+    }
+    if (!expensePolicyIsPurchase_(route)) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: "NOT_PURCHASE_POLICY" });
+    }
+    var itemLabel = String(itemRow.Item || "").trim();
+    if (!itemLabel) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: "ITEM_LABEL_MISSING" });
+    }
+    if (replacementSaveNormalized.supplierID) {
+      var supplierRows;
+      try {
+        supplierRows = readCanonicalTable(runtime.spreadsheet,
+          SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS);
+      } catch (error) {
+        return outcome(c.STATUS.REFUSED,
+          { code: codes.PAYLOAD_INVALID, field: "supplierID",
+            detail: "SUPPLIERS_NOT_READY" });
+      }
+      var supplier = supplierRows.filter(function(row) {
+        return String(row.SupplierID || "").trim() === replacementSaveNormalized.supplierID;
+      })[0];
+      if (!supplier || !masterSelectionEligible(supplier.IsActive)) {
+        return outcome(c.STATUS.REFUSED,
+          { code: codes.PAYLOAD_INVALID, field: "supplierID",
+            detail: "SUPPLIER_INACTIVE" });
+      }
+    }
+    // Foreign-artifact defenses for the replacement identity: an existing
+    // event row or Policy C journal on the replacement identity is a
+    // conflict, never a second append.
+    var replacementEventID = save.EVENT_ID_PREFIX + replacementRequestKey;
+    var existingEvents;
+    try {
+      existingEvents = readCanonicalTable(runtime.spreadsheet, "PurchaseEvents",
+        PURCHASE_EVENT_POLICY.headers);
+    } catch (error) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.SCHEMA_NOT_READY, detail: "PURCHASE_EVENTS:" + error.message });
+    }
+    if (existingEvents.some(function(row) {
+        return String(row.RequestKey || "") === replacementRequestKey ||
+          String(row.EventID || "") === replacementEventID; })) {
+      return outcome(c.STATUS.CONFLICT,
+        { code: codes.IDENTITY_CONFLICT, detail: "REPLACEMENT_EVENT_IDENTITY_EXISTS" });
+    }
+    var ledgerRows;
+    try {
+      ledgerRows = readCanonicalTable(runtime.spreadsheet, "BalanceLedger",
+        BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
+    } catch (error) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.SCHEMA_NOT_READY, detail: "BALANCE_LEDGER:" + error.message });
+    }
+    var journalState = policyCExistingJournalState_(ledgerRows, save.SOURCE_TYPE,
+      replacementEventID);
+    if (journalState.status !== "NONE") {
+      return outcome(c.STATUS.CONFLICT, { code: codes.IDENTITY_CONFLICT,
+        detail: "REPLACEMENT_JOURNAL_IDENTITY_EXISTS:" + journalState.status });
+    }
+    var replacementJournalID = save.JOURNAL_ID_PREFIX + replacementEventID;
+    var replacementAmount = Number(replacementSaveNormalized.input.AcquisitionValue);
+    var replacementNowISO = now.toISOString();
+    var replacementJournalRows = [
+      { JournalID: replacementJournalID, LineID: replacementJournalID + "-1",
+        Tanggal: replacementEconomicDate, AccountCode: c.DEBIT_ACCOUNT_CODE,
+        Debit: replacementAmount, Credit: 0, MovementType: save.MOVEMENT_TYPE,
+        SourceType: save.SOURCE_TYPE, SourceID: replacementEventID,
+        ExternalRef: "", Keterangan: "", IsActive: true,
+        CreatedAt: replacementNowISO, CreatedBy: input.actor,
+        UpdatedAt: replacementNowISO, UpdatedBy: input.actor },
+      { JournalID: replacementJournalID, LineID: replacementJournalID + "-2",
+        Tanggal: replacementEconomicDate, AccountCode: c.MONEY_ACCOUNT_CODE,
+        Debit: 0, Credit: replacementAmount, MovementType: save.MOVEMENT_TYPE,
+        SourceType: save.SOURCE_TYPE, SourceID: replacementEventID,
+        ExternalRef: "", Keterangan: "", IsActive: true,
+        CreatedAt: replacementNowISO, CreatedBy: input.actor,
+        UpdatedAt: replacementNowISO, UpdatedBy: input.actor }
+    ];
+    var replacementEventPayload = purchaseSingleCommitEventPayload_(
+      replacementSaveNormalized);
+    var allocationStatus = route.PurchaseRelationship.indexOf("HPP_COST_POOL") === 0 ?
+      "COST_POOL_ALLOCATION_UNDEFINED" : "QUANTITY_PACKAGE_UNRESOLVED";
+    var replacementEventRow = {
+      EventID: replacementEventID,
+      ExpenseID: replacementSaveNormalized.expenseItemId,
+      BusinessLabel: itemLabel,
+      PolicyVersion: EXPENSE_PURCHASE_POLICY.version,
+      PolicyRevision: EXPENSE_PURCHASE_POLICY.revision,
+      CostType: route.CostType,
+      PurchaseRelationship: route.PurchaseRelationship,
+      ExpenseDate: replacementSaveNormalized.input.ExpenseDate,
+      ReceiptDate: replacementSaveNormalized.input.ReceiptDate,
+      PurchaseQty: replacementSaveNormalized.input.PurchaseQty,
+      PurchaseUOM: replacementSaveNormalized.input.PurchaseUOM,
+      AcquisitionValue: replacementSaveNormalized.input.AcquisitionValue,
+      SupplierSource: replacementSaveNormalized.input.SupplierSource,
+      ExternalRef: replacementSaveNormalized.input.ExternalRef,
+      ExternalDocumentStatus: replacementSaveNormalized.input.ExternalDocumentStatus,
+      Attestation: JSON.stringify({ attested: true,
+        conversionEvidenceConfirmed:
+          replacementSaveNormalized.input.ConversionEvidenceConfirmed }),
+      AllocationStatus: allocationStatus,
+      RequestKey: replacementRequestKey,
+      NormalizedPayload: JSON.stringify(replacementEventPayload),
+      ReceiptPlan: "null",
+      Lifecycle: PURCHASE_EVENT_LIFECYCLE_STATES.CAPTURED_OPERATIONAL,
+      RecoveryKey: save.RECOVERY_KEY_PREFIX + replacementRequestKey,
+      CreatedAt: replacementNowISO, CreatedBy: input.actor, IsActive: true,
+      PaymentStatus: save.PAYMENT_STATUS,
+      CashAccountCode: save.MONEY_ACCOUNT_CODE,
+      SupplierID: replacementSaveNormalized.supplierID,
+      AccountingStatus: save.ACCOUNTING_STATUS
+    };
+    var replacementAuditID = "LOG-ENTRY-" + runtime.uuid();
+    var replacementAuditRow = {
+      ID_Log: replacementAuditID, Timestamp: now, Level: "INFO",
+      Module: c.AUDIT_MODULE, Action: c.AUDIT_ACTIONS.CORRECT_CREATE,
+      RecordID: replacementEventID, User: CANONICAL_ENTRY.USER,
+      Message: "Single-commit purchase correction replacement recorded.",
+      Metadata: JSON.stringify({ reason: normalized.reason,
+        requestKey: normalized.requestKey, operationID: operationID,
+        originalId: target.transactionId, transactionType: "PURCHASE",
+        singleCommit: true })
+    };
+    input.replacement = {
+      eventRow: replacementEventRow,
+      eventNormalizedPayload: replacementEventPayload,
+      saveNormalized: replacementSaveNormalized,
+      amount: replacementAmount, economicDate: replacementEconomicDate,
+      journalID: replacementJournalID, journalRows: replacementJournalRows,
+      journalSignature: policyCJournalSignature_(replacementJournalRows),
+      auditID: replacementAuditID, auditRow: replacementAuditRow
+    };
+  }
+  var plan;
+  try { plan = purchaseCorrectionPlan_(operationType, input); }
+  catch (error) {
+    return outcome(c.STATUS.REFUSED, {
+      code: error.purchaseSingleCommitCode || codes.PLAN_MALFORMED,
+      field: error.field || "", detail: "PLAN_BUILD:" + error.message });
+  }
+  var verify;
+  try { verify = purchaseCorrectionVerifyPlan_(plan); }
+  catch (error) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.PLAN_MALFORMED, detail: error.message });
+  }
+  if (!verify.ok) {
+    return outcome(c.STATUS.REFUSED, {
+      code: verify.kind === "TAMPERED" ? codes.IDENTITY_CONFLICT : codes.PLAN_MALFORMED,
+      detail: verify.reason });
+  }
+  var bounds = purchaseCorrectionBounds_(plan);
+  if (!bounds.ok) {
+    return outcome(c.STATUS.REFUSED,
+      { code: codes.BATCH_BOUNDS_EXCEEDED, detail: bounds.detail });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_BEFORE_INTENT");
+  var operation;
+  try {
+    operation = transactionResolveOperation_(runtime.repository, operationType,
+      normalized.requestKey, hash, plan.businessID, plan, runtime.now());
+  } catch (error) {
+    return outcome(error.code === "OPERATION_PAYLOAD_CONFLICT" ?
+      c.STATUS.CONFLICT : c.STATUS.RECOVERY_REQUIRED, {
+      code: error.code === "OPERATION_PAYLOAD_CONFLICT" ?
+        codes.OPERATION_PAYLOAD_CONFLICT : codes.DUPLICATE_OPERATION_EVIDENCE,
+      detail: error.message });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_INTENT_PERSIST");
+  var readback = null;
+  try { readback = runtime.repository.findOperation(operationType, normalized.requestKey); }
+  catch (error) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.INTENT_READBACK_FAILED, detail: "INTENT_READBACK_FAILED:" + error.message });
+  }
+  if (!readback) {
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.INTENT_READBACK_FAILED, detail: "INTENT_ROW_MISSING" });
+  }
+  if (readback.State !== "IN_PROGRESS" ||
+      !expenseSingleCommitFieldsExact_(readback, operation,
+        TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS)) {
+    var mismatch = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS.filter(function(header) {
+      return !expenseSingleCommitFieldEqual_(readback[header], operation[header]);
+    });
+    return outcome(c.STATUS.RECOVERY_REQUIRED,
+      { code: codes.INTENT_READBACK_FAILED, detail: "INTENT_ROW_MISMATCH:" + mismatch.join(",") });
+  }
+  if (runtime.crash) runtime.crash("PURCHASE_CORR_AFTER_INTENT");
+  return purchaseCorrectionApplyBatch_(plan, operation, runtime);
+}
+
+function purchaseCorrectionRun_(operationType, normalized, runtime) {
+  var c = PURCHASE_EVENT_CORRECTION, codes = c.CODES;
+  var existing = null;
+  try {
+    existing = runtime.repository.findOperation(operationType, normalized.requestKey);
+  } catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.RECOVERY_REQUIRED, {
+      code: error && error.message === "DUPLICATE_OPERATION" ?
+        codes.DUPLICATE_OPERATION_EVIDENCE : codes.IDENTITY_CONFLICT,
+      requestKey: normalized.requestKey,
+      detail: error && error.message ? error.message : "" });
+  }
+  var hash = transactionPayloadHash_(normalized);
+  var result = existing ?
+    purchaseCorrectionResume_(operationType, existing, hash, normalized, runtime) :
+    purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime);
+  if (result.status === c.STATUS.DONE && typeof runtime.invalidate === "function") {
+    try { runtime.invalidate(); }
+    catch (cacheError) {
+      Logger.log("Purchase correction post-commit cache invalidation skipped: " +
+        String(cacheError && cacheError.message || cacheError));
+    }
+  }
+  return result;
+}
+
+function purchaseCorrectionDispatch_(operationType, payload, ss, dispatcherRuntime, gate) {
+  var c = PURCHASE_EVENT_CORRECTION;
+  var normalized;
+  try { normalized = purchaseCorrectionNormalize_(operationType, payload); }
+  catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.REFUSED, {
+      code: error.expenseSingleCommitCode || c.CODES.PAYLOAD_INVALID,
+      requestKey: purchaseCorrectionPayloadKey_(payload),
+      field: error.field || "", detail: error.message });
+  }
+  if (gate === undefined || gate === null) {
+    gate = purchaseSingleCommitGate_(dispatcherRuntime);
+  }
+  var core;
+  try {
+    core = purchaseSingleCommitCoreRuntime_(ss, dispatcherRuntime, null, gate);
+  } catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.REFUSED, {
+      code: c.CODES.CORRECTION_RUNTIME_UNAVAILABLE, requestKey: normalized.requestKey,
+      detail: "RUNTIME_UNAVAILABLE:" + String(error && error.message || error) });
+  }
+  try {
+    return purchaseCorrectionRun_(operationType, normalized, core);
+  } catch (error) {
+    var identity = { requestKey: normalized.requestKey, operationID: "" };
+    try {
+      var pending = core.repository.findOperation(operationType, normalized.requestKey);
+      if (pending) identity.operationID = pending.OperationID;
+    } catch (lookupError) { /* requestKey remains the recoverable identity */ }
+    return purchaseCorrectionResult_(c.STATUS.UNKNOWN, Object.assign({
+      code: c.CODES.CORRECTION_EXECUTION_UNKNOWN,
+      detail: String(error && error.message || error),
+      targetID: normalized.transactionId
+    }, identity));
+  }
+}
+
+// Production transport: ONE spreadsheets.batchUpdate (appendCells +
+// updateCells) over the correction's own write surfaces.
+function purchaseCorrectionBatchRequest_(valueRanges) {
+  var sheetIds = purchaseSingleCommitSheetIdsRequest_();
+  var body = expenseCorrectionBatchBody_(valueRanges, sheetIds);
+  return inventoryReceiptMigrationRequest_("post", ":batchUpdate", body);
+}
+
+// Public operator entries: the ONLY outer lock, acquired BEFORE
+// normalize/lookup, released exactly once. Lock/runtime failure happens
+// before any durable intent (definite REFUSED); post-intent uncertainty is
+// UNKNOWN with identity retained. Zero production invocation in local tests.
+function purchaseCorrectionPublic_(operationType, payload) {
+  var c = PURCHASE_EVENT_CORRECTION, codes = c.CODES;
+  var requestKey = purchaseCorrectionPayloadKey_(payload);
+  var ss = null, dispatcher = null, gate = null;
+  try {
+    ss = SpreadsheetApp.getActiveSpreadsheet();
+    dispatcher = {
+      now: function() { return new Date(); },
+      uuid: function() { return Utilities.getUuid(); },
+      flush: function() { SpreadsheetApp.flush(); },
+      invalidate: function() { invalidateDashboardCache(); },
+      purchaseSingleCommit: { batch: function(ranges) {
+        return purchaseCorrectionBatchRequest_(ranges);
+      } }
+    };
+    gate = purchaseSingleCommitGate_(dispatcher);
+  } catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.REFUSED, {
+      code: codes.CORRECTION_RUNTIME_UNAVAILABLE, requestKey: requestKey,
+      detail: String(error && error.message || error) });
+  }
+  var lock = null, acquired = false;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    acquired = true;
+  } catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.REFUSED, {
+      code: codes.OUTER_LOCK_UNAVAILABLE, requestKey: requestKey,
+      detail: String(error && error.message || error) });
+  }
+  try {
+    return purchaseCorrectionDispatch_(operationType, payload, ss, dispatcher, gate);
+  } catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.UNKNOWN, {
+      code: codes.CORRECTION_EXECUTION_UNKNOWN, requestKey: requestKey,
+      detail: String(error && error.message || error) });
+  } finally {
+    if (acquired) {
+      try { lock.releaseLock(); } catch (lockError) { /* lock auto-expires */ }
+    }
+  }
+}
+
+function purchaseEventDurableVoid(payload) {
+  return purchaseCorrectionPublic_(PURCHASE_EVENT_CORRECTION.VOID, payload);
+}
+
+function purchaseEventDurableCorrect(payload) {
+  return purchaseCorrectionPublic_(PURCHASE_EVENT_CORRECTION.CORRECT, payload);
 }

@@ -155,7 +155,8 @@ var files = [
   '96.Tests.Treasury.Receipt.Preparation.Cases.js',
   '96.Tests.Treasury.Activation.Cases.js',
   '96.Tests.SingleCommit.Readers.Cases.js',
-  '96.Tests.SingleCommit.Config.Cases.js'
+  '96.Tests.SingleCommit.Config.Cases.js',
+  '96.Tests.SingleCommit.Corrections.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -608,6 +609,25 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testSingleCommitControlIsolation', 'testSingleCommitControlIsolation()');
   run('testSingleCommitCompatibility', 'testSingleCommitCompatibility()');
   run('testSingleCommitPackageMeasurement', 'testSingleCommitPackageMeasurement()');
+
+  // T11.8/U6 — corrections/void/cancel task matrix (109 checks): Sales
+  // Void/Correct with composed-money legs, Expense Cancel/Correct, Purchase
+  // Cancel/Correct, durability (replay/conflict/already-*/UNKNOWN/missing/
+  // tamper/duplicate/PAUSED-recovery), per-domain preflight, reporting
+  // (Cash Flow once, Revenue, T5, aggregate funds), historical (24k
+  // invariant, forbidden writers, legacy compatibility), and regression
+  // isolation. In-memory fixtures only; production mutations 0.
+  run('testSingleCommitCorrectionsSalesVoid', 'testSingleCommitCorrectionsSalesVoid()');
+  run('testSingleCommitCorrectionsSalesCorrect', 'testSingleCommitCorrectionsSalesCorrect()');
+  run('testSingleCommitCorrectionsExpenseCancel', 'testSingleCommitCorrectionsExpenseCancel()');
+  run('testSingleCommitCorrectionsExpenseCorrect', 'testSingleCommitCorrectionsExpenseCorrect()');
+  run('testSingleCommitCorrectionsPurchaseCancel', 'testSingleCommitCorrectionsPurchaseCancel()');
+  run('testSingleCommitCorrectionsPurchaseCorrect', 'testSingleCommitCorrectionsPurchaseCorrect()');
+  run('testSingleCommitCorrectionsDurability', 'testSingleCommitCorrectionsDurability()');
+  run('testSingleCommitCorrectionsPreflight', 'testSingleCommitCorrectionsPreflight()');
+  run('testSingleCommitCorrectionsReporting', 'testSingleCommitCorrectionsReporting()');
+  run('testSingleCommitCorrectionsHistorical', 'testSingleCommitCorrectionsHistorical()');
+  run('testSingleCommitCorrectionsRegression', 'testSingleCommitCorrectionsRegression()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
