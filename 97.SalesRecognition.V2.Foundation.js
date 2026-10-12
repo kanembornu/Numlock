@@ -357,15 +357,28 @@ function salesRecognitionAccountFieldMismatch_(row, expected) {
 
 // ---------------------------------------------------------------------------
 // T11.2 §20 single-commit transaction config (read-only semantics; the
-// activation writer belongs to a later authorized unit). Key and mode names
-// are frozen by T11.2 §20. Pure: no property access, no sheet access, no
-// writer. Absent/blank raw value resolves to ABSENT (= PREPARED semantics:
-// zero behavior change); invalid JSON/mode/configVersion resolves to
-// UNRESOLVED (REJECT — never a fallback).
+// prep/activation/pause writers live in 101.SingleCommit.Config.Control.js).
+// Key and mode names are frozen by T11.2 §20. Pure: no property access, no
+// sheet access, no writer. Absent/blank raw value resolves to ABSENT (=
+// PREPARED semantics: zero behavior change); invalid JSON/mode/configVersion/
+// contractVersion/activation fields resolve to UNRESOLVED (REJECT — never a
+// fallback, never a legacy re-enable). The persisted object is exactly
+// { mode, contractVersion, activationID, activatedAt, configVersion } —
+// SALES_RECOGNITION_V2/TREASURY_RECEIPT_V1 configs stay separate keys,
+// never overloaded (T11.3 §3).
 // ---------------------------------------------------------------------------
 var SINGLE_COMMIT_TRANSACTION_V1 = Object.freeze({
   CONFIG_PROPERTY: "SINGLE_COMMIT_TRANSACTION_V1",
+  CONTRACT_VERSION: "SINGLE_COMMIT_TRANSACTION_V1",
+  CONFIG_VERSION: 1,
   MODES: Object.freeze(["PREPARED", "ACTIVE", "PAUSED", "REJECT"]),
+  DEFAULT_CONFIG: Object.freeze({
+    mode: "PREPARED",
+    contractVersion: "SINGLE_COMMIT_TRANSACTION_V1",
+    activationID: "",
+    activatedAt: "",
+    configVersion: 1
+  }),
   CODES: Object.freeze({
     SINGLE_COMMIT_CONFIG_INVALID: "SINGLE_COMMIT_CONFIG_INVALID",
     SINGLE_COMMIT_MODE_PAUSED: "SINGLE_COMMIT_MODE_PAUSED"
@@ -391,37 +404,98 @@ var SINGLE_COMMIT_MONEY_POLICY = Object.freeze({
   SALES_MONEY_JOURNAL_PREFIX: "SRV2M-"
 });
 
+// Pure validator for a parsed SINGLE_COMMIT_TRANSACTION_V1 object (T11.2 §20
+// + U5 schema freeze). Mirrors validateSalesRecognitionV2Config semantics for
+// the separate T11 key: PREPARED must carry blank activation fields (never
+// activated); ACTIVE/PAUSED must carry non-empty server activation identity
+// (PAUSED only ever exists after authority — sticky intent, no legacy
+// re-enable); activatedAt must be an unambiguous ISO 8601 timestamp; REJECT
+// is a valid explicit fail-closed mode with no identity constraint. Zero
+// writes, no repair, no defaulting.
+function validateSingleCommitTransactionConfig_(config) {
+  var contract = SINGLE_COMMIT_TRANSACTION_V1, errors = [];
+  if (!config || typeof config !== "object" || Array.isArray(config)) {
+    return { status: "FAIL", errors: [{ field: "config", code: "CONFIG_INVALID" }] };
+  }
+  var mode = config.mode;
+  if (typeof mode !== "string" || contract.MODES.indexOf(config.mode) === -1) {
+    errors.push({ field: "mode", code: "MODE_INVALID" });
+  }
+  if (typeof config.contractVersion !== "string" ||
+      config.contractVersion !== contract.CONTRACT_VERSION) {
+    errors.push({ field: "contractVersion", code: "CONTRACT_VERSION_MISMATCH" });
+  }
+  if (typeof config.configVersion !== "number" || !isFinite(config.configVersion) ||
+      config.configVersion < 1 || Math.floor(config.configVersion) !== config.configVersion) {
+    errors.push({ field: "configVersion", code: "CONFIG_VERSION_INVALID" });
+  }
+  var activationID = config.activationID, activatedAt = config.activatedAt;
+  var idTypeInvalid = typeof activationID !== "string";
+  var atTypeInvalid = typeof activatedAt !== "string";
+  if (idTypeInvalid) errors.push({ field: "activationID", code: "ACTIVATION_METADATA_INVALID" });
+  if (atTypeInvalid) errors.push({ field: "activatedAt", code: "ACTIVATION_METADATA_INVALID" });
+  if (typeof mode === "string" && !idTypeInvalid && !atTypeInvalid) {
+    if (mode === "PREPARED") {
+      // Activation fields must be actual blank strings; any value fails
+      // closed (sticky: a once-activated config can never pose as PREPARED).
+      if (activationID !== "" || activatedAt !== "") {
+        errors.push({ field: "activationID", code: "ACTIVATION_METADATA_PRESENT" });
+      }
+    } else if (mode === "ACTIVE" || mode === "PAUSED") {
+      if (activationID.trim() === "" || activatedAt.trim() === "") {
+        errors.push({ field: "activationID", code: "ACTIVATION_METADATA_MISSING" });
+      }
+    }
+  }
+  if (!atTypeInvalid && activatedAt.trim() !== "" &&
+      salesRecognitionIsoTimestampEpoch_(activatedAt) === null) {
+    errors.push({ field: "activatedAt", code: "ACTIVATION_TIMESTAMP_INVALID" });
+  }
+  return { status: errors.length ? "FAIL" : "PASS", errors: errors };
+}
+
 // Pure parser for the raw SINGLE_COMMIT_TRANSACTION_V1 value (property string
 // or already-parsed object for injected runtimes). Deterministic three-state
 // result: ABSENT / VALID / UNRESOLVED. Never infers a mode, never repairs.
+// VALID carries the parsed config (writers/reporting evidence) and the
+// detailed detail codes below are stable refusal surfaces.
 function singleCommitTransactionConfigState_(raw) {
   var contract = SINGLE_COMMIT_TRANSACTION_V1;
   if (raw === null || raw === undefined ||
       (typeof raw === "string" && raw.trim() === "")) {
-    return { state: "ABSENT", mode: "PREPARED", detail: "" };
+    return { state: "ABSENT", mode: "PREPARED", detail: "", config: null };
   }
   var config = raw;
   if (typeof raw === "string") {
     try { config = JSON.parse(raw); }
     catch (error) {
-      return { state: "UNRESOLVED", mode: "", detail: "CONFIG_JSON_INVALID" };
+      return { state: "UNRESOLVED", mode: "", detail: "CONFIG_JSON_INVALID", config: null };
     }
   }
   if (!config || typeof config !== "object" || Array.isArray(config)) {
-    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_SHAPE_INVALID" };
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_SHAPE_INVALID", config: null };
   }
   if (typeof config.mode !== "string" || contract.MODES.indexOf(config.mode) === -1) {
-    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_MODE_INVALID" };
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_MODE_INVALID", config: null };
   }
   if (typeof config.configVersion !== "number" || !isFinite(config.configVersion) ||
       config.configVersion < 1 || Math.floor(config.configVersion) !== config.configVersion) {
-    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_VERSION_INVALID" };
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_VERSION_INVALID", config: null };
   }
-  if ((config.activationID !== undefined && typeof config.activationID !== "string") ||
-      (config.activatedAt !== undefined && typeof config.activatedAt !== "string")) {
-    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_ACTIVATION_INVALID" };
+  if (config.contractVersion !== contract.CONTRACT_VERSION) {
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_CONTRACT_VERSION_INVALID",
+      config: null };
   }
-  return { state: "VALID", mode: config.mode, detail: "" };
+  if (typeof config.activationID !== "string" || typeof config.activatedAt !== "string") {
+    return { state: "UNRESOLVED", mode: "", detail: "CONFIG_ACTIVATION_INVALID", config: null };
+  }
+  var validation = validateSingleCommitTransactionConfig_(config);
+  if (validation.status !== "PASS") {
+    var first = validation.errors[0] || { code: "CONFIG_INVALID" };
+    var detail = "CONFIG_" + String(first.code);
+    return { state: "UNRESOLVED", mode: "", detail: detail, config: null };
+  }
+  return { state: "VALID", mode: config.mode, detail: "", config: config };
 }
 
 // Pure mode -> Sales U2 new-intent decision (T11.2 §3/§20/§22):

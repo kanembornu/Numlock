@@ -11,7 +11,15 @@
 // Fixture helpers
 // ---------------------------------------------------------------------------
 function t11u2ConfigRaw_(mode) {
-  return JSON.stringify({ mode: mode === undefined ? "ACTIVE" : mode, configVersion: 1 });
+  mode = mode === undefined ? "ACTIVE" : mode;
+  var config = { mode: mode, contractVersion: "SINGLE_COMMIT_TRANSACTION_V1",
+    activationID: "", activatedAt: "", configVersion: 1 };
+  // U5 schema: ACTIVE/PAUSED always carry the server activation identity.
+  if (mode === "ACTIVE" || mode === "PAUSED") {
+    config.activationID = "ACT-U5-" + mode;
+    config.activatedAt = "2026-10-07T00:00:00.000Z";
+  }
+  return JSON.stringify(config);
 }
 
 function t11u2Account1040_(overrides) {

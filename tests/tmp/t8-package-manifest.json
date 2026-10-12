@@ -89,7 +89,7 @@
       },
       {
         "path": "21.Transaction.Entry.js",
-        "sha256": "5df3e376da7cc1718ea22e8bb1bdbdeebf5d2e7fd12dae0d717ea1f351a8720e"
+        "sha256": "b1e5341f466bf4960831d0848214cae5a7b02f82a81b5f62f3920228c137f3d7"
       },
       {
         "path": "22.Transaction.Lifecycle.js",
@@ -245,7 +245,7 @@
       },
       {
         "path": "95A.Transaction.Production.js",
-        "sha256": "89f276e88b34ee01d7ffde05a66b2ad0c0e4110b7f335e9848d23850465a91d8"
+        "sha256": "637745b9d478b3455863fa023bfdb4358302246c8a59add92c2e8997a34b0ec4"
       },
       {
         "path": "97.Inventory.Receipt.Operational.Runtime.Proof.js",
@@ -257,7 +257,7 @@
       },
       {
         "path": "97.SalesRecognition.V2.Foundation.js",
-        "sha256": "fc23fef1b9184ddf86603a0a4e3a59bb3ea0941bed3af0542eeab33a9891b3b9"
+        "sha256": "54ed65d150afbd5f88f62bdce6fe9f7183cbf8672e6e4460726be50d7affdb53"
       },
       {
         "path": "97A.SalesRecognition.V2.Save.js",
@@ -308,7 +308,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "0f0c882072fd27196304c053129dbfd7b75ab1b01bdba21bf687c95935ffd310"
+    "aggregateHash": "d91716f49040a0bb507e38fe3d2dbe633aa5f7d0c2a7aee27f4d1fd09555584c"
   },
   "prospective": {
     "count": 76,
@@ -399,7 +399,7 @@
       },
       {
         "path": "21.Transaction.Entry.js",
-        "sha256": "5df3e376da7cc1718ea22e8bb1bdbdeebf5d2e7fd12dae0d717ea1f351a8720e"
+        "sha256": "b1e5341f466bf4960831d0848214cae5a7b02f82a81b5f62f3920228c137f3d7"
       },
       {
         "path": "22.Transaction.Lifecycle.js",
@@ -555,7 +555,7 @@
       },
       {
         "path": "95A.Transaction.Production.js",
-        "sha256": "89f276e88b34ee01d7ffde05a66b2ad0c0e4110b7f335e9848d23850465a91d8"
+        "sha256": "637745b9d478b3455863fa023bfdb4358302246c8a59add92c2e8997a34b0ec4"
       },
       {
         "path": "97.Inventory.Receipt.Operational.Runtime.Proof.js",
@@ -567,7 +567,7 @@
       },
       {
         "path": "97.SalesRecognition.V2.Foundation.js",
-        "sha256": "fc23fef1b9184ddf86603a0a4e3a59bb3ea0941bed3af0542eeab33a9891b3b9"
+        "sha256": "54ed65d150afbd5f88f62bdce6fe9f7183cbf8672e6e4460726be50d7affdb53"
       },
       {
         "path": "97A.SalesRecognition.V2.Save.js",
@@ -618,7 +618,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "0f0c882072fd27196304c053129dbfd7b75ab1b01bdba21bf687c95935ffd310"
+    "aggregateHash": "d91716f49040a0bb507e38fe3d2dbe633aa5f7d0c2a7aee27f4d1fd09555584c"
   },
   "treasuryRuntimePendingRegistration": [
     "99.Treasury.Receipt.Foundation.js",

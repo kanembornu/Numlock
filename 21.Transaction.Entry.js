@@ -295,7 +295,24 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
     var expensePreResolvedItems = null;
     if (type === "EXPENSE") {
       var expenseGate = expenseSingleCommitGate_(runtime);
-      if (expenseGate.mode === "REFUSE") return expenseSingleCommitRefusal_(expenseGate);
+      if (expenseGate.mode === "REFUSE") {
+        // U5 (T11.2 §22 recovery): admission mode is NEVER re-evaluated for a
+        // persisted single-commit operation. Before the fail-closed refusal,
+        // probe the operation store by exact (OperationType, RequestKey); a
+        // hit routes into the core lookup-first resume path (stored immutable
+        // plan, artifact verification, zero admission gate). No hit -> the
+        // refusal stands with zero writes. ABSENT/PREPARED-never-activated
+        // never probes (no single-commit operation can exist without
+        // activation), so the legacy path stays byte-identical.
+        var recoveryType = expenseSingleCommitRecoveryRoute_(payload, ss, runtime, expenseGate);
+        if (recoveryType === EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+          return expenseSingleCommitDispatch_(payload, ss, runtime, null, expenseGate);
+        }
+        if (recoveryType === PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+          return purchaseSingleCommitDispatch_(payload, ss, runtime, null, expenseGate);
+        }
+        return expenseSingleCommitRefusal_(expenseGate);
+      }
       if (expenseGate.mode === "ACTIVE") {
         expensePreResolvedItems = readCanonicalTable(ss, "ExpenseItems",
           ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]);
@@ -576,6 +593,26 @@ function expenseSingleCommitRefusal_(gate) {
   var result = expenseSingleCommitResult_(EXPENSE_SINGLE_COMMIT_V1.STATUS.REFUSED,
     { code: gate.code, detail: gate.detail || "", writeCount: 0 });
   return expenseSingleCommitEnvelope_(result);
+}
+
+// U5 recovery-before-admission probe (T11.2 §22): exact (OperationType,
+// RequestKey) lookup against the operation store while the config gate has
+// REFUSED (PAUSED / REJECT / invalid / sticky PREPARED). Returns the matching
+// operation type ("EXPENSE_SINGLE_COMMIT_SAVE" or "PURCHASE_SINGLE_COMMIT_SAVE")
+// so the dispatcher can route into the core resume path, or "" for a plain
+// refusal. Read-only, zero writes, fail-closed on any lookup error.
+function expenseSingleCommitRecoveryRoute_(payload, ss, dispatcherRuntime, gate) {
+  var key = expenseSingleCommitPayloadKey_(payload);
+  if (!key) return "";
+  try {
+    var core = expenseSingleCommitCoreRuntime_(ss, dispatcherRuntime, null, gate);
+    var operation = core.repository.findOperation(
+      EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE, key) ||
+      core.repository.findOperation(PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE, key);
+    return operation ? String(operation.OperationType) : "";
+  } catch (error) {
+    return "";
+  }
 }
 
 // Dispatcher-shaped envelope. DONE carries the exact legacy Expense DTO so the

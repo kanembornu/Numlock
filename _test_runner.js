@@ -39,6 +39,7 @@ globalThis.runTreasuryT105ActivationMutationProof = runTreasuryT105ActivationMut
 
 globalThis.Logger = { log: function() {} };
 globalThis.fs = require('fs');
+globalThis.nodeCrypto = require('crypto');
 globalThis.Utilities = {
   getUuid: function() { return 'test-uuid-000000000000000000000000'; },
   formatDate: function(d, tz, fmt) { return d.toISOString().slice(0, 19) + '.000Z'; }
@@ -121,6 +122,7 @@ var files = [
   '99C.Treasury.Receipt.Reversal.Correction.js',
   '99D.Treasury.Operator.Api.js',
   '100.Code.js',
+  '101.SingleCommit.Config.Control.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -152,7 +154,8 @@ var files = [
   '96.Tests.Treasury.Operator.Cases.js',
   '96.Tests.Treasury.Receipt.Preparation.Cases.js',
   '96.Tests.Treasury.Activation.Cases.js',
-  '96.Tests.SingleCommit.Readers.Cases.js'
+  '96.Tests.SingleCommit.Readers.Cases.js',
+  '96.Tests.SingleCommit.Config.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -592,6 +595,19 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testSingleCommitDateAuthority', 'testSingleCommitDateAuthority()');
   run('testSingleCommitReadModeCache', 'testSingleCommitReadModeCache()');
   run('testSingleCommitRegressionPins', 'testSingleCommitRegressionPins()');
+
+  // T11.7/U5 — control plane: config schema/reader, reconciled routing,
+  // prep/activation/pause writers, idempotency/crash model, isolation proof,
+  // package measurement. In-memory fixtures only; production mutations 0.
+  run('testSingleCommitConfigReader', 'testSingleCommitConfigReader()');
+  run('testSingleCommitRoutingMatrix', 'testSingleCommitRoutingMatrix()');
+  run('testSingleCommitPreparationWriter', 'testSingleCommitPreparationWriter()');
+  run('testSingleCommitActivationWriter', 'testSingleCommitActivationWriter()');
+  run('testSingleCommitControlFailures', 'testSingleCommitControlFailures()');
+  run('testSingleCommitPauseWriter', 'testSingleCommitPauseWriter()');
+  run('testSingleCommitControlIsolation', 'testSingleCommitControlIsolation()');
+  run('testSingleCommitCompatibility', 'testSingleCommitCompatibility()');
+  run('testSingleCommitPackageMeasurement', 'testSingleCommitPackageMeasurement()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);

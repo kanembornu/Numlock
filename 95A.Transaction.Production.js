@@ -387,13 +387,35 @@ function findOperationalOperation(payload) { return transactionResponse_(functio
   return { operation: operation, order: order, payment: type === "PAYMENT" || operation && operation.OperationType === "PAYMENT" ? r.repository.findPaymentByRequest(key) : null }; }); }
 function submitOperationalFulfillment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return transitionOperationalFulfillmentWithRepository(payload.orderID, payload.next, r, r.repository).order; } finally { if (acquired) r.lock.releaseLock(); } }); }
 function submitOperationalPayment(payload) { return transactionResponse_(function() { var r = transactionProductionRuntime_(), acquired = false; try { r.lock.waitLock(30000); acquired = true; return createDurableOperationalPayment_(payload.orderID, payload, r, r.repository); } finally { if (acquired) r.lock.releaseLock(); } }); }
+// T11.7 U5 — zero-write recovery probe: exact (OperationType, RequestKey)
+// lookup for a persisted PURCHASE_SINGLE_COMMIT_SAVE operation while the
+// config gate refuses new work. Read-only; fail-closed (false) on any lookup
+// error so the refusal path keeps zero writes.
+function purchaseSingleCommitOperationalRecoveryRoute_(payload) {
+  var key = payload && payload.requestKey !== undefined && payload.requestKey !== null ?
+    String(payload.requestKey) : "";
+  if (!key) return false;
+  try {
+    return !!transactionProductionRuntime_().repository
+      .findOperation(PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE, key);
+  } catch (error) {
+    return false;
+  }
+}
 function submitOperationalPurchase(payload) { return transactionResponse_(function() {
   // T11.5 U3 — gate BEFORE any write (T11.2 §5 adapter convergence). LEGACY
   // keeps today's writer byte-for-byte; ACTIVE routes into the durable
   // PURCHASE_SINGLE_COMMIT_SAVE core under this call's own single outer lock;
   // PAUSED/REJECT/invalid refuse with zero writes and no legacy fallback.
+  // T11.7 U5 — the refusal branch first probes for a persisted
+  // PURCHASE_SINGLE_COMMIT_SAVE operation on this exact RequestKey: a hit
+  // resumes from the immutable stored plan WITHOUT re-evaluating the
+  // admission mode (T11.2 §22 recovery never strands an IN_PROGRESS intent).
   var gate = purchaseSingleCommitGate_(null);
   if (gate.mode === "REFUSE") {
+    if (purchaseSingleCommitOperationalRecoveryRoute_(payload)) {
+      return purchaseOperationalSingleCommit_(payload, gate);
+    }
     throw transactionOperationalError_(gate.code, null, gate.detail || gate.code);
   }
   if (gate.mode === "ACTIVE") return purchaseOperationalSingleCommit_(payload, gate);
