@@ -129,5 +129,16 @@ function testSalesUIU8BContract()
     css.indexOf(".transaction-order-preview-lines,.transaction-price-preview-lines{max-height:min(42vh,420px);overflow-y:auto") !== -1,
     "bounded dialog scroll + preview-scoped overflow only");
 
+  // 9. U8B-VISUAL remedy: the Sales-entry dialog is widened beyond the legacy
+  //    860px cap so the three frozen columns stay readable at real operator
+  //    viewports (measured pre-fix: 860px -> 3x266px columns, product input
+  //    112px, qty "+" overflowed its container; post-fix @1180px: 3x373px,
+  //    product 165px, "+" fully visible, order/price rows fit un-wrapped).
+  check("T9a", css.indexOf("#transactionEntryDialog[data-entry-type=sales]{width:min(100%,1180px)}") !== -1,
+    "sales-entry dialog widened token");
+  check("T9b", css.indexOf(".transaction-entry-dialog{display:flex;width:min(100%,860px)") !== -1 &&
+    css.indexOf("#transactionEntryDialog[data-entry-type=sales]{width:min(100%,1180px)}") !== -1,
+    "scoped override coexists with the legacy 860px base rule");
+
   return { total: pass, pass: pass, fail: 0 };
 }
