@@ -248,17 +248,103 @@
       var variant = (authority.productVariants || []).filter(function(row) { return row.ProductID === state.selectedProduct.productId && String(row.Tipe).toUpperCase() === state.selectedType.toUpperCase(); })[0];
       if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant yang tersedia."; return; }
       operationalTransactionState.lines.push({ productID: state.selectedProduct.productId, productVariantID: variant.ProductVariantID, qty: state.qty,
-        name: state.selectedProduct.product + " · " + state.selectedType, price: Number(state.pricing.price) });
+        name: state.selectedProduct.product + " · " + state.selectedType, servingType: state.selectedType,
+        price: Number(state.pricing.price), hpp: Number(state.pricing.hpp || 0), margin: Number(state.pricing.unitMargin || 0) });
+      // U8B frozen contract: after a successful Add Line the Product clears,
+      // Serving Type returns to none selected and Quantity returns to 1.
+      // Order Type (DINE_IN/TAKE_AWAY) is the operator's order-level choice
+      // and REMAINS unchanged.
+      state.selectedProduct = null;
+      state.selectedType = null;
+      state.pricing = null;
+      state.pricingSource = "unknown";
+      state.pricingRequestVersion = (state.pricingRequestVersion || 0) + 1;
+      state.qty = 1;
+      var productSearch = operationalElement("productEntrySearch");
+      if (productSearch) productSearch.value = "";
+      var productMeta = operationalElement("productEntryMeta");
+      if (productMeta) productMeta.innerText = "";
+      ["salesTypeHot", "salesTypeCold"].forEach(function(id) {
+        var button = operationalElement(id);
+        if (button) button.setAttribute("aria-checked", "false");
+      });
+      var qtyInput = operationalElement("salesEntryQty");
+      if (qtyInput) qtyInput.value = "1";
+      if (typeof renderTransactionEntryPricing === "function") renderTransactionEntryPricing();
       applySalesV2OperatorSurface_();
       renderOperationalOrderLines();
     }
     function removeOperationalOrderLine(index) { if (operationalTransactionState.pending) return; operationalTransactionState.lines.splice(index, 1); renderOperationalOrderLines(); }
     function renderOperationalOrderLines()
     {
-      var total = operationalTransactionState.lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0), region = operationalElement("operationalOrderLines"); region.innerHTML = "";
-      operationalTransactionState.lines.forEach(function(line, index) { var row = document.createElement("div"); row.textContent = line.name + " × " + line.qty + " · " + formatEntryCurrency(line.price) + " · " + formatEntryCurrency(line.qty * line.price) + " "; var remove = document.createElement("button"); remove.type = "button"; remove.textContent = "Remove"; remove.onclick = function() { removeOperationalOrderLine(index); }; row.appendChild(remove); region.appendChild(row); });
+      // U8B Order Preview: one row per line — `Cold × 5 @ Rp24.000` plus the
+      // aligned line total, no line/item counter; the list ends with Total.
+      var lines = operationalTransactionState.lines || [];
+      var total = lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0), region = operationalElement("operationalOrderLines");
+      region.innerHTML = "";
+      lines.forEach(function(line, index) {
+        var row = document.createElement("div");
+        row.className = "transaction-order-line";
+        var label = document.createElement("span");
+        label.className = "transaction-order-line-label";
+        label.textContent = line.servingType + " × " + line.qty + " @ " + formatEntryCurrency(line.price);
+        var amount = document.createElement("span");
+        amount.className = "transaction-order-line-total";
+        amount.textContent = formatEntryCurrency(line.qty * line.price);
+        var remove = document.createElement("button");
+        remove.type = "button";
+        remove.textContent = "Remove";
+        remove.onclick = function() { removeOperationalOrderLine(index); };
+        row.appendChild(label);
+        row.appendChild(amount);
+        row.appendChild(remove);
+        region.appendChild(row);
+      });
       operationalElement("operationalOrderTotal").textContent = "Total: " + formatEntryCurrency(total);
+      renderSalesPricingPreview_();
       if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
+    }
+    // U8B Price Preview: per product line `HPP × qty @ unit = total` and
+    // `Margin × qty @ unit = total`; multi-line orders add Total HPP and
+    // Total Margin. No Revenue row and no percentage margin. Price data stays
+    // the server-resolved pricing already carried by the draft lines — no new
+    // server call, no pricing logic change.
+    function renderSalesPricingPreview_()
+    {
+      var region = operationalElement("salesPricingLines"), totals = operationalElement("salesPricingTotals");
+      if (!region) return;
+      var lines = operationalTransactionState.lines || [];
+      region.innerHTML = "";
+      var totalHpp = 0, totalMargin = 0;
+      lines.forEach(function(line) {
+        var qty = Number(line.qty) || 0, hpp = Number(line.hpp) || 0, margin = Number(line.margin) || 0;
+        totalHpp += hpp * qty;
+        totalMargin += margin * qty;
+        var group = document.createElement("div");
+        group.className = "transaction-price-line";
+        var hppRow = document.createElement("div");
+        hppRow.className = "transaction-price-line-hpp";
+        hppRow.textContent = "HPP × " + qty + " @ " + formatEntryCurrency(hpp) + " = " + formatEntryCurrency(hpp * qty);
+        var marginRow = document.createElement("div");
+        marginRow.className = "transaction-price-line-margin";
+        marginRow.textContent = "Margin × " + qty + " @ " + formatEntryCurrency(margin) + " = " + formatEntryCurrency(margin * qty);
+        group.appendChild(hppRow);
+        group.appendChild(marginRow);
+        region.appendChild(group);
+      });
+      if (totals) {
+        totals.innerHTML = "";
+        if (lines.length > 1) {
+          var hppTotal = document.createElement("div");
+          hppTotal.className = "transaction-entry-preview-total";
+          hppTotal.textContent = "Total HPP: " + formatEntryCurrency(totalHpp);
+          var marginTotal = document.createElement("div");
+          marginTotal.className = "transaction-entry-preview-total";
+          marginTotal.textContent = "Total Margin: " + formatEntryCurrency(totalMargin);
+          totals.appendChild(hppTotal);
+          totals.appendChild(marginTotal);
+        }
+      }
     }
     function operationalServerCall(method, payload, onSuccess, onRefusal, onUnknown)
     {

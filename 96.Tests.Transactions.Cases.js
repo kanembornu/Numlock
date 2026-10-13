@@ -877,8 +877,7 @@ function testTransactionEntryUiContract()
     'var cachedPricing = state.selectedProduct.pricing && state.selectedProduct.pricing[state.selectedType];',
     'state.pricingSource = "master-cache";',
     'if (version !== transactionEntryState.pricingRequestVersion) return;',
-    'id="salesPreviewPrice"', 'id="salesPreviewHpp"', 'id="salesPreviewUnitMargin"',
-    'id="salesPreviewRevenue"', 'id="salesPreviewCogs"', 'id="salesPreviewMargin"'].forEach(function(token) {
+    'id="salesPricingLines"', 'id="salesPricingTotals"'].forEach(function(token) {
     assertSourceContains(source, token, "pricing preview and stale response protection");
   });
   scenarios++;

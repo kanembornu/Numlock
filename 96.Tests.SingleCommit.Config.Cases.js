@@ -1227,7 +1227,7 @@ function testSingleCommitPackageMeasurement() {
   ).digest("hex");
   check("P3", registeredEntries.length === 77 &&
     registeredAggregate === manifest.current.aggregateHash &&
-    registeredAggregate === "e7a1b36e89efeef512b99b51a3654a2e5a6fbae67603fe5e7faf36c8f397ef60",
+    registeredAggregate === "b4a1517139093893c476169cfc3bd122a2a1c4a7c9c38002fe8a5cacb4dedea3",
     registeredAggregate);
 
   console.log("T11_7_U5_PACKAGE current=" + manifest.current.count +

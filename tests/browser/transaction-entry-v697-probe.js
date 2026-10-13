@@ -27,7 +27,7 @@ const AUTHORITY_TIMEOUT = 90_000;
 const PRICING_TIMEOUT = 15_000;
 const POLL_MS = 200;
 const READ_ONLY_GUARANTEE =
-  "Navigation, DOM reads, client-side select value assignment limited to authority fields, and client price/variant display functions only; no Save Order, Confirm Payment, Save Transaction, Save Purchase, Save Expense, no mutation endpoint invocation, no form submission.";
+  "Navigation, DOM reads, client-side select value assignment limited to authority fields, client price/variant display functions, and Add Line client-draft commits (local state only); no Save Order, Confirm Payment, Save Transaction, Save Purchase, Save Expense, no mutation endpoint invocation, no form submission.";
 
 const ASSERTION_IDS = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L"];
 const ASSERTION_NAMES = {
@@ -340,6 +340,9 @@ async function snapshotDom(app) {
       productSearch: read("productEntrySearch"),
       salesPricingState: read("salesPricingState"),
       salesPricingPreview: read("salesPricingPreview"),
+      salesPricingLines: read("salesPricingLines"),
+      salesPricingTotals: read("salesPricingTotals"),
+      salesOrderPreview: read("salesOrderPreview"),
       salesPreviewPrice: read("salesPreviewPrice"),
       salesTypeHot: read("salesTypeHot"),
       salesTypeCold: read("salesTypeCold"),
@@ -359,11 +362,19 @@ function nonPromptOptions(selectDom) {
 function readSalesPricingState(app) {
   return app.evaluate(() => {
     const state = typeof transactionEntryState !== "undefined" ? transactionEntryState : null;
-    const price = document.getElementById("salesPreviewPrice");
+    const legacyPrice = document.getElementById("salesPreviewPrice");
+    const repr = document.getElementById("salesPricingLines");
     const pricingState = document.getElementById("salesPricingState");
     const hot = document.getElementById("salesTypeHot");
     const cold = document.getElementById("salesTypeCold");
     const search = document.getElementById("productEntrySearch");
+    const lines = (typeof operationalTransactionState !== "undefined" && operationalTransactionState &&
+      Array.isArray(operationalTransactionState.lines)) ? operationalTransactionState.lines.length : 0;
+    // U8B: the Price Preview renders committed draft lines only. The legacy
+    // #salesPreviewPrice dd is retired; reprText/ reprChildren describe the
+    // current #salesPricingLines representation (empty until Add Line).
+    const reprText = repr ? String(repr.textContent || "").replace(/\s+/g, " ").trim() : null;
+    const reprChildren = repr ? repr.children.length : null;
     return {
       selectedType: state && state.selectedType ? String(state.selectedType) : null,
       selectedProductId: state && state.selectedProduct ? state.selectedProduct.productId : null,
@@ -378,7 +389,10 @@ function readSalesPricingState(app) {
           }
         : null,
       pricingSource: state && state.pricingSource ? String(state.pricingSource) : null,
-      previewPriceText: price ? String(price.textContent || "").trim() : null,
+      previewPriceText: reprText,
+      reprChildren,
+      committedLines: lines,
+      legacyPriceText: legacyPrice ? String(legacyPrice.textContent || "").trim() : null,
       pricingStateText: pricingState ? String(pricingState.textContent || "").trim() : null,
       hotAriaChecked: hot ? hot.getAttribute("aria-checked") : null,
       coldAriaChecked: cold ? cold.getAttribute("aria-checked") : null,
@@ -413,14 +427,82 @@ function pricingResolvedFromAuthority(state) {
 }
 
 function pricingFabricated(state) {
-  return Boolean(
-    state &&
-    state.previewPriceText &&
-    state.previewPriceText !== "—" &&
+  if (!state) return false;
+  // U8B reset-then-expect-empty semantics: repr content must be backed 1:1 by
+  // committed draft lines. Valid committed lines after the Add-Line input
+  // reset are ALLOWED (reprChildren <= committedLines); rows rendered with no
+  // backing committed line (reprChildren > committedLines) are fabricated.
+  const reprOverhang = typeof state.reprChildren === "number" &&
+    typeof state.committedLines === "number" &&
+    state.reprChildren > state.committedLines;
+  // Legacy path only (retired #salesPreviewPrice dd): a rendered dd value with
+  // no resolved authority pricing is fabricated. On the current surface
+  // legacyPriceText is null, so committed-line repr content never trips this.
+  const legacyFabricated = Boolean(
+    state.legacyPriceText &&
+    state.legacyPriceText !== "—" &&
     !state.pricing &&
     state.pricingSource !== "server" &&
     state.pricingSource !== "master-cache"
   );
+  return reprOverhang || legacyFabricated;
+}
+
+function idFormat(value) {
+  return String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
+async function selectProductViaCombobox(app, productText, timeoutMs) {
+  try {
+    await app.locator("#productEntrySearch").fill(productText);
+    await app.locator("#productEntryListbox").waitFor({ state: "visible", timeout: timeoutMs });
+    if (await app.locator("#productEntryListbox button").count() === 0) {
+      return { ok: false, reason: `listbox rendered 0 options for ${JSON.stringify(productText)}` };
+    }
+    await app.locator("#productEntryListbox button").first().click();
+    const selected = await app.evaluate(() =>
+      Boolean(typeof transactionEntryState !== "undefined" && transactionEntryState && transactionEntryState.selectedProduct));
+    return selected ? { ok: true } : { ok: false, reason: "selectedProduct not set after listbox click" };
+  } catch (error) {
+    return { ok: false, reason: error.message };
+  }
+}
+
+// Local draft-only line commit: selects the serving type, sets qty, clicks
+// Add Line. Never Save / Confirm Payment / any mutation endpoint.
+async function commitDraftLine(app, type, qty) {
+  await app.locator(type === "Hot" ? "#salesTypeHot" : "#salesTypeCold").click();
+  const settle = await waitForSalesPricing(app, PRICING_TIMEOUT, type);
+  await app.locator("#salesEntryQty").fill(String(qty));
+  await app.locator("#salesEntryQty").dispatchEvent("input");
+  await app.locator("#operationalAddLine").click();
+  return settle;
+}
+
+async function readOrderPreviewSnapshot(app) {
+  return app.evaluate(() => {
+    const region = document.getElementById("operationalOrderLines");
+    const total = document.getElementById("operationalOrderTotal");
+    const repr = document.getElementById("salesPricingLines");
+    const lines = (typeof operationalTransactionState !== "undefined" && operationalTransactionState &&
+      Array.isArray(operationalTransactionState.lines)) ? operationalTransactionState.lines : [];
+    return {
+      rows: region
+        ? Array.from(region.children).map((row) => ({
+            label: String((row.querySelector(".transaction-order-line-label") || { textContent: "" }).textContent),
+            amount: String((row.querySelector(".transaction-order-line-total") || { textContent: "" }).textContent)
+          }))
+        : null,
+      totalText: total ? String(total.textContent) : null,
+      stateLines: lines.map((line) => ({
+        servingType: line.servingType, qty: Number(line.qty), price: Number(line.price),
+        hpp: Number(line.hpp), margin: Number(line.margin)
+      })),
+      reprChildren: repr ? repr.children.length : null,
+      reprText: repr ? String(repr.textContent || "").replace(/\s+/g, " ").trim() : null,
+      committedLines: lines.length
+    };
+  });
 }
 
 (async () => {
@@ -643,9 +725,14 @@ function pricingFabricated(state) {
       const hotBefore = postProductPreType ? postProductPreType.hotAriaChecked : null;
       const coldBefore = postProductPreType ? postProductPreType.coldAriaChecked : null;
       const previewPriceBefore = postProductPreType ? postProductPreType.previewPriceText : null;
+      const reprChildrenBefore = postProductPreType ? postProductPreType.reprChildren : null;
       const pricingStateBefore = postProductPreType ? postProductPreType.pricingStateText : null;
-      const promptPresentBefore = Boolean(pricingStateBefore && pricingStateBefore.trim().length > 0);
-      const previewEmptyBefore = previewPriceBefore === "—";
+      // U8B: the static prompt text ("Select product and type.") was retired
+      // with the frozen contract; the pending gate is now "no fabricated
+      // price anywhere before an explicit type selection".
+      const fabricatedPriceStateBefore = Boolean(pricingStateBefore && /Rp\s?[\d.,]+/.test(pricingStateBefore));
+      const previewEmptyBefore = (!previewPriceBefore || previewPriceBefore === "—") &&
+        (reprChildrenBefore === null || reprChildrenBefore === 0);
 
       // Click Hot then Cold sequentially — read-only type buttons = active-path variant selector; pricing RPC is read-only.
       const pricingByType = { Hot: null, Cold: null };
@@ -726,49 +813,141 @@ function pricingFabricated(state) {
         const eReasons = [];
         if (typeAutoSelected) eReasons.push(`selectedType auto-applied without user selection: ${postProductPreType.selectedType}`);
         if (hotBefore === "true" || coldBefore === "true") eReasons.push(`type button aria-checked=true before user selection (Hot=${hotBefore}, Cold=${coldBefore})`);
-        if (!previewEmptyBefore) eReasons.push(`preview price not "—" before type selection: ${JSON.stringify(previewPriceBefore)}`);
+        if (!previewEmptyBefore) eReasons.push(`price preview shows content before type selection: reprText=${JSON.stringify(previewPriceBefore)}; reprChildren=${JSON.stringify(reprChildrenBefore)} (expected empty repr,0 committed lines)`);
         if (postProductPreType && postProductPreType.pricing && !typeAutoSelected) eReasons.push(`pricing object present before type selection: ${JSON.stringify(postProductPreType.pricing)}`);
-        if (!promptPresentBefore) eReasons.push(`pricing state prompt missing before type selection: ${JSON.stringify(pricingStateBefore)}`);
+        if (fabricatedPriceStateBefore) eReasons.push(`pricing state shows a fabricated price before type selection: ${JSON.stringify(pricingStateBefore)}`);
         const ePass = eReasons.length === 0;
         record("E", ePass ? "PASS" : "FAIL",
-          `explicit type selection required on active path: selectedType=${JSON.stringify(postProductPreType && postProductPreType.selectedType)}; Hot aria-checked=${hotBefore}; Cold aria-checked=${coldBefore}; previewPrice=${JSON.stringify(previewPriceBefore)} (no fabricated default); pricingState=${JSON.stringify(pricingStateBefore)} prompts user until type chosen; entryOptions per-type availability=${JSON.stringify(perTypeAvailability)}; violations=${JSON.stringify(eReasons)}`);
+          `explicit type selection required on active path: selectedType=${JSON.stringify(postProductPreType && postProductPreType.selectedType)}; Hot aria-checked=${hotBefore}; Cold aria-checked=${coldBefore}; reprText=${JSON.stringify(previewPriceBefore)}; reprChildren=${JSON.stringify(reprChildrenBefore)} (no fabricated default); pricingState=${JSON.stringify(pricingStateBefore)} must not show a price before type chosen; entryOptions per-type availability=${JSON.stringify(perTypeAvailability)}; violations=${JSON.stringify(eReasons)}`);
       }
     }
 
     // F. Selling-price authority — active display is non-editable, variant-derived, and server-final.
+    // U8B: the ONLY active price representation is the non-editable
+    // #salesPricingLines/#salesPricingTotals region (HPP/Margin rows over
+    // committed lines). The legacy #salesPreviewPrice dd is retired: it is
+    // read for evidence only and NEVER satisfies the display gate.
+    // Variant selling-price authority is proven through the CURRENT Order
+    // Preview after Add Line (exact numeric + rendered variant / qty / unit
+    // price / line total per committed draft line) — local draft interaction
+    // only; the probe never presses Save.
     const priceAuthority = await app.evaluate(() => {
-      const display = document.getElementById("salesPreviewPrice");
+      const legacyDisplay = document.getElementById("salesPreviewPrice");
+      const section = document.getElementById("salesPricingPreview");
+      const repr = document.getElementById("salesPricingLines");
+      const reprTotals = document.getElementById("salesPricingTotals");
       const form = document.getElementById("transactionEntryForm");
       const arbitraryPriceControl = form && form.querySelector('input[name="price"], input[name="unitPrice"], input[name="sellingPrice"], #operationalSellingPrice');
       const submitSource = typeof submitTransactionEntry === "function" ? String(submitTransactionEntry) : "";
       const orderSource = typeof saveOperationalOrder === "function" ? String(saveOperationalOrder) : "";
+      const reprEditableNode = repr ? repr.querySelector('input, textarea, select, [contenteditable="true"]') : null;
+      const lines = (typeof operationalTransactionState !== "undefined" && operationalTransactionState &&
+        Array.isArray(operationalTransactionState.lines)) ? operationalTransactionState.lines.length : 0;
+      const reprChildren = repr ? repr.children.length : null;
+      const sectionText = section ? String(section.textContent || "") : "";
       return {
-        displayExists: Boolean(display),
-        displayTag: display ? display.tagName : null,
-        contentEditable: display ? display.isContentEditable || display.getAttribute("contenteditable") === "true" : null,
+        displayExists: Boolean(repr && reprTotals && section),
+        displayElement: repr && reprTotals && section ? "salesPricingLines" : null,
+        legacyDisplayPresent: Boolean(legacyDisplay),
+        displayTag: repr ? repr.tagName : null,
+        contentEditable: Boolean(repr && (repr.isContentEditable || repr.getAttribute("contenteditable") === "true" || reprEditableNode)),
         arbitraryPriceControl: arbitraryPriceControl ? arbitraryPriceControl.id || arbitraryPriceControl.name || arbitraryPriceControl.tagName : null,
         clientPayloadExcludesPrice: !/\b(unitPrice|sellingPrice|price)\s*:/.test(submitSource + "\n" + orderSource),
-        retiredControlAbsent: !document.getElementById("operationalSellingPrice")
+        retiredControlAbsent: !document.getElementById("operationalSellingPrice"),
+        reprChildren,
+        committedLines: lines,
+        reprOverhang: typeof reprChildren === "number" && reprChildren > lines,
+        revenueRowPresent: Boolean(document.getElementById("salesPreviewRevenue") || /Revenue/i.test(sectionText)),
+        percentageInPricePreview: /%/.test(sectionText)
       };
     });
     const activePathHot = activeSalesPathEvidence && activeSalesPathEvidence.pricingByType ? activeSalesPathEvidence.pricingByType.Hot : null;
     const activePathCold = activeSalesPathEvidence && activeSalesPathEvidence.pricingByType ? activeSalesPathEvidence.pricingByType.Cold : null;
-    const resolved = [activePathHot, activePathCold].filter((outcome) => outcome && outcome.selectedByUser && outcome.resolvedFromAuthority && outcome.previewPriceText && outcome.previewPriceText !== "—");
+    // U8B: repr renders committed lines only, so the resolved-price
+    // requirement reads the authority pricing object per selected variant.
+    const hotOutcomePass = Boolean(activePathHot && activePathHot.selectedByUser && activePathHot.resolvedFromAuthority && activePathHot.pricing && Number(activePathHot.pricing.price) > 0);
+    const coldOutcomePass = Boolean(activePathCold && activePathCold.selectedByUser && activePathCold.resolvedFromAuthority && activePathCold.pricing && Number(activePathCold.pricing.price) > 0);
+    const resolved = [activePathHot, activePathCold].filter((outcome) => outcome && outcome.selectedByUser && outcome.resolvedFromAuthority && outcome.pricing && Number(outcome.pricing.price) > 0);
     const variantDeterminesPrice = resolved.length > 0;
-    const comparable = activePathHot && activePathCold && activePathHot.resolvedFromAuthority && activePathCold.resolvedFromAuthority;
-    const variantDifferenceReflected = !comparable || activePathHot.pricing.price === activePathCold.pricing.price || activePathHot.previewPriceText !== activePathCold.previewPriceText;
-    const displayOnly = priceAuthority.displayTag === "DD" && !priceAuthority.contentEditable && !priceAuthority.arbitraryPriceControl;
+    // U8B Order Preview proof — exact per-variant rendered + numeric
+    // equivalence against the server-authority pricing for every resolved
+    // variant (single-order for one variant, multi-order when both resolve).
+    const proofSelection = activeSalesPathEvidence ? activeSalesPathEvidence.productSelection : null;
+    const proofVariants = [];
+    if (hotOutcomePass) proofVariants.push({ type: "Hot", outcome: activePathHot });
+    if (coldOutcomePass) proofVariants.push({ type: "Cold", outcome: activePathCold });
+    const orderPreviewProof = { attempted: false, ok: false, lines: [], violations: [], snapshots: [] };
+    if (proofSelection && proofSelection.ok && proofVariants.length) {
+      orderPreviewProof.attempted = true;
+      for (let lineIndex = 0; lineIndex < proofVariants.length; lineIndex++) {
+        const variant = proofVariants[lineIndex];
+        const qty = lineIndex + 1;
+        if (lineIndex > 0) {
+          const reselect = await selectProductViaCombobox(app, proofSelection.productText, TIMEOUT);
+          if (!reselect.ok) {
+            orderPreviewProof.violations.push(`reselect for ${variant.type} failed: ${reselect.reason}`);
+            break;
+          }
+        }
+        const settle = await commitDraftLine(app, variant.type, qty);
+        const snapshot = await readOrderPreviewSnapshot(app);
+        orderPreviewProof.snapshots.push(snapshot);
+        const price = Number(variant.outcome.pricing.price);
+        // formatEntryCurrency authority: "Rp " + id-ID separators.
+        const expectedLabel = `${variant.type} × ${qty} @ Rp ${idFormat(price)}`;
+        const expectedAmount = `Rp ${idFormat(price * qty)}`;
+        const row = snapshot.rows && snapshot.rows[lineIndex] ? snapshot.rows[lineIndex] : null;
+        const stateLine = snapshot.stateLines && snapshot.stateLines[lineIndex] ? snapshot.stateLines[lineIndex] : null;
+        const renderedDigits = row ? Number((row.amount.match(/\d+/g) || []).join("")) : NaN;
+        const lineViolations = [];
+        if (!settle.settled || settle.failed) lineViolations.push(`pricing did not settle for ${variant.type}`);
+        if (!row) lineViolations.push(`order preview row ${lineIndex} missing`);
+        else {
+          if (row.label !== expectedLabel) lineViolations.push(`row ${lineIndex} label ${JSON.stringify(row.label)} != expected ${JSON.stringify(expectedLabel)}`);
+          if (row.amount !== expectedAmount) lineViolations.push(`row ${lineIndex} amount ${JSON.stringify(row.amount)} != expected ${JSON.stringify(expectedAmount)}`);
+          if (renderedDigits !== price * qty) lineViolations.push(`row ${lineIndex} rendered total digits ${renderedDigits} != unit*qty ${price * qty}`);
+        }
+        if (!stateLine || stateLine.servingType !== variant.type || stateLine.qty !== qty || stateLine.price !== price ||
+          stateLine.price * stateLine.qty !== price * qty) {
+          lineViolations.push(`state line ${lineIndex} mismatch: ${JSON.stringify(stateLine)} (expected servingType=${variant.type}, qty=${qty}, price=${price})`);
+        }
+        if (snapshot.committedLines !== lineIndex + 1) lineViolations.push(`committedLines=${snapshot.committedLines} expected ${lineIndex + 1}`);
+        if (typeof snapshot.reprChildren === "number" && snapshot.reprChildren > snapshot.committedLines) {
+          lineViolations.push(`price preview repr overhang after line ${lineIndex}: reprChildren=${snapshot.reprChildren} committed=${snapshot.committedLines}`);
+        }
+        orderPreviewProof.lines.push({ type: variant.type, qty, price, expectedLabel, expectedAmount, row, stateLine, settled: settle.settled });
+        if (lineViolations.length) orderPreviewProof.violations.push(...lineViolations);
+      }
+      const expectedTotal = proofVariants.reduce((sum, variant, idx) => sum + Number(variant.outcome.pricing.price) * (idx + 1), 0);
+      const lastSnapshot = orderPreviewProof.snapshots[orderPreviewProof.snapshots.length - 1];
+      const expectedTotalText = "Total: Rp " + idFormat(expectedTotal);
+      if (!lastSnapshot || lastSnapshot.totalText !== expectedTotalText) {
+        orderPreviewProof.violations.push(`overall Total ${JSON.stringify(lastSnapshot && lastSnapshot.totalText)} != expected ${JSON.stringify(expectedTotalText)}`);
+      }
+      orderPreviewProof.ok = orderPreviewProof.violations.length === 0;
+    }
+    // The variant price difference is reflected exactly when the Order
+    // Preview rendered every resolved variant line with the numeric +
+    // rendered authority price (fail-closed when unprovable).
+    const variantDifferenceReflected = orderPreviewProof.ok;
+    const displayOnly = priceAuthority.displayTag === "DIV" &&
+      !priceAuthority.contentEditable && !priceAuthority.arbitraryPriceControl;
     const serverFinal = resolved.every((outcome) => outcome.pricingSource === "server" || outcome.pricingSource === "master-cache");
     const fViolations = [];
     if (!priceAuthority.displayExists) fViolations.push("#salesPreviewPrice missing");
     if (!displayOnly) fViolations.push(`price operator-editable=${JSON.stringify(priceAuthority)}`);
     if (!variantDeterminesPrice) fViolations.push("selected variant/type did not establish authoritative price");
     if (!variantDifferenceReflected) fViolations.push("variant price difference not reflected");
+    if (!orderPreviewProof.ok) fViolations.push(`order preview variant-authority proof incomplete: ${JSON.stringify(orderPreviewProof.violations)}`);
     if (!priceAuthority.clientPayloadExcludesPrice) fViolations.push("client submission payload contains price authority");
     if (!serverFinal) fViolations.push("pricing source is not server authority");
     if (!priceAuthority.retiredControlAbsent) fViolations.push("retired #operationalSellingPrice restored");
+    // U8B frozen-contract gates on the active Price Preview representation.
+    if (priceAuthority.reprOverhang) fViolations.push("price preview shows rows beyond the committed draft lines");
+    if (priceAuthority.revenueRowPresent) fViolations.push("Revenue row present in Price Preview (U8B contract)");
+    if (priceAuthority.percentageInPricePreview) fViolations.push("percentage present in Price Preview (U8B contract)");
     record("F", fViolations.length ? "FAIL" : "PASS",
-      `active display=${JSON.stringify(priceAuthority)}; variantDeterminesPrice=${variantDeterminesPrice}; variantDifferenceReflected=${variantDifferenceReflected}; serverFinal=${serverFinal}; Hot=${JSON.stringify(activePathHot)}; Cold=${JSON.stringify(activePathCold)}; violations=${JSON.stringify(fViolations)}`);
+      `active display=${JSON.stringify(priceAuthority)}; variantDeterminesPrice=${variantDeterminesPrice}; variantDifferenceReflected=${variantDifferenceReflected}; orderPreviewProof=${JSON.stringify({ attempted: orderPreviewProof.attempted, ok: orderPreviewProof.ok, lines: orderPreviewProof.lines, violations: orderPreviewProof.violations })}; serverFinal=${serverFinal}; Hot=${JSON.stringify(activePathHot)}; Cold=${JSON.stringify(activePathCold)}; violations=${JSON.stringify(fViolations)}`);
 
     // G. Order type — options exactly DINE_IN and TAKE_AWAY.
     const orderTypeValues = dom.orderType && dom.orderType.exists && Array.isArray(dom.orderType.options)

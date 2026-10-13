@@ -47,7 +47,7 @@ check("F checks variant price differences", source.includes('fViolations.push("v
 check("F rejects client payload price authority", source.includes('fViolations.push("client submission payload contains price authority")'));
 check("F requires server-final authority", source.includes('fViolations.push("pricing source is not server authority")'));
 check("F does not require retired control", source.includes('retiredControlAbsent: !document.getElementById("operationalSellingPrice")'));
-check("current display is non-editable dd", /<dd id="salesPreviewPrice">/.test(index));
+check("current price preview is non-editable section (U8B: HPP/Margin lines, no Revenue row)", /<section id="salesPricingPreview"/.test(index) && !/<dd id="salesPreviewRevenue">/.test(index) && !/<input[^>]*name="unitPrice"/.test(index));
 check("canonical submission excludes arbitrary price", /transactionType: "SALES", productId: state\.selectedProduct\.productId, type: state\.selectedType, qty: state\.qty/.test(actions));
 check("server resolves effective ProductPricing", server.includes("function resolveOperationalProduct_") && server.includes("SELLING_PRICE_NOT_AVAILABLE") && server.includes("sellingPriceSnapshot: price"));
 

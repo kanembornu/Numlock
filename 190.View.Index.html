@@ -3509,8 +3509,7 @@
             <form id="transactionEntryForm" novalidate onsubmit="submitTransactionEntry(event)">
               <section id="operationalOrderFields" class="transaction-entry-fields" aria-labelledby="operationalOrderHeading" hidden>
                 <h3 id="operationalOrderHeading">Order review</h3>
-                <label for="operationalOrderType">Order Type</label><select id="operationalOrderType"><option value="DINE_IN">Dine In</option><option value="TAKE_AWAY">Take Away</option></select>
-                <p id="operationalOrderError" class="transaction-entry-error" role="alert"></p><div id="operationalOrderLines"></div><p id="operationalOrderTotal">Total: Rp 0</p>
+                <p id="operationalOrderError" class="transaction-entry-error" role="alert"></p>
                 <button id="operationalSaveOrder" type="button" onclick="saveOperationalOrder()">Save Order</button>
                 <div id="operationalOrderLookupControl" class="transaction-entry-control"><label for="operationalOrderLookup">Continue existing order</label><input id="operationalOrderLookup" type="search" placeholder="Order number"><button id="operationalLookupButton" type="button" onclick="lookupOperationalOrder()">Find Order</button></div>
                 <div id="operationalOpenOrders" role="status" aria-live="polite"></div>
@@ -3547,6 +3546,7 @@
               </section>
               <section id="salesEntryFields" class="transaction-entry-fields" aria-labelledby="salesEntryHeading" hidden>
                 <h3 id="salesEntryHeading"><span><i class="fas fa-receipt" aria-hidden="true"></i> Sales details</span><span id="salesEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>
+                <div class="transaction-sales-layout">
                 <div class="transaction-sales-detail-card">
                   <div class="transaction-entry-control transaction-sales-product">
                     <label for="productEntrySearch">Product</label>
@@ -3556,6 +3556,10 @@
                     </div>
                     <p id="productEntryMeta" class="transaction-entry-meta"></p>
                     <p id="productEntryError" class="transaction-entry-error" role="alert"></p>
+                  </div>
+
+                  <div class="transaction-entry-control transaction-sales-order-type">
+                    <label for="operationalOrderType">Order Type</label><select id="operationalOrderType"><option value="DINE_IN">Dine In</option><option value="TAKE_AWAY">Take Away</option></select>
                   </div>
 
                   <fieldset class="transaction-entry-fieldset transaction-sales-serving">
@@ -3575,25 +3579,28 @@
                       <button type="button" aria-label="Increase quantity" onclick="adjustSalesEntryQty(1)"><i class="fas fa-plus" aria-hidden="true"></i></button>
                     </div>
                     <p id="salesEntryQtyError" class="transaction-entry-error" role="alert"></p>
-                    <button id="operationalAddLine" type="button" onclick="addSelectedSalesOrderLine()">Add Line</button>
                   </div>
+
+                  <button id="operationalAddLine" class="transaction-sales-add-line" type="button" onclick="addSelectedSalesOrderLine()">Add Line</button>
                 </div>
 
-                <section id="salesPricingPreview" class="transaction-entry-preview" aria-labelledby="salesPricingHeading" aria-busy="false">
+                <section id="salesOrderPreview" class="transaction-entry-preview transaction-order-preview" aria-labelledby="salesOrderPreviewHeading" aria-busy="false">
+                  <div class="transaction-entry-preview-heading">
+                    <h4 id="salesOrderPreviewHeading">Order preview</h4>
+                  </div>
+                  <div id="operationalOrderLines" class="transaction-order-preview-lines"></div>
+                  <p id="operationalOrderTotal" class="transaction-entry-preview-total">Total: Rp 0</p>
+                </section>
+
+                <section id="salesPricingPreview" class="transaction-entry-preview transaction-order-preview" aria-labelledby="salesPricingHeading" aria-busy="false">
                   <div class="transaction-entry-preview-heading">
                     <h4 id="salesPricingHeading">Price preview</h4>
-                    <span id="salesPricingState" role="status" aria-live="polite">Select product and type.</span>
+                    <span id="salesPricingState" role="status" aria-live="polite"></span>
                   </div>
-                  <dl>
-                    <div><dt>Selling Price</dt><dd id="salesPreviewPrice">—</dd></div>
-                    <div><dt>HPP</dt><dd id="salesPreviewHpp">—</dd></div>
-                    <div><dt>Unit Margin</dt><dd id="salesPreviewUnitMargin">—</dd></div>
-                    <div><dt>Qty</dt><dd id="salesPreviewQty">×1</dd></div>
-                    <div class="transaction-entry-preview-total"><dt>Revenue</dt><dd id="salesPreviewRevenue">—</dd></div>
-                    <div><dt>COGS</dt><dd id="salesPreviewCogs">—</dd></div>
-                    <div><dt>Total Margin</dt><dd id="salesPreviewMargin">—</dd></div>
-                  </dl>
+                  <div id="salesPricingLines" class="transaction-price-preview-lines"></div>
+                  <div id="salesPricingTotals" class="transaction-price-preview-totals"></div>
                 </section>
+                </div>
               </section>
 
               <section id="expenseEntryFields" class="transaction-entry-fields" aria-labelledby="expenseEntryHeading" hidden>
@@ -4551,8 +4558,7 @@
         "expenseEntrySearch", "expenseEntryListbox", "expenseEntryMeta", "expenseEntryError",
         "salesTypeHot", "salesTypeCold", "salesTypeError", "salesEntryQty",
         "salesEntryQtyError", "salesPricingPreview", "salesPricingState",
-        "salesPreviewPrice", "salesPreviewHpp", "salesPreviewUnitMargin", "salesPreviewQty",
-        "salesPreviewRevenue", "salesPreviewCogs", "salesPreviewMargin", "expenseEntryAmount",
+        "salesPricingLines", "salesPricingTotals", "expenseEntryAmount",
         "expenseEntryAmountError", "transactionEntrySubmitRegion", "transactionEntryGeneralError", "submitTransactionEntryButton",
         "transactionEntrySubmitLabel", "transactionEntrySuccess", "transactionEntrySuccessDetails",
         "transactionsIsActive",
@@ -4757,10 +4763,8 @@
         typeHot: required.salesTypeHot, typeCold: required.salesTypeCold,
         salesTypeError: required.salesTypeError, qty: required.salesEntryQty,
         qtyError: required.salesEntryQtyError, pricingPreview: required.salesPricingPreview,
-        pricingState: required.salesPricingState, previewPrice: required.salesPreviewPrice,
-        previewHpp: required.salesPreviewHpp, previewUnitMargin: required.salesPreviewUnitMargin,
-        previewQty: required.salesPreviewQty, previewRevenue: required.salesPreviewRevenue,
-        previewCogs: required.salesPreviewCogs, previewMargin: required.salesPreviewMargin,
+        pricingState: required.salesPricingState, pricingLines: required.salesPricingLines,
+        pricingTotals: required.salesPricingTotals,
         amount: required.expenseEntryAmount, amountError: required.expenseEntryAmountError,
         submitRegion: required.transactionEntrySubmitRegion,
         generalError: required.transactionEntryGeneralError, submit: required.submitTransactionEntryButton,

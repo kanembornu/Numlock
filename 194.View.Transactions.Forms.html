@@ -295,11 +295,13 @@
         button.setAttribute("aria-selected", String(selectedId === optionId));
         button.setAttribute("data-active", String(transactionEntryState.activeOptionIndex[type] === index));
         button.innerText = type === "product" ? option.product : option.item;
-        var meta = document.createElement("span");
-        meta.innerText = type === "product"
-          ? [option.category, option.kind].filter(Boolean).join(" · ")
-          : [option.category, option.group].filter(Boolean).join(" · ");
-        button.appendChild(meta);
+        // U8B frozen contract: product options show the NAME only — never
+        // Category/Kind in the option row (expense options keep their meta).
+        if (type !== "product") {
+          var meta = document.createElement("span");
+          meta.innerText = [option.category, option.group].filter(Boolean).join(" · ");
+          button.appendChild(meta);
+        }
         button.addEventListener("click", function() { selectTransactionEntryOption(type, option); });
         combo.listbox.appendChild(button);
       });
@@ -356,7 +358,7 @@
       if (type === "product") {
         transactionEntryState.selectedProduct = option;
         entry.productSearch.value = option.product;
-        entry.productMeta.innerText = [option.category, option.kind].filter(Boolean).join(" · ");
+        entry.productMeta.innerText = "";
         entry.productError.innerText = "";
         requestTransactionEntryPricing();
       } else {
@@ -443,16 +445,11 @@
 
     function renderTransactionEntryPricing()
     {
-      var entry = initializeStableDashboardElements().transactionEntry;
-      var pricing = transactionEntryState.pricing;
-      var qty = transactionEntryState.qty;
-      entry.previewQty.innerText = "×" + qty;
-      entry.previewPrice.innerText = pricing ? formatEntryCurrency(pricing.price) : "—";
-      entry.previewHpp.innerText = pricing ? formatEntryCurrency(pricing.hpp) : "—";
-      entry.previewUnitMargin.innerText = pricing ? formatEntryCurrency(pricing.unitMargin) : "—";
-      entry.previewRevenue.innerText = pricing ? formatEntryCurrency(pricing.price * qty) : "—";
-      entry.previewCogs.innerText = pricing ? formatEntryCurrency(pricing.hpp * qty) : "—";
-      entry.previewMargin.innerText = pricing ? formatEntryCurrency(pricing.unitMargin * qty) : "—";
+      // U8B: the Price Preview renders committed draft lines (HPP/Margin)
+      // from the resolved pricing the lines already carry. A pending
+      // selection only gates Add Line through state.pricing; its feedback is
+      // the aria-busy state + salesPricingState status text.
+      if (typeof renderSalesPricingPreview_ === "function") renderSalesPricingPreview_();
     }
 
     function adjustSalesEntryQty(delta)

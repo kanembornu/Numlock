@@ -156,7 +156,8 @@ var files = [
   '96.Tests.Treasury.Activation.Cases.js',
   '96.Tests.SingleCommit.Readers.Cases.js',
   '96.Tests.SingleCommit.Config.Cases.js',
-  '96.Tests.SingleCommit.Corrections.Cases.js'
+  '96.Tests.SingleCommit.Corrections.Cases.js',
+  '96.Tests.SalesUI.U8B.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -291,6 +292,7 @@ run('testMasterWritePolicyContracts', 'testMasterWritePolicyContracts()');
 run('testSupplierMasterContracts', 'testSupplierMasterContracts()');
 run('testTransactionOperationalFoundationContracts', 'testTransactionOperationalFoundationContracts(_htmlIndex, _htmlActions)');
 run('testSalesOperatorWorkflowContracts', 'testSalesOperatorWorkflowContracts(_htmlIndex, _htmlActions, _productionSource, _htmlForms)');
+run('testSalesUIU8BContract', 'testSalesUIU8BContract()');
 run('testTransactionAuthorityTransportContract', 'testTransactionAuthorityTransportContract()');
 run('testOperationalOrderLookupTransportContract', 'testOperationalOrderLookupTransportContract()');
 run('testOpenOperationalOrdersTransportContract', 'testOpenOperationalOrdersTransportContract()');

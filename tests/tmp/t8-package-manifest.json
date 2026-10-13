@@ -25,11 +25,11 @@
       },
       {
         "path": "189.View.Tailwind.html",
-        "sha256": "633b8428bdf7389bb14336ec6f24461b0551990d35c702963ad689bee98f8eb8"
+        "sha256": "26bfc16dfd5e9514455232809cebc30e8615988a2fa83d4e9900ed1c56107440"
       },
       {
         "path": "190.View.Index.html",
-        "sha256": "001940631b78d4e60576ee91bd44fdba3a9dab02217f7acbafe6931131e549fa"
+        "sha256": "a7d23d97501dc277b5b2c3466482a6a54ef7cc14d8526bed5ab3dfb3e5becc5e"
       },
       {
         "path": "191.View.Diagnostics.html",
@@ -45,11 +45,11 @@
       },
       {
         "path": "194.View.Transactions.Forms.html",
-        "sha256": "929b6a1b665be62fe27f2c5eb7e141d8f499f0c6ab0d87c998573b08d55cad76"
+        "sha256": "63c6bfee8fa9665193c4c8125476f538720400446b4c4ce4a812e074110a742f"
       },
       {
         "path": "195.View.Transactions.Actions.html",
-        "sha256": "1bcdb45c514a8cb3c86ffea42c7b3b5f9281d7ebc8145936c3f1406d309ef31f"
+        "sha256": "f23780fba562dd946970ff7804de5f8bc6117d3ad6b82af61e6fb4f20b0bcf2a"
       },
       {
         "path": "196.View.Dashboard.Render.html",
@@ -312,7 +312,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "e7a1b36e89efeef512b99b51a3654a2e5a6fbae67603fe5e7faf36c8f397ef60"
+    "aggregateHash": "b4a1517139093893c476169cfc3bd122a2a1c4a7c9c38002fe8a5cacb4dedea3"
   },
   "prospective": {
     "count": 77,
@@ -339,11 +339,11 @@
       },
       {
         "path": "189.View.Tailwind.html",
-        "sha256": "633b8428bdf7389bb14336ec6f24461b0551990d35c702963ad689bee98f8eb8"
+        "sha256": "26bfc16dfd5e9514455232809cebc30e8615988a2fa83d4e9900ed1c56107440"
       },
       {
         "path": "190.View.Index.html",
-        "sha256": "001940631b78d4e60576ee91bd44fdba3a9dab02217f7acbafe6931131e549fa"
+        "sha256": "a7d23d97501dc277b5b2c3466482a6a54ef7cc14d8526bed5ab3dfb3e5becc5e"
       },
       {
         "path": "191.View.Diagnostics.html",
@@ -359,11 +359,11 @@
       },
       {
         "path": "194.View.Transactions.Forms.html",
-        "sha256": "929b6a1b665be62fe27f2c5eb7e141d8f499f0c6ab0d87c998573b08d55cad76"
+        "sha256": "63c6bfee8fa9665193c4c8125476f538720400446b4c4ce4a812e074110a742f"
       },
       {
         "path": "195.View.Transactions.Actions.html",
-        "sha256": "1bcdb45c514a8cb3c86ffea42c7b3b5f9281d7ebc8145936c3f1406d309ef31f"
+        "sha256": "f23780fba562dd946970ff7804de5f8bc6117d3ad6b82af61e6fb4f20b0bcf2a"
       },
       {
         "path": "196.View.Dashboard.Render.html",
@@ -626,7 +626,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "e7a1b36e89efeef512b99b51a3654a2e5a6fbae67603fe5e7faf36c8f397ef60"
+    "aggregateHash": "b4a1517139093893c476169cfc3bd122a2a1c4a7c9c38002fe8a5cacb4dedea3"
   },
   "treasuryRuntimePendingRegistration": [
     "99.Treasury.Receipt.Foundation.js",
