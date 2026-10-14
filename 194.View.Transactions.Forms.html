@@ -654,20 +654,12 @@
     {
       var e = receiptEntryElements(), state = transactionEntryState;
       state.receiptKey = null; state.receiptPayload = null;
-      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount"].forEach(function(key) {
+      ["Date", "Qty", "Uom", "Cost", "Supplier", "CashAccount"].forEach(function(key) {
         e[key].value = ""; e[key].checked = false; e[key].setAttribute("aria-invalid", "false");
         e[key + "Error"].innerText = "";
       });
-      e.fields.hidden = true; e.controls.disabled = false; e.Reference.disabled = false;
+      e.fields.hidden = true; e.controls.disabled = false;
       e.recovery.hidden = true; e.status.innerText = ""; e.expenseDateError.innerText = "";
-    }
-
-    function updateReceiptEntryEvidence()
-    {
-      var e = receiptEntryElements();
-      if (e.Unavailable.checked) e.Reference.value = "";
-      e.Reference.disabled = e.Unavailable.checked;
-      validateReceiptEntry(true);
     }
 
     function validateReceiptEntry(showErrors)
@@ -681,8 +673,6 @@
       if (Boolean(qty) !== Boolean(uom)) errors.Uom = "Provide both actual quantity and unit, or leave both blank if unknown.";
       if (!/^\d+$/.test(cost) || !Number.isSafeInteger(Number(cost)) || Number(cost) <= 0) errors.Cost = "Enter a positive whole Rupiah acquisition cost.";
       if (!e.Supplier.value.trim()) errors.Supplier = "Enter the supplier or purchase source.";
-      if (!e.Unavailable.checked && !e.Reference.value.trim()) errors.Reference = "Enter an evidence reference or declare the document unavailable.";
-      if (!e.Attested.checked) errors.Attested = "Confirm that these details reflect what was actually received.";
       // T11.5 U3: the ACTIVE single-commit Purchase surface never requests a
       // payment channel (D1/D2/D15); the server derives 1040. Every other
       // mode keeps the exact legacy cash requirement.
@@ -692,13 +682,12 @@
         var cashAccount = e.CashAccount ? e.CashAccount.value : "";
         if (!cashAccount || ["1000", "1010", "1020"].indexOf(cashAccount) === -1) errors.CashAccount = "Select a payment account.";
       }
-      if (showErrors) ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount", "expenseDate"].forEach(function(key) {
+      if (showErrors) ["Date", "Qty", "Uom", "Cost", "Supplier", "CashAccount", "expenseDate"].forEach(function(key) {
         e[key + "Error"].innerText = errors[key] || ""; e[key].setAttribute("aria-invalid", String(Boolean(errors[key])));
       });
       if (Object.keys(errors).length || !isPurchaseExpenseEntry()) return null;
       return { ExpenseDate: e.expenseDate.value, ReceiptDate: date, PurchaseQty: qty, PurchaseUOM: uom,
-        AcquisitionValue: cost, SupplierSource: e.Supplier.value.trim(), ExternalRef: e.Unavailable.checked ? "" : e.Reference.value.trim(),
-        ExternalDocumentStatus: e.Unavailable.checked ? "EXTERNAL_DOCUMENT_UNAVAILABLE" : "AVAILABLE", Attested: true };
+        AcquisitionValue: cost, SupplierSource: e.Supplier.value.trim(), ExternalRef: "", ExternalDocumentStatus: "EXTERNAL_DOCUMENT_UNAVAILABLE", Attested: false };
     }
 
     function restoreReceiptEntryPending()
@@ -718,8 +707,7 @@
       entry.typeExpense.setAttribute("aria-checked", "true"); entry.dialog.setAttribute("data-entry-type", "expense");
       e.expenseDate.value = input.ExpenseDate || input.ReceiptDate;
       e.Date.value = input.ReceiptDate; e.Qty.value = input.PurchaseQty; e.Uom.value = input.PurchaseUOM; e.Cost.value = input.AcquisitionValue;
-      e.Supplier.value = input.SupplierSource; e.Reference.value = input.ExternalRef;
-      e.Unavailable.checked = input.ExternalDocumentStatus === "EXTERNAL_DOCUMENT_UNAVAILABLE"; e.Attested.checked = input.Attested;
+      e.Supplier.value = input.SupplierSource;
       // Automatically check if the purchase was already persisted
       state.submitting = true;
       receiptEntryElements().recovery.disabled = true;

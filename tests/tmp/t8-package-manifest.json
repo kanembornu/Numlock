@@ -29,11 +29,11 @@
       },
       {
         "path": "189.View.Tailwind.html",
-        "sha256": "9b2afafca3c902d7881903c92383eded4453b2f0e4ca2427a8ce7f240675dc91"
+        "sha256": "006221c051258b5d3fe8040d2f084d137d5300eef7fd26f462d5ec473997286f"
       },
       {
         "path": "190.View.Index.html",
-        "sha256": "a7d23d97501dc277b5b2c3466482a6a54ef7cc14d8526bed5ab3dfb3e5becc5e"
+        "sha256": "60fcc3fcf0f530015fa7ce291a3441eefbae4e702503296c6b584fb761d2309d"
       },
       {
         "path": "191.View.Diagnostics.html",
@@ -49,11 +49,11 @@
       },
       {
         "path": "194.View.Transactions.Forms.html",
-        "sha256": "63c6bfee8fa9665193c4c8125476f538720400446b4c4ce4a812e074110a742f"
+        "sha256": "394653087fe13a0b9341524ac842567c36a4d31bdd47aa834ed6b6eda6110fd5"
       },
       {
         "path": "195.View.Transactions.Actions.html",
-        "sha256": "e603261aa7a4aff94bebf73babe6ac3c072c955e76080d89b69cb511ca9780ac"
+        "sha256": "1e19a95851091defe95a9c0ce3e89f95af76c0a6ceaf05e31e7fda6bc892105a"
       },
       {
         "path": "196.View.Dashboard.Render.html",
@@ -97,7 +97,7 @@
       },
       {
         "path": "21.Transaction.Entry.js",
-        "sha256": "06f139894f3a06743c407056b4c615bf88a53e25135b20ffd60b4964d4cc371c"
+        "sha256": "ba2d23dc8366de894c55bfee76cab87edadc77681521348bed53e621ecdb0474"
       },
       {
         "path": "22.Transaction.Lifecycle.js",
@@ -177,7 +177,7 @@
       },
       {
         "path": "47.Purchase.Events.js",
-        "sha256": "72d40788374d214498150327858a601a469c9e536a0d6ad685ac06989c2e0b5a"
+        "sha256": "6b66d1f1e9bb0fb865ec658956433629d535d62070be70b827e0df29d68beb32"
       },
       {
         "path": "48.Purchase.Events.Migration.js",
@@ -316,7 +316,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "f8e4e811b8451d70d05a42b0e18c86c702db41c262f0d54c7e16c4a6a86b97b3"
+    "aggregateHash": "f207a00dd089e54ae49a5f2843dd6703a55e303a3c8a432485d90b6932788bd8"
   },
   "prospective": {
     "count": 78,
@@ -347,11 +347,11 @@
       },
       {
         "path": "189.View.Tailwind.html",
-        "sha256": "9b2afafca3c902d7881903c92383eded4453b2f0e4ca2427a8ce7f240675dc91"
+        "sha256": "006221c051258b5d3fe8040d2f084d137d5300eef7fd26f462d5ec473997286f"
       },
       {
         "path": "190.View.Index.html",
-        "sha256": "a7d23d97501dc277b5b2c3466482a6a54ef7cc14d8526bed5ab3dfb3e5becc5e"
+        "sha256": "60fcc3fcf0f530015fa7ce291a3441eefbae4e702503296c6b584fb761d2309d"
       },
       {
         "path": "191.View.Diagnostics.html",
@@ -367,11 +367,11 @@
       },
       {
         "path": "194.View.Transactions.Forms.html",
-        "sha256": "63c6bfee8fa9665193c4c8125476f538720400446b4c4ce4a812e074110a742f"
+        "sha256": "394653087fe13a0b9341524ac842567c36a4d31bdd47aa834ed6b6eda6110fd5"
       },
       {
         "path": "195.View.Transactions.Actions.html",
-        "sha256": "e603261aa7a4aff94bebf73babe6ac3c072c955e76080d89b69cb511ca9780ac"
+        "sha256": "1e19a95851091defe95a9c0ce3e89f95af76c0a6ceaf05e31e7fda6bc892105a"
       },
       {
         "path": "196.View.Dashboard.Render.html",
@@ -415,7 +415,7 @@
       },
       {
         "path": "21.Transaction.Entry.js",
-        "sha256": "06f139894f3a06743c407056b4c615bf88a53e25135b20ffd60b4964d4cc371c"
+        "sha256": "ba2d23dc8366de894c55bfee76cab87edadc77681521348bed53e621ecdb0474"
       },
       {
         "path": "22.Transaction.Lifecycle.js",
@@ -495,7 +495,7 @@
       },
       {
         "path": "47.Purchase.Events.js",
-        "sha256": "72d40788374d214498150327858a601a469c9e536a0d6ad685ac06989c2e0b5a"
+        "sha256": "6b66d1f1e9bb0fb865ec658956433629d535d62070be70b827e0df29d68beb32"
       },
       {
         "path": "48.Purchase.Events.Migration.js",
@@ -634,7 +634,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "f8e4e811b8451d70d05a42b0e18c86c702db41c262f0d54c7e16c4a6a86b97b3"
+    "aggregateHash": "f207a00dd089e54ae49a5f2843dd6703a55e303a3c8a432485d90b6932788bd8"
   },
   "treasuryRuntimePendingRegistration": [
     "99.Treasury.Receipt.Foundation.js",

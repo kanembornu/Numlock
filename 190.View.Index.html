@@ -3644,9 +3644,6 @@
                 <div class="transaction-entry-control"><label for="receiptUom">Package/UOM</label><input id="receiptUom" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptUomError" placeholder="Actual unit or package; leave blank if unknown"><p id="receiptUomError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptCost">Total acquisition cost (IDR)</label><input id="receiptCost" type="text" inputmode="numeric" onchange="validateReceiptEntry(true)" aria-describedby="receiptCostError"><p id="receiptCostError" class="transaction-entry-error" role="alert"></p></div>
                 <div class="transaction-entry-control"><label for="receiptSupplier">Supplier/source</label><input id="receiptSupplier" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptSupplierError"><p id="receiptSupplierError" class="transaction-entry-error" role="alert"></p></div>
-                <div class="transaction-entry-control"><label for="receiptReference">Purchase evidence/reference</label><input id="receiptReference" type="text" onchange="validateReceiptEntry(true)" aria-describedby="receiptReferenceError"><p id="receiptReferenceError" class="transaction-entry-error" role="alert"></p></div>
-                <div class="transaction-entry-control"><label for="receiptUnavailable">Document unavailable</label><input id="receiptUnavailable" type="checkbox" onchange="updateReceiptEntryEvidence()" aria-describedby="receiptUnavailableError"><p id="receiptUnavailableError" class="transaction-entry-error" role="alert"></p></div>
-                <div class="transaction-entry-control"><label for="receiptAttested">I confirm this purchase information reflects what was actually received.</label><input id="receiptAttested" type="checkbox" onchange="validateReceiptEntry(true)" aria-describedby="receiptAttestedError"><p id="receiptAttestedError" class="transaction-entry-error" role="alert"></p></div>
                 <div id="receiptCashAccountField" class="transaction-entry-control transaction-entry-cash-account">
                   <label for="receiptCashAccount">Paid via</label>
                   <select id="receiptCashAccount" aria-describedby="receiptCashAccountError">
@@ -4584,7 +4581,7 @@
       var receiptIds = { fields: "receiptEntryFields", controls: "receiptEntryControls",
         costType: "expenseCostType", expenseDate: "expenseDate", expenseDateError: "expenseDateError", policyFields: "expensePolicyFields", status: "receiptChoicesState",
         recovery: "receiptRecovery", retry: "receiptRetry" };
-      ["Date", "Qty", "Uom", "Cost", "Supplier", "Reference", "Unavailable", "Attested", "CashAccount"].forEach(function(key) {
+      ["Date", "Qty", "Uom", "Cost", "Supplier", "CashAccount"].forEach(function(key) {
         receiptIds[key] = "receipt" + key; receiptIds[key + "Error"] = "receipt" + key + "Error";
       });
       Object.keys(receiptIds).forEach(function(key) { requiredIds.push(receiptIds[key]); });

@@ -148,11 +148,11 @@ function normalizePurchaseEventRequestWithCompatibility_(payload, allowLegacyPay
   var cost = inventoryReceiptDecimal_(p.AcquisitionValue, 0);
   if (cost.n <= 0) inventoryReceiptFail_('INVALID_PURCHASE_COST');
   p.AcquisitionValue = inventoryReceiptDecimalText_(cost);
-  if (!p.SupplierSource || input.Attested !== true ||
-      p.ExternalRef && p.ExternalDocumentStatus !== 'AVAILABLE' ||
-      !p.ExternalRef && p.ExternalDocumentStatus !== 'EXTERNAL_DOCUMENT_UNAVAILABLE') inventoryReceiptFail_('PURCHASE_EVIDENCE_REQUIRED');
-  if (input.ConversionEvidenceConfirmed !== undefined && typeof input.ConversionEvidenceConfirmed !== 'boolean') inventoryReceiptFail_('INVALID_BOOLEAN');
-  p.Attested = true; p.ConversionEvidenceConfirmed = input.ConversionEvidenceConfirmed === true;
+  if (!p.SupplierSource) inventoryReceiptFail_('PURCHASE_SUPPLIER_REQUIRED');
+  p.ExternalRef = p.ExternalRef || '';
+  p.ExternalDocumentStatus = p.ExternalDocumentStatus || (p.ExternalRef ? 'AVAILABLE' : 'EXTERNAL_DOCUMENT_UNAVAILABLE');
+  p.Attested = input.Attested === true;
+  p.ConversionEvidenceConfirmed = input.ConversionEvidenceConfirmed === true;
   var normalized = { transactionType: 'EXPENSE', requestKey: payload.requestKey, expenseItemId: payload.expenseItemId };
   if (hasPaymentAuthority) {
     normalized.paymentStatus = paymentStatus; normalized.cashAccountCode = cashAccountCode; normalized.supplierId = supplierId;
@@ -209,7 +209,7 @@ function buildPurchaseEvent_(request, expenses, authority, audit) {
       p.ConversionEvidenceConfirmed && p.ExternalRef) {
     var input = { ItemID: route.inventoryItemIds[0], ReceiptDate: p.ReceiptDate, PurchaseQty: p.PurchaseQty,
       PurchaseUOM: p.PurchaseUOM, AcquisitionValue: p.AcquisitionValue, SupplierSource: p.SupplierSource,
-      ExternalRef: p.ExternalRef, ExternalDocumentStatus: p.ExternalDocumentStatus, Attested: true,
+      ExternalRef: p.ExternalRef, ExternalDocumentStatus: p.ExternalDocumentStatus, Attested: p.Attested === true,
       PackageIdentity: p.PackageIdentity, SupplierRef: p.SupplierRef };
     try {
       var derived = deriveInventoryReceipt_(input, authority);
@@ -232,8 +232,8 @@ function buildPurchaseEvent_(request, expenses, authority, audit) {
     PolicyVersion: EXPENSE_PURCHASE_POLICY.version, PolicyRevision: EXPENSE_PURCHASE_POLICY.revision,
     CostType: route.CostType, PurchaseRelationship: route.PurchaseRelationship, ExpenseDate: p.ExpenseDate,
     ReceiptDate: p.ReceiptDate, PurchaseQty: p.PurchaseQty, PurchaseUOM: p.PurchaseUOM, AcquisitionValue: p.AcquisitionValue,
-    SupplierSource: p.SupplierSource, ExternalRef: p.ExternalRef, ExternalDocumentStatus: p.ExternalDocumentStatus,
-    Attestation: JSON.stringify({ attested: true, conversionEvidenceConfirmed: p.ConversionEvidenceConfirmed }),
+    SupplierSource: p.SupplierSource, ExternalRef: p.ExternalRef || '', ExternalDocumentStatus: p.ExternalDocumentStatus || (p.ExternalRef ? 'AVAILABLE' : 'EXTERNAL_DOCUMENT_UNAVAILABLE'),
+    Attestation: JSON.stringify({ attested: p.Attested === true, conversionEvidenceConfirmed: p.ConversionEvidenceConfirmed === true }),
     AllocationStatus: allocation, RequestKey: request.requestKey, NormalizedPayload: JSON.stringify(request),
     ReceiptPlan: JSON.stringify(plan), Lifecycle: 'CAPTURED_OPERATIONAL', RecoveryKey: 'pe-receipt-' + request.requestKey,
     CreatedAt: audit.at, CreatedBy: audit.actor, IsActive: true, PaymentStatus: request.paymentStatus,
@@ -264,8 +264,11 @@ function purchaseEventHistory_(rows) {
     if (!route || !expensePolicyIsPurchase_(route) || row.PolicyVersion !== EXPENSE_PURCHASE_POLICY.version ||
         row.PolicyRevision !== EXPENSE_PURCHASE_POLICY.revision || row.CostType !== route.CostType ||
         row.PurchaseRelationship !== route.PurchaseRelationship || !inventoryReceiptText_(row.BusinessLabel) ||
-        !inventoryReceiptText_(row.CreatedBy) || inventoryTimestampMillis(row.CreatedAt) === null ||
-        row.Attestation !== JSON.stringify({ attested: true, conversionEvidenceConfirmed: request.input.ConversionEvidenceConfirmed })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+        !inventoryReceiptText_(row.CreatedBy) || inventoryTimestampMillis(row.CreatedAt) === null) {
+      inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    }
+    var expectedAttestation = JSON.stringify({ attested: request.input.Attested === true, conversionEvidenceConfirmed: request.input.ConversionEvidenceConfirmed === true });
+    if (row.Attestation !== expectedAttestation) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     var plan = JSON.parse(row.ReceiptPlan), p = request.input;
     if (plan) {
       if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !p.ConversionEvidenceConfirmed || !p.ExternalRef ||
