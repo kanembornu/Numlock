@@ -1,9 +1,12 @@
-// SALES-UI-U8B frozen desktop Sales entry UI contract (local, source-token).
-// Asserts: three-column layout (Sales Details | Order Preview | Price
-// Preview), name-only product options, Order Preview line format without a
-// counter, Price Preview HPP/Margin with totals (no Revenue, no percentage),
-// Add Line reset semantics with Order Type retention, full-width Add Line and
-// preview-only overflow. UI-only: no backend, no server pricing change.
+// SALES-UI-V719 desktop Sales entry UI contract (local, source-token),
+// superseding the U8B equal-columns assumption. Asserts: intentional unequal
+// three-column layout at genuinely wide widths only (Sales Details | Order
+// Preview | Price Preview), name-only product options, Order Preview with
+// product-name anchor + exact serving/qty/unit token and no counter, Price
+// Preview HPP/Margin grouped per product with totals only for multi-product
+// orders (no Revenue, no percentage), Add Line reset semantics with Order
+// Type retention, NUMLOCK-styled full-width Add Line, and preview-only
+// overflow. UI-only: no backend, no server pricing change.
 function testSalesUIU8BContract()
 {
   var pass = 0;
@@ -18,11 +21,14 @@ function testSalesUIU8BContract()
   var dialog = index.slice(index.indexOf('id="transactionEntryOverlay"'),
     index.indexOf('id="transactionLifecycleOverlay"'));
 
-  // 1. Three horizontal columns: Sales Details | Order Preview | Price Preview.
+  // 1. Three horizontal columns: Sales Details | Order Preview | Price
+  //    Preview. V719: intentionally unequal (Sales Details favored), and only
+  //    at genuinely wide widths — equal thirds are NOT the contract.
   check("T1a", dialog.indexOf('class="transaction-sales-layout"') !== -1, "layout wrapper");
   check("T1b", css.indexOf('#salesEntryFields>.transaction-sales-layout{grid-column:1/-1;grid-row:auto;display:grid') !== -1 &&
-    css.indexOf("@media (min-width:640px){#salesEntryFields>.transaction-sales-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}") !== -1,
-    "desktop three-column grid");
+    css.indexOf("@media (min-width:1024px){#salesEntryFields>.transaction-sales-layout{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}") !== -1 &&
+    css.indexOf("@media (min-width:640px){#salesEntryFields>.transaction-sales-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr)}") === -1,
+    "desktop unequal three-column grid, reflow only below 1024px");
   var layoutStart = dialog.indexOf('class="transaction-sales-layout"');
   var orderPreviewAt = dialog.indexOf('id="salesOrderPreview"', layoutStart);
   var pricePreviewAt = dialog.indexOf('id="salesPricingPreview"', layoutStart);
@@ -63,8 +69,10 @@ function testSalesUIU8BContract()
   check("T3c", forms.indexOf('entry.productMeta.innerText = "";') !== -1,
     "product meta line stays empty");
 
-  // 4. Order Preview: exact line format `Cold × 5 @ Rp24.000` + aligned line
-  //    total, Indonesian thousand separators via existing money formatter.
+  // 4. Order Preview: PRODUCT NAME anchors each line; exact meta token
+  //    `Cold × 5 @ Rp24.000` + aligned line total; Indonesian thousand
+  //    separators via existing money formatter; Remove is a styled button on
+  //    the line. No line/item counter.
   var orderRender = actions.slice(actions.indexOf("function renderOperationalOrderLines()"),
     actions.indexOf("function renderSalesPricingPreview_()"));
   check("T4a", orderRender.indexOf('label.textContent = line.servingType + " × " + line.qty + " @ " + formatEntryCurrency(line.price);') !== -1,
@@ -72,22 +80,27 @@ function testSalesUIU8BContract()
   check("T4b", orderRender.indexOf('amount.textContent = formatEntryCurrency(line.qty * line.price);') !== -1 &&
     orderRender.indexOf('"Total: " + formatEntryCurrency(total)') !== -1,
     "line total + Total row");
-  check("T4c", orderRender.indexOf("line.name") === -1 && orderRender.indexOf("(index + 1)") === -1 &&
-    orderRender.indexOf("No.") === -1 && orderRender.indexOf("#") === -1,
-    "no product-name row, no line/item counter", orderRender);
+  check("T4c", orderRender.indexOf('name.textContent = salesLineProductName_(line);') !== -1 &&
+    orderRender.indexOf("salesLineProductName_") !== -1 &&
+    orderRender.indexOf('remove.className = "transaction-order-line-remove";') !== -1 &&
+    orderRender.indexOf("(index + 1)") === -1 && orderRender.indexOf("No.") === -1,
+    "product-name anchor + attached Remove button, no line/item counter", orderRender);
 
   // 5. Price Preview: per line `HPP × qty @ unit = total` and
-  //    `Margin × qty @ unit = total`; multi-line => Total HPP + Total Margin.
+  //    `Margin × qty @ unit = total` inside a product-name-headed group;
+  //    multi-PRODUCT orders => bottom Total HPP + Total Margin (a single
+  //    product never repeats its own totals).
   var priceRender = actions.slice(actions.indexOf("function renderSalesPricingPreview_()"),
     actions.indexOf("function operationalServerCall("));
   check("T5a", priceRender.indexOf('"HPP × " + qty + " @ " + formatEntryCurrency(hpp) + " = " + formatEntryCurrency(hpp * qty);') !== -1,
     "HPP line format");
   check("T5b", priceRender.indexOf('"Margin × " + qty + " @ " + formatEntryCurrency(margin) + " = " + formatEntryCurrency(margin * qty);') !== -1,
     "Margin line format");
-  check("T5c", priceRender.indexOf("if (lines.length > 1)") !== -1 &&
+  check("T5c", priceRender.indexOf('name.className = "transaction-price-group-name";') !== -1 &&
+    priceRender.indexOf("if (groups.length > 1)") !== -1 &&
     priceRender.indexOf('"Total HPP: " + formatEntryCurrency(totalHpp)') !== -1 &&
     priceRender.indexOf('"Total Margin: " + formatEntryCurrency(totalMargin)') !== -1,
-    "multi-line totals");
+    "product-grouped rows, multi-product totals");
   check("T5d", priceRender.indexOf("%") === -1 && priceRender.indexOf("percent") === -1,
     "no percentage margin", priceRender);
   check("T5e", dialog.indexOf("salesPreviewRevenue") === -1 &&
@@ -111,11 +124,16 @@ function testSalesUIU8BContract()
     addRegion.indexOf('setAttribute("aria-checked", "false")') !== -1,
     "Serving Type resets to none selected");
 
-  // 7. Add Line is a full-width button; Save stays gated on >= 1 line.
+  // 7. Add Line is a full-width NUMLOCK-styled button (not bare text); Save
+  //    stays gated on >= 1 line.
   check("T7a", dialog.indexOf('id="operationalAddLine" class="transaction-sales-add-line" type="button"') !== -1,
     "Add Line markup");
-  check("T7b", css.indexOf("#operationalAddLine{width:100%;min-height:44px}") !== -1, "full-width CSS");
-  check("T7d", css.indexOf(".transaction-sales-add-line{grid-column:1/-1}") !== -1,
+  check("T7b", css.indexOf("#operationalAddLine{width:100%;min-height:44px}") !== -1 &&
+    css.indexOf(".transaction-sales-add-line{grid-column:1/-1;display:inline-flex;width:100%;min-height:44px;align-items:center;justify-content:center") !== -1 &&
+    css.indexOf("border:1px solid var(--card-border)") !== -1 &&
+    css.indexOf("border-radius:var(--radius-control)") !== -1,
+    "full-width NUMLOCK-styled button chrome");
+  check("T7d", css.indexOf(".transaction-sales-add-line{grid-column:1/-1;") !== -1,
     "Add Line spans the full card width (compiled CSS rule present)");
   check("T7c", actions.indexOf("if (!lines.length) return false;") !== -1, "Save gated on >= 1 line");
 
@@ -129,11 +147,10 @@ function testSalesUIU8BContract()
     css.indexOf(".transaction-order-preview-lines,.transaction-price-preview-lines{max-height:min(42vh,420px);overflow-y:auto") !== -1,
     "bounded dialog scroll + preview-scoped overflow only");
 
-  // 9. U8B-VISUAL remedy: the Sales-entry dialog is widened beyond the legacy
-  //    860px cap so the three frozen columns stay readable at real operator
-  //    viewports (measured pre-fix: 860px -> 3x266px columns, product input
-  //    112px, qty "+" overflowed its container; post-fix @1180px: 3x373px,
-  //    product 165px, "+" fully visible, order/price rows fit un-wrapped).
+  // 9. V719: the Sales-entry dialog keeps the widened 1180px cap so the
+  //    unequal three columns (Sales Details favored) stay readable at real
+  //    operator viewports (1440x900 / 1366x768 / 1280x800; equal thirds and
+  //    the old 3x373px measurement are explicitly not the contract).
   check("T9a", css.indexOf("#transactionEntryDialog[data-entry-type=sales]{width:min(100%,1180px)}") !== -1,
     "sales-entry dialog widened token");
   check("T9b", css.indexOf(".transaction-entry-dialog{display:flex;width:min(100%,860px)") !== -1 &&

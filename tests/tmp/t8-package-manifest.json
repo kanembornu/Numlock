@@ -29,7 +29,7 @@
       },
       {
         "path": "189.View.Tailwind.html",
-        "sha256": "3ca22081ae2950606b391460e264166b66519e241f7a51b00fe3dbd83d9fd0c5"
+        "sha256": "9b2afafca3c902d7881903c92383eded4453b2f0e4ca2427a8ce7f240675dc91"
       },
       {
         "path": "190.View.Index.html",
@@ -53,7 +53,7 @@
       },
       {
         "path": "195.View.Transactions.Actions.html",
-        "sha256": "f23780fba562dd946970ff7804de5f8bc6117d3ad6b82af61e6fb4f20b0bcf2a"
+        "sha256": "e603261aa7a4aff94bebf73babe6ac3c072c955e76080d89b69cb511ca9780ac"
       },
       {
         "path": "196.View.Dashboard.Render.html",
@@ -316,7 +316,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "2d0eae640423a9da7ca3ace5ca689eee30abddb13246f20b1bbb56d61cb2e6cc"
+    "aggregateHash": "f8e4e811b8451d70d05a42b0e18c86c702db41c262f0d54c7e16c4a6a86b97b3"
   },
   "prospective": {
     "count": 78,
@@ -347,7 +347,7 @@
       },
       {
         "path": "189.View.Tailwind.html",
-        "sha256": "3ca22081ae2950606b391460e264166b66519e241f7a51b00fe3dbd83d9fd0c5"
+        "sha256": "9b2afafca3c902d7881903c92383eded4453b2f0e4ca2427a8ce7f240675dc91"
       },
       {
         "path": "190.View.Index.html",
@@ -371,7 +371,7 @@
       },
       {
         "path": "195.View.Transactions.Actions.html",
-        "sha256": "f23780fba562dd946970ff7804de5f8bc6117d3ad6b82af61e6fb4f20b0bcf2a"
+        "sha256": "e603261aa7a4aff94bebf73babe6ac3c072c955e76080d89b69cb511ca9780ac"
       },
       {
         "path": "196.View.Dashboard.Render.html",
@@ -634,7 +634,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "2d0eae640423a9da7ca3ace5ca689eee30abddb13246f20b1bbb56d61cb2e6cc"
+    "aggregateHash": "f8e4e811b8451d70d05a42b0e18c86c702db41c262f0d54c7e16c4a6a86b97b3"
   },
   "treasuryRuntimePendingRegistration": [
     "99.Treasury.Receipt.Foundation.js",

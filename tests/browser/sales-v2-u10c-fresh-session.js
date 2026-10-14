@@ -363,15 +363,13 @@ function run() {
         };
       });
       // After the second Add Line the selection reset cleared state.pricing;
-      // the committed lines carry their own HPP/Margin authority. Expected
-      // totals come from the pre-Add captures (hotPricing/coldPricing).
-      var expectedHppTotal = (preAddPricing ? preAddPricing.hpp : NaN) * 1 + (coldPricing ? coldPricing.hpp : NaN) * 2;
-      var expectedMarginTotal = (preAddPricing ? preAddPricing.margin : NaN) * 1 + (coldPricing ? coldPricing.margin : NaN) * 2;
+      // the committed lines carry their own HPP/Margin authority. Both lines
+      // belong to the SAME product, so under the V719 product-grouped Price
+      // Preview the bottom Total HPP/Margin block stays EMPTY (totals appear
+      // only for multi-product orders; a single product never repeats).
       var noRevenue = pricePreview.sectionText.indexOf("Revenue") === -1;
       var noPercent = pricePreview.sectionText.indexOf("%") === -1;
-      var totalsOk = pricePreview.totalsText !== null &&
-        pricePreview.totalsText.indexOf("Total HPP: " + fmtRp(expectedHppTotal)) !== -1 &&
-        pricePreview.totalsText.indexOf("Total Margin: " + fmtRp(expectedMarginTotal)) !== -1;
+      var totalsOk = pricePreview.totalsText === "";
       var perLineOk = pricePreview.rows.length === 2 &&
         pricePreview.rows[0].hpp === "HPP × 1 @ " + fmtRp(preAddPricing ? preAddPricing.hpp : NaN) + " = " + fmtRp((preAddPricing ? preAddPricing.hpp : NaN) * 1) &&
         pricePreview.rows[0].margin === "Margin × 1 @ " + fmtRp(preAddPricing ? preAddPricing.margin : NaN) + " = " + fmtRp((preAddPricing ? preAddPricing.margin : NaN) * 1) &&
@@ -379,8 +377,8 @@ function run() {
         pricePreview.rows[1].margin === "Margin × 2 @ " + fmtRp(coldPricing ? coldPricing.margin : NaN) + " = " + fmtRp((coldPricing ? coldPricing.margin : NaN) * 2);
       ok("A7", pricePreview.groupCount === 2 && perLineOk && totalsOk && noRevenue && noPercent,
         JSON.stringify({ groupCount: pricePreview.groupCount, rows: pricePreview.rows,
-          totalsText: pricePreview.totalsText, expectedHppTotal: fmtRp(expectedHppTotal),
-          expectedMarginTotal: fmtRp(expectedMarginTotal), noRevenue: noRevenue, noPercent: noPercent }));
+          totalsText: pricePreview.totalsText, expectedTotals: "EMPTY (single product)",
+          noRevenue: noRevenue, noPercent: noPercent }));
       // ---- end U8B exact/reset/multi/price-preview block ----
 
       step("screenshot BEFORE Save — no submission");

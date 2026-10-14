@@ -248,7 +248,7 @@
       var variant = (authority.productVariants || []).filter(function(row) { return row.ProductID === state.selectedProduct.productId && String(row.Tipe).toUpperCase() === state.selectedType.toUpperCase(); })[0];
       if (!variant) { operationalElement("operationalOrderError").innerText = "Pilih variant yang tersedia."; return; }
       operationalTransactionState.lines.push({ productID: state.selectedProduct.productId, productVariantID: variant.ProductVariantID, qty: state.qty,
-        name: state.selectedProduct.product + " · " + state.selectedType, servingType: state.selectedType,
+        name: state.selectedProduct.product + " · " + state.selectedType, productName: state.selectedProduct.product, servingType: state.selectedType,
         price: Number(state.pricing.price), hpp: Number(state.pricing.hpp || 0), margin: Number(state.pricing.unitMargin || 0) });
       // U8B frozen contract: after a successful Add Line the Product clears,
       // Serving Type returns to none selected and Quantity returns to 1.
@@ -275,66 +275,113 @@
       renderOperationalOrderLines();
     }
     function removeOperationalOrderLine(index) { if (operationalTransactionState.pending) return; operationalTransactionState.lines.splice(index, 1); renderOperationalOrderLines(); }
+    // V719: display-only product identity for preview hierarchy. Draft lines
+    // carry productName; older/recovery lines fall back to the " · "-split
+    // name. Never touches the save payload (productID/productVariantID/qty).
+    function salesLineProductName_(line)
+    {
+      if (line && line.productName) return String(line.productName);
+      if (line && typeof line.name === "string" && line.name.indexOf(" · ") !== -1) return line.name.split(" · ")[0];
+      if (line && typeof line.name === "string") return line.name;
+      return "";
+    }
     function renderOperationalOrderLines()
     {
-      // U8B Order Preview: one row per line — `Cold × 5 @ Rp24.000` plus the
-      // aligned line total, no line/item counter; the list ends with Total.
+      // V719 Order Preview hierarchy: PRODUCT NAME anchors each line; the
+      // `Cold × 5 @ Rp24.000` serving/qty/unit meta sits under the name; the
+      // line total and the Remove action align right on the same line
+      // (Remove is attached to its line, never competing with the order
+      // Total). Lines are separated by subtle dividers; no line/item counter;
+      // the list ends with a stronger Total row.
       var lines = operationalTransactionState.lines || [];
       var total = lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0), region = operationalElement("operationalOrderLines");
       region.innerHTML = "";
       lines.forEach(function(line, index) {
         var row = document.createElement("div");
         row.className = "transaction-order-line";
+        var main = document.createElement("div");
+        main.className = "transaction-order-line-main";
+        var name = document.createElement("span");
+        name.className = "transaction-order-line-name";
+        name.textContent = salesLineProductName_(line);
         var label = document.createElement("span");
         label.className = "transaction-order-line-label";
         label.textContent = line.servingType + " × " + line.qty + " @ " + formatEntryCurrency(line.price);
+        main.appendChild(name);
+        main.appendChild(label);
+        var side = document.createElement("div");
+        side.className = "transaction-order-line-side";
         var amount = document.createElement("span");
         amount.className = "transaction-order-line-total";
         amount.textContent = formatEntryCurrency(line.qty * line.price);
         var remove = document.createElement("button");
         remove.type = "button";
+        remove.className = "transaction-order-line-remove";
         remove.textContent = "Remove";
         remove.onclick = function() { removeOperationalOrderLine(index); };
-        row.appendChild(label);
-        row.appendChild(amount);
-        row.appendChild(remove);
+        side.appendChild(amount);
+        side.appendChild(remove);
+        row.appendChild(main);
+        row.appendChild(side);
         region.appendChild(row);
       });
       operationalElement("operationalOrderTotal").textContent = "Total: " + formatEntryCurrency(total);
       renderSalesPricingPreview_();
       if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
     }
-    // U8B Price Preview: per product line `HPP × qty @ unit = total` and
-    // `Margin × qty @ unit = total`; multi-line orders add Total HPP and
-    // Total Margin. No Revenue row and no percentage margin. Price data stays
-    // the server-resolved pricing already carried by the draft lines — no new
-    // server call, no pricing logic change.
+    // U8B Price Preview: per line `HPP × qty @ unit = total` and
+    // `Margin × qty @ unit = total`. V719: each line's rows live inside its
+    // product-name-headed group so every pair is attributable; bottom Total
+    // HPP and Total Margin appear only for multi-product orders (a single
+    // product never repeats its own totals). No Revenue row and no
+    // percentage margin. Price data stays the server-resolved pricing
+    // already carried by the draft lines — no new server call, no pricing
+    // logic change.
     function renderSalesPricingPreview_()
     {
       var region = operationalElement("salesPricingLines"), totals = operationalElement("salesPricingTotals");
       if (!region) return;
       var lines = operationalTransactionState.lines || [];
       region.innerHTML = "";
-      var totalHpp = 0, totalMargin = 0;
+      var totalHpp = 0, totalMargin = 0, groups = [], byProduct = {};
       lines.forEach(function(line) {
         var qty = Number(line.qty) || 0, hpp = Number(line.hpp) || 0, margin = Number(line.margin) || 0;
         totalHpp += hpp * qty;
         totalMargin += margin * qty;
+        var productName = salesLineProductName_(line);
+        var group = byProduct[productName];
+        if (!group) {
+          group = byProduct[productName] = { name: productName, lines: [] };
+          groups.push(group);
+        }
+        group.lines.push(line);
+      });
+      groups.forEach(function(entry) {
         var group = document.createElement("div");
-        group.className = "transaction-price-line";
-        var hppRow = document.createElement("div");
-        hppRow.className = "transaction-price-line-hpp";
-        hppRow.textContent = "HPP × " + qty + " @ " + formatEntryCurrency(hpp) + " = " + formatEntryCurrency(hpp * qty);
-        var marginRow = document.createElement("div");
-        marginRow.className = "transaction-price-line-margin";
-        marginRow.textContent = "Margin × " + qty + " @ " + formatEntryCurrency(margin) + " = " + formatEntryCurrency(margin * qty);
-        group.appendChild(hppRow);
-        group.appendChild(marginRow);
+        group.className = "transaction-price-group";
+        var name = document.createElement("div");
+        name.className = "transaction-price-group-name";
+        name.textContent = entry.name;
+        group.appendChild(name);
+        entry.lines.forEach(function(line) {
+          var qty = Number(line.qty) || 0, hpp = Number(line.hpp) || 0, margin = Number(line.margin) || 0;
+          var hppRow = document.createElement("div");
+          hppRow.className = "transaction-price-line-hpp";
+          hppRow.textContent = "HPP × " + qty + " @ " + formatEntryCurrency(hpp) + " = " + formatEntryCurrency(hpp * qty);
+          var marginRow = document.createElement("div");
+          marginRow.className = "transaction-price-line-margin";
+          marginRow.textContent = "Margin × " + qty + " @ " + formatEntryCurrency(margin) + " = " + formatEntryCurrency(margin * qty);
+          var lineBlock = document.createElement("div");
+          lineBlock.className = "transaction-price-line";
+          lineBlock.appendChild(hppRow);
+          lineBlock.appendChild(marginRow);
+          group.appendChild(lineBlock);
+        });
         region.appendChild(group);
       });
       if (totals) {
         totals.innerHTML = "";
-        if (lines.length > 1) {
+        if (groups.length > 1) {
           var hppTotal = document.createElement("div");
           hppTotal.className = "transaction-entry-preview-total";
           hppTotal.textContent = "Total HPP: " + formatEntryCurrency(totalHpp);
