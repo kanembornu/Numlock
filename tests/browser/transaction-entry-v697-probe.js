@@ -488,15 +488,26 @@ async function readOrderPreviewSnapshot(app) {
       Array.isArray(operationalTransactionState.lines)) ? operationalTransactionState.lines : [];
     return {
       rows: region
-        ? Array.from(region.children).map((row) => ({
-            label: String((row.querySelector(".transaction-order-line-label") || { textContent: "" }).textContent),
-            amount: String((row.querySelector(".transaction-order-line-total") || { textContent: "" }).textContent)
-          }))
+        ? Array.from(region.children).map((row) => {
+            const remove = row.querySelector(".transaction-order-line-remove");
+            return {
+              label: String((row.querySelector(".transaction-order-line-label") || { textContent: "" }).textContent),
+              amount: String((row.querySelector(".transaction-order-line-total") || { textContent: "" }).textContent),
+              removeTag: remove ? String(remove.tagName) : null,
+              removeType: remove ? String(remove.type || "") : null,
+              removeAria: remove ? remove.getAttribute("aria-label") : null
+            };
+          })
         : null,
       totalText: total ? String(total.textContent) : null,
+      totalLabel: total && total.querySelector(".transaction-order-total-label")
+        ? String(total.querySelector(".transaction-order-total-label").textContent).trim() : null,
+      totalValue: total && total.querySelector(".transaction-order-total-value")
+        ? String(total.querySelector(".transaction-order-total-value").textContent) : null,
       stateLines: lines.map((line) => ({
         servingType: line.servingType, qty: Number(line.qty), price: Number(line.price),
-        hpp: Number(line.hpp), margin: Number(line.margin)
+        hpp: Number(line.hpp), margin: Number(line.margin),
+        productName: String(line.productName || "")
       })),
       reprChildren: repr ? repr.children.length : null,
       reprText: repr ? String(repr.textContent || "").replace(/\s+/g, " ").trim() : null,
@@ -906,6 +917,15 @@ async function readOrderPreviewSnapshot(app) {
           if (row.label !== expectedLabel) lineViolations.push(`row ${lineIndex} label ${JSON.stringify(row.label)} != expected ${JSON.stringify(expectedLabel)}`);
           if (row.amount !== expectedAmount) lineViolations.push(`row ${lineIndex} amount ${JSON.stringify(row.amount)} != expected ${JSON.stringify(expectedAmount)}`);
           if (renderedDigits !== price * qty) lineViolations.push(`row ${lineIndex} rendered total digits ${renderedDigits} != unit*qty ${price * qty}`);
+          // V720: destructive action is a compact X BUTTON keyed to its own
+          // product — not the retired text affordance.
+          const expectedRemoveAria = stateLine ? `Remove ${stateLine.productName}` : null;
+          if (row.removeTag !== "BUTTON" || row.removeType !== "button") {
+            lineViolations.push(`row ${lineIndex} remove is not a type=button (got ${JSON.stringify({ tag: row.removeTag, type: row.removeType })})`);
+          }
+          if (expectedRemoveAria && row.removeAria !== expectedRemoveAria) {
+            lineViolations.push(`row ${lineIndex} remove aria-label ${JSON.stringify(row.removeAria)} != expected ${JSON.stringify(expectedRemoveAria)}`);
+          }
         }
         if (!stateLine || stateLine.servingType !== variant.type || stateLine.qty !== qty || stateLine.price !== price ||
           stateLine.price * stateLine.qty !== price * qty) {
@@ -920,9 +940,12 @@ async function readOrderPreviewSnapshot(app) {
       }
       const expectedTotal = proofVariants.reduce((sum, variant, idx) => sum + Number(variant.outcome.pricing.price) * (idx + 1), 0);
       const lastSnapshot = orderPreviewProof.snapshots[orderPreviewProof.snapshots.length - 1];
-      const expectedTotalText = "Total: Rp " + idFormat(expectedTotal);
-      if (!lastSnapshot || lastSnapshot.totalText !== expectedTotalText) {
-        orderPreviewProof.violations.push(`overall Total ${JSON.stringify(lastSnapshot && lastSnapshot.totalText)} != expected ${JSON.stringify(expectedTotalText)}`);
+      // V720 structured Total row: `Total` label cell (product-name left
+      // edge) + value cell on the shared monetary column.
+      const expectedTotalLabel = "Total";
+      const expectedTotalValue = "Rp " + idFormat(expectedTotal);
+      if (!lastSnapshot || lastSnapshot.totalLabel !== expectedTotalLabel || lastSnapshot.totalValue !== expectedTotalValue) {
+        orderPreviewProof.violations.push(`overall Total ${JSON.stringify(lastSnapshot && { label: lastSnapshot.totalLabel, value: lastSnapshot.totalValue })} != expected ${JSON.stringify({ label: expectedTotalLabel, value: expectedTotalValue })}`);
       }
       orderPreviewProof.ok = orderPreviewProof.violations.length === 0;
     }

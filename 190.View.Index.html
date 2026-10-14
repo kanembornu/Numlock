@@ -4458,6 +4458,19 @@
       enhanceCustomSelect(elements.performanceGrouping, "Category grouping");
       enhanceCustomSelect(elements.customYear, "Available custom year");
       enhanceCustomSelect(elements.customMonth, "Available custom month");
+      // SALES-UI-V720: the Sales Order Type control reuses the established
+      // NUMLOCK graph/dashboard dropdown component (same enhanceCustomSelect
+      // markup builder, ui-custom-select CSS classes, open/close/keyboard
+      // events and listbox a11y — no third dropdown design). The native
+      // select remains the value authority: DINE_IN/TAKE_AWAY options,
+      // payload reads, validation and writers are untouched.
+      var operationalOrderTypeSelect = document.getElementById("operationalOrderType");
+      if (operationalOrderTypeSelect && !customSelectRegistry[operationalOrderTypeSelect.id]) {
+        enhanceCustomSelect(operationalOrderTypeSelect, "Order Type");
+        operationalOrderTypeSelect.addEventListener("change", function() {
+          synchronizeCustomSelect(operationalOrderTypeSelect.id, false);
+        });
+      }
       document.addEventListener("click", function(event)
       {
         Object.keys(customSelectRegistry).forEach(function(id)

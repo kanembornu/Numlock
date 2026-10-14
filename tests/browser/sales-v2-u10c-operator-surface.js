@@ -57,7 +57,7 @@ function makeElement_(id, tagName, attrs, flat)
   attrs = attrs || "";
   var element = {
     id: id, tagName: tagName || "div", attributes: {}, dataset: {}, style: {},
-    innerText: "", innerHTML: "", textContent: "", value: "", checked: false,
+    innerText: "", textContent: "", value: "", checked: false,
     hidden: /(?:^|\s)hidden(?:\s|=|>|$)/.test(attrs),
     disabled: /(?:^|\s)disabled(?:\s|=|>|$)/.test(attrs),
     setAttribute: function(key, value) { this.attributes[key] = String(value); },
@@ -82,6 +82,23 @@ function makeElement_(id, tagName, attrs, flat)
     classList: { add: function() {}, remove: function() {}, toggle: function() {}, contains: function() { return false; } },
     _children: null
   };
+  // Faithful innerHTML semantics for the renderers under test: assigning ""
+  // clears children and text (real DOM behavior), so repeated renders
+  // replace prior output instead of accumulating it.
+  var innerHTMLValue = "";
+  Object.defineProperty(element, "innerHTML", {
+    get: function() { return innerHTMLValue; },
+    set: function(value) {
+      innerHTMLValue = String(value);
+      if (innerHTMLValue === "") {
+        this.children = [];
+        this.textContent = "";
+        this.innerText = "";
+      }
+    },
+    enumerable: true,
+    configurable: true
+  });
   if (!flat) {
     var level1 = makeElement_(id + "^parent", "div", "", true);
     var level2 = makeElement_(id + "^parent^parent", "div", "", true);
@@ -372,9 +389,16 @@ function runSalesV2U10COperatorSurface() {
     hA4.ctx.operationalTransactionState.lines[0].qty === 1 &&
     hA4.ctx.operationalTransactionState.lines[1].qty === 2,
     JSON.stringify(hA4.ctx.operationalTransactionState.lines));
-  ok("A5-2", hA4.el("operationalOrderTotal").textContent ===
-    "Total: " + hA4.ctx.formatEntryCurrency(60000),
-    hA4.el("operationalOrderTotal").textContent);
+  // V720 structured Total row: label cell left (product-name column) +
+  // value cell on the shared monetary column; no X cell. Assert the exact
+  // cells instead of one concatenated string so the column contract itself
+  // is pinned.
+  var totalRowA5 = hA4.el("operationalOrderTotal");
+  var totalCellsA5 = totalRowA5.children || [];
+  ok("A5-2", totalCellsA5.length === 2 &&
+    String(totalCellsA5[0].textContent).trim() === "Total" &&
+    totalCellsA5[1].textContent === hA4.ctx.formatEntryCurrency(60000),
+    JSON.stringify(totalCellsA5.map(function(cell) { return cell.textContent; })));
 
   // A6 + A9 one Save -> U7 V2 route with one stable RequestKey; a duplicate
   // click never dispatches a second intent.
