@@ -123,6 +123,7 @@ var files = [
   '99D.Treasury.Operator.Api.js',
   '100.Code.js',
   '101.SingleCommit.Config.Control.js',
+  '102.Transitional.Clearing.Close.js',
   '96.Tests.Transaction.Operational.Cases.js',
   '96.Tests.Transaction.Production.Readiness.Cases.js',
   '96.Tests.SalesRecognition.V2.Save.Cases.js',
@@ -157,7 +158,8 @@ var files = [
   '96.Tests.SingleCommit.Readers.Cases.js',
   '96.Tests.SingleCommit.Config.Cases.js',
   '96.Tests.SingleCommit.Corrections.Cases.js',
-  '96.Tests.SalesUI.U8B.Cases.js'
+  '96.Tests.SalesUI.U8B.Cases.js',
+  '96.Tests.SingleCommit.TransitionalClose.Cases.js'
 ];
 
 var ctx = vm.createContext(globalThis);
@@ -630,6 +632,18 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   run('testSingleCommitCorrectionsReporting', 'testSingleCommitCorrectionsReporting()');
   run('testSingleCommitCorrectionsHistorical', 'testSingleCommitCorrectionsHistorical()');
   run('testSingleCommitCorrectionsRegression', 'testSingleCommitCorrectionsRegression()');
+
+  // T11.13/U10 — dedicated transitional clearing close writer (T11.2 §18):
+  // happy path + exact journal, fail-closed preflight refusals (zero write),
+  // durability (replay/ALREADY_COMMITTED/ambiguous transport/partial/tamper),
+  // T5 + reader integration (CLEARED from the canonical journal, 1030 zero,
+  // 1040 +once, Revenue/P&L untouched, Cash Flow counted once, U9-style Sale
+  // untouched), and static source audit. In-memory fixtures only.
+  run('testTransitionalCloseHappyPath', 'testTransitionalCloseHappyPath()');
+  run('testTransitionalClosePreflightRefusals', 'testTransitionalClosePreflightRefusals()');
+  run('testTransitionalCloseDurability', 'testTransitionalCloseDurability()');
+  run('testTransitionalCloseT5Readers', 'testTransitionalCloseT5Readers()');
+  run('testTransitionalCloseSourceAudit', 'testTransitionalCloseSourceAudit()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
