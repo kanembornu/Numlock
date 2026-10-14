@@ -224,7 +224,8 @@ function run() {
       var preAddPricing = await app.evaluate(function() {
         var state = typeof transactionEntryState !== "undefined" ? transactionEntryState : null;
         return state && state.pricing
-          ? { price: Number(state.pricing.price), hpp: Number(state.pricing.hpp), margin: Number(state.pricing.unitMargin), type: String(state.selectedType) }
+          ? { price: Number(state.pricing.price), hpp: Number(state.pricing.hpp), margin: Number(state.pricing.unitMargin), type: String(state.selectedType),
+              productName: state.selectedProduct ? String(state.selectedProduct.product) : "" }
           : null;
       });
 
@@ -237,11 +238,15 @@ function run() {
       // no longer inside the legacy #operationalOrderFields block.
       var draft = lineAdded ? await app.locator("#salesOrderPreview").evaluate(function(root) {
         var lines = root.querySelector("#operationalOrderLines");
+        var totalRow = root.querySelector("#operationalOrderTotal");
+        var totalLabel = totalRow ? totalRow.querySelector(".transaction-order-total-label") : null;
+        var totalValue = totalRow ? totalRow.querySelector(".transaction-order-total-value") : null;
         return { count: lines.children.length, text: lines.innerText,
-          total: root.querySelector("#operationalOrderTotal").innerText };
-      }) : { count: -1, text: "", total: "" };
+          totalLabel: totalLabel ? String(totalLabel.textContent).trim() : null,
+          totalValue: totalValue ? String(totalValue.textContent) : null };
+      }) : { count: -1, text: "", totalLabel: null, totalValue: null };
       ok("A3", draft.count === 1, JSON.stringify(draft));
-      ok("A5-b", draft.count === 1 && /Rp/.test(draft.total), draft.total);
+      ok("A5-b", draft.count === 1 && /Rp/.test(draft.totalValue || ""), JSON.stringify(draft.totalValue));
 
       ok("A4-b", !(await app.locator("#submitTransactionEntryButton").isDisabled()), "Save enabled after a valid line");
       var saveAfterLine = await app.locator("button").evaluateAll(function(nodes) {
@@ -255,16 +260,27 @@ function run() {
       var singleRow = await app.locator("#operationalOrderLines > div").first().evaluate(function(row) {
         var label = row.querySelector(".transaction-order-line-label");
         var amount = row.querySelector(".transaction-order-line-total");
-        return { label: label ? String(label.textContent) : null, amount: amount ? String(amount.textContent) : null };
+        var remove = row.querySelector(".transaction-order-line-remove");
+        return { label: label ? String(label.textContent) : null, amount: amount ? String(amount.textContent) : null,
+          removeIsButton: Boolean(remove && remove.tagName === "BUTTON" && remove.type === "button"),
+          removeAria: remove ? remove.getAttribute("aria-label") : null };
       });
       var hotUnit = preAddPricing ? preAddPricing.price : NaN;
       var expectedSingleLabel = "Hot × 1 @ " + fmtRp(hotUnit);
       var expectedSingleAmount = fmtRp(hotUnit);
       var singleDigits = Number(((singleRow.amount || "").match(/\d+/g) || []).join(""));
+      // V720 structured Total row: `Total` label cell + value cell on the
+      // monetary column, plus the destructive X button contract (button,
+      // product-specific aria-label — never the old text affordance).
+      var expectedRemoveAria = "Remove " + (preAddPricing ? preAddPricing.productName : "");
       ok("A3-b", singleRow.label === expectedSingleLabel && singleRow.amount === expectedSingleAmount &&
-        singleDigits === hotUnit && draft.total === "Total: " + fmtRp(hotUnit),
+        singleDigits === hotUnit && draft.totalLabel === "Total" &&
+        draft.totalValue === fmtRp(hotUnit) && singleRow.removeIsButton &&
+        singleRow.removeAria === expectedRemoveAria,
         JSON.stringify({ singleRow: singleRow, expectedLabel: expectedSingleLabel,
-          expectedAmount: expectedSingleAmount, total: draft.total, price: hotUnit }));
+          expectedAmount: expectedSingleAmount, totalLabel: draft.totalLabel,
+          totalValue: draft.totalValue, expectedTotalValue: fmtRp(hotUnit),
+          expectedRemoveAria: expectedRemoveAria, price: hotUnit }));
 
       // U8B Add-Line reset: Product clears, Serving Type none, Quantity=1,
       // Order Type preserved; Price Preview repr stays backed by committed
@@ -327,58 +343,85 @@ function run() {
         var rows = Array.prototype.map.call(lines.children, function(row) {
           var label = row.querySelector(".transaction-order-line-label");
           var amount = row.querySelector(".transaction-order-line-total");
-          return { label: label ? String(label.textContent) : null, amount: amount ? String(amount.textContent) : null };
+          var remove = row.querySelector(".transaction-order-line-remove");
+          return { label: label ? String(label.textContent) : null, amount: amount ? String(amount.textContent) : null,
+            removeAria: remove ? remove.getAttribute("aria-label") : null };
         });
+        var totalRow = root.querySelector("#operationalOrderTotal");
+        var totalLabel = totalRow ? totalRow.querySelector(".transaction-order-total-label") : null;
+        var totalValue = totalRow ? totalRow.querySelector(".transaction-order-total-value") : null;
         return { count: lines.children.length, rows: rows,
-          total: root.querySelector("#operationalOrderTotal").innerText };
-      }) : { count: -1, rows: [], total: "" };
+          totalLabel: totalLabel ? String(totalLabel.textContent).trim() : null,
+          totalValue: totalValue ? String(totalValue.textContent) : null };
+      }) : { count: -1, rows: [], totalLabel: null, totalValue: null };
       var coldUnit = coldPricing ? coldPricing.price : NaN;
       var expectedMultiLabel = "Cold × 2 @ " + fmtRp(coldUnit);
       var expectedMultiAmount = fmtRp(coldUnit * 2);
-      var expectedOverall = "Total: " + fmtRp(hotUnit + coldUnit * 2);
+      var expectedOverallValue = fmtRp(hotUnit + coldUnit * 2);
       var noCounter = multi.rows.every(function(row) { return row.label && !/^[\d#]/.test(row.label); });
       ok("A6", multiAdded && multi.count === 2 && multi.rows[1] &&
         multi.rows[1].label === expectedMultiLabel && multi.rows[1].amount === expectedMultiAmount &&
-        multi.total === expectedOverall && noCounter,
+        multi.totalLabel === "Total" && multi.totalValue === expectedOverallValue && noCounter,
         JSON.stringify({ multi: multi, expectedLabel: expectedMultiLabel,
-          expectedAmount: expectedMultiAmount, expectedOverall: expectedOverall, noCounter: noCounter }));
+          expectedAmount: expectedMultiAmount, expectedOverallValue: expectedOverallValue, noCounter: noCounter }));
 
       var pricePreview = await app.locator("#salesPricingPreview").evaluate(function(section) {
         var groups = section.querySelectorAll(".transaction-price-line");
+        function readPriceRow(row) {
+          if (!row) return null;
+          var metric = row.querySelector(".transaction-price-metric");
+          var detail = row.querySelector(".transaction-price-detail");
+          var amount = row.querySelector(".transaction-price-amount");
+          return { metric: metric ? String(metric.textContent) : null,
+            detail: detail ? String(detail.textContent) : null,
+            amount: amount ? String(amount.textContent) : null };
+        }
         var rows = Array.prototype.map.call(groups, function(group) {
-          var hpp = group.querySelector(".transaction-price-line-hpp");
-          var margin = group.querySelector(".transaction-price-line-margin");
-          return { hpp: hpp ? String(hpp.textContent) : null, margin: margin ? String(margin.textContent) : null };
+          return { hpp: readPriceRow(group.querySelector(".transaction-price-line-hpp")),
+            margin: readPriceRow(group.querySelector(".transaction-price-line-margin")) };
         });
         var totals = section.querySelector("#salesPricingTotals");
+        var totalRows = totals ? Array.prototype.map.call(totals.querySelectorAll(".transaction-price-total-row"), function(row) {
+          var label = row.querySelector(".transaction-price-total-label");
+          var value = row.querySelector(".transaction-price-total-value");
+          return { label: label ? String(label.textContent) : null, value: value ? String(value.textContent) : null };
+        }) : [];
         var state = typeof transactionEntryState !== "undefined" ? transactionEntryState : null;
         var lines = (typeof operationalTransactionState !== "undefined" && operationalTransactionState &&
           Array.isArray(operationalTransactionState.lines)) ? operationalTransactionState.lines : [];
         return {
-          groupCount: groups.length, rows: rows,
+          groupCount: groups.length, rows: rows, totalRows: totalRows,
           totalsText: totals ? String(totals.textContent).replace(/\s+/g, " ").trim() : null,
           sectionText: String(section.textContent || ""),
+          reprText: String((section.querySelector("#salesPricingLines") || { textContent: "" }).textContent || "") +
+            String((totals || { textContent: "" }).textContent || ""),
           stateLines: lines.map(function(line) { return { qty: Number(line.qty), hpp: Number(line.hpp), margin: Number(line.margin) }; }),
           pricing: state && state.pricing ? { price: Number(state.pricing.price), hpp: Number(state.pricing.hpp), margin: Number(state.pricing.unitMargin) } : null
         };
       });
       // After the second Add Line the selection reset cleared state.pricing;
       // the committed lines carry their own HPP/Margin authority. Both lines
-      // belong to the SAME product, so under the V719 product-grouped Price
+      // belong to the SAME product, so under the product-grouped Price
       // Preview the bottom Total HPP/Margin block stays EMPTY (totals appear
       // only for multi-product orders; a single product never repeats).
+      // V720 structured rows: METRIC | qty × unit | TOTAL — no equation `=`,
+      // no `@` anywhere in the Price Preview representation.
       var noRevenue = pricePreview.sectionText.indexOf("Revenue") === -1;
       var noPercent = pricePreview.sectionText.indexOf("%") === -1;
-      var totalsOk = pricePreview.totalsText === "";
+      var noEquation = pricePreview.reprText.indexOf("=") === -1 && pricePreview.reprText.indexOf("@") === -1;
+      var totalsOk = pricePreview.totalsText === "" && pricePreview.totalRows.length === 0;
+      function expectPriceRow(metric, qty, unit) {
+        return { metric: metric, detail: qty + " × " + fmtRp(unit), amount: fmtRp(unit * qty) };
+      }
       var perLineOk = pricePreview.rows.length === 2 &&
-        pricePreview.rows[0].hpp === "HPP × 1 @ " + fmtRp(preAddPricing ? preAddPricing.hpp : NaN) + " = " + fmtRp((preAddPricing ? preAddPricing.hpp : NaN) * 1) &&
-        pricePreview.rows[0].margin === "Margin × 1 @ " + fmtRp(preAddPricing ? preAddPricing.margin : NaN) + " = " + fmtRp((preAddPricing ? preAddPricing.margin : NaN) * 1) &&
-        pricePreview.rows[1].hpp === "HPP × 2 @ " + fmtRp(coldPricing ? coldPricing.hpp : NaN) + " = " + fmtRp((coldPricing ? coldPricing.hpp : NaN) * 2) &&
-        pricePreview.rows[1].margin === "Margin × 2 @ " + fmtRp(coldPricing ? coldPricing.margin : NaN) + " = " + fmtRp((coldPricing ? coldPricing.margin : NaN) * 2);
-      ok("A7", pricePreview.groupCount === 2 && perLineOk && totalsOk && noRevenue && noPercent,
+        JSON.stringify(pricePreview.rows[0].hpp) === JSON.stringify(expectPriceRow("HPP", 1, preAddPricing ? preAddPricing.hpp : NaN)) &&
+        JSON.stringify(pricePreview.rows[0].margin) === JSON.stringify(expectPriceRow("Margin", 1, preAddPricing ? preAddPricing.margin : NaN)) &&
+        JSON.stringify(pricePreview.rows[1].hpp) === JSON.stringify(expectPriceRow("HPP", 2, coldPricing ? coldPricing.hpp : NaN)) &&
+        JSON.stringify(pricePreview.rows[1].margin) === JSON.stringify(expectPriceRow("Margin", 2, coldPricing ? coldPricing.margin : NaN));
+      ok("A7", pricePreview.groupCount === 2 && perLineOk && totalsOk && noRevenue && noPercent && noEquation,
         JSON.stringify({ groupCount: pricePreview.groupCount, rows: pricePreview.rows,
           totalsText: pricePreview.totalsText, expectedTotals: "EMPTY (single product)",
-          noRevenue: noRevenue, noPercent: noPercent }));
+          noRevenue: noRevenue, noPercent: noPercent, noEquation: noEquation }));
       // ---- end U8B exact/reset/multi/price-preview block ----
 
       step("screenshot BEFORE Save — no submission");

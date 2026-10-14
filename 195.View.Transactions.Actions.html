@@ -287,12 +287,16 @@
     }
     function renderOperationalOrderLines()
     {
-      // V719 Order Preview hierarchy: PRODUCT NAME anchors each line; the
-      // `Cold × 5 @ Rp24.000` serving/qty/unit meta sits under the name; the
-      // line total and the Remove action align right on the same line
-      // (Remove is attached to its line, never competing with the order
-      // Total). Lines are separated by subtle dividers; no line/item counter;
-      // the list ends with a stronger Total row.
+      // V720 Order Preview (owner-frozen refinement): every line renders as
+      // PRODUCT | VALUE | ACTION columns. Product name + serving/qty/unit
+      // metadata stay anchored left; the line total is one stable
+      // right-aligned numeric column; the destructive action is a compact
+      // red X button in a narrow, fixed action column (same column for every
+      // row, never competing with the Total). The order Total is a
+      // structured row: `Total` shares the product-name left edge and its
+      // value sits on the same monetary column as the line totals — no X.
+      // Presentation only: payload fields, arithmetic and draft structure
+      // are unchanged.
       var lines = operationalTransactionState.lines || [];
       var total = lines.reduce(function(sum, line) { return sum + line.qty * line.price; }, 0), region = operationalElement("operationalOrderLines");
       region.innerHTML = "";
@@ -309,34 +313,67 @@
         label.textContent = line.servingType + " × " + line.qty + " @ " + formatEntryCurrency(line.price);
         main.appendChild(name);
         main.appendChild(label);
-        var side = document.createElement("div");
-        side.className = "transaction-order-line-side";
         var amount = document.createElement("span");
         amount.className = "transaction-order-line-total";
         amount.textContent = formatEntryCurrency(line.qty * line.price);
         var remove = document.createElement("button");
         remove.type = "button";
         remove.className = "transaction-order-line-remove";
-        remove.textContent = "Remove";
+        remove.setAttribute("aria-label", "Remove " + salesLineProductName_(line));
         remove.onclick = function() { removeOperationalOrderLine(index); };
-        side.appendChild(amount);
-        side.appendChild(remove);
+        remove.textContent = "×";
         row.appendChild(main);
-        row.appendChild(side);
+        row.appendChild(amount);
+        row.appendChild(remove);
         region.appendChild(row);
       });
-      operationalElement("operationalOrderTotal").textContent = "Total: " + formatEntryCurrency(total);
+      var totalRow = operationalElement("operationalOrderTotal");
+      totalRow.innerHTML = "";
+      var totalLabel = document.createElement("span");
+      totalLabel.className = "transaction-order-total-label";
+      totalLabel.textContent = "Total";
+      var totalValue = document.createElement("span");
+      totalValue.className = "transaction-order-total-value";
+      totalValue.textContent = formatEntryCurrency(total);
+      totalRow.appendChild(totalLabel);
+      totalRow.appendChild(totalValue);
       renderSalesPricingPreview_();
       if (typeof updateTransactionEntrySubmitState === "function") updateTransactionEntrySubmitState();
     }
-    // U8B Price Preview: per line `HPP × qty @ unit = total` and
-    // `Margin × qty @ unit = total`. V719: each line's rows live inside its
-    // product-name-headed group so every pair is attributable; bottom Total
-    // HPP and Total Margin appear only for multi-product orders (a single
-    // product never repeats its own totals). No Revenue row and no
-    // percentage margin. Price data stays the server-resolved pricing
-    // already carried by the draft lines — no new server call, no pricing
-    // logic change.
+    // U8B Price Preview: committed draft lines only, grouped under the
+    // product name. V720 (owner-frozen refinement): each metric renders as
+    // a structured METRIC | qty × unit | TOTAL row (no equation `=`, no
+    // `@`), left/metric + middle + right-aligned total columns stable
+    // across every row and group. Multi-product orders add structured
+    // `Total HPP` / `Total Margin` rows (label left, value on the same
+    // monetary column as the row totals); a single product never repeats
+    // its own totals. No Revenue row and no percentage margin. Price data
+    // stays the server-resolved pricing already carried by the draft lines
+    // — no new server call, no pricing logic change.
+    function salesPricePreviewCell_(className, text)
+    {
+      var cell = document.createElement("span");
+      cell.className = className;
+      cell.textContent = text;
+      return cell;
+    }
+    function salesPricePreviewRow_(metricClass, metric, qty, unit, lineTotal)
+    {
+      var row = document.createElement("div");
+      row.className = "transaction-price-row " + metricClass;
+      row.appendChild(salesPricePreviewCell_("transaction-price-metric", metric));
+      row.appendChild(salesPricePreviewCell_("transaction-price-detail", qty + " × " + formatEntryCurrency(unit)));
+      row.appendChild(salesPricePreviewCell_("transaction-price-amount", formatEntryCurrency(lineTotal)));
+      return row;
+    }
+    function salesPricePreviewTotalRow_(label, value)
+    {
+      var row = document.createElement("div");
+      row.className = "transaction-price-total-row";
+      row.appendChild(salesPricePreviewCell_("transaction-price-total-label", label));
+      row.appendChild(salesPricePreviewCell_("transaction-price-total-value", formatEntryCurrency(value)));
+      return row;
+    }
     function renderSalesPricingPreview_()
     {
       var region = operationalElement("salesPricingLines"), totals = operationalElement("salesPricingTotals");
@@ -365,16 +402,10 @@
         group.appendChild(name);
         entry.lines.forEach(function(line) {
           var qty = Number(line.qty) || 0, hpp = Number(line.hpp) || 0, margin = Number(line.margin) || 0;
-          var hppRow = document.createElement("div");
-          hppRow.className = "transaction-price-line-hpp";
-          hppRow.textContent = "HPP × " + qty + " @ " + formatEntryCurrency(hpp) + " = " + formatEntryCurrency(hpp * qty);
-          var marginRow = document.createElement("div");
-          marginRow.className = "transaction-price-line-margin";
-          marginRow.textContent = "Margin × " + qty + " @ " + formatEntryCurrency(margin) + " = " + formatEntryCurrency(margin * qty);
           var lineBlock = document.createElement("div");
           lineBlock.className = "transaction-price-line";
-          lineBlock.appendChild(hppRow);
-          lineBlock.appendChild(marginRow);
+          lineBlock.appendChild(salesPricePreviewRow_("transaction-price-line-hpp", "HPP", qty, hpp, hpp * qty));
+          lineBlock.appendChild(salesPricePreviewRow_("transaction-price-line-margin", "Margin", qty, margin, margin * qty));
           group.appendChild(lineBlock);
         });
         region.appendChild(group);
@@ -382,14 +413,8 @@
       if (totals) {
         totals.innerHTML = "";
         if (groups.length > 1) {
-          var hppTotal = document.createElement("div");
-          hppTotal.className = "transaction-entry-preview-total";
-          hppTotal.textContent = "Total HPP: " + formatEntryCurrency(totalHpp);
-          var marginTotal = document.createElement("div");
-          marginTotal.className = "transaction-entry-preview-total";
-          marginTotal.textContent = "Total Margin: " + formatEntryCurrency(totalMargin);
-          totals.appendChild(hppTotal);
-          totals.appendChild(marginTotal);
+          totals.appendChild(salesPricePreviewTotalRow_("Total HPP", totalHpp));
+          totals.appendChild(salesPricePreviewTotalRow_("Total Margin", totalMargin));
         }
       }
     }

@@ -1,11 +1,15 @@
-// SALES-UI-V719 desktop Sales entry UI contract (local, source-token),
-// superseding the U8B equal-columns assumption. Asserts: intentional unequal
-// three-column layout at genuinely wide widths only (Sales Details | Order
-// Preview | Price Preview), name-only product options, Order Preview with
-// product-name anchor + exact serving/qty/unit token and no counter, Price
-// Preview HPP/Margin grouped per product with totals only for multi-product
-// orders (no Revenue, no percentage), Add Line reset semantics with Order
-// Type retention, NUMLOCK-styled full-width Add Line, and preview-only
+// SALES-UI-V720 desktop Sales entry UI contract (local, source-token),
+// superseding the U8B equal-columns assumption and the V719 text-Remove /
+// equation-price representation. Asserts: intentional unequal three-column
+// layout at genuinely wide widths only (Sales Details | Order Preview |
+// Price Preview), name-only product options, Order Type reusing the
+// established ui-custom-select dropdown component at Product-input
+// geometry, Order Preview PRODUCT|VALUE|ACTION rows with compact X action +
+// structured Total row on the shared monetary column, Price Preview
+// structured METRIC|qty x unit|TOTAL rows (no "=" / "@") grouped per
+// product with structured totals only for multi-product orders (no
+// Revenue, no percentage), Add Line reset semantics with Order Type
+// retention, NUMLOCK-styled full-width Add Line, and preview-only
 // overflow. UI-only: no backend, no server pricing change.
 function testSalesUIU8BContract()
 {
@@ -58,6 +62,15 @@ function testSalesUIU8BContract()
   // legacy full-width .transaction-sales-product rule.
   check("T2c", css.indexOf(".transaction-sales-layout .transaction-sales-product{grid-column:auto}") !== -1,
     "Product cell scoped override (row 1 = Product | Order Type)");
+  // V720: Order Type reuses the established NUMLOCK graph/dashboard dropdown
+  // component (enhanceCustomSelect helper + ui-custom-select classes + chevron
+  // indicator), scoped to Product-input geometry (48px, radius-control).
+  check("T2d", index.indexOf('enhanceCustomSelect(operationalOrderTypeSelect, "Order Type")') !== -1 &&
+    index.indexOf("synchronizeCustomSelect(operationalOrderTypeSelect.id, false)") !== -1 &&
+    css.indexOf(".transaction-sales-order-type .ui-custom-select{width:100%;min-width:0}") !== -1 &&
+    css.indexOf(".transaction-sales-order-type .ui-custom-select-trigger{height:48px;min-height:48px;") !== -1 &&
+    css.indexOf(".transaction-sales-order-type .ui-custom-select-trigger::after{") !== -1,
+    "Order Type reuses ui-custom-select at Product-input geometry with chevron indicator");
 
   // 3. Product selector shows NAME only — no Category/Kind in option rows,
   //    listbox meta or the product meta line.
@@ -69,44 +82,70 @@ function testSalesUIU8BContract()
   check("T3c", forms.indexOf('entry.productMeta.innerText = "";') !== -1,
     "product meta line stays empty");
 
-  // 4. Order Preview: PRODUCT NAME anchors each line; exact meta token
-  //    `Cold × 5 @ Rp24.000` + aligned line total; Indonesian thousand
-  //    separators via existing money formatter; Remove is a styled button on
-  //    the line. No line/item counter.
+  // 4. Order Preview: PRODUCT | VALUE | ACTION. PRODUCT NAME anchors each
+  //    line with exact meta token `Cold × 5 @ Rp24.000`; VALUE is the stable
+  //    right-aligned line total; ACTION is the compact destructive X button
+  //    keyed to its product (aria-label, no text affordance); the order
+  //    Total is a structured row (`Total` label cell + value cell on the
+  //    shared monetary column). Indonesian thousand separators via existing
+  //    money formatter. No line/item counter.
   var orderRender = actions.slice(actions.indexOf("function renderOperationalOrderLines()"),
     actions.indexOf("function renderSalesPricingPreview_()"));
   check("T4a", orderRender.indexOf('label.textContent = line.servingType + " × " + line.qty + " @ " + formatEntryCurrency(line.price);') !== -1,
     "serving x qty @ unit token");
   check("T4b", orderRender.indexOf('amount.textContent = formatEntryCurrency(line.qty * line.price);') !== -1 &&
-    orderRender.indexOf('"Total: " + formatEntryCurrency(total)') !== -1,
-    "line total + Total row");
+    orderRender.indexOf('remove.setAttribute("aria-label", "Remove " + salesLineProductName_(line));') !== -1 &&
+    orderRender.indexOf('remove.onclick = function() { removeOperationalOrderLine(index); };') !== -1 &&
+    orderRender.indexOf('remove.textContent = "×";') !== -1 &&
+    orderRender.indexOf('remove.textContent = "Remove"') === -1 &&
+    orderRender.indexOf('totalLabel.textContent = "Total";') !== -1 &&
+    orderRender.indexOf('totalValue.textContent = formatEntryCurrency(total);') !== -1 &&
+    orderRender.indexOf('"Total: " + formatEntryCurrency(total)') === -1,
+    "line total + X action + structured Total row");
   check("T4c", orderRender.indexOf('name.textContent = salesLineProductName_(line);') !== -1 &&
     orderRender.indexOf("salesLineProductName_") !== -1 &&
     orderRender.indexOf('remove.className = "transaction-order-line-remove";') !== -1 &&
     orderRender.indexOf("(index + 1)") === -1 && orderRender.indexOf("No.") === -1,
     "product-name anchor + attached Remove button, no line/item counter", orderRender);
+  check("T4d", css.indexOf(".transaction-order-line{display:grid;grid-template-columns:minmax(0,1fr) auto 24px;") !== -1 &&
+    css.indexOf("#operationalOrderTotal{display:grid;grid-template-columns:minmax(0,1fr) auto 24px;") !== -1 &&
+    css.indexOf(".transaction-order-line-total{text-align:right;") !== -1 &&
+    css.indexOf(".transaction-order-line-remove{display:inline-flex;width:24px;height:24px;") !== -1 &&
+    css.indexOf(".transaction-order-total-label{text-align:left;") !== -1 &&
+    css.indexOf(".transaction-order-total-value{text-align:right;") !== -1,
+    "PRODUCT|VALUE|ACTION grid, shared monetary column, compact X column");
 
-  // 5. Price Preview: per line `HPP × qty @ unit = total` and
-  //    `Margin × qty @ unit = total` inside a product-name-headed group;
-  //    multi-PRODUCT orders => bottom Total HPP + Total Margin (a single
-  //    product never repeats its own totals).
+  // 5. Price Preview: structured METRIC | qty × unit | TOTAL rows inside a
+  //    product-name-headed group (no equation "=", no "@"), multi-PRODUCT
+  //    orders => structured bottom Total HPP + Total Margin rows on the
+  //    shared monetary column (a single product never repeats its own
+  //    totals).
   var priceRender = actions.slice(actions.indexOf("function renderSalesPricingPreview_()"),
     actions.indexOf("function operationalServerCall("));
-  check("T5a", priceRender.indexOf('"HPP × " + qty + " @ " + formatEntryCurrency(hpp) + " = " + formatEntryCurrency(hpp * qty);') !== -1,
-    "HPP line format");
-  check("T5b", priceRender.indexOf('"Margin × " + qty + " @ " + formatEntryCurrency(margin) + " = " + formatEntryCurrency(margin * qty);') !== -1,
-    "Margin line format");
+  check("T5a", priceRender.indexOf('lineBlock.appendChild(salesPricePreviewRow_("transaction-price-line-hpp", "HPP", qty, hpp, hpp * qty));') !== -1,
+    "HPP structured row");
+  check("T5b", priceRender.indexOf('lineBlock.appendChild(salesPricePreviewRow_("transaction-price-line-margin", "Margin", qty, margin, margin * qty));') !== -1,
+    "Margin structured row");
   check("T5c", priceRender.indexOf('name.className = "transaction-price-group-name";') !== -1 &&
     priceRender.indexOf("if (groups.length > 1)") !== -1 &&
-    priceRender.indexOf('"Total HPP: " + formatEntryCurrency(totalHpp)') !== -1 &&
-    priceRender.indexOf('"Total Margin: " + formatEntryCurrency(totalMargin)') !== -1,
-    "product-grouped rows, multi-product totals");
+    priceRender.indexOf('totals.appendChild(salesPricePreviewTotalRow_("Total HPP", totalHpp));') !== -1 &&
+    priceRender.indexOf('totals.appendChild(salesPricePreviewTotalRow_("Total Margin", totalMargin));') !== -1,
+    "product-grouped rows, multi-product structured totals");
   check("T5d", priceRender.indexOf("%") === -1 && priceRender.indexOf("percent") === -1,
     "no percentage margin", priceRender);
   check("T5e", dialog.indexOf("salesPreviewRevenue") === -1 &&
     dialog.indexOf("<dt>Revenue</dt>") === -1 &&
     dialog.indexOf('id="salesPreviewPrice"') === -1,
     "Revenue row and legacy preview rows removed");
+  check("T5f", priceRender.indexOf('" = "') === -1 && priceRender.indexOf(" @ ") === -1 &&
+    css.indexOf(".transaction-price-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;") !== -1 &&
+    css.indexOf(".transaction-price-metric{") !== -1 &&
+    css.indexOf(".transaction-price-detail{") !== -1 &&
+    css.indexOf(".transaction-price-amount{text-align:right;") !== -1 &&
+    css.indexOf("#salesPricingTotals:empty{display:none") !== -1 &&
+    css.indexOf(".transaction-price-total-row{display:grid;grid-template-columns:minmax(0,1fr) auto;") !== -1 &&
+    css.indexOf(".transaction-price-total-value{text-align:right;") !== -1,
+    "no equation tokens; stable metric/detail/total columns; structured totals grid");
 
   // 6. Add Line reset: Product clears, Serving Type none, Quantity=1, and the
   //    Order Type select is NEVER touched by the reset.
