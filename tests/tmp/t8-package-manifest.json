@@ -1,7 +1,7 @@
 {
   "note": "T9 upload-manifest state (local .claspignore allowlist; no push). The eight Treasury runtime files (99/99A-99D + 202-204) are REGISTERED per the T9 authorized gate (T3-T7 documented deferral, U8->U9 precedent); 'prospective' = current + any still-pending Treasury files (none after T9).",
   "current": {
-    "count": 77,
+    "count": 78,
     "files": [
       {
         "path": "00.Project.Spec.js",
@@ -18,6 +18,10 @@
       {
         "path": "101.SingleCommit.Config.Control.js",
         "sha256": "cd052ff2b4fb59037c82baf4b13d45fa6512c8a686270c8a61d9f34dd9e1fb2c"
+      },
+      {
+        "path": "102.Transitional.Clearing.Close.js",
+        "sha256": "9f7d9827d885a50e8c3d24e78d303ed8301771455f781f009f91a0bea5813ae6"
       },
       {
         "path": "12A.Depreciation.Report.Service.js",
@@ -312,10 +316,10 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "6bf0528183f6e4a4bd478eed793b5531545167b18708ad1afb9be205b25808e0"
+    "aggregateHash": "a94ad316b000e8fe510df69aedb1d0834c59d0016104cd9c2fb14eee56ffa53d"
   },
   "prospective": {
-    "count": 77,
+    "count": 78,
     "files": [
       {
         "path": "00.Project.Spec.js",
@@ -332,6 +336,10 @@
       {
         "path": "101.SingleCommit.Config.Control.js",
         "sha256": "cd052ff2b4fb59037c82baf4b13d45fa6512c8a686270c8a61d9f34dd9e1fb2c"
+      },
+      {
+        "path": "102.Transitional.Clearing.Close.js",
+        "sha256": "9f7d9827d885a50e8c3d24e78d303ed8301771455f781f009f91a0bea5813ae6"
       },
       {
         "path": "12A.Depreciation.Report.Service.js",
@@ -626,7 +634,7 @@
         "sha256": "4a176fd72806a90425ee5e9df7ea1bdcb60afbd1af8a2f768223ff27e7157d9a"
       }
     ],
-    "aggregateHash": "6bf0528183f6e4a4bd478eed793b5531545167b18708ad1afb9be205b25808e0"
+    "aggregateHash": "a94ad316b000e8fe510df69aedb1d0834c59d0016104cd9c2fb14eee56ffa53d"
   },
   "treasuryRuntimePendingRegistration": [
     "99.Treasury.Receipt.Foundation.js",

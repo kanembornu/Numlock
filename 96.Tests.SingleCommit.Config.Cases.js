@@ -1198,9 +1198,10 @@ function testSingleCommitPackageMeasurement() {
     .map(function(line) { return line.slice(1); })
     .filter(function(path) { return path !== ""; });
 
-  // P1 current package: 77 allowlisted runtime files (control plane
-  // registered by the authorized U8 upload unit), tests/docs excluded.
-  check("P1", manifest.current.count === 77 && allowlist.length === 77 &&
+  // P1 current package: 78 allowlisted runtime files (control plane
+  // registered by the authorized U8 upload unit, transitional close writer
+  // registered by the authorized U10 upload unit), tests/docs excluded.
+  check("P1", manifest.current.count === 78 && allowlist.length === 78 &&
     manifest.current.files.every(function(entry) {
       return entry.path.indexOf("tests/") !== 0 && entry.path.indexOf("docs/") !== 0;
     }), String(manifest.current.count));
@@ -1214,7 +1215,7 @@ function testSingleCommitPackageMeasurement() {
     fs.existsSync("101.SingleCommit.Config.Control.js"));
 
   // P3 registered package aggregate: recomputed from the manifest entries
-  // must equal the stored aggregate (no hash drift, exactly 77 entries).
+  // must equal the stored aggregate (no hash drift, exactly 78 entries).
   var nodeCrypto = globalThis.nodeCrypto;
   var controlHash = nodeCrypto.createHash("sha256")
     .update(fs.readFileSync("101.SingleCommit.Config.Control.js")).digest("hex");
@@ -1225,14 +1226,14 @@ function testSingleCommitPackageMeasurement() {
     registeredEntries.map(function(entry) {
       return entry.sha256 + "  " + entry.path + "\n"; }).join("")
   ).digest("hex");
-  check("P3", registeredEntries.length === 77 &&
+  check("P3", registeredEntries.length === 78 &&
     registeredAggregate === manifest.current.aggregateHash &&
-    registeredAggregate === "6bf0528183f6e4a4bd478eed793b5531545167b18708ad1afb9be205b25808e0",
+    registeredAggregate === "a94ad316b000e8fe510df69aedb1d0834c59d0016104cd9c2fb14eee56ffa53d",
     registeredAggregate);
 
   console.log("T11_7_U5_PACKAGE current=" + manifest.current.count +
     " currentHash=" + manifest.current.aggregateHash +
-    " registered=77 registeredHash=" + registeredAggregate +
+    " registered=78 registeredHash=" + registeredAggregate +
     " controlSha256=" + controlHash);
   console.log("T11_7_U5_PACKAGE checks=" + counter.pass);
   return { status: "PASS", checks: counter.pass,
