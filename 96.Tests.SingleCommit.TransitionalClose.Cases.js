@@ -4,8 +4,12 @@
 // transport / partial / tamper / duplicate), T5 + reader integration (CLEARED
 // from the canonical journal, 1030 zero, 1040 +once, Revenue/P&L untouched,
 // Cash Flow counted exactly once, U9-style Sale untouched), forbidden
-// artifact audits, and static source audits. In-memory fixtures only; no
-// production access, no network, no clasp, no config writes.
+// artifact audits, static source audits, and the T11-13 retirement gate
+// (production entry + write wiring removed; frozen retirement invariant
+// proven statically + zero-write dynamic probe; historical accounting
+// assertions unweakened). In-memory fixtures only; no production access, no
+// network, no clasp, no config writes. The production writer is NEVER
+// invoked; construction uses the injected-runtime core against fixtures.
 
 function trccCheck_(id, value, detail) {
   if (!value) throw new Error("U10_TRANSITIONAL_CLOSE:" + id +
@@ -306,12 +310,12 @@ function testTransitionalCloseHappyPath() {
       return b.map(function(r) { return r.range + ":" + r.values.length; });
     })));
 
-  // H7 zero-parameter frozen surface + caller override impossibility: the
-  // public entry takes zero parameters; the core takes only the runtime and
-  // ignores any extra argument; a second argument cannot move amount or
-  // identities.
-  check("H7", closeTransitionalClearingProduction.length === 0 &&
-    transitionalClearingCloseWithRuntime_.length === 1 &&
+  // H7 frozen surface (construction core): the injected-runtime core takes
+  // only the runtime and ignores any extra argument; amount and identities
+  // are frozen constants — no caller can move them. Production
+  // callability of the retired entry is asserted by
+  // testTransitionalCloseRetirement (entry absent), not here.
+  check("H7", transitionalClearingCloseWithRuntime_.length === 1 &&
     close.AMOUNT === 24000 && close.MONEY_ACCOUNT_CODE === "1040" &&
     close.CLEARING_ACCOUNT_CODE === "1030" &&
     close.RECOGNITION_ID === "SCR-CE122B27-ORD677BE5CES" &&
@@ -807,24 +811,25 @@ function testTransitionalCloseSourceAudit() {
   function check(id, value, detail) { trccCheck_(id, value, detail); pass++; }
   var source = fs.readFileSync("102.Transitional.Clearing.Close.js", "utf8");
 
-  // S1 the ONE public entry is zero-parameter and the core takes only the
-  // runtime; the writer never locks anywhere else.
-  check("S1", /function closeTransitionalClearingProduction\s*\(\s*\)/.test(source) &&
+  // S1 the production entry surface is GONE (retired): no zero-argument
+  // public entry declaration, no lock acquisition anywhere in the file; the
+  // injected-runtime core remains the construction/verification authority.
+  check("S1", source.indexOf("function closeTransitionalClearingProduction") === -1 &&
+    typeof closeTransitionalClearingProduction === "undefined" &&
     /function transitionalClearingCloseWithRuntime_\s*\(\s*runtime\s*\)/.test(source) &&
-    source.split("function closeTransitionalClearingProduction").length - 1 === 1 &&
-    source.split("LockService.getScriptLock").length - 1 === 1,
-    "entry surface");
+    source.split("LockService.getScriptLock").length - 1 === 0,
+    "retired entry surface");
 
   // S2 frozen single-purpose constants; no generic journal/adjustment
-  // parameter surface exists anywhere in the file.
+  // parameter surface exists anywhere in the file, and the retired entry
+  // identifier is fully absent (declaration, call, or comment reference).
   check("S2", source.indexOf("AMOUNT: 24000") !== -1 &&
     source.indexOf("RECOGNITION_ID: \"SCR-CE122B27-ORD677BE5CES\"") !== -1 &&
     source.indexOf("ORDER_ID: \"ORD-677BE5CE-SALESRECOGNI\"") !== -1 &&
     source.indexOf("MONEY_ACCOUNT_CODE: \"1040\"") !== -1 &&
     source.indexOf("CLEARING_ACCOUNT_CODE: \"1030\"") !== -1 &&
     source.indexOf("TRANSITIONAL_CLEARING_CLOSE") !== -1 &&
-    /closeTransitionalClearingProduction\s*\([^)]+\)/.test(source.replace(
-      /function closeTransitionalClearingProduction\s*\(\s*\)/, "")) === false,
+    source.indexOf("closeTransitionalClearingProduction") === -1,
     "frozen constants");
 
   // S3 truthful internal attestation only: no fabricated external evidence,
@@ -846,12 +851,184 @@ function testTransitionalCloseSourceAudit() {
     "control plane isolation");
 
   // S5 no config-mode literal that the U8 routing audit forbids outside the
-  // routing tables, and the writer is inert from every application path.
+  // routing tables, and the writer is inert from every application path —
+  // the retired entry does not exist at runtime.
   check("S5", !/mode: ?"ACTIVE"/.test(source) && !/mode = ?"ACTIVE"/.test(source) &&
     source.indexOf("google.script.run") === -1 &&
-    typeof closeTransitionalClearingProduction === "function",
+    typeof closeTransitionalClearingProduction === "undefined",
     "routing hygiene");
 
   console.log("U10_TRANSITIONAL_CLOSE_SOURCE_AUDIT checks=" + pass);
+  return { total: pass, pass: pass, fail: 0 };
+}
+
+// ---------------------------------------------------------------------------
+// Retirement gate (T11-13): the consumed writer's production surface is
+// removed and provably inert. The frozen retirement invariant holds
+// independently of balances / T5 state / RequestKey replay / operator
+// behavior: NO callable path can create another TRANSITIONAL_CLEARING_CLOSE
+// financial write. The writer is never invoked to "prove" retirement — the
+// proof is static (source + call graph) plus one zero-write dynamic probe
+// with the injected transport removed. Accounting assertions above remain
+// unweakened and construct the historical journal only through the in-memory
+// fixture core.
+// ---------------------------------------------------------------------------
+function testTransitionalCloseRetirement() {
+  var pass = 0;
+  function check(id, value, detail) { trccCheck_(id, value, detail); pass++; }
+  var source = fs.readFileSync("102.Transitional.Clearing.Close.js", "utf8");
+
+  // A1/B1 entry absent: no public production entry exists in source or at
+  // runtime (mechanism A: entry removed, not guarded).
+  check("A1", source.indexOf("function closeTransitionalClearingProduction") === -1 &&
+    typeof closeTransitionalClearingProduction === "undefined" &&
+    source.indexOf("closeTransitionalClearingProduction") === -1,
+    "entry absent");
+
+  // A2 production wiring fully removed from the writer file: lock wrapper,
+  // runtime factory, production sheet-identity lookup, REST batch transport,
+  // production spreadsheet/service handles, cache invalidation, HTTP/network
+  // and UI-run surfaces.
+  ["transitionalClearingLockedRun_", "transitionalClearingCloseRuntime_",
+    "transitionalClearingCloseBatchRequest_", "transitionalClearingCloseSheetIdsRequest_",
+    "requireNumlockProductionSpreadsheet", "inventoryReceiptMigrationRequest_",
+    "NUMLOCK_PRODUCTION_STORAGE_POLICY", "LockService", "UrlFetchApp",
+    "SpreadsheetApp", "PropertiesService", "Session.getActiveUser",
+    "invalidateDashboardCache", "google.script.run"].forEach(function(token) {
+      check("A2-" + token, source.indexOf(token) === -1, token);
+    });
+
+  // C1 no path from any other runtime/UI file to any writer symbol: neither
+  // the retired entry nor the retained construction core is referenced
+  // anywhere outside this writer file and its dedicated test file.
+  var writerSymbols = ["closeTransitionalClearingProduction",
+    "transitionalClearingCloseWithRuntime_", "transitionalClearingLockedRun_",
+    "transitionalClearingCloseRuntime_", "transitionalClearingCloseBatchRequest_"];
+  var scanned = fs.readdirSync(".").filter(function(name) {
+    return (/\.js$|\.html$/).test(name) &&
+      name !== "102.Transitional.Clearing.Close.js" &&
+      name !== "96.Tests.SingleCommit.TransitionalClose.Cases.js" &&
+      name !== "_test_runner.js";
+  });
+  var leaked = [];
+  scanned.forEach(function(name) {
+    var text = fs.readFileSync(name, "utf8");
+    writerSymbols.forEach(function(symbol) {
+      if (text.indexOf(symbol) !== -1) leaked.push(name + ":" + symbol);
+    });
+  });
+  check("C1", leaked.length === 0, JSON.stringify(leaked));
+
+  // A3 dynamic zero-write probe: with the injected batch transport removed,
+  // the retained core cannot mutate anything — every write surface
+  // byte-identical, zero batches, zero close lines. (This is a zero-write
+  // probe against a fixture, never a production invocation.)
+  var probe = trccRuntime_();
+  var probeFixture = probe.spreadsheet;
+  var surfacesBefore = trccSurfaceSnapshot_(probeFixture);
+  var countsBefore = trccRowCounts_(probeFixture);
+  delete probe.batch;
+  var probeResult = transitionalClearingCloseWithRuntime_(probe);
+  check("A3", probeResult.status === "UNKNOWN" &&
+    probeResult.code === "TRANSITIONAL_CLOSE_BATCH_OUTCOME_UNKNOWN" &&
+    probe.events.batches.length === 0 &&
+    surfacesBefore === trccSurfaceSnapshot_(probeFixture) &&
+    JSON.stringify(countsBefore) === JSON.stringify(trccRowCounts_(probeFixture)) &&
+    trccCloseLines_(probeFixture).length === 0,
+    JSON.stringify(probeResult));
+
+  // D1-J1 historical artifacts remain readable and semantically valid
+  // through canonical readers ONLY. Construct the committed journal once on
+  // a fixture (construction authority, in-memory), then every check below
+  // reads through readers/projections with no further writer call.
+  var history = trccRuntime_();
+  var fixture = history.spreadsheet;
+  var revenueBefore = trccAccountNet_(fixture, "4000");
+  var statementBefore = buildCashFlowStatement(trccLedger_(fixture),
+    readCanonicalTable(fixture, "Accounts", CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS),
+    { startDate: "2026-10-01", endDate: "2026-10-31" }, { openingCash: 0 });
+  var built = transitionalClearingCloseWithRuntime_(history);
+  trccCheck_("D1p", built.status === "DONE", JSON.stringify(built));
+
+  // D1 operation authority + journal + audit readable and valid: exactly one
+  // COMMITTED operation whose stored plan verifies, two balanced close
+  // lines, one truthful audit — all via the canonical readers.
+  var ops = trccOperations_(fixture).filter(function(op) {
+    return String(op.OperationType || "") === "TRANSITIONAL_CLEARING_CLOSE";
+  });
+  var storedPlan = ops.length === 1 ? JSON.parse(ops[0].OperationPlan) : null;
+  var verify = storedPlan ? transitionalClearingCloseVerifyPlan_(storedPlan) :
+    { ok: false, reason: "NO_OP" };
+  var closeLines = trccCloseLines_(fixture);
+  var audits = trccLogs_(fixture).filter(function(row) {
+    return String(row.Module || "") === "TransitionalClearingClose";
+  });
+  check("D1", ops.length === 1 && ops[0].State === "COMMITTED" &&
+    String(ops[0].LastError || "") === "" && verify.ok &&
+    closeLines.length === 2 && audits.length === 1 &&
+    String(audits[0].RecordID) === "TRCC-SCR-CE122B27-ORD677BE5CES" &&
+    String(audits[0].ID_Log || "").indexOf("TRCCA-") === 0,
+    JSON.stringify({ ops: ops.length, verify: verify, lines: closeLines.length,
+      audits: audits.length }));
+
+  // E1 T5 transitional stays CLEARED, derived from the historical journal.
+  var exposure = buildTreasuryClearingExposure_(fixture,
+    { recognitionID: "SCR-CE122B27-ORD677BE5CES" });
+  check("E1", exposure.status === "OK" &&
+    exposure.row.ClearingStatus === "CLEARED" &&
+    Number(exposure.row.ClearedAmount) === 24000 &&
+    Number(exposure.row.OutstandingAmount) === 0 &&
+    exposure.row.RecognitionIntegrity === "VALID",
+    JSON.stringify(exposure.row));
+
+  // F1/G1 1030 zero; 1040 keeps the historical +24,000 exactly once.
+  var recon = buildTreasury1030Reconciliation_(fixture, {});
+  check("F1", recon.reconciliationStatus === "OK" &&
+    Number(recon.ledgerNet1030) === 0 && Number(recon.outstandingTotal) === 0 &&
+    Number(recon.unexplainedResidual) === 0, JSON.stringify(recon));
+  check("G1", trccAccountNet_(fixture, "1040") === 24000 &&
+    closeLines.filter(function(line) {
+      return String(line.AccountCode) === "1040"; }).length === 1,
+    String(trccAccountNet_(fixture, "1040")));
+
+  // H1 Revenue / P&L unchanged by retirement semantics: the historical close
+  // never touched Revenue recognition; the 4000 net is the seeded
+  // recognition only, identical before and after journal construction.
+  check("H1", trccAccountNet_(fixture, "4000") === revenueBefore &&
+    revenueBefore === -24000, String(trccAccountNet_(fixture, "4000")));
+
+  // I1 Cash Flow keeps exactly ONE historical Operating inflow from the
+  // committed close; recognition journals never count as cash.
+  var accounts = readCanonicalTable(fixture, "Accounts",
+    CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS);
+  var statement = buildCashFlowStatement(trccLedger_(fixture), accounts,
+    { startDate: "2026-10-01", endDate: "2026-10-31" }, { openingCash: 0 });
+  check("I1", statementBefore.operating === 0 && statement.operating === 24000 &&
+    statement.netChange === 24000 && statement.ambiguous.length === 0,
+    JSON.stringify(statement));
+
+  // J1 normal T11 Sale + Treasury surfaces unaffected: a U9-style genuine
+  // Sale is seeded; across journal construction every non-close sheet stays
+  // byte-identical (Orders/Sales/Treasury/Payments/Inventory/…).
+  var saleRuntime = trccRuntime_();
+  trccU9StyleSale_(saleRuntime.spreadsheet);
+  var saleFixture = saleRuntime.spreadsheet;
+  function nonCloseSheetBytes_() {
+    return JSON.stringify(["Orders", "OrderLines", "SalesRecognitionEvents",
+      "SalesRecognitionAudits", "Accounts", "Payments", "Settlements", "tabsal",
+      "tabops", "InventoryLedger", "PurchaseEvents", "TreasuryReceipts",
+      "TreasuryOperations", "TreasuryAudits"].map(function(name) {
+        var sheet = saleFixture.getSheetByName(name);
+        return name + ":" + JSON.stringify(sheet ? sheet.values : null);
+      }));
+  }
+  var saleBefore = nonCloseSheetBytes_();
+  var saleClose = transitionalClearingCloseWithRuntime_(saleRuntime);
+  check("J1", saleClose.status === "DONE" &&
+    nonCloseSheetBytes_() === saleBefore &&
+    trccCloseLines_(saleFixture).length === 2,
+    JSON.stringify(saleClose));
+
+  console.log("U10_TRANSITIONAL_CLOSE_RETIREMENT checks=" + pass);
   return { total: pass, pass: pass, fail: 0 };
 }

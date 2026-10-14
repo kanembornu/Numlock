@@ -1,41 +1,52 @@
 // ---------------------------------------------------------------------------
-// T11.13/U10 — TRANSITIONAL_CLEARING_CLOSE durable writer (T11.2 §18/§21
-// step 8, FROZEN contract; D13 owner attestation).
+// T11.13/U10 — TRANSITIONAL_CLEARING_CLOSE historical authority
+// (T11.2 §18/§21 step 8, FROZEN contract; D13 owner attestation).
 //
-// ONE deliberately single-purpose operation: close the frozen transitional
-// exposure SCR-CE122B27-ORD677BE5CES (Rp24,000, Dr1030 from the U2
-// transitional recognition, no genuine receipt, T5 UNCLEARED) with the ONE
-// authorized journal Dr1040 Operational Funds 24,000 / Cr1030 Sales
+// RETIRED WRITER (T11-13 retirement gate): the one authorized production
+// invocation of this transition consumed the operation — the ZERO-argument
+// public production entry, its lock wrapper, the production runtime factory,
+// the production sheet-identity lookup and the REST batch transport have been
+// REMOVED from this file. No callable path in this runtime can create another
+// TRANSITIONAL_CLEARING_CLOSE financial write, independent of balances, T5
+// state, RequestKey replay or operator behavior. The injected-runtime core
+// below is retained solely as the in-memory construction/verification
+// authority for tests and historical interpretation: it requires a caller-
+// supplied spreadsheet fixture and batch function, which no remaining
+// production composition or external invocation surface can supply.
+//
+// Historical transition (frozen, executed exactly once in production):
+// close the transitional exposure SCR-CE122B27-ORD677BE5CES (Rp24,000,
+// Dr1030 from the U2 transitional recognition, no genuine receipt) with the
+// ONE authorized journal Dr1040 Operational Funds 24,000 / Cr1030 Sales
 // Settlement Clearing 24,000, source classification
-// TRANSITIONAL_CLEARING_CLOSE, JournalID TRCC-<RecognitionID>.
+// TRANSITIONAL_CLEARING_CLOSE, JournalID TRCC-<RecognitionID>. The committed
+// operation row, ledger journal and audit row remain readable and
+// semantically valid; every projection/read path that classifies
+// TRANSITIONAL_CLEARING_CLOSE / TRCC- artifacts must keep working unchanged.
 //
 // This is NOT a generic journal / clearing / adjustment / Treasury / payment
 // / migration feature. Every business fact (amount, accounts, RecognitionID,
-// OrderID, source key, journal identity, RequestKey) is FROZEN in code; the
-// public entry takes ZERO parameters, so no caller can choose or override any
-// business input. It is never called from any application load or business
-// path. The global control plane (101.SingleCommit.Config.Control.js) keeps
-// its mutation authority EXACTLY the one Script Properties key and still
-// never performs this close — this writer is the only narrow door and it
-// reaches sheets, never config.
+// OrderID, source key, journal identity, RequestKey) is FROZEN in the
+// constants below; the former public entry took ZERO parameters, so no caller
+// could choose or override any business input. It was never called from any
+// application load or business path. The global control plane
+// (101.SingleCommit.Config.Control.js) keeps its mutation authority EXACTLY
+// the one Script Properties key and never performed this close.
 //
 // Durability model (§18 idempotency + established durable-operation
-// conventions): deterministic one-time identity derived from the frozen
+// conventions, retained as historical documentation of the committed
+// artifacts): deterministic one-time identity derived from the frozen
 // transition; the operation row (TransactionOperations, State=COMMITTED), the
-// two BalanceLedger lines and the one Logs audit row travel in ONE atomic
-// spreadsheets.batchUpdate (three appendCells subrequests) — a partial state
-// where the ledger commits but the operation authority is unrecoverable is
-// impossible by construction. First valid invocation commits exactly once;
-// replay after commit returns the committed result / ALREADY_COMMITTED with
-// zero writes and never a second journal; ambiguous transport is resolved by
-// readback (artifacts present => committed result; absent => safe fresh
-// attempt under the same deterministic identity — never a blind duplicate).
-// Every failed preflight or pre-batch failure writes ZERO rows.
+// two BalanceLedger lines and the one Logs audit row traveled in ONE atomic
+// batchUpdate (three appendCells subrequests). Replay-after-commit semantics
+// (ALREADY_COMMITTED, zero writes, never a second journal) were covered by
+// the test matrix; idempotency is defense-in-depth only and is NOT the
+// retirement mechanism — the production write surface no longer exists.
 //
 // Evidence: truthful internal attestation only (owner-authorized internal
 // architecture transition, source RecognitionID, frozen amount/accounts,
-// server timestamp, this contract + D13 + active task authorization in the
-// audit Metadata). NO fabricated EvidenceRef, NO TreasuryReceipts row, NO
+// server timestamp, this contract + D13 + task authorization in the audit
+// Metadata). NO fabricated EvidenceRef, NO TreasuryReceipts row, NO
 // payment / channel / destination / settlement artifact.
 // ---------------------------------------------------------------------------
 var TRANSITIONAL_CLEARING_CLOSE_V1 = Object.freeze({
@@ -833,11 +844,15 @@ function transitionalClearingCloseInspect_(plan, ss) {
 }
 
 // ---------------------------------------------------------------------------
-// Execution core. Never acquires a lock (the public entry owns the single
-// outer ScriptLock). Fixed order: exact (OperationType, RequestKey) lookup
-// BEFORE any mutable-state evaluation -> replay or full preflight -> freeze
-// plan -> bounds -> ONE atomic batch -> exact readback. Never retries a
-// failed batch inside one call.
+// Injected-runtime core (RETIRED from production; retained as the in-memory
+// construction/verification authority for the test matrix and historical
+// interpretation). It never acquires locks, reaches the network or touches
+// production storage by itself: every storage and transport capability must
+// be injected through the runtime argument, and no remaining runtime
+// composition supplies one. Fixed order: exact (OperationType, RequestKey)
+// lookup BEFORE any mutable-state evaluation -> replay or full preflight ->
+// freeze plan -> bounds -> ONE atomic batch over the injected transport ->
+// exact readback. Never retries a failed batch inside one call.
 // ---------------------------------------------------------------------------
 function transitionalClearingCloseWithRuntime_(runtime) {
   var close = TRANSITIONAL_CLEARING_CLOSE_V1, codes = close.CODES;
@@ -1011,93 +1026,18 @@ function transitionalClearingCloseWithRuntime_(runtime) {
 }
 
 // ---------------------------------------------------------------------------
-// Production runtime + public entry. The entry takes ZERO parameters (no
-// client can choose the amount, the accounts, the RecognitionID, the order,
-// the evidence, the date or the identity), owns the single ScriptLock, and
-// is never called from any application load or business path.
+// RETIRED PRODUCTION SURFACE (T11-13): the zero-argument public production
+// entry, its lock wrapper, the production runtime factory, the production
+// sheet-identity lookup and the REST batch transport that committed the ONE
+// authorized close were removed here after the transition was consumed and
+// independently proven exactly-once (docs/T11-12-U10-TRANSITIONAL-24K-CLOSE.md).
+// What remains above is: the frozen identity constants (historical READ
+// authority for committed TRANSITIONAL_CLEARING_CLOSE / TRCC- artifacts),
+// the read-only gates, the pure plan/verify/bounds builders, the read-only
+// artifact inspector, and the injected-runtime core used exclusively by the
+// in-memory test matrix. No production composition exists — and none can be
+// externally supplied — that can reach a TRANSITIONAL_CLEARING_CLOSE
+// financial write. Retirement is proven statically, by source audit and
+// deployed-byte proof; the writer is never invoked to demonstrate it.
 // ---------------------------------------------------------------------------
-function transitionalClearingCloseSheetIdsRequest_() {
-  var close = TRANSITIONAL_CLEARING_CLOSE_V1;
-  var response = inventoryReceiptMigrationRequest_("get",
-    "?fields=" + encodeURIComponent("spreadsheetId,sheets.properties(sheetId,title)"));
-  if (!response || response.spreadsheetId !== NUMLOCK_PRODUCTION_STORAGE_POLICY.SPREADSHEET_ID) {
-    throw new Error("PRODUCTION_IDENTITY_MISMATCH");
-  }
-  var ids = {};
-  (response.sheets || []).forEach(function(sheet) {
-    var properties = sheet && sheet.properties;
-    if (properties && close.WRITE_SURFACES.indexOf(properties.title) !== -1 &&
-        typeof properties.sheetId === "number") {
-      ids[properties.title] = properties.sheetId;
-    }
-  });
-  var missing = close.WRITE_SURFACES.filter(function(name) {
-    return typeof ids[name] !== "number";
-  });
-  if (missing.length) throw new Error("SHEET_ID_UNAVAILABLE:" + missing.join(","));
-  return ids;
-}
 
-// ONE Sheets REST mutation: spreadsheets.batchUpdate with exactly three
-// appendCells subrequests over the frozen write surfaces (atomic all-or-none)
-// through the same sanitized transport every other durable writer uses.
-function transitionalClearingCloseBatchRequest_(valueRanges) {
-  var sheetIds = transitionalClearingCloseSheetIdsRequest_();
-  var body = transitionalClearingCloseBatchBody_(valueRanges, sheetIds);
-  return inventoryReceiptMigrationRequest_("post", ":batchUpdate", body);
-}
-
-function transitionalClearingCloseRuntime_() {
-  return {
-    spreadsheet: requireNumlockProductionSpreadsheet(),
-    properties: PropertiesService.getScriptProperties(),
-    now: function() { return new Date(); },
-    actor: function() { return Session.getActiveUser().getEmail() || CANONICAL_ENTRY.USER; },
-    batch: transitionalClearingCloseBatchRequest_,
-    invalidate: function() { invalidateDashboardCache(); }
-  };
-}
-
-function transitionalClearingLockedRun_(core) {
-  var close = TRANSITIONAL_CLEARING_CLOSE_V1;
-  var runtime;
-  try { runtime = transitionalClearingCloseRuntime_(); }
-  catch (error) {
-    return transitionalClearingCloseResult_(close.STATUS.RUNTIME_UNAVAILABLE, {
-      detail: String(error && error.message || error) });
-  }
-  var lock = null, acquired = false;
-  try {
-    lock = LockService.getScriptLock();
-    lock.waitLock(30000);
-    acquired = true;
-  } catch (error) {
-    return transitionalClearingCloseResult_(close.STATUS.LOCK_TIMEOUT,
-      { detail: String(error && error.message || error) });
-  }
-  try {
-    return core(runtime);
-  } finally {
-    if (acquired) {
-      try { lock.releaseLock(); } catch (lockError) { /* lock auto-expires */ }
-    }
-  }
-}
-
-// The ONE public entry point. ZERO parameters by contract.
-function closeTransitionalClearingProduction() {
-  var close = TRANSITIONAL_CLEARING_CLOSE_V1;
-  var result = transitionalClearingLockedRun_(transitionalClearingCloseWithRuntime_);
-  // Post-commit freshness: ONLY a durable commit (fresh or replay) may
-  // invalidate the shared dashboard cache. Ephemeral best-effort maintenance.
-  if ((result.status === close.STATUS.DONE ||
-       result.status === close.STATUS.ALREADY_COMMITTED) &&
-      result.writeCount > 0 && typeof invalidateDashboardCache === "function") {
-    try { invalidateDashboardCache(); }
-    catch (cacheError) {
-      Logger.log("Transitional clearing close post-commit cache invalidation skipped: " +
-        String(cacheError && cacheError.message || cacheError));
-    }
-  }
-  return result;
-}

@@ -638,12 +638,16 @@ run('testSalesRecognitionV2U6SourceAudit', 'testSalesRecognitionV2U6SourceAudit(
   // durability (replay/ALREADY_COMMITTED/ambiguous transport/partial/tamper),
   // T5 + reader integration (CLEARED from the canonical journal, 1030 zero,
   // 1040 +once, Revenue/P&L untouched, Cash Flow counted once, U9-style Sale
-  // untouched), and static source audit. In-memory fixtures only.
+  // untouched), static source audit, and the T11-13 retirement gate (entry +
+  // production write wiring removed; frozen retirement invariant; historical
+  // artifacts readable; accounting assertions unweakened). In-memory
+  // fixtures only.
   run('testTransitionalCloseHappyPath', 'testTransitionalCloseHappyPath()');
   run('testTransitionalClosePreflightRefusals', 'testTransitionalClosePreflightRefusals()');
   run('testTransitionalCloseDurability', 'testTransitionalCloseDurability()');
   run('testTransitionalCloseT5Readers', 'testTransitionalCloseT5Readers()');
   run('testTransitionalCloseSourceAudit', 'testTransitionalCloseSourceAudit()');
+  run('testTransitionalCloseRetirement', 'testTransitionalCloseRetirement()');
 
   console.log('\n===== NUMLOCK POLICY C LOCAL HARNESS: ' + pass + ' PASS, ' + fail + ' FAIL =====');
 process.exit(fail > 0 ? 1 : 0);
