@@ -3501,6 +3501,9 @@
                 <button id="transactionTypeExpense" type="button" role="radio" aria-checked="false" data-entry-type="EXPENSE" onclick="setTransactionEntryType('EXPENSE')">
                   <i class="fas fa-wallet" aria-hidden="true"></i><span>Expense</span>
                 </button>
+                <button id="transactionTypePurchase" type="button" role="radio" aria-checked="false" data-entry-type="PURCHASE" onclick="setTransactionEntryType('PURCHASE')">
+                  <i class="fas fa-box-open" aria-hidden="true"></i><span>Purchase</span>
+                </button>
               </div>
             </fieldset>
 
@@ -3605,34 +3608,66 @@
 
               <section id="expenseEntryFields" class="transaction-entry-fields" aria-labelledby="expenseEntryHeading" hidden>
                 <h3 id="expenseEntryHeading"><span><i class="fas fa-wallet" aria-hidden="true"></i> Expense details</span><span id="expenseEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>
-                <div id="expensePolicyFields" class="transaction-entry-control">
-                  <label for="expenseCostType">Cost Type</label><select id="expenseCostType" onchange="setExpenseCostType(this.value)"><option value="FIXED_COST">Fixed Cost</option><option value="VARIABLE_COST">Variable Cost</option></select>
-                  <label for="expenseDate">Expense date</label><input id="expenseDate" type="date" aria-describedby="expenseDateError"><p id="expenseDateError" class="transaction-entry-error" role="alert"></p>
-                </div>
-                <div class="transaction-entry-control">
-                  <label for="expenseEntrySearch">Expense item</label>
-                  <div class="transaction-entry-combobox">
-                    <input id="expenseEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="expenseEntryListbox" aria-describedby="expenseEntryError" placeholder="Search expense items" oninput="filterTransactionEntryOptions('expense')" onkeydown="handleEntryComboboxKeydown(event, 'expense')">
-                    <div id="expenseEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Expense items" hidden></div>
+                <div class="transaction-expense-layout">
+                  <div class="transaction-entry-control">
+                    <label for="expenseEntrySearch">Expense Item</label>
+                    <div class="transaction-entry-combobox">
+                      <input id="expenseEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="expenseEntryListbox" aria-describedby="expenseEntryError" placeholder="Search expense items" oninput="filterTransactionEntryOptions('expense')" onkeydown="handleEntryComboboxKeydown(event, 'expense')">
+                      <div id="expenseEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Expense items" hidden></div>
+                    </div>
+                    <p id="expenseEntryMeta" class="transaction-entry-meta"></p>
+                    <p id="expenseEntryError" class="transaction-entry-error" role="alert"></p>
                   </div>
-                  <p id="expenseEntryMeta" class="transaction-entry-meta"></p>
-                  <p id="expenseEntryError" class="transaction-entry-error" role="alert"></p>
+                  <div class="transaction-entry-control">
+                    <label for="expenseEntryAmount">Amount (IDR)</label>
+                    <div class="transaction-entry-money"><span aria-hidden="true">Rp</span><input id="expenseEntryAmount" type="text" inputmode="numeric" autocomplete="off" aria-describedby="expenseEntryAmountError" placeholder="0" oninput="updateExpenseEntryAmount()"></div>
+                    <p id="expenseEntryAmountError" class="transaction-entry-error" role="alert"></p>
+                  </div>
                 </div>
-                <div class="transaction-entry-control">
-                  <label for="expenseEntryAmount">Amount (IDR)</label>
-                  <div class="transaction-entry-money"><span aria-hidden="true">Rp</span><input id="expenseEntryAmount" type="text" inputmode="numeric" autocomplete="off" aria-describedby="expenseEntryAmountError" placeholder="0" oninput="updateExpenseEntryAmount()"></div>
-                  <p id="expenseEntryAmountError" class="transaction-entry-error" role="alert"></p>
-                </div>
+              </section>
 
-                <fieldset id="expenseCashAccountFieldset" class="transaction-entry-fieldset transaction-entry-cash-account">
-                  <legend>Paid via</legend>
-                  <div class="transaction-entry-segments">
-                    <button id="expenseCashAccount1000" type="button" role="radio" aria-checked="false" data-cash-account="1000" onclick="setCashAccountCode('expense', '1000')">Cash on Hand</button>
-                    <button id="expenseCashAccount1010" type="button" role="radio" aria-checked="false" data-cash-account="1010" onclick="setCashAccountCode('expense', '1010')">DANA</button>
-                    <button id="expenseCashAccount1020" type="button" role="radio" aria-checked="false" data-cash-account="1020" onclick="setCashAccountCode('expense', '1020')">BluBCA</button>
+              <section id="purchaseEntryFields" class="transaction-entry-fields" aria-labelledby="purchaseEntryHeading" hidden>
+                <h3 id="purchaseEntryHeading"><span><i class="fas fa-box-open" aria-hidden="true"></i> Purchase details</span><span id="purchaseEntryOptionsStatus" class="transaction-entry-ready-status" hidden>Entry options ready</span></h3>
+                <div class="transaction-purchase-layout">
+                  <div class="transaction-purchase-row">
+                    <div class="transaction-entry-control">
+                      <label for="purchaseEntrySearch">Purchase item</label>
+                      <div class="transaction-entry-combobox">
+                        <input id="purchaseEntrySearch" type="search" inputmode="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="purchaseEntryListbox" aria-describedby="purchaseEntryError" placeholder="Search purchase items" oninput="filterTransactionEntryOptions('purchase')" onkeydown="handleEntryComboboxKeydown(event, 'purchase')">
+                        <div id="purchaseEntryListbox" class="transaction-entry-listbox" role="listbox" aria-label="Purchase items" hidden></div>
+                      </div>
+                      <p id="purchaseEntryMeta" class="transaction-entry-meta"></p>
+                      <p id="purchaseEntryError" class="transaction-entry-error" role="alert"></p>
+                    </div>
+                    <div class="transaction-entry-control">
+                      <label for="purchaseEntryQty">Quantity</label>
+                      <div class="transaction-entry-quantity">
+                        <button type="button" aria-label="Decrease quantity" onclick="adjustPurchaseEntryQty(-1)"><i class="fas fa-minus" aria-hidden="true"></i></button>
+                        <input id="purchaseEntryQty" type="number" inputmode="decimal" min="0.000001" step="0.000001" value="1" aria-describedby="purchaseEntryQtyError" oninput="updatePurchaseEntryQty()">
+                        <button type="button" aria-label="Increase quantity" onclick="adjustPurchaseEntryQty(1)"><i class="fas fa-plus" aria-hidden="true"></i></button>
+                      </div>
+                      <p id="purchaseEntryQtyError" class="transaction-entry-error" role="alert"></p>
+                    </div>
                   </div>
-                  <p id="expenseCashAccountError" class="transaction-entry-error" role="alert"></p>
-                </fieldset>
+                  <div class="transaction-purchase-row">
+                    <div class="transaction-purchase-meta">
+                      <div class="transaction-entry-control">
+                        <label>Unit (UOM)</label>
+                        <p id="purchaseEntryUom" class="transaction-entry-display-value">—</p>
+                      </div>
+                      <div class="transaction-entry-control">
+                        <label for="purchaseEntrySupplier">Supplier</label>
+                        <input id="purchaseEntrySupplier" type="text" autocomplete="off" aria-describedby="purchaseEntrySupplierError" placeholder="Optional override" oninput="updatePurchaseEntrySupplier()">
+                        <p id="purchaseEntrySupplierError" class="transaction-entry-error" role="alert"></p>
+                      </div>
+                    </div>
+                    <div class="transaction-entry-control">
+                      <label for="purchaseEntryTotal">Total Purchase (IDR)</label>
+                      <div class="transaction-entry-money"><span aria-hidden="true">Rp</span><input id="purchaseEntryTotal" type="text" inputmode="numeric" autocomplete="off" aria-describedby="purchaseEntryTotalError" placeholder="0" oninput="updatePurchaseEntryTotal()"></div>
+                      <p id="purchaseEntryTotalError" class="transaction-entry-error" role="alert"></p>
+                    </div>
+                  </div>
+                </div>
               </section>
 
               <section id="receiptEntryFields" class="transaction-entry-fields" aria-labelledby="receiptEntryHeading" hidden>
@@ -4562,14 +4597,16 @@
         "categoryMixCenter", "categoryMixLegend", "hotColdComparison", "hotColdChartSummary", "hotColdChartEmpty",
         "marginHealthContainer",
         "transactionEntryOverlay", "transactionEntryDialog", "closeTransactionEntryButton",
-        "transactionEntryOptionsState", "salesEntryOptionsStatus", "expenseEntryOptionsStatus", "transactionEntryForm", "salesEntryFields",
-        "expenseEntryFields", "transactionTypeSales", "transactionTypeExpense",
+        "transactionEntryOptionsState", "salesEntryOptionsStatus", "expenseEntryOptionsStatus", "purchaseEntryOptionsStatus", "transactionEntryForm", "salesEntryFields",
+        "expenseEntryFields", "purchaseEntryFields", "transactionTypeSales", "transactionTypeExpense", "transactionTypePurchase",
         "productEntrySearch", "productEntryListbox", "productEntryMeta", "productEntryError",
         "expenseEntrySearch", "expenseEntryListbox", "expenseEntryMeta", "expenseEntryError",
+        "purchaseEntrySearch", "purchaseEntryListbox", "purchaseEntryMeta", "purchaseEntryError",
         "salesTypeHot", "salesTypeCold", "salesTypeError", "salesEntryQty",
         "salesEntryQtyError", "salesPricingPreview", "salesPricingState",
         "salesPricingLines", "salesPricingTotals", "expenseEntryAmount",
-        "expenseEntryAmountError", "transactionEntrySubmitRegion", "transactionEntryGeneralError", "submitTransactionEntryButton",
+        "expenseEntryAmountError", "purchaseEntryQty", "purchaseEntryQtyError", "purchaseEntryTotal", "purchaseEntryTotalError", "purchaseEntrySupplier", "purchaseEntrySupplierError", "purchaseEntryUom",
+        "transactionEntrySubmitRegion", "transactionEntryGeneralError", "submitTransactionEntryButton",
         "transactionEntrySubmitLabel", "transactionEntrySuccess", "transactionEntrySuccessDetails",
         "transactionsIsActive",
         "transactionLifecycleOverlay", "transactionLifecycleDialog", "transactionLifecycleTitle", "transactionLifecycleDescription",
@@ -4762,20 +4799,26 @@
         trigger: required.newTransactionButton, overlay: required.transactionEntryOverlay,
         dialog: required.transactionEntryDialog, closeButton: required.closeTransactionEntryButton,
         optionsState: required.transactionEntryOptionsState,
-        salesOptionsStatus: required.salesEntryOptionsStatus, expenseOptionsStatus: required.expenseEntryOptionsStatus,
+        salesOptionsStatus: required.salesEntryOptionsStatus, expenseOptionsStatus: required.expenseEntryOptionsStatus, purchaseOptionsStatus: required.purchaseEntryOptionsStatus,
         form: required.transactionEntryForm,
-        salesFields: required.salesEntryFields, expenseFields: required.expenseEntryFields,
-        typeSales: required.transactionTypeSales, typeExpense: required.transactionTypeExpense,
+        salesFields: required.salesEntryFields, expenseFields: required.expenseEntryFields, purchaseFields: required.purchaseEntryFields,
+        typeSales: required.transactionTypeSales, typeExpense: required.transactionTypeExpense, typePurchase: required.transactionTypePurchase,
         productSearch: required.productEntrySearch, productListbox: required.productEntryListbox,
         productMeta: required.productEntryMeta, productError: required.productEntryError,
         expenseSearch: required.expenseEntrySearch, expenseListbox: required.expenseEntryListbox,
         expenseMeta: required.expenseEntryMeta, expenseError: required.expenseEntryError,
+        purchaseSearch: required.purchaseEntrySearch, purchaseListbox: required.purchaseEntryListbox,
+        purchaseMeta: required.purchaseEntryMeta, purchaseError: required.purchaseEntryError,
         typeHot: required.salesTypeHot, typeCold: required.salesTypeCold,
         salesTypeError: required.salesTypeError, qty: required.salesEntryQty,
         qtyError: required.salesEntryQtyError, pricingPreview: required.salesPricingPreview,
         pricingState: required.salesPricingState, pricingLines: required.salesPricingLines,
         pricingTotals: required.salesPricingTotals,
         amount: required.expenseEntryAmount, amountError: required.expenseEntryAmountError,
+        purchaseQty: required.purchaseEntryQty, purchaseQtyError: required.purchaseEntryQtyError,
+        purchaseTotal: required.purchaseEntryTotal, purchaseTotalError: required.purchaseEntryTotalError,
+        purchaseSupplier: required.purchaseEntrySupplier, purchaseSupplierError: required.purchaseEntrySupplierError,
+        purchaseUom: required.purchaseEntryUom,
         submitRegion: required.transactionEntrySubmitRegion,
         generalError: required.transactionEntryGeneralError, submit: required.submitTransactionEntryButton,
         submitLabel: required.transactionEntrySubmitLabel, success: required.transactionEntrySuccess,

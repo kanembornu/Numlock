@@ -89,6 +89,27 @@
           if (expenseCashError) expenseCashError.innerText = "";
         }
       }
+      // T11.5 U3: the ACTIVE single-commit Purchase surface never
+      // requests a payment channel (D1/D2/D15); the server derives 1040.
+      // Every other mode keeps the legacy "Paid via" selector required.
+      var purchaseCash = operationalElement("purchaseCashAccountFieldset");
+      if (purchaseCash) {
+        var hidePurchaseCash = Boolean(transactionEntryState &&
+          transactionEntryState.transactionType === "PURCHASE" &&
+          transactionEntryState.mode !== "correction" &&
+          singleCommitExpenseSurface_() === "ACTIVE");
+        purchaseCash.hidden = hidePurchaseCash;
+        purchaseCash.style.display = hidePurchaseCash ? "none" : "";
+        if (hidePurchaseCash && transactionEntryState.cashAccountCode) {
+          transactionEntryState.cashAccountCode = null;
+          ["1000", "1010", "1020"].forEach(function(code) {
+            var button = document.getElementById("purchaseCashAccount" + code);
+            if (button) button.setAttribute("aria-checked", "false");
+          });
+          var purchaseCashError = operationalElement("purchaseCashAccountError");
+          if (purchaseCashError) purchaseCashError.innerText = "";
+        }
+      }
       // T11.5 U3: the ACTIVE single-commit Purchase receipt surface never
       // requests a payment channel (D1/D2/D15); the server derives 1040.
       // Every other mode keeps the legacy "Paid via" selector required.
@@ -584,9 +605,16 @@
         saveOperationalOrder();
         return;
       }
-      var payload = state.transactionType === "SALES"
-        ? { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty, cashAccountCode: state.cashAccountCode }
-        : { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount, cashAccountCode: state.cashAccountCode };
+      var payload;
+      if (state.transactionType === "SALES") {
+        payload = { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty, cashAccountCode: state.cashAccountCode };
+      } else if (state.transactionType === "PURCHASE") {
+        // Backend: Purchase = Expense-derived (same transactionType EXPENSE)
+        // Policy routing: expensePolicyIsPurchase_(route)
+        payload = { transactionType: "EXPENSE", expenseItemId: state.selectedPurchase.expenseItemId, amount: state.purchaseTotal, cashAccountCode: state.cashAccountCode, isPurchase: true, purchaseQty: state.purchaseQty, purchaseUom: state.purchaseUom, supplierSource: state.purchaseSupplier };
+      } else {
+        payload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount, cashAccountCode: state.cashAccountCode };
+      }
       if (state.mode === "correction") {
         payload.transactionId = state.originalDetail.id;
         payload.reason = state.correctionReason.trim();
@@ -597,7 +625,7 @@
         }
         return;
       }
-      if (state.transactionType === "EXPENSE") {
+      if (state.transactionType === "EXPENSE" || state.transactionType === "PURCHASE") {
         var date = receiptEntryElements().expenseDate.value;
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
           receiptEntryElements().expenseDateError.innerText = "Enter a valid expense date."; return;
@@ -608,6 +636,7 @@
       // transaction (T11.2 §9). The same key is retained across retries of
       // the same payload; a changed payload mints a new identity.
       if (state.transactionType === "EXPENSE") payload.requestKey = expenseIntentRequestKey_(payload);
+      if (state.transactionType === "PURCHASE") payload.requestKey = purchaseIntentRequestKey_(payload);
       state.submitting = true;
       entry.generalError.innerText = "";
       updateTransactionEntrySubmitState();

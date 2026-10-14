@@ -3,13 +3,14 @@
       return {
         receiptKey: null, receiptPayload: null, receiptUnresolved: false, receiptChoices: [], receiptChoicesVersion: 0,
         costType: "FIXED_COST", transactionType: null, entryOptions: null, selectedProduct: null,
-        selectedExpense: null, selectedType: null, qty: 1, amount: null,
+        selectedExpense: null, selectedPurchase: null, selectedType: null, qty: 1, amount: null,
+        purchaseQty: 1, purchaseTotal: null, purchaseUom: null, purchaseSupplier: null,
         cashAccountCode: null,
-        expenseIntent: null,
+        expenseIntent: null, purchaseIntent: null,
         pricing: null, pricingSource: "unknown", lastPriceReadyLatencyMs: null,
         loadingOptions: false, loadingPricing: false,
         submitting: false, optionsLoaded: false, optionsRevision: "", pricingRequestVersion: 0,
-        activeOptionIndex: { product: -1, expense: -1 }, successResult: null,
+        activeOptionIndex: { product: -1, expense: -1, purchase: -1 }, successResult: null,
         submissionComplete: false, mode: "create", originalDetail: null,
         correctionReason: "", correctionPreview: null, correctionStage: "edit"
       };
@@ -63,6 +64,11 @@
       return state.purchaseIntent.requestKey;
     }
 
+    function isPurchaseEntry()
+    {
+      return transactionEntryState.transactionType === "PURCHASE";
+    }
+
     function formatEntryCurrency(value)
     {
       return "Rp " + Number(value || 0).toLocaleString("id-ID");
@@ -95,9 +101,14 @@
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
         (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0) &&
         (singleCommitNormalExpense || state.cashAccountCode);
+      var singleCommitPurchaseActive = singleCommitExpenseSurface_() === "ACTIVE";
+      var validPurchase = state.transactionType === "PURCHASE" && state.selectedPurchase &&
+        Number.isFinite(state.purchaseQty) && state.purchaseQty > 0 &&
+        Number.isInteger(state.purchaseTotal) && state.purchaseTotal > 0 &&
+        (singleCommitPurchaseActive || state.cashAccountCode);
       var correctionReasonValid = state.mode !== "correction" || state.correctionReason.trim().length >= 3;
       entry.submit.disabled = state.receiptUnresolved || state.submitting || state.submissionComplete || state.loadingOptions ||
-        !(validSales || validExpense || state.transactionType === "INVENTORY_RECEIPT" && !state.receiptUnresolved) || !correctionReasonValid;
+        !(validSales || validExpense || validPurchase || state.transactionType === "INVENTORY_RECEIPT" && !state.receiptUnresolved) || !correctionReasonValid;
       entry.submit.setAttribute("aria-busy", String(state.submitting));
       entry.submitLabel.innerText = state.submitting
         ? (state.mode === "correction" ? "Processing…" : "Saving…")
@@ -148,6 +159,7 @@
       document.body.classList.remove("overflow-hidden");
       closeEntryCombobox("product");
       closeEntryCombobox("expense");
+      closeEntryCombobox("purchase");
       if (transactionEntryLastFocus && typeof transactionEntryLastFocus.focus === "function") transactionEntryLastFocus.focus();
     }
 
@@ -209,20 +221,23 @@
       var ready = transactionEntryState.optionsLoaded && Boolean(transactionEntryState.entryOptions);
       entry.salesOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "SALES");
       entry.expenseOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "EXPENSE");
+      entry.purchaseOptionsStatus.hidden = !(ready && transactionEntryState.transactionType === "PURCHASE");
     }
 
     function setTransactionEntryType(type)
     {
-      if (["SALES", "EXPENSE"].indexOf(type) === -1 || transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
+      if (["SALES", "EXPENSE", "PURCHASE"].indexOf(type) === -1 || transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
       var entry = initializeStableDashboardElements().transactionEntry;
       if (transactionEntryState.transactionType !== type) {
         transactionEntryState.selectedExpense = null; transactionEntryState.amount = null;
         transactionEntryState.selectedProduct = null; transactionEntryState.selectedType = null;
+        transactionEntryState.selectedPurchase = null; transactionEntryState.purchaseQty = 1; transactionEntryState.purchaseTotal = null; transactionEntryState.purchaseUom = null; transactionEntryState.purchaseSupplier = null;
         transactionEntryState.pricing = null; transactionEntryState.loadingPricing = false;
         transactionEntryState.cashAccountCode = null;
         transactionEntryState.pricingRequestVersion++;
         entry.expenseSearch.value = ""; entry.amount.value = ""; entry.productSearch.value = "";
-        entry.expenseMeta.innerText = ""; entry.productMeta.innerText = "";
+        entry.purchaseSearch.value = ""; entry.purchaseQty.value = "1"; entry.purchaseTotal.value = ""; entry.purchaseSupplier.value = "";
+        entry.expenseMeta.innerText = ""; entry.productMeta.innerText = ""; entry.purchaseMeta.innerText = ""; entry.purchaseUom.innerText = "—";
         entry.typeHot.setAttribute("aria-checked", "false"); entry.typeCold.setAttribute("aria-checked", "false");
         ["1000", "1010", "1020"].forEach(function(c) {
           var salesBtn = document.getElementById("salesCashAccount" + c);
@@ -239,17 +254,20 @@
       entry.dialog.setAttribute("data-entry-type", type.toLowerCase());
       entry.typeSales.setAttribute("aria-checked", String(type === "SALES"));
       entry.typeExpense.setAttribute("aria-checked", String(type === "EXPENSE"));
+      entry.typePurchase.setAttribute("aria-checked", String(type === "PURCHASE"));
       entry.salesFields.hidden = type !== "SALES";
       entry.expenseFields.hidden = type !== "EXPENSE";
+      entry.purchaseFields.hidden = type !== "PURCHASE";
       operationalElement("operationalOrderFields").hidden = type !== "SALES";
       if (type === "SALES") { restoreOperationalRecovery(); if (salesV2OperatorLegacyControlsAllowed_()) listOperationalOpenOrders(); }
       applySalesV2OperatorSurface_();
       var receipt = receiptEntryElements();
       updateExpensePurchaseFields();
+      updatePurchaseEntryFields();
       entry.generalError.innerText = "";
       entry.optionsState.innerText = transactionEntryState.optionsLoaded ? "Entry options ready." : entry.optionsState.innerText;
       updateTransactionEntryOptionsPresentation();
-      closeEntryCombobox(type === "SALES" ? "expense" : "product");
+      closeEntryCombobox(type === "SALES" ? "expense" : type === "PURCHASE" ? "expense" : "product");
       updateTransactionEntrySubmitState();
       if (transactionEntryState.optionsLoaded) completeTransactionEntryDiagnostic(transactionEntryOptionsDiagnosticSource);
     }
@@ -257,11 +275,15 @@
     function getEntryCombobox(type)
     {
       var entry = initializeStableDashboardElements().transactionEntry;
-      return type === "product"
-        ? { input: entry.productSearch, listbox: entry.productListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.sales : [] }
-        : { input: entry.expenseSearch, listbox: entry.expenseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.expenses.filter(function(option) {
+      if (type === "product") {
+        return { input: entry.productSearch, listbox: entry.productListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.sales : [] };
+      } else if (type === "purchase") {
+        return { input: entry.purchaseSearch, listbox: entry.purchaseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.purchases : [] };
+      } else {
+        return { input: entry.expenseSearch, listbox: entry.expenseListbox, options: transactionEntryState.entryOptions ? transactionEntryState.entryOptions.expenses.filter(function(option) {
           return transactionEntryState.mode === "correction" || option.costType === transactionEntryState.costType;
         }) : [] };
+      }
     }
 
     function getFilteredEntryOptions(type)
@@ -285,9 +307,14 @@
       options.forEach(function(option, index)
       {
         var button = document.createElement("button");
-        var selectedId = type === "product"
-          ? transactionEntryState.selectedProduct && transactionEntryState.selectedProduct.productId
-          : transactionEntryState.selectedExpense && transactionEntryState.selectedExpense.expenseItemId;
+        var selectedId;
+        if (type === "product") {
+          selectedId = transactionEntryState.selectedProduct && transactionEntryState.selectedProduct.productId;
+        } else if (type === "purchase") {
+          selectedId = transactionEntryState.selectedPurchase && transactionEntryState.selectedPurchase.expenseItemId;
+        } else {
+          selectedId = transactionEntryState.selectedExpense && transactionEntryState.selectedExpense.expenseItemId;
+        }
         var optionId = type === "product" ? option.productId : option.expenseItemId;
         button.type = "button";
         button.className = "transaction-entry-option";
@@ -296,10 +323,10 @@
         button.setAttribute("data-active", String(transactionEntryState.activeOptionIndex[type] === index));
         button.innerText = type === "product" ? option.product : option.item;
         // U8B frozen contract: product options show the NAME only — never
-        // Category/Kind in the option row (expense options keep their meta).
+        // Category/Kind in the option row (expense/purchase options keep their meta).
         if (type !== "product") {
           var meta = document.createElement("span");
-          meta.innerText = [option.category, option.group].filter(Boolean).join(" · ");
+          meta.innerText = [option.category, option.group, option.kind].filter(Boolean).join(" · ");
           button.appendChild(meta);
         }
         button.addEventListener("click", function() { selectTransactionEntryOption(type, option); });
@@ -320,7 +347,14 @@
       if (!transactionEntryState.optionsLoaded || transactionEntryState.submitting || transactionEntryState.receiptUnresolved) return;
       transactionEntryState.activeOptionIndex[type] = -1;
       if (type === "product") transactionEntryState.selectedProduct = null;
-      else { transactionEntryState.selectedExpense = null; clearReceiptEntry(); updateExpensePurchaseFields(); }
+      else if (type === "purchase") {
+        transactionEntryState.selectedPurchase = null;
+        updatePurchaseEntryFields();
+      } else {
+        transactionEntryState.selectedExpense = null;
+        clearReceiptEntry();
+        updateExpensePurchaseFields();
+      }
       renderEntryOptionList(type);
       if (type === "product") requestTransactionEntryPricing();
       invalidateCorrectionReview();
@@ -361,6 +395,12 @@
         entry.productMeta.innerText = "";
         entry.productError.innerText = "";
         requestTransactionEntryPricing();
+      } else if (type === "purchase") {
+        transactionEntryState.selectedPurchase = option;
+        entry.purchaseSearch.value = option.item;
+        entry.purchaseMeta.innerText = [option.category, option.group, option.kind].filter(Boolean).join(" · ");
+        entry.purchaseError.innerText = "";
+        updatePurchaseEntryFields();
       } else {
         if (transactionEntryState.mode !== "correction" && option.costType !== transactionEntryState.costType) return;
         clearReceiptEntry();
@@ -485,6 +525,76 @@
       updateTransactionEntrySubmitState();
     }
 
+    function updatePurchaseEntryFields()
+    {
+      var state = transactionEntryState, entry = initializeStableDashboardElements().transactionEntry;
+      if (!state.selectedPurchase) {
+        entry.purchaseUom.innerText = "—";
+        entry.purchaseQty.value = "1";
+        entry.purchaseTotal.value = "";
+        entry.purchaseSupplier.value = "";
+        state.purchaseQty = 1;
+        state.purchaseTotal = null;
+        state.purchaseUom = null;
+        state.purchaseSupplier = null;
+        entry.purchaseQtyError.innerText = "";
+        entry.purchaseTotalError.innerText = "";
+        entry.purchaseSupplierError.innerText = "";
+      } else {
+        entry.purchaseUom.innerText = state.selectedPurchase.uom || "—";
+        state.purchaseUom = state.selectedPurchase.uom || null;
+        if (!state.purchaseQty || state.purchaseQty < 1) {
+          state.purchaseQty = 1;
+          entry.purchaseQty.value = "1";
+        }
+        entry.purchaseQtyError.innerText = "";
+        entry.purchaseTotalError.innerText = "";
+        entry.purchaseSupplierError.innerText = "";
+      }
+      updateTransactionEntrySubmitState();
+    }
+
+    function adjustPurchaseEntryQty(delta)
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var current = Number(entry.purchaseQty.value) || 1;
+      var next = Math.max(0.000001, current + delta);
+      entry.purchaseQty.value = next.toFixed(6).replace(/\.?0+$/, "");
+      updatePurchaseEntryQty();
+    }
+
+    function updatePurchaseEntryQty()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var qty = Number(entry.purchaseQty.value);
+      var valid = Number.isFinite(qty) && qty > 0;
+      transactionEntryState.purchaseQty = valid ? qty : null;
+      invalidateCorrectionReview();
+      entry.purchaseQtyError.innerText = valid ? "" : "Quantity must be a positive number.";
+      entry.purchaseQty.setAttribute("aria-invalid", String(!valid));
+      updateTransactionEntrySubmitState();
+    }
+
+    function updatePurchaseEntryTotal()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      var total = normalizeEntryInteger(entry.purchaseTotal.value);
+      transactionEntryState.purchaseTotal = total;
+      invalidateCorrectionReview();
+      entry.purchaseTotal.value = total ? total.toLocaleString("id-ID") : "";
+      entry.purchaseTotalError.innerText = total && total > 0 ? "" : "Total must be greater than 0.";
+      entry.purchaseTotal.setAttribute("aria-invalid", String(!(total && total > 0)));
+      updateTransactionEntrySubmitState();
+    }
+
+    function updatePurchaseEntrySupplier()
+    {
+      var entry = initializeStableDashboardElements().transactionEntry;
+      transactionEntryState.purchaseSupplier = entry.purchaseSupplier.value.trim();
+      invalidateCorrectionReview();
+      updateTransactionEntrySubmitState();
+    }
+
     function invalidateCorrectionReview()
     {
       if (transactionEntryState.mode !== "correction" || transactionEntryState.correctionStage !== "review") return;
@@ -571,6 +681,7 @@
       entry.form.reset();
       receiptEntryElements().expenseDate.value = transactionEntryToday();
       updateExpensePurchaseFields();
+      updatePurchaseEntryFields();
       entry.form.hidden = false;
       entry.submitRegion.hidden = false;
       entry.success.hidden = true;
@@ -581,16 +692,19 @@
       entry.typeFieldset.hidden = false;
       entry.typeSales.disabled = false;
       entry.typeExpense.disabled = false;
+      entry.typePurchase.disabled = false;
       entry.correctionWorkspace.hidden = true;
       entry.correctionReasonRegion.hidden = true;
       entry.correctionReview.hidden = true;
       entry.correctionReview.parentElement.classList.remove("has-review");
       entry.salesFields.hidden = true;
       entry.expenseFields.hidden = true;
+      entry.purchaseFields.hidden = true;
       operationalElement("operationalOrderFields").hidden = true;
       applySalesV2OperatorSurface_();
       entry.typeSales.setAttribute("aria-checked", "false");
       entry.typeExpense.setAttribute("aria-checked", "false");
+      entry.typePurchase.setAttribute("aria-checked", "false");
       entry.typeHot.setAttribute("aria-checked", "false");
       entry.typeCold.setAttribute("aria-checked", "false");
       ["1000", "1010", "1020"].forEach(function(c) {
@@ -601,11 +715,12 @@
       });
       var receiptCashSelect = document.getElementById("receiptCashAccount");
       if (receiptCashSelect) receiptCashSelect.value = "";
-      entry.productMeta.innerText = ""; entry.expenseMeta.innerText = "";
-      entry.productError.innerText = ""; entry.expenseError.innerText = "";
+      entry.productMeta.innerText = ""; entry.expenseMeta.innerText = ""; entry.purchaseMeta.innerText = ""; entry.purchaseUom.innerText = "—";
+      entry.productError.innerText = ""; entry.expenseError.innerText = ""; entry.purchaseError.innerText = "";
       entry.salesTypeError.innerText = ""; entry.qtyError.innerText = "";
-      entry.amountError.innerText = ""; entry.generalError.innerText = "";
-      entry.optionsState.innerText = optionsLoaded ? "Entry options ready." : "Select Sales or Expense.";
+      entry.amountError.innerText = ""; entry.purchaseQtyError.innerText = ""; entry.purchaseTotalError.innerText = ""; entry.purchaseSupplierError.innerText = "";
+      entry.generalError.innerText = "";
+      entry.optionsState.innerText = optionsLoaded ? "Entry options ready." : "Select Sales, Expense, or Purchase.";
       updateTransactionEntryOptionsPresentation();
       renderTransactionEntryPricing();
       updateTransactionEntrySubmitState();
