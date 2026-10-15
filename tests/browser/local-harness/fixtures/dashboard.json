@@ -1,0 +1,127 @@
+{
+  "summary": {
+    "revenue": 15000000,
+    "expense": 8500000,
+    "profit": 6500000,
+    "unitsSold": 420,
+    "averageMonthlyRevenue": 1250000
+  },
+  "insights": {
+    "profitMargin": 43.3
+  },
+  "dateFilter": {
+    "filter": "currentYear",
+    "label": "Current year",
+    "startDate": "2026-01-01",
+    "endDate": "2026-12-31",
+    "rowCount": 156,
+    "availablePeriods": [],
+    "availableMonths": ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10", "2026-11", "2026-12"],
+    "availableYears": ["2024", "2025", "2026"]
+  },
+  "reportingScope": {
+    "transactionCount": 156,
+    "lastTransactionDate": "2026-10-14"
+  },
+  "dataFreshness": {
+    "status": "Current"
+  },
+  "periodComparison": {
+    "changes": {
+      "revenuePercent": 12.5,
+      "expensePercent": 8.2,
+      "profitPercent": 18.7,
+      "unitsSoldPercent": 5.3,
+      "profitMarginPoints": 2.1
+    },
+    "status": {
+      "revenue": "Up",
+      "expense": "Up",
+      "profit": "Up",
+      "unitsSold": "Up",
+      "profitMargin": "Up"
+    },
+    "previous": {
+      "startDate": "2025-01-01",
+      "endDate": "2025-12-31",
+      "rowCount": 142
+    },
+    "message": ""
+  },
+  "dataQuality": {
+    "status": "Good",
+    "issueCount": 0,
+    "issues": [],
+    "scope": {
+      "scopedRows": 156,
+      "excludedInvalidDateRows": 0
+    },
+    "lifecycle": {
+      "inactiveCanonicalRows": 0
+    }
+  },
+  "kpiTargets": {
+    "editable": false,
+    "provenance": "LOCAL FIXTURE",
+    "targets": []
+  },
+  "revenueTrend": {
+    "labels": ["2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09", "2026-10"],
+    "values": [1200000, 1350000, 1180000, 1420000, 1510000, 1600000, 1480000, 1550000, 1620000, 1680000],
+    "granularity": "month"
+  },
+  "topProducts": [
+    { "name": "Espresso", "qty": 85, "revenue": 2125000 },
+    { "name": "Cappuccino", "qty": 72, "revenue": 1980000 },
+    { "name": "Latte", "qty": 68, "revenue": 1870000 },
+    { "name": "Americano", "qty": 55, "revenue": 1265000 },
+    { "name": "Cold Brew", "qty": 48, "revenue": 1320000 }
+  ],
+  "performanceAnalytics": {
+    "productProfitability": [
+      { "label": "Espresso", "grossMargin": 1275000, "grossMarginPercent": 60.0, "revenue": 2125000, "cogs": 850000 },
+      { "label": "Cappuccino", "grossMargin": 1188000, "grossMarginPercent": 60.0, "revenue": 1980000, "cogs": 792000 },
+      { "label": "Latte", "grossMargin": 1122000, "grossMarginPercent": 60.0, "revenue": 1870000, "cogs": 748000 },
+      { "label": "Americano", "grossMargin": 759000, "grossMarginPercent": 60.0, "revenue": 1265000, "cogs": 506000 },
+      { "label": "Cold Brew", "grossMargin": 792000, "grossMarginPercent": 60.0, "revenue": 1320000, "cogs": 528000 }
+    ],
+    "classifications": {
+      "category": [
+        { "category": "Coffee", "revenue": 8560000, "grossMargin": 5136000, "grossMarginPercent": 60.0 },
+        { "category": "Non-Coffee", "revenue": 6440000, "grossMargin": 3864000, "grossMarginPercent": 60.0 }
+      ],
+      "kind": [
+        { "kind": "Hot", "revenue": 5890000, "grossMargin": 3534000, "grossMarginPercent": 60.0 },
+        { "kind": "Cold", "revenue": 9110000, "grossMargin": 5466000, "grossMarginPercent": 60.0 }
+      ]
+    },
+    "hotColdEconomics": [
+      { "servingType": "Hot", "revenue": 5890000, "cogs": 2356000, "grossMargin": 3534000, "grossMarginPercent": 60.0, "units": 298 },
+      { "servingType": "Cold", "revenue": 9110000, "cogs": 3644000, "grossMargin": 5466000, "grossMarginPercent": 60.0, "units": 222 }
+    ],
+    "expenseGroups": [
+      { "group": "Rent", "amount": 3000000 },
+      { "group": "Salaries", "amount": 2800000 },
+      { "group": "Utilities", "amount": 850000 },
+      { "group": "Supplies", "amount": 620000 },
+      { "group": "Marketing", "amount": 450000 },
+      { "group": "Other", "amount": 780000 }
+    ],
+    "totalGrossMargin": 9000000,
+    "grossMarginComparison": {
+      "status": "Up",
+      "grossMarginChangePercent": 3.2
+    }
+  },
+  "diagnosis": [
+    { "level": "opportunity", "title": "Revenue Growth", "description": "Revenue up 12.5% vs last year. Consider expanding high-margin cold beverage line." }
+  ],
+  "recommendations": [
+    { "priority": "Medium", "message": "Scale best-selling Cold Brew product — 60% margin with growing demand." }
+  ],
+  "recentTransactions": [],
+  "dashboardPerformance": {
+    "totalMs": 45,
+    "cacheHit": true
+  }
+}

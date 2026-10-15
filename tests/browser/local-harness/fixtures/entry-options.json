@@ -1,0 +1,192 @@
+{
+  "success": true,
+  "data": {
+    "sales": [
+      {
+        "productId": "PROD-001",
+        "product": "Espresso",
+        "category": "Coffee",
+        "kind": "Hot",
+        "pricing": {
+          "Hot": { "price": 25000, "hpp": 10000, "unitMargin": 15000, "purchaseUom": "cup", "baseUom": "cup" },
+          "Cold": { "price": 28000, "hpp": 11000, "unitMargin": 17000, "purchaseUom": "cup", "baseUom": "cup" }
+        }
+      },
+      {
+        "productId": "PROD-002",
+        "product": "Cappuccino",
+        "category": "Coffee",
+        "kind": "Hot",
+        "pricing": {
+          "Hot": { "price": 27500, "hpp": 11000, "unitMargin": 16500, "purchaseUom": "cup", "baseUom": "cup" },
+          "Cold": { "price": 30000, "hpp": 12000, "unitMargin": 18000, "purchaseUom": "cup", "baseUom": "cup" }
+        }
+      },
+      {
+        "productId": "PROD-003",
+        "product": "Latte",
+        "category": "Coffee",
+        "kind": "Hot",
+        "pricing": {
+          "Hot": { "price": 27500, "hpp": 11000, "unitMargin": 16500, "purchaseUom": "cup", "baseUom": "cup" },
+          "Cold": { "price": 30000, "hpp": 12000, "unitMargin": 18000, "purchaseUom": "cup", "baseUom": "cup" }
+        }
+      },
+      {
+        "productId": "PROD-004",
+        "product": "Americano",
+        "category": "Coffee",
+        "kind": "Hot",
+        "pricing": {
+          "Hot": { "price": 23000, "hpp": 9200, "unitMargin": 13800, "purchaseUom": "cup", "baseUom": "cup" },
+          "Cold": { "price": 25000, "hpp": 10000, "unitMargin": 15000, "purchaseUom": "cup", "baseUom": "cup" }
+        }
+      },
+      {
+        "productId": "PROD-005",
+        "product": "Cold Brew",
+        "category": "Coffee",
+        "kind": "Cold",
+        "pricing": {
+          "Hot": { "price": 27500, "hpp": 11000, "unitMargin": 16500, "purchaseUom": "cup", "baseUom": "cup" },
+          "Cold": { "price": 27500, "hpp": 11000, "unitMargin": 16500, "purchaseUom": "cup", "baseUom": "cup" }
+        }
+      }
+    ],
+    "expenses": [
+      {
+        "expenseItemId": "EXP-001",
+        "item": "Rent",
+        "category": "Fixed Overhead",
+        "group": "Rent",
+        "kind": "FIXED_COST",
+        "purchaseRequired": false,
+        "uom": "month"
+      },
+      {
+        "expenseItemId": "EXP-002",
+        "item": "Salaries",
+        "category": "Fixed Overhead",
+        "group": "Salaries",
+        "kind": "FIXED_COST",
+        "purchaseRequired": false,
+        "uom": "month"
+      },
+      {
+        "expenseItemId": "EXP-003",
+        "item": "Electricity",
+        "category": "Utilities",
+        "group": "Utilities",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": false,
+        "uom": "kWh"
+      },
+      {
+        "expenseItemId": "EXP-004",
+        "item": "Water",
+        "category": "Utilities",
+        "group": "Utilities",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": false,
+        "uom": "m3"
+      },
+      {
+        "expenseItemId": "EXP-005",
+        "item": "Coffee Beans",
+        "category": "COGS",
+        "group": "Coffee Beans",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": true,
+        "uom": "kg"
+      },
+      {
+        "expenseItemId": "EXP-006",
+        "item": "Milk",
+        "category": "COGS",
+        "group": "Dairy",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": true,
+        "uom": "L"
+      },
+      {
+        "expenseItemId": "EXP-007",
+        "item": "Cups & Lids",
+        "category": "COGS",
+        "group": "Packaging",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": true,
+        "uom": "pcs"
+      },
+      {
+        "expenseItemId": "EXP-008",
+        "item": "Syrups",
+        "category": "COGS",
+        "group": "Flavorings",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": true,
+        "uom": "L"
+      },
+      {
+        "expenseItemId": "EXP-009",
+        "item": "Marketing",
+        "category": "Variable Overhead",
+        "group": "Marketing",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": false,
+        "uom": "campaign"
+      },
+      {
+        "expenseItemId": "EXP-010",
+        "item": "Cleaning Supplies",
+        "category": "Variable Overhead",
+        "group": "Maintenance",
+        "kind": "VARIABLE_COST",
+        "purchaseRequired": true,
+        "uom": "pcs"
+      }
+    ],
+    "purchases": [
+      {
+        "expenseItemId": "EXP-005",
+        "item": "Coffee Beans",
+        "category": "COGS",
+        "group": "Coffee Beans",
+        "kind": "VARIABLE_COST",
+        "uom": "kg"
+      },
+      {
+        "expenseItemId": "EXP-006",
+        "item": "Milk",
+        "category": "COGS",
+        "group": "Dairy",
+        "kind": "VARIABLE_COST",
+        "uom": "L"
+      },
+      {
+        "expenseItemId": "EXP-007",
+        "item": "Cups & Lids",
+        "category": "COGS",
+        "group": "Packaging",
+        "kind": "VARIABLE_COST",
+        "uom": "pcs"
+      },
+      {
+        "expenseItemId": "EXP-008",
+        "item": "Syrups",
+        "category": "COGS",
+        "group": "Flavorings",
+        "kind": "VARIABLE_COST",
+        "uom": "L"
+      },
+      {
+        "expenseItemId": "EXP-010",
+        "item": "Cleaning Supplies",
+        "category": "Variable Overhead",
+        "group": "Maintenance",
+        "kind": "VARIABLE_COST",
+        "uom": "pcs"
+      }
+    ],
+    "revision": "local-fixture-v2"
+  }
+}

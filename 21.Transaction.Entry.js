@@ -153,7 +153,9 @@ function buildTransactionEntryOptions(products, expenseItems, pricingRows, refer
       costType: registry ? null : coverage[row.ID_Ops].CostType,
       purchaseRequired: registry ? false : expensePolicyIsPurchase_(coverage[row.ID_Ops]) }; })
     .sort(function(a, b) { return a.item.localeCompare(b.item) || a.expenseItemId.localeCompare(b.expenseItemId); });
-  return { sales: sales, expenses: expenses };
+  var purchases = expenses.filter(function(e) { return e.purchaseRequired; })
+    .map(function(e) { return { expenseItemId: e.expenseItemId, item: e.item, category: e.category, group: e.group, kind: e.kind, uom: "" }; });
+  return { sales: sales, expenses: expenses, purchases: purchases };
 }
 
 function getTransactionEntryOptions() {

@@ -1216,8 +1216,7 @@ function testSingleCommitPackageMeasurement() {
 
   // P3 registered package aggregate: recomputed from the manifest entries
   // must equal the stored aggregate (no hash drift, exactly 78 entries).
-  // V720-SA7: pin updated for Expense & Purchase UI changes
-  // (T8 manifest regenerated).
+  // V720-SA8: pin updated for Purchase options contract correction.
   var nodeCrypto = globalThis.nodeCrypto;
   var controlHash = nodeCrypto.createHash("sha256")
     .update(fs.readFileSync("101.SingleCommit.Config.Control.js")).digest("hex");
@@ -1230,7 +1229,7 @@ function testSingleCommitPackageMeasurement() {
   ).digest("hex");
   check("P3", registeredEntries.length === 78 &&
     registeredAggregate === manifest.current.aggregateHash &&
-    registeredAggregate === "a417761dc6886f3c2bd954d10fe1ddfc727b1d4bee41033c5f30484d9a7f1453",
+    registeredAggregate === "7f57ceab0dc0551504f396b55e6ecc64c0f3084204a80c84638077993d04ec49",
     registeredAggregate);
 
   console.log("T11_7_U5_PACKAGE current=" + manifest.current.count +

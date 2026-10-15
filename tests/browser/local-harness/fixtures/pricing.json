@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "data": {
+    "price": 25000,
+    "hpp": 10000,
+    "unitMargin": 15000,
+    "purchaseUom": "cup",
+    "baseUom": "cup"
+  }
+}

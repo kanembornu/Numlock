@@ -179,7 +179,9 @@
             showTransactionEntryOptionsFailure(); return;
           }
           transactionEntryState.entryOptions = {
-            sales: response.data.sales.slice(), expenses: response.data.expenses.slice()
+            sales: response.data.sales.slice(), 
+            expenses: response.data.expenses.slice(),
+            purchases: (response.data.purchases || []).slice()
           };
           transactionEntryState.optionsLoaded = true;
           transactionEntryState.optionsRevision = String(response.data.revision || "");

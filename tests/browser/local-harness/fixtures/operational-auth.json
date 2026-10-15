@@ -1,0 +1,72 @@
+{
+  "success": true,
+  "data": {
+    "products": [
+      { "ProductID": "PROD-001", "Name": "Espresso" },
+      { "ProductID": "PROD-002", "Name": "Cappuccino" },
+      { "ProductID": "PROD-003", "Name": "Latte" },
+      { "ProductID": "PROD-004", "Name": "Americano" },
+      { "ProductID": "PROD-005", "Name": "Cold Brew" }
+    ],
+    "productVariants": [
+      { "ProductVariantID": "PROD-001-HOT", "ProductID": "PROD-001", "Tipe": "Hot", "SellingPrice": 25000 },
+      { "ProductVariantID": "PROD-001-COLD", "ProductID": "PROD-001", "Tipe": "Cold", "SellingPrice": 28000 },
+      { "ProductVariantID": "PROD-002-HOT", "ProductID": "PROD-002", "Tipe": "Hot", "SellingPrice": 27500 },
+      { "ProductVariantID": "PROD-002-COLD", "ProductID": "PROD-002", "Tipe": "Cold", "SellingPrice": 30000 },
+      { "ProductVariantID": "PROD-003-HOT", "ProductID": "PROD-003", "Tipe": "Hot", "SellingPrice": 27500 },
+      { "ProductVariantID": "PROD-003-COLD", "ProductID": "PROD-003", "Tipe": "Cold", "SellingPrice": 30000 },
+      { "ProductVariantID": "PROD-004-HOT", "ProductID": "PROD-004", "Tipe": "Hot", "SellingPrice": 23000 },
+      { "ProductVariantID": "PROD-004-COLD", "ProductID": "PROD-004", "Tipe": "Cold", "SellingPrice": 25000 },
+      { "ProductVariantID": "PROD-005-HOT", "ProductID": "PROD-005", "Tipe": "Hot", "SellingPrice": 27500 },
+      { "ProductVariantID": "PROD-005-COLD", "ProductID": "PROD-005", "Tipe": "Cold", "SellingPrice": 27500 }
+    ],
+    "suppliers": [
+      { "SupplierID": "SUP-001", "Name": "Bean Masters Coffee Roasters" },
+      { "SupplierID": "SUP-002", "Name": "Dairy Fresh Indonesia" },
+      { "SupplierID": "SUP-003", "Name": "EcoPack Solutions" },
+      { "SupplierID": "SUP-004", "Name": "Flavor House Distributors" },
+      { "SupplierID": "SUP-005", "Name": "CleanPro Supplies" }
+    ],
+    "purchaseItems": [
+      { "ExpenseItemID": "EXP-005", "label": "Coffee Beans (Arabica, 1kg)", "ItemID": "ITEM-005", "category": "COGS", "group": "Coffee Beans", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-006", "label": "Fresh Milk (Full Cream, 1L)", "ItemID": "ITEM-006", "category": "COGS", "group": "Dairy", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-007", "label": "Paper Cups 12oz (50 pcs)", "ItemID": "ITEM-007", "category": "COGS", "group": "Packaging", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-008", "label": "Vanilla Syrup (1L)", "ItemID": "ITEM-008", "category": "COGS", "group": "Flavorings", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-010", "label": "Cleaning Solution (500ml)", "ItemID": "ITEM-010", "category": "COGS", "group": "Maintenance", "kind": "VARIABLE_COST" }
+    ],
+    "expenseItems": [
+      { "ExpenseItemID": "EXP-001", "label": "Rent (Monthly)", "category": "Fixed Overhead", "group": "Rent", "kind": "FIXED_COST" },
+      { "ExpenseItemID": "EXP-002", "label": "Staff Salaries", "category": "Fixed Overhead", "group": "Salaries", "kind": "FIXED_COST" },
+      { "ExpenseItemID": "EXP-003", "label": "Electricity Bill", "category": "Utilities", "group": "Utilities", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-004", "label": "Water Bill", "category": "Utilities", "group": "Utilities", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-005", "label": "Coffee Beans (Arabica, 1kg)", "category": "COGS", "group": "Coffee Beans", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-006", "label": "Fresh Milk (Full Cream, 1L)", "category": "COGS", "group": "Dairy", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-007", "label": "Paper Cups 12oz (50 pcs)", "category": "COGS", "group": "Packaging", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-008", "label": "Vanilla Syrup (1L)", "category": "COGS", "group": "Flavorings", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-009", "label": "Marketing Campaign", "category": "Variable Overhead", "group": "Marketing", "kind": "VARIABLE_COST" },
+      { "ExpenseItemID": "EXP-010", "label": "Cleaning Solution (500ml)", "category": "COGS", "group": "Maintenance", "kind": "VARIABLE_COST" }
+    ],
+    "items": [
+      { "ItemID": "ITEM-005", "Name": "Coffee Beans (Arabica)" },
+      { "ItemID": "ITEM-006", "Name": "Fresh Milk (Full Cream)" },
+      { "ItemID": "ITEM-007", "Name": "Paper Cups 12oz" },
+      { "ItemID": "ITEM-008", "Name": "Vanilla Syrup" },
+      { "ItemID": "ITEM-010", "Name": "Cleaning Solution" }
+    ],
+    "conversions": [
+      { "ItemID": "ITEM-005", "PurchaseUOM": "kg", "BaseUOM": "kg", "ConversionFactor": 1 },
+      { "ItemID": "ITEM-006", "PurchaseUOM": "L", "BaseUOM": "L", "ConversionFactor": 1 },
+      { "ItemID": "ITEM-007", "PurchaseUOM": "pack", "BaseUOM": "pcs", "ConversionFactor": 50 },
+      { "ItemID": "ITEM-008", "PurchaseUOM": "L", "BaseUOM": "L", "ConversionFactor": 1 },
+      { "ItemID": "ITEM-010", "PurchaseUOM": "bottle", "BaseUOM": "pcs", "ConversionFactor": 1 }
+    ],
+    "paymentMethods": [
+      { "code": "1000", "label": "Cash (IDR)" },
+      { "code": "1010", "label": "Bank Transfer - BCA" },
+      { "code": "1020", "label": "Bank Transfer - Mandiri" },
+      { "code": "1040", "label": "Accounts Payable (Purchase)" }
+    ],
+    "salesV2Mode": "ACTIVE",
+    "singleCommitMode": "ACTIVE"
+  }
+}
