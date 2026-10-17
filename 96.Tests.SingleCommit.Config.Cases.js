@@ -1214,9 +1214,19 @@ function testSingleCommitPackageMeasurement() {
       return entry.path === "101.SingleCommit.Config.Control.js"; }).length === 1 &&
     fs.existsSync("101.SingleCommit.Config.Control.js"));
 
+  // Local regression snapshot 2026-10-16: reviewed current 78-file inventory,
+  // byte hashes and existing UI/policy deltas; see evidence record
+  // docs/evidence/package-manifest-regression-20261016.md. Not a release gate.
+  // M3: remeasured after only 21.Transaction.Entry.js and
+  // 95.Transaction.Operational.js changed; 78-file inventory unchanged.
   // P3 registered package aggregate: recomputed from the manifest entries
   // must equal the stored aggregate (no hash drift, exactly 78 entries).
-  // V720-SA8: pin updated for Purchase options contract correction.
+  // V720-SA8: pin updated for Purchase final information simplification
+  // (labels + compact authoritative UOM/Supplier + override removal).
+  // PURCHASE_THREE_COLUMN: pin updated for explicit 3-col Purchase grid
+  // (Item | Quantity | Total same row, compact info beneath Item).
+  // P0_BLANK_BODY: pin updated for missing shell IDs abort fix
+  // (expenseCostType/expenseDate/expenseDateError/expensePolicyFields).
   var nodeCrypto = globalThis.nodeCrypto;
   var controlHash = nodeCrypto.createHash("sha256")
     .update(fs.readFileSync("101.SingleCommit.Config.Control.js")).digest("hex");
@@ -1229,8 +1239,18 @@ function testSingleCommitPackageMeasurement() {
   ).digest("hex");
   check("P3", registeredEntries.length === 78 &&
     registeredAggregate === manifest.current.aggregateHash &&
-    registeredAggregate === "7f57ceab0dc0551504f396b55e6ecc64c0f3084204a80c84638077993d04ec49",
+    registeredAggregate === "9394a27f1c7cebf32223b324cc45fe19a9589513132153abbbe6d9bb46f6df54",
     registeredAggregate);
+
+  // P4 independently binds every manifest entry to the allowlist and source
+  // bytes. A matching stored aggregate alone cannot detect source-only drift.
+  check("P4", JSON.stringify(registeredEntries.map(function(entry) {
+    return entry.path;
+  })) === JSON.stringify(allowlist.slice().sort()) &&
+    new Set(allowlist).size === 78 && registeredEntries.every(function(entry) {
+      return entry.sha256 === nodeCrypto.createHash("sha256")
+        .update(fs.readFileSync(entry.path)).digest("hex");
+    }), "manifest inventory/source mismatch");
 
   console.log("T11_7_U5_PACKAGE current=" + manifest.current.count +
     " currentHash=" + manifest.current.aggregateHash +
