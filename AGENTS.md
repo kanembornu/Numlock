@@ -86,6 +86,28 @@ REPORT
 - Before recommending a commit, inspect the worktree and distinguish task changes from pre-existing changes.
 - Do not include unrelated files in recommended Git commands.
 
+## Autonomous Execution Contract
+
+Owner decision: routine technical operations run fully automated inside the task scope. An approved task authorizes all necessary operations within its explicit boundaries. Do not request repetitive owner approval for routine operations already included in that scope.
+
+### Automation Loop
+
+For every authorized task: `PLAN → IMPLEMENT → TEST → DIAGNOSE → FIX → RETEST → VERIFY → COMPLETE`. Continue automatically through recoverable failures within scope and bounded recovery. Do not stop at the first fixable failure.
+
+### Task-Gated Write Authorization
+
+- Read-only inspection (`clasp status`, `clasp versions`, `clasp deployments`, `clasp pull` to isolated workspace for source-byte parity, `git diff/log/rev-parse`, `node --check/--test`, preflight scripts) is auto-allowed via `opencode.json`. Isolated pull never overwrites the primary repository.
+- Source synchronization (`clasp push --force`), version creation (`clasp version`), deployment update/creation (`clasp deploy/redeploy`), rollback, provider/policy activation, business writes, and `git add/commit/push/reset` remain task-gated: they require that the *task* explicitly authorizes them. Shell allow alone is not business authorization. `AGENTS.md` Rules 7/8 still apply (one push per authorization; OpenCode executes after approval, no manual deferral).
+- `numlock-critical` / `numlock-ops` additionally gate `clasp *` as `ask` for human-gated operations; `clasp status/versions/deployments` are `allow` for parity checks.
+
+### Pre-Sync / Pre-Deploy / Post-Deploy Safety
+
+Before source synchronization: verify `scriptId 1zQfkkcA7JPrzYqJAdtRaZGixmc1lQ7b7KyyOS3cpmmhanRvovQkyWsZc` project identity, read actual remote Editor HEAD (`clasp status` manifest gate), compare file inventory + `appsscript.json` hashes against reviewed package `efbeeabfae0dd27dcf64434097444c1bf59a7fec0b4f9f243756161cd8e0649c` aggregate, detect unreviewed remote changes, preserve recoverable baseline. Before deployment: verify existing deployment `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` identity, preserve Web App URL/executeAs/access, create immutable version, update existing deployment (never duplicate). After deployment: run authorized runtime verification, detect regressions, safe rollback to `721` when required (pointer move only, never reverse committed journals).
+
+### Data Integrity
+
+Preserve double-entry accounting, canonical workbook `1ubfWtRVdrToBYZIxewgT9H-scIeszZHDUHDrLd64e9M` authority (`requireNumlockProductionSpreadsheet()`), idempotency, single-commit integrity, durable `(OperationType,RequestKey)` identity, Correct/Void semantics, historical recovery, inventory metadata-only. Never fabricate success, replay uncertain commits, or rewrite historical records.
+
 ## Required Completion Output
 
 Every completed task must report:
@@ -138,17 +160,12 @@ Telemetry must report actual measured values when available. Use UNKNOWN
 when unavailable. Never fabricate "~N toolcalls" or "~N minutes" as
 measured evidence.
 
-### One Specialist Principle
+### Primary execution and optional specialists
 
-After classification and context packaging, delegate once to the selected
-specialist. For Heavy tasks, numlock-heavy owns implementation, local
-commands, focused tests, repair, and final audit within its permission
-boundary.
-
-Do NOT delegate to numlock-medium merely for Node execution, test harness
-execution, Git status, diff audit, or ordinary file inspection. A downstream
-delegation is allowed only when a genuinely distinct capability is required.
-If delegation occurs, telemetry must state WHY.
+Primary owns local development, edits, debugging, tests, repair, and final
+audit directly. Delegation is optional for a distinct capability, never a
+prerequisite for shell or test execution. When delegated, give one specialist
+a bounded scope and report why it was useful; do not repeat its work.
 
 ### Compact Context Package
 
@@ -167,7 +184,7 @@ containing:
 - REQUIRED_TESTS (specific test expectations)
 - ACCEPTANCE_GATES (pass/fail criteria)
 - KNOWN_PRIOR_EVIDENCE (accepted results, not to re-prove)
-- PREMIUM_FALLBACK_POLICY
+- BACKEND_AND_RECOVERY_POLICY
 
 The specialist receives this compact contract instead of a full task
 reconstruction. Repository/source remains authoritative on conflict.
@@ -191,137 +208,58 @@ HTML/CSS, Apps Script client/server, or visual relationships.
 
 ## OpenCode Routing
 
-Primary entrypoint: `numlock` (read-only classifier/orchestrator/delegator).
-Classify three independent dimensions:
+Primary entrypoint: `numlock`, the local development executor. OpenCode +
+9router remains the configured execution path. All project agents use
+`9router/numlock-explore-free`; no alternate model dependency is configured.
 
-- **Reasoning demand L1-L4:** L1 mechanical; L2 bounded work on established
-  patterns; L3 substantial multi-step reasoning under established authorities;
-  L4 novel or high-ambiguity reasoning that established contracts cannot resolve.
-  Size, file count, gate count, test volume, browser work, production context,
-  deployment, R3, and R4 do not alone make work L4.
-- **Operational risk R1-R4:** controls permissions, human authorization,
-  mutation budget, fail-closed behavior, and retry policy. Risk never directly
-  selects a model.
-- **Execution state:** `CONTINUE`, `ESCALATE`, or `BLOCK`.
+Classify reasoning demand L1-L4 independently from operational risk R1-R4.
+Primary can perform local development at every reasoning level. Complexity
+alone does not require delegation or a different model. Unresolved reasoning
+must be reported with evidence rather than silently changing backend.
 
-### Specialist Agents
+Optional specialists: `numlock-explore` for read-only audit, `numlock-light`
+for L1, `numlock-medium` for L2, `numlock-heavy` for L3, `numlock-browser` for
+browser acceptance, `numlock-critical` for R4 preparation and exactly
+owner-authorized controlled operations, `numlock-commit` for explicitly
+requested local staging/commit, and `numlock-ops` for bounded authorized ops.
+Neither classification nor delegation grants production or Git authorization.
 
-| Agent            | Scope                               | Implementation                                                           |
-| ---------------- | ----------------------------------- | ------------------------------------------------------------------------ |
-| numlock-explore  | Read-only exploration, audit, trace | No                                                                       |
-| numlock-light    | L1 local work                       | Yes (bounded)                                                            |
-| numlock-medium   | L2 local work                       | Yes (bounded)                                                            |
-| numlock-heavy    | L3 local work                       | Yes (local implementation + validation)                                  |
-| numlock-critical | ANY/R4                              | Local preparation; risky action only within explicit human authorization |
-| numlock-commit   | Local Git staging/commit only       | No (explicit-path staging + commit)                                      |
-| numlock-ops      | Deterministic operations            | Only within exact allowlist, authorization, and mutation budget           |
+### Development shell and production boundary
 
-### Initial Routing
+Normal compound/piped local commands are permitted by project policy.
+Until process isolation is verified, unknown shell commands require approval
+(`ask`), not automatic allowance or blanket denial. No unrestricted shell is
+enabled. Do not use auto-approve mode to bypass this fallback.
 
-- Explicit read-only → numlock-explore on Free
-- L1 → numlock-light on Free
-- L2 → numlock-medium on Free
-- L3 → numlock-heavy on Free
-- Clearly intrinsic L4 → `9router/numlock-sol` directly; do not waste a
-  mandatory Free attempt
-- ANY/R4 → numlock-critical on Free unless independent L4 evidence selects Sol
-- Explicitly authorized local commit → numlock-commit on Free
+The current checkout shares the user's home and has a production association;
+credential-file presence is not evidence of isolation. OpenCode pattern rules
+and `external_directory` checks are permission controls, not an OS sandbox.
+An approved interpreter/package script can access credentials or network.
+No command prefix denylist can establish production isolation for arbitrary code.
+See `docs/LOCAL-EXECUTION-CONTRACT.md` for the required isolation evidence.
 
-R4 overrides operational routing, not reasoning demand. L2+R4 means Free plus
-strict permissions, explicit human gate, and bounded mutation budget—not Sol.
+Production writes, deployment, migrations, credentials, destructive Git and
+historical backfills still require exact owner authorization, role permissions,
+and operation counts. Primary and development specialists cannot run clasp.
+Shell approval alone never grants business authority.
 
-### Premium Model Routing
+### Bounded recovery and evidence
 
-| Agent            | Initial Model                      | Sol use                                      |
-| ---------------- | ---------------------------------- | -------------------------------------------- |
-| numlock/explore/light/medium | `9router/numlock-explore-free` | Evidence-based escalation only               |
-| numlock-heavy    | `9router/numlock-explore-free`      | L4 or measured reasoning blocker             |
-| numlock-critical | `9router/numlock-explore-free`      | Independent L4 or measured reasoning blocker |
-| numlock-commit/ops | `9router/numlock-explore-free`    | Never for deterministic execution            |
+For one parent objective, allow one primary attempt and at most one predefined,
+materially different bounded recovery. No loops or autonomous mutation retries.
+Report unresolved reasoning with its sources and required decision. Return
+precise infrastructure states: `BLOCKED_AUTH`, `BLOCKED_PERMISSION`,
+`BLOCKED_CAPABILITY`, `BLOCKED_NETWORK`, `BLOCKED_HUMAN_GATE`, or
+`BLOCKED_MUTATION_BUDGET`. A 401/expired token is `BLOCKED_AUTH`; do not retry
+unchanged credentials or silently change backend.
 
-Premium reasoning authority: `9router/numlock-sol`. Free execution authority:
-`9router/numlock-explore-free`. OpenCode remains sole execution and coordination
-entrypoint through 9Router. Only configured OpenAI-compatible routes are used;
-protocol compatibility does not make an external agent. No silent backend
-substitution. Premium unavailability returns `PREMIUM_BACKEND_REQUIRED` only
-when Sol was validly selected.
+Local config tests prove configuration only. Node shell probes prove only the
+current Node process can execute those probes. Actual OpenCode permission,
+model execution, optional delegation, Apps Script and browser acceptance each
+need their own measured evidence. Never infer isolation from a missing allow rule.
 
-Free must escalate in the same task when measured evidence establishes one exact
-reason:
-
-1. `AUTHORITY_CONFLICT` — authoritative sources materially conflict and no deterministic precedence exists.
-2. `ARCHITECTURAL_AMBIGUITY` — necessary design decision is absent from architecture/contracts.
-3. `REASONING_INSUFFICIENCY` — bounded Free attempt cannot safely determine implementation or prove required invariant.
-4. `CROSS_SUBSYSTEM_CONTRADICTION` — Transaction/Finance/Product interaction needs non-mechanical synthesis unresolved by established authorities.
-5. `NOVEL_RECOVERY_REQUIRED` — production mutation outcome is uncertain and no predefined recovery safely determines next action.
-6. `VALIDATION_CONTRADICTION` — implementation, authoritative tests, or runtime evidence materially contradict and deterministic tracing cannot establish correct state.
-7. `OWNER_PREMIUM_REQUEST` — owner explicitly requests premium/Sol.
-
-Escalation sends smallest sufficient context and exact `ESCALATION_REASON`, not
-full task history. Sol resolves reasoning only. When remaining work is
-mechanical, Sol returns a concise `RESOLUTION/EXECUTION CONTRACT`; primary hands
-editing, tests, Git operations, exact authorized commands, browser probes, and
-structured reconciliation back to Free. Do not retain Sol for convenience. Use
-smallest supported orchestration pattern if direct model handoff is unavailable.
-
-Infrastructure and capability failures never select Sol. Return exact state:
-
-- `BLOCKED_AUTH`: invalid/expired/missing OAuth or external authentication
-- `BLOCKED_PERMISSION`: denied or non-allowlisted command
-- `BLOCKED_CAPABILITY`: unavailable shell, browser, file, or required tool
-- `BLOCKED_NETWORK`: network, DNS, or unreachable deployment
-- `BLOCKED_HUMAN_GATE`: required approval absent
-- `BLOCKED_MUTATION_BUDGET`: authorized attempt count exhausted
-
-For one parent objective, permit one primary Free attempt and at most one
-predefined, materially different bounded recovery. No loops. After both fail,
-reasoning insufficiency escalates to Sol; infrastructure blocks; uncertain
-mutation follows existing recovery on Free or uses `NOVEL_RECOVERY_REQUIRED`
-only when no contract determines a safe next action. No autonomous mutation
-retry or recursive remediation.
-
-### Routing Acceptance Examples
-
-1. Read/search source → Free.
-2. Large multi-file implementation following established pattern → Free.
-3. Large task with many sequential gates and deterministic contracts → Free.
-4. Read-only production diagnostic → Free, subject to command permission.
-5. Known one-shot production mutation, explicit authorization, L2/R4 → Free + HUMAN_GATE.
-6. `clasp invalid_grant` → `BLOCKED_AUTH`; no Sol.
-7. Missing shell/command permission → `BLOCKED_CAPABILITY` or `BLOCKED_PERMISSION`; no Sol.
-8. Network failure → `BLOCKED_NETWORK`; no Sol.
-9. Materially contradictory authoritative accounting contracts without deterministic precedence → automatic Sol (`AUTHORITY_CONFLICT`).
-10. Free implementation discovers architecture decision absent from frozen contract → automatic Sol (`ARCHITECTURAL_AMBIGUITY`).
-11. Uncertain production mutation with fully determining recovery contract → deterministic recovery on Free where safe.
-12. Uncertain production mutation without safe recovery contract → automatic Sol (`NOVEL_RECOVERY_REQUIRED`).
-13. Sol resolves ambiguity; edit/test/commit remains → return to Free with resolution/execution contract.
-14. Owner explicitly requests Sol → direct Sol permitted (`OWNER_PREMIUM_REQUEST`).
-15. R4 simple predetermined command with explicit authorization → Free + HUMAN_GATE.
-16. L4 non-production architecture problem → Sol despite low operational risk.
-
-### Execution architecture
-
-Use repository authorities plus concise task delta. Delegations carry exact
-scope, blocker or escalation reason, and needed evidence; never duplicate full
-NUMLOCK architecture or premium transcript. Reasoning effort is independent of
-risk and model label.
-
-HEAVY performs authorized deterministic L3 local implementation in small
-validated steps. CRITICAL prepares exact files, target, operation count,
-expected write footprint, checks, and reconciliation. If risky action lacks
-exact authorization, return `HUMAN_GATE_REQUIRED`. Existing authorization
-persists only within exact scope and count. Ambiguous or stale authorization is
-not permission. Sol selection never widens operational authority.
-
-Never downgrade financial semantics to evade a boundary. No deployment,
-production write, migration, credential mutation, destructive Git operation,
-or historical backfill is authorized by classification or model. Shell approval
-is additional enforcement; generic shell/interpreter commands cannot bypass
-business gates.
-
-CodeGraph remains a local code tool. Use allowed `codegraph explore`/`codegraph
-status` when no MCP is configured. Do not initialize/reindex during routine
-exploration.
+CodeGraph remains a local code tool. Try it once when available; do not
+initialize/reindex during routine exploration. Source and tests remain authority.
 
 ### Upload manifest gate
 
