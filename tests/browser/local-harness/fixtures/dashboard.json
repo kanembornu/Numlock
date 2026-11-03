@@ -75,7 +75,12 @@
     { "name": "Cappuccino", "qty": 72, "revenue": 1980000 },
     { "name": "Latte", "qty": 68, "revenue": 1870000 },
     { "name": "Americano", "qty": 55, "revenue": 1265000 },
-    { "name": "Cold Brew", "qty": 48, "revenue": 1320000 }
+    { "name": "Cold Brew", "qty": 48, "revenue": 1320000 },
+    { "name": "Mocha", "qty": 42, "revenue": 1050000 },
+    { "name": "Flat White", "qty": 38, "revenue": 950000 },
+    { "name": "Macchiato", "qty": 35, "revenue": 875000 },
+    { "name": "Affogato", "qty": 28, "revenue": 700000 },
+    { "name": "Frappuccino", "qty": 26, "revenue": 650000 }
   ],
   "performanceAnalytics": {
     "productProfitability": [
@@ -83,7 +88,12 @@
       { "label": "Cappuccino", "grossMargin": 1188000, "grossMarginPercent": 60.0, "revenue": 1980000, "cogs": 792000 },
       { "label": "Latte", "grossMargin": 1122000, "grossMarginPercent": 60.0, "revenue": 1870000, "cogs": 748000 },
       { "label": "Americano", "grossMargin": 759000, "grossMarginPercent": 60.0, "revenue": 1265000, "cogs": 506000 },
-      { "label": "Cold Brew", "grossMargin": 792000, "grossMarginPercent": 60.0, "revenue": 1320000, "cogs": 528000 }
+      { "label": "Cold Brew", "grossMargin": 792000, "grossMarginPercent": 60.0, "revenue": 1320000, "cogs": 528000 },
+      { "label": "Mocha", "grossMargin": 630000, "grossMarginPercent": 60.0, "revenue": 1050000, "cogs": 420000 },
+      { "label": "Flat White", "grossMargin": 570000, "grossMarginPercent": 60.0, "revenue": 950000, "cogs": 380000 },
+      { "label": "Macchiato", "grossMargin": 525000, "grossMarginPercent": 60.0, "revenue": 875000, "cogs": 350000 },
+      { "label": "Affogato", "grossMargin": 420000, "grossMarginPercent": 60.0, "revenue": 700000, "cogs": 280000 },
+      { "label": "Frappuccino", "grossMargin": 390000, "grossMarginPercent": 60.0, "revenue": 650000, "cogs": 260000 }
     ],
     "classifications": {
       "category": [

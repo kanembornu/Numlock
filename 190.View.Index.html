@@ -346,6 +346,12 @@
       #dashboardPanelOverview #revenueChartTitle { font-size: 20px; font-weight: 700; letter-spacing: -0.025em; line-height: 25px; }
       #dashboardPanelOverview .overview-kpi-value { font-size: 31px; font-weight: 800; letter-spacing: -0.04em; line-height: 35px; }
       #dashboardPanelOverview .hf-kpi-card > span:last-child { color: var(--text-muted); font-weight: 400; line-height: 16px; }
+      .hf-kpi-delta { position: relative; display: inline-flex; }
+      .hf-kpi-delta > strong { cursor: help; outline-offset: 3px; }
+      .hf-kpi-tooltip { position: absolute; z-index: 30; right: 0; bottom: calc(100% + 8px); width: 260px; padding: 10px 12px; border-radius: 8px; background: var(--tooltip-bg, var(--text-primary)); color: var(--tooltip-text, var(--surface-1)); box-shadow: var(--shadow-2); font-size: 12px; font-weight: 400; line-height: 18px; text-align: left; white-space: normal; visibility: hidden; opacity: 0; }
+      .hf-kpi-delta:not([data-tooltip-dismissed]):hover .hf-kpi-tooltip,
+      .hf-kpi-delta:not([data-tooltip-dismissed]):focus-within .hf-kpi-tooltip { visibility: visible; opacity: 1; }
+      html.numlock-phone .hf-kpi-tooltip { width: 180px; }
       #dashboardPanelOverview #revenueChartSection,
       #dashboardPanelOverview #topProductsSection { padding: 20px 20px 10px; }
       #dashboardPanelOverview #revenueChartSection > div:first-child > span { height: 36px; border-color: var(--card-border); border-radius: 9px; padding-left: 12px; padding-right: 12px; background: var(--surface-1); }
@@ -503,7 +509,7 @@
         #dashboardPanelOverview #executiveSummarySection { min-height: 120px; }
         #dashboardPanelOverview .hf-kpi-card { min-height: 130px; }
         #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }
-        #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: max-content auto auto auto; gap: 12px; }
+        #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: max-content auto auto auto; gap: 4px; }
         #dashboardPanelOverview #dashboardHeaderRegion { grid-row: 1; }
         #dashboardPanelOverview #keyMetricsSection { grid-row: 1; margin: 0; }
         #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; }
@@ -2302,7 +2308,7 @@
       #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important; border-top: 0 !important; }
       #sidebarCollapseButton { width: 100% !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
       #dashboardTabInsights { white-space: nowrap !important; }
-      #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 42px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
+      #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 20px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 2px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
       #dashboardPanelOverview #periodComparisonSection,
       #dashboardPanelOverview #dataQualityInformation { padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
       #dashboardPanelOverview #dataQualityInformation { display: flex !important; min-width: max-content !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }
@@ -2316,7 +2322,7 @@
       #dashboardPanelOverview #dataQualityDetails p { margin-top: 2px; color: var(--text-secondary); }
       #dashboardPanelOverview #mainChartWrapper { height: clamp(240px, 22vw, 320px) !important; min-height: 0 !important; max-height: none !important; }
       #dashboardContent { gap: var(--overview-section-gap) !important; }
-      #dashboardPanelOverview #topProductsSection { overflow-x: auto; }
+      #dashboardPanelOverview #topProductsSection { overflow: visible; }
       .hf-top-products-table { width: 100%; min-width: 320px; table-layout: fixed; }
       .hf-top-products-table th,
       .hf-top-products-table td { height: 34px; padding: 0 6px; border-bottom: 1px solid var(--divider); text-align: left !important; white-space: nowrap; }
@@ -2351,7 +2357,7 @@
         #dashboardSidebar #sidebarCollapseButton { min-height: 44px !important; gap: 11px !important; padding: 8px 12px !important; }
         #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; box-sizing: border-box !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }
-        #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(320px, 3fr) minmax(320px, 1fr) !important; }
+        #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(0, 3fr) minmax(360px, 1fr) !important; }
       }
       @media (min-width: 1280px) {
         #dashboardSidebar #sidebarCollapseButton { min-height: 48px !important; gap: 12px !important; padding: 10px 12px !important; }
@@ -2388,12 +2394,12 @@
       #dashboardPanelOverview .hf-analytics-title-icon, #dashboardPanelOverview .hf-summary-title-icon { width: var(--section-icon-size) !important; height: var(--section-icon-size) !important; flex-basis: var(--section-icon-size) !important; border-radius: 10px !important; font-size: var(--section-icon-glyph-size) !important; }
       #dashboardPanelOverview .hf-analytics-title-icon > i, #dashboardPanelOverview .hf-summary-title-icon > i { font-size: var(--section-icon-glyph-size) !important; line-height: 1 !important; }
       #dashboardPanelOverview .hf-analytics-title-icon-products > i { font-size: 17px !important; }
-      #dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 8px 16px !important; }
+      #dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 1px 16px !important; }
       #dashboardPanelOverview #revenueChartSection { padding-left: 4px !important; }
       #dashboardPanelOverview #keyMetricsSection { margin: 0 !important; }
       #dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 12px !important; padding-left: 12px !important; }
       @media (min-width: 1024px) {
-        #dashboardPanelOverview #keyMetricsSection { grid-row: 1 !important; }
+        #dashboardPanelOverview #keyMetricsSection { grid-row: 1 !important; height: 214px !important; }
         #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2 !important; }
         #dashboardPanelOverview #overviewContextRow { grid-row: 3 !important; }
         #dashboardPanelOverview #executiveSummarySection { grid-row: 4 !important; }
