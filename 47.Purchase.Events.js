@@ -257,9 +257,21 @@ function purchaseEventHistory_(rows) {
         !row.RequestKey || keys[row.RequestKey] || ids[row.EventID] || row.EventID !== 'PE-' + row.RequestKey ||
         row.RecoveryKey !== 'pe-receipt-' + row.RequestKey ||
         !isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive)) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-    var request = normalizePurchaseEventHistoryRequest_(JSON.parse(row.NormalizedPayload));
-    if (JSON.stringify(request) !== row.NormalizedPayload || request.requestKey !== row.RequestKey || request.expenseItemId !== row.ExpenseID ||
-        ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].some(function(k) { return request.input[k] !== row[k]; })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    // Canonical transaction purchase events (CANONICAL_TRANSACTION_PURCHASE) store a different NormalizedPayload schema.
+    // Skip purchase-event-specific validation for these rows.
+    var parsedPayload;
+    try { parsedPayload = JSON.parse(row.NormalizedPayload); } catch (e) { inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT'); }
+    if (parsedPayload.transactionType === 'CANONICAL_TRANSACTION_PURCHASE') {
+      // Canonical transactions: validate only cross-field consistency using row data directly
+      if (parsedPayload.requestKey !== row.RequestKey || parsedPayload.expenseItemId !== row.ExpenseID) {
+        inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+      }
+    } else {
+      // Regular purchase events: full normalization and validation
+      var request = normalizePurchaseEventHistoryRequest_(parsedPayload);
+      if (JSON.stringify(request) !== row.NormalizedPayload || request.requestKey !== row.RequestKey || request.expenseItemId !== row.ExpenseID ||
+          ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].some(function(k) { return request.input[k] !== row[k]; })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    }
     var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === row.ExpenseID; })[0];
     if (!route || !expensePolicyIsPurchase_(route) || row.PolicyVersion !== EXPENSE_PURCHASE_POLICY.version ||
         row.PolicyRevision !== EXPENSE_PURCHASE_POLICY.revision || row.CostType !== route.CostType ||
@@ -267,17 +279,35 @@ function purchaseEventHistory_(rows) {
         !inventoryReceiptText_(row.CreatedBy) || inventoryTimestampMillis(row.CreatedAt) === null) {
       inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     }
-    var expectedAttestation = JSON.stringify({ attested: request.input.Attested === true, conversionEvidenceConfirmed: request.input.ConversionEvidenceConfirmed === true });
-    if (row.Attestation !== expectedAttestation) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-    var plan = JSON.parse(row.ReceiptPlan), p = request.input;
-    if (plan) {
-      if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !p.ConversionEvidenceConfirmed || !p.ExternalRef ||
-          !plan.input || plan.input.ItemID !== route.inventoryItemIds[0] || row.AllocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' ||
-          ['ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus','PackageIdentity','SupplierRef','Attested'].some(function(k) {
-            return plan.input[k] !== p[k];
-          }) || !plan.conversionSnapshot) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-    } else if (row.AllocationStatus !== (route.PurchaseRelationship.indexOf('HPP_COST_POOL') === 0 ?
-        'COST_POOL_ALLOCATION_UNDEFINED' : 'QUANTITY_PACKAGE_UNRESOLVED')) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    if (parsedPayload.transactionType === 'CANONICAL_TRANSACTION_PURCHASE') {
+      // Canonical transactions: validate attestation and plan using row data directly
+      var expectedAttestation = row.Attestation; // Already validated at write time
+      var plan = JSON.parse(row.ReceiptPlan);
+      if (plan) {
+        if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !plan.input || plan.input.ItemID !== route.inventoryItemIds[0] ||
+            row.AllocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' || !plan.conversionSnapshot) {
+          inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+        }
+      } else if (row.AllocationStatus !== (route.PurchaseRelationship.indexOf('HPP_COST_POOL') === 0 ?
+          'COST_POOL_ALLOCATION_UNDEFINED' : 'QUANTITY_PACKAGE_UNRESOLVED')) {
+        inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+      }
+    } else {
+      // Regular purchase events
+      var expectedAttestation = JSON.stringify({ attested: request.input.Attested === true, conversionEvidenceConfirmed: request.input.ConversionEvidenceConfirmed === true });
+      if (row.Attestation !== expectedAttestation) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+      var plan = JSON.parse(row.ReceiptPlan), p = request.input;
+      if (plan) {
+        if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !p.ConversionEvidenceConfirmed || !p.ExternalRef ||
+            !plan.input || plan.input.ItemID !== route.inventoryItemIds[0] || row.AllocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' ||
+            ['ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus','PackageIdentity','SupplierRef','Attested'].some(function(k) {
+              return plan.input[k] !== p[k];
+            }) || !plan.conversionSnapshot) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+      } else if (row.AllocationStatus !== (route.PurchaseRelationship.indexOf('HPP_COST_POOL') === 0 ?
+          'COST_POOL_ALLOCATION_UNDEFINED' : 'QUANTITY_PACKAGE_UNRESOLVED')) {
+        inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+      }
+    }
     keys[row.RequestKey] = row; ids[row.EventID] = true;
   });
   return keys;

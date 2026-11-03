@@ -67,11 +67,15 @@
 
       var elements = initializeStableDashboardElements();
       var staging = elements.dashboardSectionStaging;
-      var overviewEvidenceRow = staging.querySelector("#overviewEvidenceRow");
-      var topProductsSection = staging.querySelector("#topProductsSection");
-      var performanceSignalGrid = staging.querySelector("#performanceSignalGrid");
-      var forecastSection = staging.querySelector("#forecastSection");
-      var productConcentrationSection = staging.querySelector("#productConcentrationSection");
+      var overviewEvidenceRow = document.getElementById("overviewEvidenceRow");
+      var topProductsSection = document.getElementById("topProductsSection");
+      var performanceSignalGrid = document.getElementById("performanceSignalGrid");
+      var forecastSection = document.getElementById("forecastSection");
+      var productConcentrationSection = document.getElementById("productConcentrationSection");
+
+      if (!overviewEvidenceRow || !topProductsSection || !performanceSignalGrid || !forecastSection || !productConcentrationSection) {
+        throw new Error("Dashboard staging section resolution failed: one or more required sections not found in document");
+      }
 
       overviewEvidenceRow.appendChild(topProductsSection);
       performanceSignalGrid.appendChild(forecastSection);
@@ -79,16 +83,16 @@
       var sectionOwnership = {
         overview: [
           elements.dashboardHeaderRegion,
-          staging.querySelector("#keyMetricsSection"),
+          document.getElementById("keyMetricsSection"),
           overviewEvidenceRow,
-          staging.querySelector("#overviewContextRow"),
-          staging.querySelector("#executiveSummarySection")
+          document.getElementById("overviewContextRow"),
+          document.getElementById("executiveSummarySection")
         ],
         performance: [
-          staging.querySelector("#performanceSnapshotSection"),
-          staging.querySelector("#productProfitabilitySection"),
-          staging.querySelector("#performanceSecondaryGrid"),
-          staging.querySelector("#performanceDecisionRow")
+          document.getElementById("performanceSnapshotSection"),
+          document.getElementById("productProfitabilitySection"),
+          document.getElementById("performanceSecondaryGrid"),
+          document.getElementById("performanceDecisionRow")
         ],
         insights: []
       };
@@ -98,20 +102,32 @@
       insightsColumn.className = "insights-plans-column";
       insightsColumn.setAttribute("aria-labelledby", "insightsColumnTitle");
       insightsColumn.innerHTML = '<header class="insights-plans-header insights-header"><span class="insights-plans-header-icon" aria-hidden="true"><i class="fas fa-lightbulb"></i></span><div><h2 id="insightsColumnTitle">INSIGHTS</h2><p>Key findings from current performance</p></div></header>';
-      insightsColumn.appendChild(staging.querySelector("#businessPriorityRegion"));
-      insightsColumn.appendChild(staging.querySelector("#diagnosisSection"));
-      insightsColumn.appendChild(staging.querySelector("#riskOpportunitySection"));
-      insightsColumn.appendChild(staging.querySelector("#businessMaturityCard"));
+      insightsColumn.appendChild(document.getElementById("businessPriorityRegion"));
+      insightsColumn.appendChild(document.getElementById("diagnosisSection"));
+      insightsColumn.appendChild(document.getElementById("riskOpportunitySection"));
+      insightsColumn.appendChild(document.getElementById("businessMaturityCard"));
 
       var plansColumn = document.createElement("section");
       plansColumn.id = "plansColumn";
       plansColumn.className = "insights-plans-column";
       plansColumn.setAttribute("aria-labelledby", "plansColumnTitle");
       plansColumn.innerHTML = '<header class="insights-plans-header plans-header"><span class="insights-plans-header-icon" aria-hidden="true"><i class="fas fa-clipboard-list"></i></span><div><h2 id="plansColumnTitle">PLANS</h2><p>Recommended actions and execution roadmap</p></div></header>';
-      plansColumn.appendChild(staging.querySelector("#recommendationsSection"));
-      plansColumn.appendChild(staging.querySelector("#actionRoadmapCard"));
-      plansColumn.appendChild(staging.querySelector("#kpiTargetReference"));
+      plansColumn.appendChild(document.getElementById("recommendationsSection"));
+      plansColumn.appendChild(document.getElementById("actionRoadmapCard"));
+      plansColumn.appendChild(document.getElementById("kpiTargetReference"));
       sectionOwnership.insights.push(insightsColumn, plansColumn);
+
+      var missingSections = [];
+      Object.keys(sectionOwnership).forEach(function(panelName) {
+        sectionOwnership[panelName].forEach(function(section, index) {
+          if (!section) {
+            missingSections.push(panelName + "[" + index + "]");
+          }
+        });
+      });
+      if (missingSections.length > 0) {
+        throw new Error("Dashboard tab section ownership is incomplete: missing sections " + missingSections.join(", "));
+      }
 
       elements.dashboardPanels.forEach(function(panel)
       {
@@ -119,13 +135,6 @@
 
         sectionOwnership[panelName].forEach(function(section)
         {
-          if (!section)
-          {
-            throw new Error(
-              "Dashboard tab section ownership is incomplete"
-            );
-          }
-
           panel.appendChild(section);
         });
       });

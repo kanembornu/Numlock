@@ -510,6 +510,8 @@
         #dashboardPanelOverview #executiveSummarySection { min-height: 120px; }
         #dashboardPanelOverview .hf-kpi-card { min-height: 130px; }
         #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
+        #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
+        #dashboardPanelOverview #dashboardHeaderRegion { grid-row: 1; }
         #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: max-content auto auto auto; gap: 12px; }
         #dashboardPanelOverview #keyMetricsSection { grid-row: 1; margin: 0; }
         #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; grid-template-rows: 404px; }
@@ -2806,6 +2808,7 @@
     </div>
 
     <div id="dashboardContent" aria-busy="false">
+      <div id="dashboardHeaderRegion" class="sr-only"></div>
       <div
         id="dashboardTabList"
         class="flex items-center gap-2 overflow-x-auto border-b border-slate-200"
@@ -4631,7 +4634,7 @@
         "sessionLogsErrorCount", "sessionLogsToolbar",
         "clearSessionLogsButton", "sessionLogsAnnouncement",
         "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
-        "dashboardTabList", "dashboardTabPanels",
+        "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
         "dashboardSectionStaging", "newTransactionButton",
         "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
         "periodComparisonLabel", "periodComparisonLead", "periodComparisonPeriod",
@@ -4854,6 +4857,7 @@
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging,
+        dashboardHeaderRegion: required.dashboardHeaderRegion,
         performanceGrouping: required.performanceGrouping,
         dateFilterLabel: required.dateFilterLabel,
         transactionCountLabel: required.transactionCountLabel,
