@@ -96,9 +96,6 @@
       #dashboardSidebar { width: 248px; background: var(--sidebar); border-right: 1px solid var(--sidebar-divider); box-shadow: none; overflow: hidden; }
       #mainContent { background: var(--canvas); }
       #topUtilityBar { height: 76px; min-height: 76px; background: var(--surface-1); border-color: var(--divider); box-shadow: none; }
-      #utilityPageTitle { font-size: 32px; font-weight: 800; line-height: 35px; letter-spacing: -0.04em; }
-      #utilityPageContext { margin-top: 4px; font-size: 14px; line-height: 18px; }
-      #utilityPageContext,
       #utilityMetadata { color: var(--text-muted); }
       #dashboardUtilityControls { gap: 10px; }
       #dateFilterControls { gap: 10px; }
@@ -107,7 +104,7 @@
       .hf-period-secondary { display: flex; align-items: center; gap: 10px; }
       #utilityMetadata { gap: 20px; font-size: 12px; }
       #contentViewport { min-height: 0; background: var(--canvas); }
-      #dashboardTabList { height: 44px; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); }
+      #dashboardTabList { height: auto; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); overflow-x: hidden; overflow-y: hidden; }
       #dashboardTabList [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; }
       #dashboardTabList [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
       #transactionsTabList { width: max-content; height: 44px; min-height: 44px; gap: 10px; border: 1px solid var(--card-border); border-radius: 10px; padding: 2px 8px 0; background: var(--surface-1); box-shadow: var(--card-shadow); }
@@ -126,7 +123,7 @@
       .hf-secondary-surface { background: var(--card-bg); border-color: var(--card-border); border-radius: var(--radius-card); box-shadow: var(--card-shadow); }
       .overview-kpi-value { font-variant-numeric: tabular-nums; }
       .performance-metric-value { font-variant-numeric: tabular-nums; }
-      #mainChartWrapper { height: 288px; min-height: 288px; max-height: 288px; overflow: visible; }
+      #mainChartWrapper { height: auto; flex: 1; min-height: 0; max-height: none; }
       #mainChartWrapper > canvas { display: block; width: 100% !important; height: 100% !important; max-height: 100% !important; }
       #sidebarBackdrop { background: var(--overlay); }
       .numlock-mark { display: flex; width: 46px; height: 46px; flex: 0 0 46px; align-items: flex-end; justify-content: center; gap: 3px; padding: 5px 4px; color: var(--brand); }
@@ -174,9 +171,9 @@
       .finance-report-grid { display: grid; min-width: 0; grid-template-columns: minmax(280px, 0.8fr) minmax(0, 1.2fr); gap: 14px; }
       .finance-report-grid > *,
       .finance-equity-grid > * { min-width: 0; }
-      .finance-statement, .finance-expenses { padding: 16px; }
+      .finance-statement, .finance-expenses { padding: 12px; }
       .finance-statement-list { margin-top: 10px; }
-      .finance-statement-row { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; padding: 9px 2px; border-bottom: 1px solid var(--divider); }
+      .finance-statement-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--divider); }
       .finance-statement-row dd { font-variant-numeric: tabular-nums; text-align: right; }
       .finance-statement-row.finance-total { font-weight: 750; }
       .finance-table-scroll { max-width: 100%; overflow-x: auto; }
@@ -223,7 +220,7 @@
         .finance-expense-table th, .finance-expense-table td { padding: 7px 10px; line-height: 17px; vertical-align: middle; }
         .finance-expense-table thead th { padding-top: 6px; padding-bottom: 6px; }
         .finance-expense-table tbody th strong { display: block; line-height: 17px; }
-        .finance-status-strip > div { display: flex; min-height: 50px; flex-direction: column; justify-content: center; padding: 8px 14px; background: var(--surface-2); }
+        .finance-status-strip > div { display: flex; min-height: 44px; flex-direction: column; justify-content: center; padding: 8px 14px; background: var(--surface-2); }
         .finance-status-strip dt { color: var(--text-secondary); font-weight: 700; }
         .finance-status-strip dd { margin-top: 2px; color: var(--text-primary); font-weight: 600; line-height: 17px; }
       }
@@ -267,7 +264,7 @@
       .ui-action-label { font-size: var(--text-label-size); font-weight: var(--font-weight-semibold); line-height: var(--text-label-line); }
       .ui-form-text { font-family: var(--font-sans); font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
       .ui-empty-state { font-size: var(--text-body-size); font-weight: var(--font-weight-normal); line-height: var(--text-body-line); color: var(--text-muted); }
-      .hf-analytics-card-header { display: flex; min-height: 44px; align-items: center; justify-content: space-between; gap: var(--space-5); }
+      .hf-analytics-card-header { display: flex; min-height: 40px; align-items: center; justify-content: space-between; gap: var(--space-5); }
       .hf-analytics-title-group { display: inline-flex; min-width: 0; align-items: center; gap: var(--space-5); }
       .hf-analytics-title-icon { display: inline-flex; width: 44px; height: 44px; flex: 0 0 44px; align-items: center; justify-content: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 17px; }
       .hf-analytics-title-icon-products { background: var(--warning-soft); color: var(--warning); }
@@ -293,17 +290,17 @@
       th[aria-sort="descending"] .hf-top-products-sort::after { content: "\2193"; color: var(--brand); opacity: 1; }
       .ui-native-select { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; }
       .hf-executive-plane { background: var(--surface-1); border-bottom: 1px solid var(--divider); }
-      .hf-summary-action-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 18px; }
-      .hf-summary-card-header { display: flex; align-items: center; gap: 12px; }
-      .hf-summary-title-icon { display: inline-flex; width: 38px; height: 38px; flex: 0 0 38px; align-items: center; justify-content: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); font-size: 15px; }
+      .hf-summary-action-grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 4px; }
+      .hf-summary-card-header { display: flex; align-items: center; gap: 10px; }
+      .hf-summary-title-icon { display: inline-flex; width: 34px; height: 34px; flex: 0 0 34px; align-items: center; justify-content: center; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-size: 14px; }
       .hf-summary-title-icon-purple { background: color-mix(in srgb, var(--chart-series-6) 12%, transparent); color: var(--chart-series-6); }
-      .hf-summary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 16px; }
-      .hf-summary-metrics > * { min-width: 0; padding: 5px 18px; }
+      .hf-summary-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 10px; }
+      .hf-summary-metrics > * { min-width: 0; padding: 4px 12px; }
       .hf-summary-metrics > * + * { border-left: 1px solid var(--divider); }
-      .hf-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      .hf-quick-actions button { display: grid; width: 100%; min-width: 0; min-height: 50px; grid-template-columns: 32px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 11px; border-color: var(--card-border); background: var(--surface-1); transition: background-color 150ms ease, border-color 150ms ease; }
+      .hf-quick-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+      .hf-quick-actions button { display: grid; width: 100%; min-width: 0; min-height: 44px; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: 6px 10px; border-color: var(--card-border); background: var(--surface-1); transition: background-color 150ms ease, border-color 150ms ease; }
       .hf-quick-actions button:hover { border-color: var(--border-strong); background: var(--hover); }
-      .hf-quick-actions button > i:first-child { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 9px; background: var(--brand-soft); color: var(--brand); font-size: 13px; }
+      .hf-quick-actions button > i:first-child { display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border-radius: 8px; background: var(--brand-soft); color: var(--brand); font-size: 12px; }
       .hf-action-copy { min-width: 0; }
       .hf-action-copy strong,
       .hf-action-copy span { display: block; }
@@ -325,7 +322,7 @@
       .hf-kpi-card:nth-child(3) .hf-kpi-icon { background: var(--success-soft); color: var(--success); }
       .hf-kpi-card:nth-child(4) .hf-kpi-icon { background: var(--warning-soft); color: var(--warning); }
       .hf-kpi-card:nth-child(5) .hf-kpi-icon { background: color-mix(in srgb, var(--chart-series-6) 12%, transparent); color: var(--chart-series-6); }
-      .hf-overview-evidence { display: grid; min-width: 0; grid-template-columns: minmax(320px, 3fr) minmax(320px, 1fr); gap: 18px; }
+      .hf-overview-evidence { display: grid; min-width: 0; grid-template-columns: minmax(320px, 2.5fr) minmax(360px, 1.5fr); gap: 18px; }
       .hf-overview-context { display: grid; min-width: 0; align-content: start; gap: 16px; }
       #periodComparisonSection,
       #dataQualityInformation { border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--card-bg); box-shadow: var(--card-shadow); }
@@ -410,9 +407,12 @@
       .transactions-row-action--resolve:hover { filter: brightness(.96); }
       .transactions-row-action--void { --transaction-action-bg: var(--critical-soft); color: var(--critical); }
       .transactions-row-action--void:hover { filter: brightness(.96); }
-      #transactionsPagination { min-height: 50px; border-top: 1px solid var(--divider); padding: 7px 12px; }
+      #transactionsPagination { min-height: 44px; border-top: 1px solid var(--divider); padding: 7px 12px; }
       #transactionsPagination button { display: inline-flex; min-width: 92px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 5px 12px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
       #transactionsPagination button:disabled { cursor: default; opacity: .45; }
+      .pagination-btn { display: inline-flex; min-width: 72px; min-height: 32px; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 10px; color: var(--text-secondary); font-size: 13px; font-weight: 500; background: var(--surface-1); }
+      .pagination-btn:hover:not(:disabled) { background: var(--hover); color: var(--text-primary); }
+      .pagination-btn:disabled { cursor: default; opacity: .45; }
       #transactionsPageIndicator { color: var(--text-primary); font-size: 14px; font-weight: 500; }
       #transactionsRangeSummary { color: var(--text-primary); font-size: 14px; }
       .transactions-pagination-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
@@ -495,6 +495,8 @@
 
         #dashboardSidebar { width: var(--sidebar-width-expanded); transform: translateX(0); }
         #mainContent { display: grid; grid-template-rows: 76px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); min-height: 0; }
+        #mainContent:has(#dashboard.active) { grid-template-rows: 0 minmax(0, 1fr); }
+        #mainContent:has(#dashboard.active) #topUtilityBar { display: none; }
         #contentViewport { height: auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 24px 24px; }
         #dashboard.active { display: flex; min-height: 0; flex-direction: column; }
         #dashboardContent { display: grid; min-height: 0; grid-template-rows: 44px auto; gap: 16px; }
@@ -502,20 +504,18 @@
         #dashboardTabPanels { min-height: 0; overflow: visible; }
         .dashboard-tab-panel:not(#dashboardPanelOverview) { min-height: 0; overflow-y: auto; }
         #dashboardPanelOverview { min-height: 0; overflow: visible; container-type: inline-size; }
-        #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 12px; }
         #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 0; }
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection { min-height: 120px; }
         #dashboardPanelOverview .hf-kpi-card { min-height: 130px; }
-        #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; }
-        #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: max-content auto auto auto; gap: 4px; }
-        #dashboardPanelOverview #dashboardHeaderRegion { grid-row: 1; }
+        #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
+        #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: max-content auto auto auto; gap: 12px; }
         #dashboardPanelOverview #keyMetricsSection { grid-row: 1; margin: 0; }
-        #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; }
+        #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; grid-template-rows: 404px; }
         #dashboardPanelOverview #overviewContextRow { grid-row: 3; }
         #dashboardPanelOverview #executiveSummarySection { grid-row: 4; margin: 0; }
-        #dashboardPanelOverview #mainChartWrapper { height: clamp(240px, 22vw, 320px); min-height: 0; max-height: none; }
+        #dashboardPanelOverview #mainChartWrapper { height: auto; flex: 1; min-height: 0; max-height: none; }
         @container (max-width: 657px) {
           .hf-overview-evidence { grid-template-columns: 1fr !important; }
           .hf-overview-context { grid-template-columns: 1fr !important; }
@@ -1843,7 +1843,7 @@
         #dashboardPanelInsights .business-signal-marker { display: flex; align-items: center; gap: 6px; }
         #dashboardPanelInsights .business-signal-marker::before { width: 5px; height: 5px; flex: 0 0 5px; border-radius: 9999px; background: var(--brand); content: ""; }
         #dashboardPanelInsights #intelligenceMetricContext { margin-top: 1px; margin-left: 38px; padding-top: 3px; }
-        #dashboardPanelInsights #intelligenceMetricContext > .intelligence-summary-card { display: grid; height: 64px; grid-template-columns: 32px minmax(0, 1fr); align-items: center; column-gap: 10px; padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); }
+        #dashboardPanelInsights #intelligenceMetricContext > .intelligence-summary-card { display: grid; height: 56px; grid-template-columns: 32px minmax(0, 1fr); align-items: center; column-gap: 10px; padding: 6px 10px; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-2); }
         #dashboardPanelInsights .intelligence-summary-icon { display: inline-flex; width: 32px; height: 32px; align-items: center; justify-content: center; border-radius: 8px; font-size: 14px; }
         #dashboardPanelInsights .intelligence-summary-card--revenue .intelligence-summary-icon { background: var(--success-soft); color: var(--success); }
         #dashboardPanelInsights .intelligence-summary-card--profit .intelligence-summary-icon { background: var(--warning-soft); color: var(--warning); }
@@ -1853,7 +1853,7 @@
         #dashboardPanelInsights .intelligence-summary-metric { color: var(--success); font-size: 14px; font-weight: 700; line-height: 20px; }
         #dashboardPanelInsights .intelligence-summary-divider { width: 1px; height: 14px; flex: 0 0 1px; background: var(--border-strong); }
         #dashboardPanelInsights .intelligence-summary-meta { color: var(--text-muted); font-size: 10px; line-height: 14px; }
-        #dashboardPanelInsights #riskOpportunitySection { display: grid; grid-template-rows: 28px auto 34px; gap: 8px; }
+        #dashboardPanelInsights #riskOpportunitySection { display: grid; grid-template-rows: 26px auto 32px; gap: 7px; }
         #dashboardPanelInsights #riskOpportunitySection > div { min-height: 0; overflow-wrap: anywhere; }
         #dashboardPanelInsights #riskOpportunitySection .risk-opportunity-heading h2 { font-size: 16px; line-height: 20px; }
         #dashboardPanelInsights .risk-opportunity-cards { display: grid; min-height: 0; margin-left: 38px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; gap: 8px; }
@@ -1889,8 +1889,8 @@
         #dashboardPanelInsights .target-reference-title { line-height: 28px; }
         #dashboardPanelInsights .action-roadmap-grid,
         #dashboardPanelInsights .business-maturity-scale { position: relative; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-        #dashboardPanelInsights .action-roadmap-grid { margin-top: 20px; }
-        #dashboardPanelInsights .business-maturity-scale { margin-top: 24px; }
+        #dashboardPanelInsights .action-roadmap-grid { margin-top: 16px; }
+        #dashboardPanelInsights .business-maturity-scale { margin-top: 20px; }
         #dashboardPanelInsights .business-maturity-node { position: relative; z-index: 2; display: block; width: 8px; height: 8px; margin: 0 auto 10px; border-radius: 9999px; background: var(--border-strong); }
         #dashboardPanelInsights .business-maturity-node--active { background: #f59e0b; }
         #dashboardPanelInsights .business-maturity-stage-label { font-size: 14px; font-weight: 700; line-height: 18px; }
@@ -1948,12 +1948,17 @@
         #dashboardSidebar { width: var(--sidebar-width-expanded); }
         #mainContent { grid-template-rows: 68px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); }
         #topUtilityBar { height: 68px; min-height: 68px; }
+        #mainContent:has(#dashboard.active) { grid-template-rows: 0 minmax(0, 1fr); }
+        #mainContent:has(#dashboard.active) #topUtilityBar { display: none; }
       }
 
       /* Extracted non-Dashboard density rules from removed height-bucket query. */
       @media (min-width: 1024px) {
         #dashboardSidebar > nav + div > .space-y-1 { transform: none; margin-bottom: 0; }
         .hf-setting-choice { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
+        #productDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
+        #inventoryItemDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
+        #financeAssetDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
       }
 
       @media (max-width: 1023px)
@@ -2001,6 +2006,10 @@
         .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .hf-summary-metrics > * + * { border-left: 0; }
         .hf-evidence-group > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
+        #productDetail { max-height: none; overflow-y: visible; overflow-x: visible; }
+        #inventoryItemDetail { max-height: none; overflow-y: visible; overflow-x: visible; }
+        #financeAssetDetail { max-height: none; overflow-y: visible; overflow-x: visible; }
+        .inventory-items-layout { grid-template-columns: minmax(0, 1fr); }
       }
 
       @media (max-width: 639px)
@@ -2184,7 +2193,6 @@
         #sidebarBackdrop,
         #sidebarMenuButton,
         #topUtilityBar,
-        #dashboardScreenHeader,
         #dashboardTabList,
         #dashboardStatus,
         #dateFilterControls > label,
@@ -2308,7 +2316,7 @@
       #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important; border-top: 0 !important; }
       #sidebarCollapseButton { width: 100% !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
       #dashboardTabInsights { white-space: nowrap !important; }
-      #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 20px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 2px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
+      #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 42px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
       #dashboardPanelOverview #periodComparisonSection,
       #dashboardPanelOverview #dataQualityInformation { padding: 0 !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
       #dashboardPanelOverview #dataQualityInformation { display: flex !important; min-width: max-content !important; align-items: center !important; justify-content: flex-end !important; white-space: nowrap !important; }
@@ -2320,7 +2328,7 @@
       #dashboardPanelOverview #dataQualityDetails strong { display: block; color: var(--text-primary); font-weight: 600; }
       #dashboardPanelOverview #dataQualityDetails p + strong { margin-top: 8px; }
       #dashboardPanelOverview #dataQualityDetails p { margin-top: 2px; color: var(--text-secondary); }
-      #dashboardPanelOverview #mainChartWrapper { height: clamp(240px, 22vw, 320px) !important; min-height: 0 !important; max-height: none !important; }
+      #dashboardPanelOverview #mainChartWrapper { height: auto !important; flex: 1 !important; min-height: 0 !important; max-height: none !important; }
       #dashboardContent { gap: var(--overview-section-gap) !important; }
       #dashboardPanelOverview #topProductsSection { overflow: visible; }
       .hf-top-products-table { width: 100%; min-width: 320px; table-layout: fixed; }
@@ -2357,7 +2365,7 @@
         #dashboardSidebar #sidebarCollapseButton { min-height: 44px !important; gap: 11px !important; padding: 8px 12px !important; }
         #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; box-sizing: border-box !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }
-        #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(0, 3fr) minmax(360px, 1fr) !important; }
+        #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(320px, 2.5fr) minmax(360px, 1.5fr) !important; }
       }
       @media (min-width: 1280px) {
         #dashboardSidebar #sidebarCollapseButton { min-height: 48px !important; gap: 12px !important; padding: 10px 12px !important; }
@@ -2371,8 +2379,8 @@
       :where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important; font-kerning: normal; text-wrap: balance; }
       :where(button, input, select, textarea, .ui-form-text, .ui-action-label, .ui-badge-label) { letter-spacing: -0.005em; }
       :where(.ui-page-subtitle, .ui-body-text, .ui-meta-text, .ui-empty-state, .hf-section-label) { letter-spacing: 0; }
-      #utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
-      #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
+      #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
       #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
@@ -2394,10 +2402,10 @@
       #dashboardPanelOverview .hf-analytics-title-icon, #dashboardPanelOverview .hf-summary-title-icon { width: var(--section-icon-size) !important; height: var(--section-icon-size) !important; flex-basis: var(--section-icon-size) !important; border-radius: 10px !important; font-size: var(--section-icon-glyph-size) !important; }
       #dashboardPanelOverview .hf-analytics-title-icon > i, #dashboardPanelOverview .hf-summary-title-icon > i { font-size: var(--section-icon-glyph-size) !important; line-height: 1 !important; }
       #dashboardPanelOverview .hf-analytics-title-icon-products > i { font-size: 17px !important; }
-      #dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 20px 1px 16px !important; }
+      #dashboardPanelOverview #revenueChartSection, #dashboardPanelOverview #topProductsSection { padding: 22px 16px 8px 16px !important; }
       #dashboardPanelOverview #revenueChartSection { padding-left: 4px !important; }
       #dashboardPanelOverview #keyMetricsSection { margin: 0 !important; }
-      #dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 12px !important; padding-left: 12px !important; }
+      #dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 0 !important; padding-left: 12px !important; }
       @media (min-width: 1024px) {
         #dashboardPanelOverview #keyMetricsSection { grid-row: 1 !important; height: 214px !important; }
         #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2 !important; }
@@ -2418,12 +2426,23 @@
       #dashboardPanelInsights #riskOpportunitySection { min-height: 0 !important; overflow: hidden !important; }
       #dashboardPanelInsights #riskOpportunitySection > div { overflow-wrap: anywhere; }
       /* WO-029 authoritative mobile runtime: keep after every legacy and desktop enforcement rule. */
+      @media (min-width: 768px) {
+        #dashboardPanelOverview #executiveSummarySection { gap: 4px !important; }
+        #dashboardPanelOverview #executiveSummarySection > .overview-surface, #dashboardPanelOverview #executiveSummarySection > section { padding: 8px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-summary-card-header { gap: 8px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-summary-title-icon { width: 32px !important; height: 32px !important; flex-basis: 32px !important; border-radius: 8px !important; font-size: 13px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-summary-metrics { margin-top: 8px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-summary-metrics > * { padding: 3px 8px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions { gap: 4px !important; margin-top: 4px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions button { min-height: 36px !important; gap: 6px !important; padding: 4px 8px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions button > i:first-child { width: 24px !important; height: 24px !important; font-size: 11px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-action-copy strong { font-size: 11px !important; line-height: 14px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-action-copy span { font-size: 10px !important; line-height: 12px !important; }
+      }
       @media (max-width: 767px) {
         :root { --mobile-text-section: 1.5rem; --mobile-text-primary: 1.125rem; --mobile-text-supporting: 0.9375rem; --mobile-line-section: 1.875rem; --mobile-line-primary: 1.625rem; --mobile-line-supporting: 1.375rem; }
         #topUtilityBar { min-height: 72px !important; padding: 10px 12px !important; }
         #sidebarMenuButton { width: 52px !important; min-width: 52px !important; min-height: 52px !important; padding: 0 !important; justify-content: center !important; font-size: 20px !important; }
-        #utilityPageTitle { font-size: 28px !important; line-height: 34px !important; }
-        #utilityPageContext { font-size: 16px !important; line-height: 23px !important; }
         #contentViewport { padding: 12px 8px 16px !important; }
         #dashboardTabList { height: 54px !important; min-height: 54px !important; }
         #dashboardTabList [role="tab"], #dashboardTabInsights { height: 52px !important; padding-right: 10px !important; padding-left: 10px !important; font-size: 16px !important; line-height: 22px !important; }
@@ -2446,7 +2465,7 @@
         #dashboardPanelOverview .hf-kpi-card .overview-kpi-value { font-size: 32px !important; line-height: 39px !important; }
         #dashboardPanelOverview .hf-kpi-comparison { font-size: 15px !important; line-height: 22px !important; }
         #dashboardPanelOverview #revenueChartTitle, #dashboardPanelOverview #topProductsTitle, #dashboardPanelOverview .hf-section-heading { font-size: 24px !important; line-height: 30px !important; }
-        #dashboardPanelOverview #mainChartWrapper { height: 260px !important; min-height: 260px !important; max-height: 260px !important; padding: 10px 2px 0 !important; }
+        #dashboardPanelOverview #mainChartWrapper { height: 260px !important; min-height: 260px !important; max-height: 260px !important; padding: 0 2px !important; }
         #dashboardPanelOverview .hf-top-products-table { min-width: 560px !important; }
         #dashboardPanelOverview .hf-top-products-table th, #dashboardPanelOverview .hf-top-products-table td { height: 46px !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #dashboardPanelOverview .hf-top-products-table thead th { font-size: 16px !important; line-height: 22px !important; }
@@ -2460,16 +2479,16 @@
         #dashboardPanelOverview #dataQualityScopeSummary { grid-column: 1 / -1 !important; }
         #dashboardPanelOverview #dataQualityStatusBadge, #dashboardPanelOverview #dataQualityScopeSummary { flex: 0 0 auto !important; white-space: nowrap !important; font-size: 15px !important; line-height: 22px !important; }
         #dashboardPanelOverview .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-        #dashboardPanelOverview #executiveSummarySection > .overview-surface, #dashboardPanelOverview #executiveSummarySection > section { padding: 14px !important; }
+        #dashboardPanelOverview #executiveSummarySection > .overview-surface, #dashboardPanelOverview #executiveSummarySection > section { padding: 10px !important; }
         #dashboardPanelOverview #executiveSummaryPeriod, #dashboardPanelOverview #quickActionsTitle + p { font-size: 15px !important; line-height: 21px !important; }
         #dashboardPanelOverview .hf-summary-metrics .hf-section-label { font-size: 16px !important; line-height: 22px !important; }
         #dashboardPanelOverview .hf-summary-metrics .performance-metric-value { font-size: 25px !important; line-height: 32px !important; }
         #dashboardPanelOverview .hf-summary-metrics > * > div:last-child { font-size: 15px !important; line-height: 22px !important; }
-        #dashboardPanelOverview .hf-quick-actions { grid-template-columns: minmax(0, 1fr) !important; gap: 10px !important; }
-        #dashboardPanelOverview .hf-quick-actions button { min-height: 68px !important; gap: 12px !important; padding: 10px 12px !important; }
-        #dashboardPanelOverview .hf-quick-actions button > i:first-child { font-size: 19px !important; }
-        #dashboardPanelOverview .hf-action-copy strong { font-size: 17px !important; line-height: 23px !important; }
-        #dashboardPanelOverview .hf-action-copy span { font-size: 15px !important; line-height: 22px !important; }
+        #dashboardPanelOverview .hf-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4px !important; }
+        #dashboardPanelOverview .hf-quick-actions button { min-height: 40px !important; gap: 6px !important; padding: 4px 8px !important; }
+        #dashboardPanelOverview .hf-quick-actions button > i:first-child { width: 24px !important; height: 24px !important; font-size: 11px !important; }
+        #dashboardPanelOverview .hf-action-copy strong { font-size: 11px !important; line-height: 14px !important; }
+        #dashboardPanelOverview .hf-action-copy span { font-size: 10px !important; line-height: 12px !important; }
         #dashboardSidebar .ui-sidebar-item, #dashboardSidebar .ui-future-module { font-size: 16px !important; line-height: 23px !important; }
       }
       @media (max-width: 339px) {
@@ -2492,7 +2511,7 @@
       html.numlock-phone #dashboardPanelOverview #revenueChartSection, html.numlock-phone #dashboardPanelOverview #topProductsSection { width: 100%; min-width: 0; }
       html.numlock-phone #dashboardPanelOverview #topProductWrapper { max-width: 100%; overflow-x: auto; overscroll-behavior-inline: contain; }
       html.numlock-phone #dashboardPanelOverview .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      html.numlock-phone #dashboardPanelOverview .hf-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      html.numlock-phone #dashboardPanelOverview .hf-quick-actions { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4px !important; }
       html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-card-header { display: grid !important; grid-template-columns: minmax(0, 1fr) minmax(112px, 140px); align-items: center !important; gap: 12px !important; }
       html.numlock-phone #dashboardPanelOverview #revenueChartSection .hf-analytics-title-group { min-width: 0; justify-self: start; }
       html.numlock-phone #dashboardPanelOverview #dateFilterControls { display: flex !important; width: 140px !important; min-width: 112px !important; max-width: 140px !important; flex-wrap: wrap !important; justify-content: flex-end !important; justify-self: end; }
@@ -2752,8 +2771,7 @@
         <span class="sr-only">Menu</span>
       </button>
         <div class="min-w-0">
-          <div id="utilityPageTitle" class="ui-page-title truncate ui-theme-primary">Dashboard</div>
-          <div id="utilityPageContext" class="ui-page-subtitle truncate ui-theme-muted">Business performance at a glance.</div>
+
         </div>
       </div>
 
@@ -2766,13 +2784,8 @@
 ================================================== -->
     <div id="dashboard" class="page active">
 
-    <!-- HEADER -->
-    <div id="dashboardHeaderRegion" class="sr-only">
-      <div id="dashboardScreenHeader">
-        <h1 id="dashboardHeading" tabindex="-1">Dashboard</h1>
-        <p>Business performance at a glance</p>
-      </div>
-    </div>
+
+
 
     <div
       id="dashboardStatus"
@@ -2811,8 +2824,8 @@
 
       <div id="dashboardSectionStaging" hidden>
     <!-- EXECUTIVE SUMMARY -->
-    <section id="executiveSummarySection" class="hf-summary-action-grid min-w-0 mb-3" aria-labelledby="executiveSummaryTitle">
-      <div class="overview-surface relative min-w-0 border p-4">
+    <section id="executiveSummarySection" class="hf-summary-action-grid min-w-0" aria-labelledby="executiveSummaryTitle">
+      <div class="overview-surface relative min-w-0 border p-3">
         <div class="hf-summary-card-header">
           <span class="hf-summary-title-icon" aria-hidden="true"><i class="fas fa-chart-pie"></i></span>
           <div><h2 id="executiveSummaryTitle" class="hf-section-heading" tabindex="-1">Key Summary</h2><p id="executiveSummaryPeriod" class="text-[11px] text-slate-500">This Year</p></div>
@@ -2831,7 +2844,7 @@
           </div>
         </div>
       </div>
-      <section class="overview-surface relative min-w-0 border p-4" aria-labelledby="quickActionsTitle">
+      <section class="overview-surface relative min-w-0 border p-3" aria-labelledby="quickActionsTitle">
         <div class="hf-summary-card-header">
           <span class="hf-summary-title-icon hf-summary-title-icon-purple" aria-hidden="true"><i class="fas fa-bolt"></i></span>
           <div><h2 id="quickActionsTitle" class="hf-section-heading">Quick Actions</h2><p class="text-[11px] text-slate-500">Frequently used actions</p></div>
@@ -3343,7 +3356,7 @@
             </dl>
             <section class="finance-equity-surface finance-surface mt-3" aria-labelledby="financeAssetsRegisterHeading">
               <h2 id="financeAssetsRegisterHeading" class="hf-section-heading">Asset Register</h2>
-              <div class="products-grid-scroll mt-3">
+              <div id="financeAssetsTableRegion" class="products-grid-scroll mt-3">
                 <table class="products-grid products-grid--cogs">
                   <caption class="sr-only">Fixed asset register</caption>
                   <thead><tr><th scope="col">Asset</th><th scope="col">Category</th><th scope="col">Qty</th><th scope="col">Acquired</th><th scope="col">Cost</th><th scope="col">Status</th></tr></thead>
@@ -3351,6 +3364,18 @@
                 </table>
               </div>
             </section>
+            <nav id="financeAssetsPagination" class="mt-3 flex items-center justify-between gap-3" hidden aria-label="Assets Register pagination">
+              <div class="flex items-center gap-2" aria-live="polite">
+                <span id="financeAssetsPageInfo" class="text-sm ui-theme-secondary"></span>
+              </div>
+              <div class="flex items-center gap-2" role="group" aria-label="Assets page navigation">
+                <button id="financeAssetsFirstPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="First page" disabled>First</button>
+                <button id="financeAssetsPrevPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Previous page" disabled>Previous</button>
+                <div id="financeAssetsPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+                <button id="financeAssetsNextPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Next page" disabled>Next</button>
+                <button id="financeAssetsLastPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Last page" disabled>Last</button>
+              </div>
+            </nav>
             <section id="financeAssetDetail" class="finance-equity-surface finance-surface mt-3" hidden aria-labelledby="financeAssetDetailHeading">
               <h2 id="financeAssetDetailHeading" class="hf-section-heading">Asset Detail</h2>
               <div id="financeAssetDetailContent" class="mt-2"></div>
@@ -3367,10 +3392,22 @@
             <div>
               <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepAssetsHeading">
                 <h2 id="financeDepAssetsHeading" class="hf-section-heading">Asset Register</h2>
-                <div class="finance-table-scroll">
+                <div id="financeDepreciationTableRegion" class="finance-table-scroll" style="max-height: 100%; overflow-y: auto;">
                   <table class="finance-equity-table"><caption class="sr-only">Fixed asset depreciation schedule</caption><thead><tr><th scope="col">ID</th><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Acquired</th><th scope="col" class="finance-number">Cost</th><th scope="col" class="finance-number">Accum. Dep.</th><th scope="col" class="finance-number">Period Dep.</th><th scope="col" class="finance-number">Net Book Value</th><th scope="col">Status</th></tr></thead><tbody id="financeDepAssetBody"></tbody></table>
                 </div>
               </section>
+              <nav id="financeDepreciationPagination" class="mt-3 flex items-center justify-between gap-3" hidden aria-label="Depreciation pagination">
+                <div class="flex items-center gap-2" aria-live="polite">
+                  <span id="financeDepreciationPageInfo" class="text-sm ui-theme-secondary"></span>
+                </div>
+                <div class="flex items-center gap-2" role="group" aria-label="Depreciation page navigation">
+                  <button id="financeDepreciationFirstPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="First page" disabled>First</button>
+                  <button id="financeDepreciationPrevPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Previous page" disabled>Previous</button>
+                  <div id="financeDepreciationPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+                  <button id="financeDepreciationNextPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Next page" disabled>Next</button>
+                  <button id="financeDepreciationLastPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Last page" disabled>Last</button>
+                </div>
+              </nav>
               <section class="finance-equity-surface finance-surface" aria-labelledby="financeDepReconHeading">
                 <h2 id="financeDepReconHeading" class="hf-section-heading">Reconciliation</h2>
                 <dl class="finance-statement-list">
@@ -4005,6 +4042,18 @@
               <tbody id="productsTableBody"></tbody>
             </table>
           </div>
+          <nav id="productsCatalogPagination" class="mt-3 flex items-center justify-between gap-3" hidden aria-label="Product Catalog pagination">
+            <div class="flex items-center gap-2" aria-live="polite">
+              <span id="productsCatalogPageInfo" class="text-sm ui-theme-secondary"></span>
+            </div>
+            <div class="flex items-center gap-2" role="group" aria-label="Catalog page navigation">
+              <button id="productsCatalogFirstPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="First page" disabled>First</button>
+              <button id="productsCatalogPrevPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Previous page" disabled>Previous</button>
+              <div id="productsCatalogPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+              <button id="productsCatalogNextPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Next page" disabled>Next</button>
+              <button id="productsCatalogLastPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Last page" disabled>Last</button>
+            </div>
+          </nav>
         </section>
       </div>
       <div id="productsPanelRecipe" class="products-tab-panel cogs-recipe-layout" role="tabpanel" aria-labelledby="productsTabRecipe" hidden>
@@ -4081,6 +4130,18 @@
               <tbody id="inventoryItemsTableBody"></tbody>
             </table>
           </div>
+          <nav id="inventoryItemsPagination" class="mt-3 flex items-center justify-between gap-3" hidden aria-label="Inventory Items pagination">
+            <div class="flex items-center gap-2" aria-live="polite">
+              <span id="inventoryItemsPageInfo" class="text-sm ui-theme-secondary"></span>
+            </div>
+            <div class="flex items-center gap-2" role="group" aria-label="Inventory page navigation">
+              <button id="inventoryItemsFirstPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="First page" disabled>First</button>
+              <button id="inventoryItemsPrevPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Previous page" disabled>Previous</button>
+              <div id="inventoryItemsPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+              <button id="inventoryItemsNextPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Next page" disabled>Next</button>
+              <button id="inventoryItemsLastPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Last page" disabled>Last</button>
+            </div>
+          </nav>
         </section>
         <aside id="inventoryItemDetail" class="inventory-items-panel hf-secondary-surface p-4" aria-labelledby="inventoryItemDetailHeading">
           <h2 id="inventoryItemDetailHeading" class="hf-section-heading">Item detail</h2>
@@ -4550,23 +4611,27 @@
         "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
         "transactionDrilldownSummary", "transactionDrilldownText",
         "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSize", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
-        "mainContent", "topUtilityBar", "utilityPageTitle",
-        "utilityPageContext", "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
+        "mainContent", "topUtilityBar",
+        "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
         "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
-        "productsTableBody", "productDetailEmpty", "productDetailContent", "cogsRecipePeriod", "cogsRecipeKind", "cogsRecipeProduct", "cogsRecipeVariant",
+        "productsTableBody", "productDetailEmpty", "productDetailContent", "productsCatalogPagination",
+        "productsCatalogFirstPage", "productsCatalogPrevPage", "productsCatalogNextPage", "productsCatalogLastPage",
+        "productsCatalogPageInfo", "productsCatalogPageNumbers", "cogsRecipePeriod", "cogsRecipeKind", "cogsRecipeProduct", "cogsRecipeVariant",
         "cogsRecipeLoading", "cogsRecipeEmpty", "cogsRecipeError",
         "cogsRecipeResult", "cogsRecipeTableBody",
         "cogsRecipeComputedCogs", "cogsRecipeSellingPrice", "cogsRecipeMargin", "cogsRecipeMarginPercent", "standardCostConfigurationBody",
         "standardCostPreviewCogs", "standardCostPreviewSellingPrice", "standardCostPreviewMargin", "standardCostPreviewMarginPercent",
         "proposedSellingPrice", "standardCostApplyButton", "inventoryItemsLoading", "inventoryItemsEmpty",
         "inventoryItemsError", "inventoryItemsTableRegion", "inventoryItemsTableBody", "inventoryItemDetailEmpty",
-        "inventoryItemDetailContent", "settings", "logs",
+        "inventoryItemDetailContent", "inventoryItemsPagination",
+        "inventoryItemsFirstPage", "inventoryItemsPrevPage", "inventoryItemsNextPage", "inventoryItemsLastPage",
+        "inventoryItemsPageInfo", "inventoryItemsPageNumbers", "settings", "logs",
         "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
         "sessionLogsInfoCount", "sessionLogsWarningCount",
         "sessionLogsErrorCount", "sessionLogsToolbar",
         "clearSessionLogsButton", "sessionLogsAnnouncement",
         "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
-        "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
+        "dashboardTabList", "dashboardTabPanels",
         "dashboardSectionStaging", "newTransactionButton",
         "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
         "periodComparisonLabel", "periodComparisonLead", "periodComparisonPeriod",
@@ -4599,10 +4664,16 @@
         "financeAssetsContent", "assetsTabRegister", "assetsTabDepreciation", "assetsPanelRegister", "assetsPanelDepreciation",
         "financeAssetsTotal", "financeAssetsActive", "financeAssetsCost", "financeAssetsRegisterHeading",
         "financeAssetsRegisterBody", "financeAssetDetail", "financeAssetDetailHeading", "financeAssetDetailContent",
+        "financeAssetsPagination", "financeAssetsFirstPage", "financeAssetsPrevPage", "financeAssetsNextPage", "financeAssetsLastPage",
+        "financeAssetsPageInfo", "financeAssetsPageNumbers",
+        "financeAssetsTableRegion",
         "financeDepreciationContent", "financeDepExpense", "financeDepAccumulated", "financeDepNBV", "financeDepActiveAssets", "financeDepFullyDepreciated",
         "financeDepAssetsHeading", "financeDepAssetBody", "financeDepReconHeading", "financeDepReconPeriod", "financeDepReconAccum", "financeDepReconNBV",
         "financeDepPolicyHeading", "financeDepPolicyMethod", "financeDepPolicyGranularity", "financeDepPolicyRounding", "financeDepPolicyStartRule",
         "financeDepPolicyResidualTreatment", "financeDepPolicySource",
+        "financeDepreciationPagination", "financeDepreciationFirstPage", "financeDepreciationPrevPage", "financeDepreciationNextPage", "financeDepreciationLastPage",
+        "financeDepreciationPageInfo", "financeDepreciationPageNumbers",
+        "financeDepreciationTableRegion",
         "snapshotTopProfit", "snapshotBestMargin", "snapshotTopRevenue", "snapshotExpenseDriver", "snapshotTotalMargin", "snapshotConcentration",
         "categoryMixCenter", "categoryMixLegend", "hotColdComparison", "hotColdChartSummary", "hotColdChartEmpty",
         "marginHealthContainer",
@@ -4710,8 +4781,6 @@
         sidebarCollapseButton: required.sidebarCollapseButton,
         mainContent: required.mainContent,
         topUtilityBar: required.topUtilityBar,
-        utilityPageTitle: required.utilityPageTitle,
-        utilityPageContext: required.utilityPageContext,
         sidebarDataStatus: required.sidebarDataStatus,
         products: required.products,
         productsTabCatalog: required.productsTabCatalog,
@@ -4747,6 +4816,13 @@
         productsTableBody: required.productsTableBody,
         productDetailEmpty: required.productDetailEmpty,
         productDetailContent: required.productDetailContent,
+        productsCatalogPagination: required.productsCatalogPagination,
+        productsCatalogFirstPage: required.productsCatalogFirstPage,
+        productsCatalogPrevPage: required.productsCatalogPrevPage,
+        productsCatalogNextPage: required.productsCatalogNextPage,
+        productsCatalogLastPage: required.productsCatalogLastPage,
+        productsCatalogPageInfo: required.productsCatalogPageInfo,
+        productsCatalogPageNumbers: required.productsCatalogPageNumbers,
         inventoryItemsLoading: required.inventoryItemsLoading,
         inventoryItemsEmpty: required.inventoryItemsEmpty,
         inventoryItemsError: required.inventoryItemsError,
@@ -4754,6 +4830,13 @@
         inventoryItemsTableBody: required.inventoryItemsTableBody,
         inventoryItemDetailEmpty: required.inventoryItemDetailEmpty,
         inventoryItemDetailContent: required.inventoryItemDetailContent,
+        inventoryItemsPagination: required.inventoryItemsPagination,
+        inventoryItemsFirstPage: required.inventoryItemsFirstPage,
+        inventoryItemsPrevPage: required.inventoryItemsPrevPage,
+        inventoryItemsNextPage: required.inventoryItemsNextPage,
+        inventoryItemsLastPage: required.inventoryItemsLastPage,
+        inventoryItemsPageInfo: required.inventoryItemsPageInfo,
+        inventoryItemsPageNumbers: required.inventoryItemsPageNumbers,
         settingsPage: required.settings,
         logsPage: required.logs,
         themeStatus: required.themeStatus,
@@ -4768,7 +4851,6 @@
         sessionLogsListRegion: required.sessionLogsListRegion,
         sessionLogsEmpty: required.sessionLogsEmpty,
         sessionLogsList: required.sessionLogsList,
-        dashboardHeaderRegion: required.dashboardHeaderRegion,
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging,
@@ -4862,6 +4944,48 @@
       elements.assetsTabDepreciation = required.assetsTabDepreciation;
       elements.assetsPanelRegister = required.assetsPanelRegister;
       elements.assetsPanelDepreciation = required.assetsPanelDepreciation;
+      elements.financeAssetsPagination = required.financeAssetsPagination;
+      elements.financeAssetsFirstPage = required.financeAssetsFirstPage;
+      elements.financeAssetsPrevPage = required.financeAssetsPrevPage;
+      elements.financeAssetsNextPage = required.financeAssetsNextPage;
+      elements.financeAssetsLastPage = required.financeAssetsLastPage;
+      elements.financeAssetsPageInfo = required.financeAssetsPageInfo;
+      elements.financeAssetsPageNumbers = required.financeAssetsPageNumbers;
+      elements.financeDepreciationPagination = required.financeDepreciationPagination;
+      elements.financeDepreciationFirstPage = required.financeDepreciationFirstPage;
+      elements.financeDepreciationPrevPage = required.financeDepreciationPrevPage;
+      elements.financeDepreciationNextPage = required.financeDepreciationNextPage;
+      elements.financeDepreciationLastPage = required.financeDepreciationLastPage;
+      elements.financeDepreciationPageInfo = required.financeDepreciationPageInfo;
+      elements.financeDepreciationPageNumbers = required.financeDepreciationPageNumbers;
+      elements.financeAssetsTotal = required.financeAssetsTotal;
+      elements.financeAssetsActive = required.financeAssetsActive;
+      elements.financeAssetsCost = required.financeAssetsCost;
+      elements.financeAssetsRegisterHeading = required.financeAssetsRegisterHeading;
+      elements.financeAssetsRegisterBody = required.financeAssetsRegisterBody;
+      elements.financeAssetDetail = required.financeAssetDetail;
+      elements.financeAssetDetailHeading = required.financeAssetDetailHeading;
+      elements.financeAssetDetailContent = required.financeAssetDetailContent;
+      elements.financeAssetsTableRegion = required.financeAssetsTableRegion;
+      elements.financeDepExpense = required.financeDepExpense;
+      elements.financeDepAccumulated = required.financeDepAccumulated;
+      elements.financeDepNBV = required.financeDepNBV;
+      elements.financeDepActiveAssets = required.financeDepActiveAssets;
+      elements.financeDepFullyDepreciated = required.financeDepFullyDepreciated;
+      elements.financeDepAssetsHeading = required.financeDepAssetsHeading;
+      elements.financeDepAssetBody = required.financeDepAssetBody;
+      elements.financeDepReconHeading = required.financeDepReconHeading;
+      elements.financeDepReconPeriod = required.financeDepReconPeriod;
+      elements.financeDepReconAccum = required.financeDepReconAccum;
+      elements.financeDepReconNBV = required.financeDepReconNBV;
+      elements.financeDepPolicyHeading = required.financeDepPolicyHeading;
+      elements.financeDepPolicyMethod = required.financeDepPolicyMethod;
+      elements.financeDepPolicyGranularity = required.financeDepPolicyGranularity;
+      elements.financeDepPolicyRounding = required.financeDepPolicyRounding;
+      elements.financeDepPolicyStartRule = required.financeDepPolicyStartRule;
+      elements.financeDepPolicyResidualTreatment = required.financeDepPolicyResidualTreatment;
+      elements.financeDepPolicySource = required.financeDepPolicySource;
+      elements.financeDepreciationTableRegion = required.financeDepreciationTableRegion;
       elements.dashboardTabs =
         elements.dashboardTabList.querySelectorAll('[role="tab"]');
       elements.dashboardPanels =
@@ -5042,6 +5166,99 @@
           setProductsTab(tab.id === "productsTabInventory" ? "inventory" : tab.id === "productsTabRecipe" ? "recipe" : "catalog");
         });
       });
+
+      elements.productsCatalogFirstPage.addEventListener("click", function() {
+        productsCatalogPagination.currentPage = 1;
+        renderProductsListPage();
+      });
+      elements.productsCatalogPrevPage.addEventListener("click", function() {
+        if (productsCatalogPagination.currentPage > 1) {
+          productsCatalogPagination.currentPage--;
+          renderProductsListPage();
+        }
+      });
+      elements.productsCatalogNextPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(productsCatalogPagination.filteredItems.length / productsCatalogPagination.pageSize));
+        if (productsCatalogPagination.currentPage < totalPages) {
+          productsCatalogPagination.currentPage++;
+          renderProductsListPage();
+        }
+      });
+      elements.productsCatalogLastPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(productsCatalogPagination.filteredItems.length / productsCatalogPagination.pageSize));
+        productsCatalogPagination.currentPage = totalPages;
+        renderProductsListPage();
+      });
+
+      elements.inventoryItemsFirstPage.addEventListener("click", function() {
+        inventoryItemsPagination.currentPage = 1;
+        renderInventoryItemsListPage();
+      });
+      elements.inventoryItemsPrevPage.addEventListener("click", function() {
+        if (inventoryItemsPagination.currentPage > 1) {
+          inventoryItemsPagination.currentPage--;
+          renderInventoryItemsListPage();
+        }
+      });
+      elements.inventoryItemsNextPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(inventoryItemsPagination.filteredItems.length / inventoryItemsPagination.pageSize));
+        if (inventoryItemsPagination.currentPage < totalPages) {
+          inventoryItemsPagination.currentPage++;
+          renderInventoryItemsListPage();
+        }
+      });
+      elements.inventoryItemsLastPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(inventoryItemsPagination.filteredItems.length / inventoryItemsPagination.pageSize));
+        inventoryItemsPagination.currentPage = totalPages;
+        renderInventoryItemsListPage();
+      });
+
+      elements.financeAssetsFirstPage.addEventListener("click", function() {
+        financeAssetsPagination.currentPage = 1;
+        renderFinanceAssetsListPage();
+      });
+      elements.financeAssetsPrevPage.addEventListener("click", function() {
+        if (financeAssetsPagination.currentPage > 1) {
+          financeAssetsPagination.currentPage--;
+          renderFinanceAssetsListPage();
+        }
+      });
+      elements.financeAssetsNextPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(financeAssetsPagination.filteredItems.length / financeAssetsPagination.pageSize));
+        if (financeAssetsPagination.currentPage < totalPages) {
+          financeAssetsPagination.currentPage++;
+          renderFinanceAssetsListPage();
+        }
+      });
+      elements.financeAssetsLastPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(financeAssetsPagination.filteredItems.length / financeAssetsPagination.pageSize));
+        financeAssetsPagination.currentPage = totalPages;
+        renderFinanceAssetsListPage();
+      });
+
+      elements.financeDepreciationFirstPage.addEventListener("click", function() {
+        financeDepreciationPagination.currentPage = 1;
+        renderFinanceDepreciationListPage();
+      });
+      elements.financeDepreciationPrevPage.addEventListener("click", function() {
+        if (financeDepreciationPagination.currentPage > 1) {
+          financeDepreciationPagination.currentPage--;
+          renderFinanceDepreciationListPage();
+        }
+      });
+      elements.financeDepreciationNextPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(financeDepreciationPagination.filteredItems.length / financeDepreciationPagination.pageSize));
+        if (financeDepreciationPagination.currentPage < totalPages) {
+          financeDepreciationPagination.currentPage++;
+          renderFinanceDepreciationListPage();
+        }
+      });
+      elements.financeDepreciationLastPage.addEventListener("click", function() {
+        var totalPages = Math.max(1, Math.ceil(financeDepreciationPagination.filteredItems.length / financeDepreciationPagination.pageSize));
+        financeDepreciationPagination.currentPage = totalPages;
+        renderFinanceDepreciationListPage();
+      });
+
       elements.assetsTabRegister.addEventListener("click", function() {
         setFinanceDestination("assets");
         ensureFinanceData();
@@ -5073,8 +5290,14 @@
           setSidebarOpen(false, false);
         });
 
-      window.addEventListener("resize", scheduleResponsiveChartResize);
-      window.addEventListener("orientationchange", scheduleResponsiveChartResize);
+      window.addEventListener("resize", function() {
+        scheduleResponsiveChartResize();
+        recalculatePageSizes();
+      });
+      window.addEventListener("orientationchange", function() {
+        scheduleResponsiveChartResize();
+        recalculatePageSizes();
+      });
 
       setSidebarOpen(false, false);
       setDesktopSidebarCollapsed(false);
@@ -5180,9 +5403,6 @@
         return;
       }
 
-      elements.utilityPageTitle.innerText = contract.title;
-      elements.utilityPageContext.innerText = contract.context;
-
       var heading = activePage.querySelector("h1");
 
       if (heading)
@@ -5211,9 +5431,342 @@
 
     var productsDataLoaded = false;
     var productsReadModel = [];
+    var productsCatalogPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
     var inventoryItemsDataLoaded = false;
     var inventoryItemsReadModel = [];
+    var inventoryItemsPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
+    var financeAssetsDataLoaded = false;
+    var financeAssetsReadModel = [];
+    var financeAssetsPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
+    var financeDepreciationDataLoaded = false;
+    var financeDepreciationReadModel = [];
+    var financeDepreciationPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
     var cogsRecipeDataLoaded = false;
+
+    function calculatePageSize(containerHeight, rowHeight, headerHeight, padding)
+    {
+      var available = containerHeight - headerHeight - padding;
+      var size = Math.max(1, Math.floor(available / rowHeight));
+      return size;
+    }
+
+    function updateProductsCatalogPagination()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = productsCatalogPagination;
+      var totalPages = Math.max(1, Math.ceil(pagination.filteredItems.length / pagination.pageSize));
+      if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
+      var start = (pagination.currentPage - 1) * pagination.pageSize + 1;
+      var end = Math.min(pagination.currentPage * pagination.pageSize, pagination.filteredItems.length);
+      elements.productsCatalogPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length;
+      elements.productsCatalogFirstPage.disabled = pagination.currentPage === 1;
+      elements.productsCatalogPrevPage.disabled = pagination.currentPage === 1;
+      elements.productsCatalogNextPage.disabled = pagination.currentPage === totalPages;
+      elements.productsCatalogLastPage.disabled = pagination.currentPage === totalPages;
+      elements.productsCatalogPagination.hidden = pagination.filteredItems.length <= pagination.pageSize;
+      renderPageNumbers(elements.productsCatalogPageNumbers, pagination.currentPage, totalPages, "productsCatalog");
+    }
+
+    function updateInventoryItemsPagination()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = inventoryItemsPagination;
+      var totalPages = Math.max(1, Math.ceil(pagination.filteredItems.length / pagination.pageSize));
+      if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
+      var start = (pagination.currentPage - 1) * pagination.pageSize + 1;
+      var end = Math.min(pagination.currentPage * pagination.pageSize, pagination.filteredItems.length);
+      elements.inventoryItemsPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length;
+      elements.inventoryItemsFirstPage.disabled = pagination.currentPage === 1;
+      elements.inventoryItemsPrevPage.disabled = pagination.currentPage === 1;
+      elements.inventoryItemsNextPage.disabled = pagination.currentPage === totalPages;
+      elements.inventoryItemsLastPage.disabled = pagination.currentPage === totalPages;
+      elements.inventoryItemsPagination.hidden = pagination.filteredItems.length <= pagination.pageSize;
+      renderPageNumbers(elements.inventoryItemsPageNumbers, pagination.currentPage, totalPages, "inventoryItems");
+    }
+
+    function updateFinanceAssetsPagination()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = financeAssetsPagination;
+      var totalPages = Math.max(1, Math.ceil(pagination.filteredItems.length / pagination.pageSize));
+      if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
+      var start = (pagination.currentPage - 1) * pagination.pageSize + 1;
+      var end = Math.min(pagination.currentPage * pagination.pageSize, pagination.filteredItems.length);
+      elements.financeAssetsPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length;
+      elements.financeAssetsFirstPage.disabled = pagination.currentPage === 1;
+      elements.financeAssetsPrevPage.disabled = pagination.currentPage === 1;
+      elements.financeAssetsNextPage.disabled = pagination.currentPage === totalPages;
+      elements.financeAssetsLastPage.disabled = pagination.currentPage === totalPages;
+      elements.financeAssetsPagination.hidden = pagination.filteredItems.length <= pagination.pageSize;
+      renderPageNumbers(elements.financeAssetsPageNumbers, pagination.currentPage, totalPages, "financeAssets");
+    }
+
+    function updateFinanceDepreciationPagination()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = financeDepreciationPagination;
+      var totalPages = Math.max(1, Math.ceil(pagination.filteredItems.length / pagination.pageSize));
+      if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
+      var start = (pagination.currentPage - 1) * pagination.pageSize + 1;
+      var end = Math.min(pagination.currentPage * pagination.pageSize, pagination.filteredItems.length);
+      elements.financeDepreciationPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length;
+      elements.financeDepreciationFirstPage.disabled = pagination.currentPage === 1;
+      elements.financeDepreciationPrevPage.disabled = pagination.currentPage === 1;
+      elements.financeDepreciationNextPage.disabled = pagination.currentPage === totalPages;
+      elements.financeDepreciationLastPage.disabled = pagination.currentPage === totalPages;
+      elements.financeDepreciationPagination.hidden = pagination.filteredItems.length <= pagination.pageSize;
+      renderPageNumbers(elements.financeDepreciationPageNumbers, pagination.currentPage, totalPages, "financeDepreciation");
+    }
+
+    function renderPageNumbers(container, currentPage, totalPages, prefix)
+    {
+      container.innerHTML = "";
+      var maxVisible = 5;
+      var startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+      var endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      if (endPage - startPage + 1 < maxVisible) {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+      }
+      for (var p = startPage; p <= endPage; p++) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "pagination-btn rounded-md border px-3 py-1.5 text-sm";
+        btn.setAttribute("aria-label", "Page " + p);
+        btn.setAttribute("data-page", String(p));
+        btn.innerText = String(p);
+        if (p === currentPage) {
+          btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
+          btn.setAttribute("aria-current", "page");
+        }
+        btn.addEventListener("click", function(page) {
+          return function() {
+            if (prefix === "productsCatalog") {
+              productsCatalogPagination.currentPage = page;
+              renderProductsListPage();
+            } else if (prefix === "inventoryItems") {
+              inventoryItemsPagination.currentPage = page;
+              renderInventoryItemsListPage();
+            } else if (prefix === "financeAssets") {
+              financeAssetsPagination.currentPage = page;
+              renderFinanceAssetsListPage();
+            } else if (prefix === "financeDepreciation") {
+              financeDepreciationPagination.currentPage = page;
+              renderFinanceDepreciationListPage();
+            }
+          };
+        }(p));
+        container.appendChild(btn);
+      }
+    }
+
+    function renderProductsListPage()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = productsCatalogPagination;
+      elements.productsTableBody.innerHTML = "";
+      var start = (pagination.currentPage - 1) * pagination.pageSize;
+      var end = Math.min(start + pagination.pageSize, pagination.filteredItems.length);
+      var pageItems = pagination.filteredItems.slice(start, end);
+      pageItems.forEach(function(product)
+      {
+        var row = document.createElement("tr");
+        row.innerHTML = '<td><button type="button" class="product-grid-link"></button></td><td></td><td></td><td></td>';
+        var button = row.cells[0].querySelector("button");
+        button.dataset.productId = product.ID_Prod;
+        button.innerText = product.Produk;
+        button.setAttribute("aria-label", "View details for " + product.Produk);
+        button.addEventListener("click", function() { renderProductDetail(this.dataset.productId); });
+        row.cells[1].innerText = product.Kategori;
+        row.cells[2].innerText = product.Kind;
+        row.cells[3].innerText = product.IsActive ? "Active" : "Inactive";
+        elements.productsTableBody.appendChild(row);
+      });
+      elements.productsEmpty.hidden = pagination.filteredItems.length !== 0;
+      elements.productsTableRegion.hidden = pagination.filteredItems.length === 0;
+      updateProductsCatalogPagination();
+    }
+
+    function renderInventoryItemsListPage()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = inventoryItemsPagination;
+      elements.inventoryItemsTableBody.innerHTML = "";
+      var start = (pagination.currentPage - 1) * pagination.pageSize;
+      var end = Math.min(start + pagination.pageSize, pagination.filteredItems.length);
+      var pageItems = pagination.filteredItems.slice(start, end);
+      pageItems.forEach(function(item)
+      {
+        var row = document.createElement("tr");
+        row.className = "inventory-item-row";
+        row.setAttribute("aria-selected", "false");
+        row.innerHTML = '<td><button type="button" class="product-grid-link"></button></td><td></td><td></td><td></td>';
+        var button = row.cells[0].querySelector("button");
+        button.dataset.itemId = item.ItemID;
+        button.innerText = item.ItemName;
+        button.setAttribute("aria-label", "View details for " + item.ItemName);
+        button.addEventListener("click", function() { renderInventoryItemDetail(this.dataset.itemId); });
+        row.cells[1].innerText = item.Classification;
+        row.cells[2].innerText = item.BaseUOM;
+        row.cells[3].innerText = item.IsActive ? "Active" : "Inactive";
+        elements.inventoryItemsTableBody.appendChild(row);
+      });
+      elements.inventoryItemsEmpty.hidden = pagination.filteredItems.length !== 0;
+      elements.inventoryItemsTableRegion.hidden = pagination.filteredItems.length === 0;
+      updateInventoryItemsPagination();
+    }
+
+    function renderFinanceAssetsListPage()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = financeAssetsPagination;
+      elements.financeAssetsRegisterBody.innerHTML = "";
+      var start = (pagination.currentPage - 1) * pagination.pageSize;
+      var end = Math.min(start + pagination.pageSize, pagination.filteredItems.length);
+      var pageItems = pagination.filteredItems.slice(start, end);
+      pageItems.forEach(function(asset)
+      {
+        var status = asset.DisposedAt ? "Disposed" : asset.IsActive ? "Active" : "Inactive";
+        var row = document.createElement("tr");
+        row.setAttribute("data-asset-id", asset.ID_Asset);
+        row.addEventListener("click", function(event) {
+          var clickedAssetId = event.currentTarget.getAttribute("data-asset-id");
+          renderFinanceAssetDetail(clickedAssetId);
+        });
+        row.innerHTML = "<td>" + escapeUiHtml(asset.Nama) + "</td>" +
+          "<td>" + escapeUiHtml(asset.Kategori) + "</td>" +
+          "<td class=\"finance-number\">" + escapeUiHtml(String(asset.Jumlah)) + "</td>" +
+          "<td>" + escapeUiHtml(formatFinanceDate(asset.TanggalPerolehan)) + "</td>" +
+          "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.BiayaPerolehan)) + "</td>" +
+          "<td>" + escapeUiHtml(status) + "</td>";
+        elements.financeAssetsRegisterBody.appendChild(row);
+      });
+      updateFinanceAssetsPagination();
+    }
+
+    function renderFinanceAssetDetail(assetId)
+    {
+      var asset = financeAssetsReadModel.find(function(candidate) { return candidate.ID_Asset === assetId; });
+      if (!asset) return;
+      var elements = initializeStableDashboardElements();
+      var fields = [["Asset ID", asset.ID_Asset], ["Asset Name", asset.Nama], ["Category", asset.Kategori],
+        ["Quantity", asset.Jumlah], ["Acquisition Date", formatFinanceDate(asset.TanggalPerolehan)],
+        ["Acquisition Cost", formatFinanceCurrency(asset.BiayaPerolehan)],
+        ["Status", asset.DisposedAt ? "Disposed" : asset.IsActive ? "Active" : "Inactive"]];
+      elements.financeAssetDetailContent.innerHTML = "";
+      var table = document.createElement("table");
+      table.className = "products-grid products-grid--detail";
+      table.innerHTML = '<thead><tr><th scope="col">Field</th><th scope="col">Value</th></tr></thead><tbody></tbody>';
+      fields.forEach(function(field)
+      {
+        var row = table.tBodies[0].insertRow();
+        var label = document.createElement("th");
+        label.scope = "row";
+        label.className = "py-2 text-left font-normal ui-theme-muted";
+        label.innerText = field[0];
+        row.appendChild(label);
+        row.insertCell().innerText = field[1];
+      });
+      elements.financeAssetDetailContent.appendChild(table);
+      elements.financeAssetDetail.hidden = false;
+    }
+
+    function renderFinanceDepreciationListPage()
+    {
+      var elements = initializeStableDashboardElements();
+      var pagination = financeDepreciationPagination;
+      elements.financeDepAssetBody.innerHTML = "";
+      var start = (pagination.currentPage - 1) * pagination.pageSize;
+      var end = Math.min(start + pagination.pageSize, pagination.filteredItems.length);
+      var pageItems = pagination.filteredItems.slice(start, end);
+      pageItems.forEach(function(asset)
+      {
+        var statusLabel = asset.disposedAt ? "Disposed" : asset.fullyDepreciated ? "Fully Dep." : "Active";
+        var row = document.createElement("tr");
+        row.innerHTML = "<th scope=\"row\">" + escapeUiHtml(asset.id) + "</th>" +
+          "<td>" + escapeUiHtml(asset.name) + "</td>" +
+          "<td>" + escapeUiHtml(asset.category) + "</td>" +
+          "<td>" + escapeUiHtml(formatFinanceDate(asset.acquisitionDate)) + "</td>" +
+          "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.cost)) + "</td>" +
+          "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.accumulatedDepreciation)) + "</td>" +
+          "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.periodDepreciation)) + "</td>" +
+          "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.netBookValue)) + "</td>" +
+          "<td>" + escapeUiHtml(statusLabel) + "</td>";
+        elements.financeDepAssetBody.appendChild(row);
+      });
+      updateFinanceDepreciationPagination();
+    }
+
+    // Expose pagination state for testing and responsive recalculation
+    window.productsCatalogPagination = productsCatalogPagination;
+    window.inventoryItemsPagination = inventoryItemsPagination;
+    window.financeAssetsPagination = financeAssetsPagination;
+    window.financeDepreciationPagination = financeDepreciationPagination;
+
+    function recalculatePageSizes()
+    {
+      var elements = initializeStableDashboardElements();
+      var tableRegion = elements.productsTableRegion;
+      if (tableRegion && !tableRegion.hidden) {
+        var row = tableRegion.querySelector("tbody tr");
+        if (row) {
+          var rowHeight = row.getBoundingClientRect().height;
+          var containerHeight = tableRegion.clientHeight;
+          var headerHeight = tableRegion.querySelector("thead") ? tableRegion.querySelector("thead").getBoundingClientRect().height : 40;
+          var newPageSize = calculatePageSize(containerHeight, rowHeight, headerHeight, 24);
+          if (newPageSize !== productsCatalogPagination.pageSize) {
+            productsCatalogPagination.pageSize = newPageSize;
+            productsCatalogPagination.currentPage = 1;
+            renderProductsListPage();
+          }
+        }
+      }
+      var invTableRegion = elements.inventoryItemsTableRegion;
+      if (invTableRegion && !invTableRegion.hidden) {
+        var invRow = invTableRegion.querySelector("tbody tr");
+        if (invRow) {
+          var invRowHeight = invRow.getBoundingClientRect().height;
+          var invContainerHeight = invTableRegion.clientHeight;
+          var invHeaderHeight = invTableRegion.querySelector("thead") ? invTableRegion.querySelector("thead").getBoundingClientRect().height : 40;
+          var newInvPageSize = calculatePageSize(invContainerHeight, invRowHeight, invHeaderHeight, 24);
+          if (newInvPageSize !== inventoryItemsPagination.pageSize) {
+            inventoryItemsPagination.pageSize = newInvPageSize;
+            inventoryItemsPagination.currentPage = 1;
+            renderInventoryItemsListPage();
+          }
+        }
+      }
+      var assetsTableRegion = elements.financeAssetsTableRegion;
+      if (assetsTableRegion && !assetsTableRegion.hidden) {
+        var assetsRow = assetsTableRegion.querySelector("tbody tr");
+        if (assetsRow) {
+          var assetsRowHeight = assetsRow.getBoundingClientRect().height;
+          var assetsContainerHeight = assetsTableRegion.clientHeight;
+          var assetsHeaderHeight = assetsTableRegion.querySelector("thead") ? assetsTableRegion.querySelector("thead").getBoundingClientRect().height : 40;
+          var newAssetsPageSize = calculatePageSize(assetsContainerHeight, assetsRowHeight, assetsHeaderHeight, 24);
+          if (newAssetsPageSize !== financeAssetsPagination.pageSize) {
+            financeAssetsPagination.pageSize = newAssetsPageSize;
+            financeAssetsPagination.currentPage = 1;
+            renderFinanceAssetsListPage();
+          }
+        }
+      }
+      var depTableRegion = elements.financeDepreciationTableRegion;
+      if (depTableRegion && !depTableRegion.hidden) {
+        var depRow = depTableRegion.querySelector("tbody tr");
+        if (depRow) {
+          var depRowHeight = depRow.getBoundingClientRect().height;
+          var depContainerHeight = depTableRegion.clientHeight;
+          var depHeaderHeight = depTableRegion.querySelector("thead") ? depTableRegion.querySelector("thead").getBoundingClientRect().height : 40;
+          var newDepPageSize = calculatePageSize(depContainerHeight, depRowHeight, depHeaderHeight, 24);
+          if (newDepPageSize !== financeDepreciationPagination.pageSize) {
+            financeDepreciationPagination.pageSize = newDepPageSize;
+            financeDepreciationPagination.currentPage = 1;
+            renderFinanceDepreciationListPage();
+          }
+        }
+      }
+    }
+
     var cogsRecipeReadModel = null;
     var cogsRecipeCurrentVariant = null;
     var standardCostApplyInFlight = false;
@@ -5225,6 +5778,8 @@
       elements.productsPanelCatalog.hidden = tabName !== "catalog";
       elements.productsPanelRecipe.hidden = tabName !== "recipe";
       elements.productsPanelInventory.hidden = tabName !== "inventory";
+      elements.productsCatalogPagination.hidden = tabName !== "catalog";
+      elements.inventoryItemsPagination.hidden = tabName !== "inventory";
       if (tabName === "inventory") ensureInventoryItemsData();
       else if (tabName === "recipe") ensureCogsRecipeData();
       else ensureProductsData();
@@ -5599,25 +6154,10 @@
     function renderInventoryItemsList()
     {
       var elements = initializeStableDashboardElements();
-      elements.inventoryItemsTableBody.innerHTML = "";
-      elements.inventoryItemsEmpty.hidden = inventoryItemsReadModel.length !== 0;
-      elements.inventoryItemsTableRegion.hidden = inventoryItemsReadModel.length === 0;
-      inventoryItemsReadModel.forEach(function(item)
-      {
-        var row = document.createElement("tr");
-        row.className = "inventory-item-row";
-        row.setAttribute("aria-selected", "false");
-        row.innerHTML = '<td><button type="button" class="product-grid-link"></button></td><td></td><td></td><td></td>';
-        var button = row.cells[0].querySelector("button");
-        button.dataset.itemId = item.ItemID;
-        button.innerText = item.ItemName;
-        button.setAttribute("aria-label", "View details for " + item.ItemName);
-        button.addEventListener("click", function() { renderInventoryItemDetail(this.dataset.itemId); });
-        row.cells[1].innerText = item.Classification;
-        row.cells[2].innerText = item.BaseUOM;
-        row.cells[3].innerText = item.IsActive ? "Active" : "Inactive";
-        elements.inventoryItemsTableBody.appendChild(row);
-      });
+      inventoryItemsPagination.filteredItems = inventoryItemsReadModel;
+      inventoryItemsPagination.totalItems = inventoryItemsReadModel.length;
+      inventoryItemsPagination.currentPage = 1;
+      renderInventoryItemsListPage();
     }
 
     function renderInventoryItemDetail(itemId)
@@ -5683,23 +6223,10 @@
     function renderProductsList()
     {
       var elements = initializeStableDashboardElements();
-      elements.productsTableBody.innerHTML = "";
-      elements.productsEmpty.hidden = productsReadModel.length !== 0;
-      elements.productsTableRegion.hidden = productsReadModel.length === 0;
-      productsReadModel.forEach(function(product)
-      {
-        var row = document.createElement("tr");
-        row.innerHTML = '<td><button type="button" class="product-grid-link"></button></td><td></td><td></td><td></td>';
-        var button = row.cells[0].querySelector("button");
-        button.dataset.productId = product.ID_Prod;
-        button.innerText = product.Produk;
-        button.setAttribute("aria-label", "View details for " + product.Produk);
-        button.addEventListener("click", function() { renderProductDetail(this.dataset.productId); });
-        row.cells[1].innerText = product.Kategori;
-        row.cells[2].innerText = product.Kind;
-        row.cells[3].innerText = product.IsActive ? "Active" : "Inactive";
-        elements.productsTableBody.appendChild(row);
-      });
+      productsCatalogPagination.filteredItems = productsReadModel;
+      productsCatalogPagination.totalItems = productsReadModel.length;
+      productsCatalogPagination.currentPage = 1;
+      renderProductsListPage();
     }
 
     function formatProductPrice(value)
