@@ -6,66 +6,74 @@ const fs = require('fs');
 const path = require('path');
 
 const MODEL = '9router/numlock-explore-free';
-const SPECIALISTS = [
-  'numlock-explore', 'numlock-light', 'numlock-medium', 'numlock-heavy',
-  'numlock-critical', 'numlock-commit', 'numlock-ops', 'numlock-browser'
-];
-const NAMES = ['numlock', ...SPECIALISTS];
+const SPECIALISTS = [];
+const NAMES = ['numlock'];
 const rule = (action, resource, effect) => ({ action, resource, effect });
 const BASELINE = [
-  rule('*', '*', 'ask'),
-  ...['read', 'glob', 'grep', 'question', 'skill'].map(a => rule(a, '*', 'allow')),
-  ...[
-    '*.env', '*.env.*', '*.clasprc.json', '*credentials*',
-    '*token*.json', '*auth.json', '*.pem', '*.key'
-  ].map(p => rule('read', p, 'deny')),
-  rule('read', '*.clasp.json', 'ask'),
-  rule('external_directory', '*', 'deny'),
-  rule('subagent', '*', 'deny'),
-  rule('webfetch', '*', 'deny'),
-  rule('websearch', '*', 'deny'),
-  ...[
-    'pwd', 'git status', 'git status --short',
-    'git diff --check', 'git rev-parse HEAD',
-    'git diff *', 'git log *', 'git rev-parse *',
-    'node --check *', 'node --test *', 'node _test_runner.js',
-    'node _test_runner.js *', 'node scripts/preflight.js',
-    'node scripts/preflight.js *', 'node scripts/runtime-preflight.js',
-    'node scripts/runtime-preflight.js *'
-  ].map(p => rule('shell', p, 'allow')),
-  rule('shell', 'clasp *', 'deny'),
-  ...[
-    'clasp status', 'clasp status *',
-    'clasp versions', 'clasp versions *',
-    'clasp deployments', 'clasp deployments *',
-    'clasp pull *',
-    'clasp push *', 'clasp version *', 'clasp deploy *',
-    'clasp run *', 'clasp logs *'
-  ].map(p => rule('shell', p, 'allow'))
+  rule("*", "*", "ask"),
+  rule("read", "*", "allow"),
+  rule("glob", "*", "allow"),
+  rule("grep", "*", "allow"),
+  rule("question", "*", "allow"),
+  rule("skill", "*", "allow"),
+  rule("read", "*.env", "deny"),
+  rule("read", "*.env.*", "deny"),
+  rule("read", "*.clasprc.json", "deny"),
+  rule("read", "*credentials*", "deny"),
+  rule("read", "*token*.json", "deny"),
+  rule("read", "*auth.json", "deny"),
+  rule("read", "*.pem", "deny"),
+  rule("read", "*.key", "deny"),
+  rule("read", "*.clasp.json", "ask"),
+  rule("external_directory", "*", "deny"),
+  rule("subagent", "*", "deny"),
+  rule("webfetch", "*", "deny"),
+  rule("websearch", "*", "deny"),
+  rule("shell", "pwd", "allow"),
+  rule("shell", "git status", "allow"),
+  rule("shell", "git status --short", "allow"),
+  rule("shell", "git diff --check", "allow"),
+  rule("shell", "git rev-parse HEAD", "allow"),
+  rule("shell", "git diff *", "allow"),
+  rule("shell", "git log *", "allow"),
+  rule("shell", "git rev-parse *", "allow"),
+  rule("shell", "node --check *", "allow"),
+  rule("shell", "node --test *", "allow"),
+  rule("shell", "node _test_runner.js", "allow"),
+  rule("shell", "node _test_runner.js *", "allow"),
+  rule("shell", "node scripts/preflight.js", "allow"),
+  rule("shell", "node scripts/preflight.js *", "allow"),
+  rule("shell", "clasp *", "ask"),
+  rule("shell", "clasp status", "allow"),
+  rule("shell", "clasp status *", "allow"),
+  rule("shell", "clasp versions", "allow"),
+  rule("shell", "clasp versions *", "allow"),
+  rule("shell", "clasp deployments", "allow"),
+  rule("shell", "clasp deployments *", "allow"),
+  rule("shell", "clasp pull *", "ask"),
+  rule("shell", "clasp push *", "ask"),
+  rule("shell", "clasp version *", "ask"),
+  rule("shell", "clasp deploy *", "ask"),
+  rule("shell", "clasp run *", "ask"),
+  rule("shell", "clasp logs *", "allow"),
+  rule("shell", "codegraph explore*", "allow"),
+  rule("shell", "codegraph status*", "allow"),
+  rule("shell", "git ls-files*", "allow"),
+  rule("edit", "*", "allow"),
+  rule("edit", "*.env", "deny"),
+  rule("edit", "*.env.*", "deny"),
+  rule("edit", "*.clasprc.json", "deny"),
+  rule("edit", "*credentials*", "deny"),
+  rule("edit", "*token*.json", "deny"),
+  rule("edit", "*auth.json", "deny"),
+  rule("edit", "*.pem", "deny"),
+  rule("edit", "*.key", "deny"),
+  rule("edit", "*.clasp.json", "deny")
 ];
 
 function overrides(name) {
-  if (name === 'numlock') return SPECIALISTS.map(n => rule('subagent', n, 'ask'));
-  const result = [];
-  if (['numlock-explore', 'numlock-commit', 'numlock-ops', 'numlock-browser'].includes(name)) {
-    result.push(rule('edit', '*', 'deny'));
-  }
-  if (['numlock-critical', 'numlock-ops'].includes(name)) {
-    result.push(rule('shell', 'clasp *', 'ask'));
-    result.push(rule('shell', 'clasp status', 'allow'));
-    result.push(rule('shell', 'clasp status *', 'allow'));
-    result.push(rule('shell', 'clasp versions', 'allow'));
-    result.push(rule('shell', 'clasp versions *', 'allow'));
-    result.push(rule('shell', 'clasp deployments', 'allow'));
-    result.push(rule('shell', 'clasp deployments *', 'allow'));
-    result.push(rule('shell', 'clasp pull *', 'allow'));
-    result.push(rule('shell', 'clasp push *', 'allow'));
-    result.push(rule('shell', 'clasp version *', 'allow'));
-    result.push(rule('shell', 'clasp deploy *', 'allow'));
-    result.push(rule('shell', 'clasp run *', 'allow'));
-    result.push(rule('shell', 'clasp logs *', 'allow'));
-  }
-  return result;
+  if (name !== 'numlock') throw new Error('Unknown project agent: ' + name);
+  return [];
 }
 
 // Mirrors v2.0.30 util/wildcard.ts; does not parse shell commands.

@@ -47,7 +47,7 @@ REPORT
 ## Agent Skills Policy
 
 - `AGENTS.md` is the sole authority for cross-cutting workflow, routing, escalation, recovery, safety, and evidence policy. User scope and this contract override generic skill guidance.
-- Specialist agent contracts inherit this file. They must contain only role-specific behavior and overrides plus concise references to inherited authority; they must not duplicate cross-cutting policy.
+- The single `numlock` executor inherits this file; its prompt must not duplicate cross-cutting policy.
 - Route skills selectively; do not invoke them unnecessarily for simple isolated tasks. For small isolated patches, follow `AGENTS.md` alone unless extra workflow guidance is materially useful.
 - For multi-file or non-trivial implementation, prefer `@incremental-implementation`.
 - For bugs, failing tests, or unexpected runtime behavior, prefer `@debugging-and-error-recovery`; add `@test-driven-development` when the behavior can be covered by tests.
@@ -98,11 +98,11 @@ For every authorized task: `PLAN → IMPLEMENT → TEST → DIAGNOSE → FIX →
 
 - Read-only inspection (`clasp status`, `clasp versions`, `clasp deployments`, `clasp pull` to isolated workspace for source-byte parity, `git diff/log/rev-parse`, `node --check/--test`, preflight scripts) is auto-allowed via `opencode.json`. Isolated pull never overwrites the primary repository.
 - Source synchronization (`clasp push --force`), version creation (`clasp version`), deployment update/creation (`clasp deploy/redeploy`), rollback, provider/policy activation, business writes, and `git add/commit/push/reset` remain task-gated: they require that the *task* explicitly authorizes them. Shell allow alone is not business authorization. `AGENTS.md` Rules 7/8 still apply (one push per authorization; OpenCode executes after approval, no manual deferral).
-- `numlock-critical` / `numlock-ops` additionally gate `clasp *` as `ask` for human-gated operations; `clasp status/versions/deployments` are `allow` for parity checks.
+- The single `numlock` executor gates `clasp *` as `ask`; `clasp status/versions/deployments/logs` are `allow` for read-only inspection. A permission allow never grants task authority. Pull, run and all writes require a reviewed destination/side-effect check and normal permission gate.
 
 ### Pre-Sync / Pre-Deploy / Post-Deploy Safety
 
-Before source synchronization: verify `scriptId 1zQfkkcA7JPrzYqJAdtRaZGixmc1lQ7b7KyyOS3cpmmhanRvovQkyWsZc` project identity, read actual remote Editor HEAD (`clasp status` manifest gate), compare file inventory + `appsscript.json` hashes against reviewed package `efbeeabfae0dd27dcf64434097444c1bf59a7fec0b4f9f243756161cd8e0649c` aggregate, detect unreviewed remote changes, preserve recoverable baseline. Before deployment: verify existing deployment `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` identity, preserve Web App URL/executeAs/access, create immutable version, update existing deployment (never duplicate). After deployment: run authorized runtime verification, detect regressions, safe rollback to `721` when required (pointer move only, never reverse committed journals).
+Before source synchronization: verify `scriptId 1zQfkkcA7JPrzYqJAdtRaZGixmc1lQ7b7KyyOS3cpmmhanRvovQkyWsZc` project identity, verify actual remote Editor HEAD by isolated source-byte comparison (`clasp status` proves upload inventory only), compare file inventory + `appsscript.json` hashes against the exact task-reviewed package and authorized aggregate manifest (never reuse historical package checksums), detect unreviewed remote changes, preserve recoverable baseline. Before deployment: verify existing deployment `AKfycbxyll_HUHO9_YmUL6QuJ93ZeIgO8Asy_LcsqTaK2C2dK8nesZXAzPkkSEhbwZKxkX6q` identity, preserve Web App URL/executeAs/access, create immutable version, update existing deployment (never duplicate). After deployment: run authorized runtime verification, detect regressions, safe rollback to the task-authorized baseline (`749` for this task) when required (pointer move only, never reverse committed journals).
 
 ### Data Integrity
 
@@ -160,34 +160,12 @@ Telemetry must report actual measured values when available. Use UNKNOWN
 when unavailable. Never fabricate "~N toolcalls" or "~N minutes" as
 measured evidence.
 
-### Primary execution and optional specialists
+### Single executor
 
-Primary owns local development, edits, debugging, tests, repair, and final
-audit directly. Delegation is optional for a distinct capability, never a
-prerequisite for shell or test execution. When delegated, give one specialist
-a bounded scope and report why it was useful; do not repeat its work.
-
-### Compact Context Package
-
-When delegating to Heavy/Critical, construct a compact context package
-containing:
-
-- TASK_ID (unique identifier)
-- COMPLEXITY and OPERATIONAL_RISK
-- REASONING_EFFORT (medium/high)
-- BASELINE_COMMIT and ORIGIN_COMMIT
-- AUTHORIZED_FILES (exact list)
-- DEPENDENCY_CLOSURE (known file relationships)
-- BUSINESS_INVARIANTS (frozen contracts)
-- TECHNICAL_INVARIANTS (schema, locking, persistence rules)
-- FORBIDDEN_OPERATIONS (explicit prohibitions)
-- REQUIRED_TESTS (specific test expectations)
-- ACCEPTANCE_GATES (pass/fail criteria)
-- KNOWN_PRIOR_EVIDENCE (accepted results, not to re-prove)
-- BACKEND_AND_RECOVERY_POLICY
-
-The specialist receives this compact contract instead of a full task
-reconstruction. Repository/source remains authoritative on conflict.
+`numlock` owns inspection, local development, edits, debugging, testing, repair,
+browser acceptance and final audit directly. No project subagents or delegation
+are configured. L1-L4 and R1-R4 classify work without changing authority.
+Production or Git operations remain exact-task-gated and permission-gated.
 
 ### CodeGraph
 
@@ -206,23 +184,16 @@ runtime behavior, and tests remain authoritative. Use targeted source/runtime
 inspection where CodeGraph is unavailable or cannot confidently establish
 HTML/CSS, Apps Script client/server, or visual relationships.
 
-## OpenCode Routing
+## OpenCode execution
 
-Primary entrypoint: `numlock`, the local development executor. OpenCode +
-9router remains the configured execution path. All project agents use
-`9router/numlock-explore-free`; no alternate model dependency is configured.
+The single project agent is `numlock`, using OpenCode + the existing
+`9router/numlock-explore-free` route. Model/provider settings are unchanged.
+The former ten roles are responsibilities of this executor. Subagent execution
+is denied; no Sol route, premium dependency or silent backend substitution is used.
+Unknown reasoning is reported with evidence and a required decision.
 
-Classify reasoning demand L1-L4 independently from operational risk R1-R4.
-Primary can perform local development at every reasoning level. Complexity
-alone does not require delegation or a different model. Unresolved reasoning
-must be reported with evidence rather than silently changing backend.
-
-Optional specialists: `numlock-explore` for read-only audit, `numlock-light`
-for L1, `numlock-medium` for L2, `numlock-heavy` for L3, `numlock-browser` for
-browser acceptance, `numlock-critical` for R4 preparation and exactly
-owner-authorized controlled operations, `numlock-commit` for explicitly
-requested local staging/commit, and `numlock-ops` for bounded authorized ops.
-Neither classification nor delegation grants production or Git authorization.
+Historical documents may name former agents; those references record past
+execution and do not establish active routing or current authorization.
 
 ### Development shell and production boundary
 
@@ -240,7 +211,7 @@ See `docs/LOCAL-EXECUTION-CONTRACT.md` for the required isolation evidence.
 
 Production writes, deployment, migrations, credentials, destructive Git and
 historical backfills still require exact owner authorization, role permissions,
-and operation counts. Primary and development specialists cannot run clasp.
+and operation counts. The single executor may run clasp only within the exact task authorization and its normal permission decision.
 Shell approval alone never grants business authority.
 
 ### Bounded recovery and evidence
@@ -255,7 +226,7 @@ unchanged credentials or silently change backend.
 
 Local config tests prove configuration only. Node shell probes prove only the
 current Node process can execute those probes. Actual OpenCode permission,
-model execution, optional delegation, Apps Script and browser acceptance each
+model execution, Apps Script and browser acceptance each
 need their own measured evidence. Never infer isolation from a missing allow rule.
 
 CodeGraph remains a local code tool. Try it once when available; do not

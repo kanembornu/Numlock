@@ -72,7 +72,7 @@ for (const [name, mutate, failure] of [
   ['obsolete substring denial', cfg => {
     cfg.permissions.push(rule('shell', '*clasp*', 'deny'));
   }, 'shared-policy'],
-  ['missing direct clasp denial', cfg => {
+  ['missing sensitive edit denial', cfg => {
     cfg.permissions.pop();
   }, 'shared-policy'],
   ['sensitive read auto-allow', cfg => {
@@ -135,7 +135,7 @@ test('sensitive read resources match deny rules; no confidentiality proof', () =
   }
 });
 
-test('primary retains approval-gated editing capability', () => {
+test('primary retains local editing capability', () => {
   const failures = fixture((cfg, dir) => {
     alterAgent(dir, 'numlock',
       rules => rules.push(rule('edit', '*', 'deny')));
@@ -143,14 +143,14 @@ test('primary retains approval-gated editing capability', () => {
   assert.ok(failures.includes('profile-policy:numlock'));
 });
 
-test('read denial does not imply search or edit denial', () => {
+test('sensitive read and edit are denied; search has a separate resource contract', () => {
   assert.equal(evaluate('read', 'private/credentials.json', BASELINE), 'deny');
   assert.equal(evaluate('grep', 'example-pattern', BASELINE), 'allow');
   assert.equal(evaluate('glob', '**/*', BASELINE), 'allow');
-  assert.equal(evaluate('edit', 'private/credentials.json', BASELINE), 'ask');
+  assert.equal(evaluate('edit', 'private/credentials.json', BASELINE), 'deny');
 });
 
-test('direct clasp decisions are profile-specific, never automatic', () => {
+test('read-only clasp is allowed; writes and execution require approval', () => {
   for (const name of NAMES) {
     for (const command of [
       'clasp status', 'clasp deployments', 'clasp versions',
@@ -159,10 +159,11 @@ test('direct clasp decisions are profile-specific, never automatic', () => {
       'clasp version NUMLOCK', 'clasp deploy --help',
       'clasp run validateFinanceProductionRuntime', 'clasp logs --json'
     ]) {
-      assert.equal(evaluate('shell', command, BASELINE, overrides(name)), 'allow',
+      const expected = /^clasp (status|versions|deployments|logs)( |$)/.test(command) ? 'allow' : 'ask';
+      assert.equal(evaluate('shell', command, BASELINE, overrides(name)), expected,
         name + ': ' + command);
     }
-    const expected = ['numlock-critical', 'numlock-ops'].includes(name) ? 'ask' : 'deny';
+    const expected = 'ask';
     for (const command of [
       'clasp', 'clasp clone project',
       'clasp update-deployment example -V 1'
@@ -205,12 +206,9 @@ test('routine read-only inspections auto-allow; writes remain gated', () => {
     'git rev-parse --abbrev-ref HEAD',
     'node --check file.js', 'node --test scripts/preflight.test.js',
     'node _test_runner.js', 'node _test_runner.js --watch',
-    'node scripts/preflight.js', 'node scripts/runtime-preflight.js --probe',
+    'node scripts/preflight.js',
     'clasp status', 'clasp versions', 'clasp deployments',
     'clasp status --json', 'clasp versions --json',
-    'clasp pull --projectDir /tmp/x',
-    'clasp push --force', 'clasp push', 'clasp version NUMLOCK M3',
-    'clasp deploy --help', 'clasp run validateFinanceProductionRuntime',
     'clasp logs --json'
   ];
   for (const command of allows) {
@@ -225,12 +223,12 @@ test('routine read-only inspections auto-allow; writes remain gated', () => {
     'clasp', 'clasp clone project',
     'clasp update-deployment example -V 1'
   ]) {
-    assert.equal(evaluate('shell', command, BASELINE), 'deny', command);
+    assert.equal(evaluate('shell', command, BASELINE), 'ask', command);
   }
 });
 
 test('compound resource aggregation denies or asks without running commands', () => {
-  assert.equal(decision('shell', ['pwd', 'clasp clone project'], BASELINE), 'deny');
+  assert.equal(decision('shell', ['pwd', 'clasp clone project'], BASELINE), 'ask');
   assert.equal(decision('shell', ['pwd', 'node example.js'], BASELINE), 'ask');
   assert.equal(decision('shell', ['pwd', 'git status'], BASELINE), 'allow');
   assert.equal(evaluate('shell', 'pwd && node example.js', BASELINE), 'ask');
@@ -241,20 +239,34 @@ test('edits, delegation and external boundaries are explicit', () => {
     const readonly = ['numlock-explore', 'numlock-commit', 'numlock-ops',
       'numlock-browser'].includes(name);
     assert.equal(evaluate('edit', 'file.js', BASELINE, overrides(name)),
-      readonly ? 'deny' : 'ask');
+      readonly ? 'deny' : 'allow');
     assert.equal(evaluate('external_directory', '/outside/*',
       BASELINE, overrides(name)), 'deny');
     assert.equal(evaluate('subagent', 'numlock-light', BASELINE, overrides(name)),
-      name === 'numlock' ? 'ask' : 'deny');
+      'deny');
   }
 });
 
-test('later agent/session rules win; saved approvals cannot defeat configured deny', () => {
-  const agent = overrides('numlock-ops');
-  assert.equal(evaluate('shell', 'clasp clone project', BASELINE, agent), 'ask');
-  const session = [rule('shell', 'clasp *', 'allow')];
-  assert.equal(evaluate('shell', 'clasp clone project', BASELINE, agent, session), 'allow');
-  const saved = [rule('shell', '*', 'allow')];
-  assert.equal(decision('shell', ['clasp clone project'], BASELINE, saved), 'deny');
+test('saved approvals cannot defeat configured credential or delegation denies', () => {
+  const saved = [rule('*', '*', 'allow')];
+  assert.equal(decision('read', ['private/credentials.json'], BASELINE, saved), 'deny');
+  assert.equal(decision('edit', ['.clasp.json'], BASELINE, saved), 'deny');
+  assert.equal(decision('subagent', ['numlock-heavy'], BASELINE, saved), 'deny');
   assert.equal(decision('shell', ['node example.js'], BASELINE, saved), 'allow');
+});
+
+test('rejects restoration of a retired project agent', () => {
+  assert.ok(fixture((cfg, dir) => {
+    fs.copyFileSync(path.join(dir, '.opencode/agents/numlock.md'),
+      path.join(dir, '.opencode/agents/numlock-heavy.md'));
+  }).includes('exact-registry'));
+});
+
+test('all former diagnostic entrypoints remain gated rather than removed', () => {
+  for (const name of ['runInventoryPolicyEvidenceDiagnostic', 'runCashProductionDiagnostic',
+    'validateFinanceProductionRuntime', 'runMonetaryOpeningBoundedReadDiagnostic',
+    'runTabopsDictionaryBoundedReadDiagnostic', 'runMonetaryOpeningEvidenceCompletionDiagnostic']) {
+    assert.equal(evaluate('shell', 'clasp run ' + name, BASELINE), 'ask');
+  }
+  assert.equal(evaluate('shell', 'clasp pull --projectDir /tmp/numlock-a --versionNumber 685', BASELINE), 'ask');
 });

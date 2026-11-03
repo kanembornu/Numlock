@@ -12,9 +12,9 @@ import { homedir } from "node:os";
 
 // ── Closed operation registry ──────────────────────────────────────────
 const OPERATIONS = Object.freeze({
-  canary: { agent: "numlock-ops", command: "clasp status" },
-  "package022-runner": { agent: "numlock-ops", command: "clasp run runAllBackendTests" },
-  "package022-diagnostic": { agent: "numlock-ops", command: "clasp run runAllBackendTestsDiagnostic" },
+  canary: { agent: "numlock", command: "clasp status" },
+  "package022-runner": { agent: "numlock", command: "clasp run runAllBackendTests" },
+  "package022-diagnostic": { agent: "numlock", command: "clasp run runAllBackendTestsDiagnostic" },
 });
 
 // ── CLI argument parsing ───────────────────────────────────────────────
