@@ -41,8 +41,8 @@ const BASELINE = [
   rule("shell", "node --test *", "allow"),
   rule("shell", "node _test_runner.js", "allow"),
   rule("shell", "node _test_runner.js *", "allow"),
-  rule("shell", "node scripts/preflight.js", "allow"),
-  rule("shell", "node scripts/preflight.js *", "allow"),
+  rule("shell", "node scripts/preflight/index.js", "allow"),
+  rule("shell", "node scripts/preflight/index.js *", "allow"),
   rule("shell", "clasp *", "ask"),
   rule("shell", "clasp status", "allow"),
   rule("shell", "clasp status *", "allow"),
@@ -158,7 +158,19 @@ function inspect(root) {
 }
 
 if (require.main === module) {
-  const failures = inspect(path.resolve(__dirname, '..'));
+  let root = process.cwd();
+  while (root !== path.parse(root).root) {
+    if (fs.existsSync(path.join(root, 'opencode.json'))) break;
+    root = path.dirname(root);
+  }
+  if (!fs.existsSync(path.join(root, 'opencode.json'))) {
+    console.log('FAIL configuration: opencode.json not found');
+    console.log('STATIC PREFLIGHT: FAIL');
+    console.log('Effective permissions, scanner, approvals and isolation: UNKNOWN.');
+    process.exitCode = 1;
+    process.exit(1);
+  }
+  const failures = inspect(root);
   for (const failure of failures) console.log('FAIL ' + failure);
   console.log('STATIC PREFLIGHT: ' + (failures.length ? 'FAIL' : 'PASS'));
   console.log('Effective permissions, scanner, approvals and isolation: UNKNOWN.');

@@ -8,7 +8,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "../../..");
-const FIXTURES_DIR = path.join(__dirname, "fixtures");
+const FIXTURES_DIR = path.join(__dirname, "../fixtures");
 
 /**
  * Read a file from the repository root

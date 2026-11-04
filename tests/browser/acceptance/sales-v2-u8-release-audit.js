@@ -131,8 +131,8 @@ function runSalesV2U8ReleaseAudit() {
     .map(function(line) { return line.trim().slice(1); })
     .filter(function(file) { return fs.existsSync(file); });
   var u8Files = ["96.Tests.SalesRecognition.V2.U8.Cases.js", "_test_runner.js",
-    "tests/browser/sales-v2-u8-mutation-proof.js",
-    "tests/browser/sales-v2-u8-release-audit.js",
+    "tests/browser/acceptance/sales-v2-u8-mutation-proof.js",
+    "tests/browser/acceptance/sales-v2-u8-release-audit.js",
     "docs/SALES-RECOGNITION-V2-U8-RELEASE-EVIDENCE.md"]
     .filter(function(file) { return fs.existsSync(file); });
   var hygieneFiles = allowlisted.concat(u8Files).filter(function(file) {
@@ -201,7 +201,7 @@ function runSalesV2U8ReleaseAudit() {
 
   // ---- 5. U8 artifacts exist and stay out of the upload manifest ----
   ["96.Tests.SalesRecognition.V2.U8.Cases.js",
-   "tests/browser/sales-v2-u8-mutation-proof.js"].forEach(function(file) {
+   "tests/browser/acceptance/sales-v2-u8-mutation-proof.js"].forEach(function(file) {
     if (!fs.existsSync(file)) fail_("U8_ARTIFACT_MISSING", file);
     if (claspignore.indexOf("!" + file) !== -1) fail_("U8_ARTIFACT_REGISTERED", file);
   });

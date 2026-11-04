@@ -1,7 +1,7 @@
 import { test, expect } from "playwright/test";
 const path = require("node:path");
 const http = require("node:http");
-const { assembleHtml } = require("./local-harness/assemble-html.js");
+const { assembleHtml } = require("../harness/assemble-html.js");
 
 const PORT = 34568;
 const TARGET_URL = `http://localhost:${PORT}/`;

@@ -10,7 +10,7 @@ const {
   decision, frontmatter, inspect
 } = require('./preflight');
 
-const repo = path.resolve(__dirname, '..');
+const repo = path.resolve(__dirname, '../..');
 
 function fixture(mutate, cli = false) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'numlock-preflight-test-'));
@@ -23,7 +23,7 @@ function fixture(mutate, cli = false) {
     fs.writeFileSync(path.join(dir, 'opencode.json'), JSON.stringify(cfg));
     if (!cli) return inspect(dir);
     fs.mkdirSync(path.join(dir, 'scripts'));
-    fs.copyFileSync(path.join(repo, 'scripts/preflight.js'),
+    fs.copyFileSync(path.join(repo, 'scripts/preflight/preflight.js'),
       path.join(dir, 'scripts/preflight.js'));
     return cp.spawnSync(process.execPath, ['scripts/preflight.js'], {
       cwd: dir, encoding: 'utf8', timeout: 5000
@@ -204,9 +204,9 @@ test('routine read-only inspections auto-allow; writes remain gated', () => {
     'pwd', 'git status', 'git status --short', 'git diff --check',
     'git rev-parse HEAD', 'git diff HEAD', 'git log --oneline',
     'git rev-parse --abbrev-ref HEAD',
-    'node --check file.js', 'node --test scripts/preflight.test.js',
+    'node --check file.js', 'node --test scripts/preflight/test.js',
     'node _test_runner.js', 'node _test_runner.js --watch',
-    'node scripts/preflight.js',
+    'node scripts/preflight/index.js',
     'clasp status', 'clasp versions', 'clasp deployments',
     'clasp status --json', 'clasp versions --json',
     'clasp logs --json'
