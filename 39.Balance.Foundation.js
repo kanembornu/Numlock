@@ -105,6 +105,9 @@ function executeAccountsPayableAccountMigration_(runtime) {
 }
 
 function runAccountsPayableAccountMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -628,23 +631,35 @@ function balanceFoundationRowsFromValues(values) {
 }
 
 function balanceFoundationReplaceSheetValues(sheet, values) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   sheet.getDataRange().clearContent();
   sheet.getRange(1, 1, values.length, values[0].length).setValues(values);
 }
 
 function balanceFoundationExpandSheetColumns(sheet, targetColumns) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var currentColumns = sheet.getMaxColumns();
   if (currentColumns > targetColumns) throw new Error("Unexpected physical sheet width before migration write");
   if (currentColumns < targetColumns) sheet.insertColumnsAfter(currentColumns, targetColumns - currentColumns);
 }
 
 function balanceFoundationWriteMigrationCandidate(sheet, values, afterStructure) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   balanceFoundationExpandSheetColumns(sheet, values[0].length);
   if (afterStructure) afterStructure();
   balanceFoundationReplaceSheetValues(sheet, values);
 }
 
 function balanceFoundationRestoreGridDimensions(sheet, dimensions) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var currentColumns = sheet.getMaxColumns(), currentRows = sheet.getMaxRows();
   if (currentColumns > dimensions.maxColumns) {
     sheet.deleteColumns(dimensions.maxColumns + 1, currentColumns - dimensions.maxColumns);
@@ -822,6 +837,9 @@ function validateBalanceFoundationSchemaMigrationAcceptance(original, candidate,
 }
 
 function rollbackBalanceFoundationSchemaMigration(state, flush) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var failures = [];
   [{ sheet: state.accountsSheet, snapshot: state.original.accounts, name: "Accounts" },
     { sheet: state.openingSheet, snapshot: state.original.opening, name: "FinanceOpeningBalances" }]
@@ -850,6 +868,9 @@ function balanceFoundationMigrationFailure(originalError, rollbackError) {
 }
 
 function executeBalanceFoundationSchemaMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ss = runtime.spreadsheet;
   var accountsSheet = ss.getSheetByName(BALANCE_FOUNDATION_SCHEMA_MIGRATION.ACCOUNTS_SHEET);
   var openingSheet = ss.getSheetByName(FINANCE_OPENING_BALANCE_POLICY.SHEET);
@@ -986,6 +1007,9 @@ function balanceFoundationOpeningResidualIsBlank(sheet) {
 }
 
 function executeBalanceFoundationFinanceOpeningBalancesWidthRecoveryWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ss = runtime.spreadsheet;
   var openingSheet = ss && ss.getSheetByName(FINANCE_OPENING_BALANCE_POLICY.SHEET);
   var openingValues = balanceFoundationSheetSnapshot(openingSheet);
@@ -1037,6 +1061,9 @@ function executeBalanceFoundationFinanceOpeningBalancesWidthRecoveryWithRuntime(
 }
 
 function runBalanceFoundationFinanceOpeningBalancesWidthRecoveryWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
   if (!spreadsheet) return { status: "REFUSED", reason: "CANONICAL_STORAGE_UNAVAILABLE", writeCount: 0 };
   return executeBalanceFoundationFinanceOpeningBalancesWidthRecoveryWithRuntime({
@@ -1050,6 +1077,9 @@ function runBalanceFoundationFinanceOpeningBalancesWidthRecoveryWithRuntime(runt
 }
 
 function runBalanceFoundationFinanceOpeningBalancesWidthRecovery() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -1065,6 +1095,9 @@ function runBalanceFoundationFinanceOpeningBalancesWidthRecovery() {
 }
 
 function executeBalanceFoundationPartialAccountsRecoveryWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ss = runtime.spreadsheet;
   var accountsSheet = ss.getSheetByName(BALANCE_FOUNDATION_SCHEMA_MIGRATION.ACCOUNTS_SHEET);
   var openingSheet = ss.getSheetByName(FINANCE_OPENING_BALANCE_POLICY.SHEET);
@@ -1091,6 +1124,9 @@ function executeBalanceFoundationPartialAccountsRecoveryWithRuntime(runtime) {
 }
 
 function runBalanceFoundationPartialAccountsRecoveryWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
   if (!spreadsheet) return { status: "REFUSED", reason: "CANONICAL_STORAGE_UNAVAILABLE", writeCount: 0 };
   return executeBalanceFoundationPartialAccountsRecoveryWithRuntime({
@@ -1099,6 +1135,9 @@ function runBalanceFoundationPartialAccountsRecoveryWithRuntime(runtime) {
 }
 
 function runBalanceFoundationPartialAccountsRecovery() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -1114,6 +1153,9 @@ function runBalanceFoundationPartialAccountsRecovery() {
 }
 
 function runBalanceFoundationSchemaMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var spreadsheet = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
   if (!spreadsheet) return { status: "REFUSED", reason: "CANONICAL_STORAGE_UNAVAILABLE", writeCount: 0 };
   return executeBalanceFoundationSchemaMigrationWithRuntime({
@@ -1122,6 +1164,9 @@ function runBalanceFoundationSchemaMigrationWithRuntime(runtime) {
 }
 
 function runBalanceFoundationSchemaMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -1185,6 +1230,9 @@ function balanceFoundationResizeDisposableSheet(sheet, rowCount, columnCount) {
 }
 
 function balanceFoundationCreateDisposableLegacySpreadsheetWithRuntime(name, runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var fixture = balanceFoundationDisposableLegacyValues();
   var spreadsheet = runtime.spreadsheetApp.create(name, 1000,
     BALANCE_FOUNDATION_SCHEMA_MIGRATION.ACCOUNTS_LEGACY_HEADERS.length);
@@ -1211,6 +1259,9 @@ function balanceFoundationRuntimeProofRequire(condition, message) {
 }
 
 function runBalanceFoundationDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var disposableIds = [], result = null, failure = null, cleanup = "DELETED";
   try {
     var migratedId = balanceFoundationCreateDisposableLegacySpreadsheet(
@@ -1990,6 +2041,9 @@ function buildInventoryConversionSchemaMigrationPlan(state) {
 }
 
 function inventoryConversionWriteExactHeader(sheet, headers) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var difference = headers.length - sheet.getMaxColumns();
   if (difference > 0) sheet.insertColumnsAfter(sheet.getMaxColumns(), difference);
   if (difference < 0 && headers.length === INVENTORY_CONVERSION_SCHEMA_MIGRATION.LEGACY_HEADERS.length) {
@@ -2007,6 +2061,9 @@ function validateInventoryConversionSchemaMigrationAcceptance(before, after) {
 }
 
 function executeInventoryConversionSchemaMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var before = readInventoryConversionSchemaMigrationState(runtime.spreadsheet);
   var plan = buildInventoryConversionSchemaMigrationPlan(before);
@@ -2038,6 +2095,9 @@ function executeInventoryConversionSchemaMigrationWithRuntime(runtime) {
 }
 
 function executeInventoryConversionSchemaRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   if (!record || record.migrationId !== INVENTORY_CONVERSION_SCHEMA_MIGRATION.MIGRATION_ID ||
       record.version !== INVENTORY_CONVERSION_SCHEMA_MIGRATION.VERSION || !record.preState || !record.acceptedPostState ||
@@ -2059,6 +2119,9 @@ function executeInventoryConversionSchemaRecoveryWithRuntime(runtime, record) {
 }
 
 function runInventoryConversionSchemaMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -2073,6 +2136,9 @@ function runInventoryConversionSchemaMigration() {
 }
 
 function runInventoryConversionSchemaRecovery(record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -2087,6 +2153,9 @@ function runInventoryConversionSchemaRecovery(record) {
 }
 
 function inventoryConversionDisposableCreateFixture(runtime, canonicalId, owned, label, sourceState, scenario) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var token = runtime.createToken(), name = INVENTORY_SCHEMA_RUNTIME.DISPOSABLE_NAME_PREFIX + "Conversion " + label + " " + token;
   var spreadsheet = runtime.createSpreadsheet(name, 1000, INVENTORY_CONVERSION_SCHEMA_MIGRATION.LEGACY_HEADERS.length);
   var ownership = { token: token, spreadsheetId: String(spreadsheet.getId()), spreadsheetName: name };
@@ -2124,6 +2193,9 @@ function inventoryConversionDisposableContext(runtime, ownership) {
 }
 
 function executeInventoryConversionDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], failure = null, cleanupFailures = [], result = null, productionBefore = null;
   try {
     var canonical = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
@@ -2307,6 +2379,9 @@ function executeInventoryConversionDisposableRuntimeProofWithRuntime(runtime) {
 }
 
 function runInventoryConversionDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = executeInventoryConversionDisposableRuntimeProofWithRuntime({
     storage: { openById: function(id) { return SpreadsheetApp.openById(id); } },
     createToken: function() { return new Date().getTime() + "-" + Utilities.getUuid(); },
@@ -2482,6 +2557,9 @@ function validateInventorySchemaMigrationAcceptance(before, after, targetItems) 
 }
 
 function inventoryMigrationRestoreSheet(sheet, snapshot) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   balanceFoundationRestoreGridDimensions(sheet, snapshot);
   sheet.getDataRange().clearContent();
   if (snapshot.values.length) sheet.getRange(1, 1, snapshot.values.length, snapshot.values[0].length).setValues(snapshot.values);
@@ -2493,6 +2571,9 @@ function inventoryMigrationRestoreSheet(sheet, snapshot) {
 }
 
 function executeInventorySchemaRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var expectedOwned = [INVENTORY_SCHEMA_MIGRATION.ITEMS_SHEET, INVENTORY_SCHEMA_MIGRATION.CONVERSIONS_SHEET,
     INVENTORY_SCHEMA_MIGRATION.LEDGER_SHEET];
@@ -2527,6 +2608,9 @@ function executeInventorySchemaRecoveryWithRuntime(runtime, record) {
 }
 
 function executeInventorySchemaMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var before = readInventorySchemaMigrationState(runtime.spreadsheet);
   var plan = buildInventorySchemaMigrationPlan(before, runtime.timestamp);
@@ -2569,6 +2653,9 @@ function inventoryDisposableRuntimeProofRequire(condition, message) {
 }
 
 function inventoryDisposableCreateFixture(runtime, canonicalId, owned, label, sourceState, mutate) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var token = runtime.createToken(), name = INVENTORY_SCHEMA_RUNTIME.DISPOSABLE_NAME_PREFIX + label + " " + token;
   var spreadsheet = runtime.createSpreadsheet(name, 1000, INVENTORY_SCHEMA_MIGRATION.ACCOUNTS_HEADERS.length);
   var ownership = { token: token, spreadsheetId: String(spreadsheet.getId()), spreadsheetName: name };
@@ -2603,6 +2690,9 @@ function inventoryDisposableAppendValues(sheet, values) {
 }
 
 function executeInventoryDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], failure = null, cleanupFailures = [], result = null, productionBefore = null;
   try {
     var canonical = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
@@ -2719,10 +2809,16 @@ function executeInventoryDisposableRuntimeProofWithRuntime(runtime) {
 }
 
 function runInventoryDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   return runInventoryConversionDisposableRuntimeProof();
 }
 
 function runInventorySchemaMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -2737,6 +2833,9 @@ function runInventorySchemaMigration() {
 }
 
 function runInventorySchemaRecovery(migrationRecord) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;

@@ -145,6 +145,8 @@ function buildTransactionsPageResult(rows, requestedPage, pageSize) {
 }
 
 function getTransactionsPeriodRows(range) {
+  // Cached DTOs cannot attest current Purchase history or repair metadata.
+  var purchases = readPurchaseEventTransactionRows_(requireNumlockProductionSpreadsheet());
   var cache = CacheService.getScriptCache();
   var prefix = ["transactions-period-v3", getDashboardCacheRevision(), range.startDate, range.endDate].join("|");
   var metaKey = prefix + "|meta";
@@ -179,7 +181,6 @@ function getTransactionsPeriodRows(range) {
   // Expense/Purchase/Inventory sources are unchanged.
   var salesResult = buildTransactionSalesReadRows_(ss, range, lifecycleSales);
   var salesRecognition = salesRecognitionReadSummary_(salesResult.projection);
-  var purchases = readPurchaseEventTransactionRows_(ss);
   periodRows = periodRows.concat(salesResult.rows,
     purchases.concat(readInventoryReceiptTransactionRows_(ss, purchases)).filter(function(row) {
       return row.date >= range.startDate && row.date <= range.endDate;

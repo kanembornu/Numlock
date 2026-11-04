@@ -285,3 +285,319 @@ function createOperationalExpenseWithRepository(payload, authority, repository) 
   repository.createExpense(expense);
   return { expense: expense, writeCount: 1 };
 }
+
+// Owner-authorized prospective configuration only. No supplier/item allocation,
+// inventory conversion, historical inference, policy registration, or writes.
+var PURCHASE_BINDING_M3_SYRUPS = Object.freeze([
+  ['OSR07', 'Blue Citrus'], ['OSR08', 'Caramel'], ['OSR09', 'Hazelnut'],
+  ['OSR10', 'Lychee'], ['OSR11', 'Mango'], ['OSR12', 'Mojito'],
+  ['OSR13', 'Passion'], ['OSR14', 'Peach'], ['OSR15', 'Peppermint'],
+  ['OSR17', 'Vanilla'], ['', 'Cranberry'], ['', 'Kiwi'], ['', 'Apple']
+].map(function(r) { return Object.freeze({ expenseItemId: r[0], flavor: r[1] }); }));
+
+function purchaseBindingM3Fail_(code) { throw new Error(code); }
+
+function purchaseBindingM3Date_(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+      !isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) {
+    purchaseBindingM3Fail_('M3_DATE_INVALID');
+  }
+  return value;
+}
+
+// IDs must already exist in their canonical masters. If Nocturn is absent,
+// createSupplierWithRuntime_ is the existing canonical allocation path;
+// this planner never calls it, guesses an ID, or falls back to a name lookup.
+function buildPurchaseBindingM3Config_(request, suppliers, items) {
+  var p = request || {}, allocated = p.allocatedExpenseIDs || {};
+  var config = { version: 'PURCHASE-BINDING-M3-V1', effectiveFrom: p.effectiveFrom,
+    evidenceRef: p.evidenceRef, rows: PURCHASE_BINDING_M3_SYRUPS.map(function(r) {
+      var id = r.expenseItemId || allocated[r.flavor];
+      if (typeof id !== 'string' || !id.trim()) purchaseBindingM3Fail_('M3_ITEM_ALLOCATION_REQUIRED');
+      return { expenseItemId: id, flavor: r.flavor, SupplierID: p.supplierID,
+        PurchaseUOM: r.flavor === 'Caramel' ? 'bottle' : 'pack',
+        PackageMl: r.flavor === 'Caramel' ? 750 : 100, IsActive: true };
+    }) };
+  validatePurchaseBindingM3Config_(config, suppliers, items);
+  return config;
+}
+
+function validatePurchaseBindingM3Config_(config, suppliers, items) {
+  if (!config || config.version !== 'PURCHASE-BINDING-M3-V1' ||
+      typeof config.evidenceRef !== 'string' || !config.evidenceRef.trim() ||
+      !Array.isArray(config.rows) || [10, 13].indexOf(config.rows.length) === -1) purchaseBindingM3Fail_('M3_CONFIG_INVALID');
+  if (purchaseBindingM3Date_(config.effectiveFrom) < '2026-10-16') purchaseBindingM3Fail_('M3_EFFECTIVE_DATE_INVALID');
+  var seen = Object.create(null), flavors = Object.create(null), supplierID = null;
+  config.rows.forEach(function(row) {
+    if (!row || typeof row.expenseItemId !== 'string' || !row.expenseItemId ||
+        row.expenseItemId.trim() !== row.expenseItemId || row.expenseItemId === 'OSR16' ||
+        row.IsActive !== true) purchaseBindingM3Fail_('M3_BINDING_INVALID');
+    if (seen[row.expenseItemId] || flavors[row.flavor]) purchaseBindingM3Fail_('M3_BINDING_DUPLICATE');
+    seen[row.expenseItemId] = true; flavors[row.flavor] = true;
+    var spec = PURCHASE_BINDING_M3_SYRUPS.filter(function(r) { return r.flavor === row.flavor; });
+    if (spec.length !== 1 || spec[0].expenseItemId && spec[0].expenseItemId !== row.expenseItemId) purchaseBindingM3Fail_('M3_ITEM_AUTHORITY');
+    var caramel = row.flavor === 'Caramel';
+    if (row.PurchaseUOM !== (caramel ? 'bottle' : 'pack') || row.PackageMl !== (caramel ? 750 : 100)) purchaseBindingM3Fail_('M3_PACKAGE_AUTHORITY');
+    if (typeof row.SupplierID !== 'string' || !row.SupplierID || row.SupplierID.trim() !== row.SupplierID ||
+        supplierID !== null && row.SupplierID !== supplierID) purchaseBindingM3Fail_('M3_SUPPLIER_AUTHORITY');
+    supplierID = row.SupplierID;
+    var supplier = (suppliers || []).filter(function(r) { return r.SupplierID === supplierID; });
+    if (supplier.length !== 1 || !isCanonicalActive(supplier[0].IsActive) || supplier[0].Name !== 'Nocturn') purchaseBindingM3Fail_('M3_SUPPLIER_AUTHORITY');
+    var item = (items || []).filter(function(r) { return r.ID_Ops === row.expenseItemId; });
+    if (item.length !== 1 || !isCanonicalActive(item[0].IsActive) || item[0].Item !== 'Sirup ' + row.flavor) purchaseBindingM3Fail_('M3_ITEM_AUTHORITY');
+  });
+  PURCHASE_BINDING_M3_SYRUPS.forEach(function(r) {
+    if (r.expenseItemId && !seen[r.expenseItemId]) purchaseBindingM3Fail_('M3_BINDING_MISSING');
+  });
+  return config;
+}
+
+function validatePurchaseBindingM3Intent_(normalized, config, suppliers, items) {
+  if (config === null || config === undefined) return null;
+  // Even malformed prospective config refuses new intents; never falls back.
+  validatePurchaseBindingM3Config_(config, suppliers, items);
+  var effDate = purchaseBindingM3Date_(normalized.input.ExpenseDate);
+  if (effDate < config.effectiveFrom) {
+    var governed = config.rows.filter(function(r) { return r.expenseItemId === normalized.expenseItemId; })[0];
+    if (governed) purchaseBindingM3Fail_('M3_POLICY_DATE_INVALID');
+    return null;
+  }
+  var row = config.rows.filter(function(r) { return r.expenseItemId === normalized.expenseItemId; })[0];
+  if (!row) return null; // OSR16 and other existing purchase identities retain V1.
+  if (normalized.supplierID !== row.SupplierID) purchaseBindingM3Fail_('M3_SUPPLIER_MISMATCH');
+  if (normalized.input.PurchaseUOM !== row.PurchaseUOM) purchaseBindingM3Fail_('M3_UOM_MISMATCH');
+  return row; // PackageMl is configuration metadata, never a conversion factor.
+}
+
+// M3 COMBINED ACTIVATION provider supply (owner-authorized; SAME date as 46).
+// Unfilled placeholder keeps the global null (V1 path, zero behavior change).
+// Guard is shape-based (regex), NOT a literal comparison, so date substitution
+// cannot neutralize it. Rows are literals against verified masters (Gate 4
+// 13/13): Nocturn SUP-20261016-BRYVN8YPS72M, OSR07-OSR15 + OSR17 + OSR22/23/24.
+// Per-intent preflight (95:386-391) revalidates every row against live masters.
+// Release gate: valid only if production activation succeeds on 2026-10-19 Asia/Jakarta.
+var M3_PROVIDER_EFFECTIVE_FROM_ = '2026-10-19';
+var PURCHASE_BINDING_M3_CONFIG = /^\d{4}-\d{2}-\d{2}$/.test(M3_PROVIDER_EFFECTIVE_FROM_) ? Object.freeze({
+  version: 'PURCHASE-BINDING-M3-V1', effectiveFrom: M3_PROVIDER_EFFECTIVE_FROM_,
+  evidenceRef: 'docs/evidence/finance-phase-11v12/SPEC-M3-AMENDMENT.md',
+  rows: Object.freeze([
+    Object.freeze({ expenseItemId: 'OSR07', flavor: 'Blue Citrus', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR08', flavor: 'Caramel', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'bottle', PackageMl: 750, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR09', flavor: 'Hazelnut', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR10', flavor: 'Lychee', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR11', flavor: 'Mango', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR12', flavor: 'Mojito', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR13', flavor: 'Passion', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR14', flavor: 'Peach', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR15', flavor: 'Peppermint', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR17', flavor: 'Vanilla', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR22', flavor: 'Cranberry', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR23', flavor: 'Kiwi', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true }),
+    Object.freeze({ expenseItemId: 'OSR24', flavor: 'Apple', SupplierID: 'SUP-20261016-BRYVN8YPS72M', PurchaseUOM: 'pack', PackageMl: 100, IsActive: true })
+  ]) }) : null;
+function readPurchaseBindingM3Config_() { return PURCHASE_BINDING_M3_CONFIG; }
+
+// Fail-closed activation-date authority: Policy V2 (46) and this provider are
+// ONE owner-substituted authoritative activation date; a divergent hand edit
+// can never install mismatched policy/provider windows. Load-time only, zero
+// business writes. typeof-skip: GAS loads 46 before 95 alphabetically; an
+// isolated 95-only load has no policy-side constant and skips the check.
+if (typeof M3_ACTIVATION_EFFECTIVE_FROM_ !== 'undefined' &&
+    M3_ACTIVATION_EFFECTIVE_FROM_ !== M3_PROVIDER_EFFECTIVE_FROM_) {
+  purchaseBindingM3Fail_('M3_ACTIVATION_DATE_DISAGREEMENT');
+}
+
+// Owner-authorized local config provider (SPEC-M3-AMENDMENT.md OP-4). Builds
+// and validates a complete prospective config from caller-supplied verified
+// canonical IDs without mutating the global: the global stays null (binding
+// inactive) until a separately authorized activation supply. Never allocates
+// IDs, never reads production, never falls back to name lookup. Approved
+// reservation: Cranberry→OSR22, Kiwi→OSR23, Apple→OSR24 (pass via
+// allocatedExpenseIDs after canonical master allocation).
+function providePurchaseBindingM3Config_(request, suppliers, items) {
+  var config = buildPurchaseBindingM3Config_(request, suppliers, items);
+  return Object.freeze({ version: config.version, effectiveFrom: config.effectiveFrom,
+    evidenceRef: config.evidenceRef, rows: Object.freeze(config.rows.slice()) });
+}
+
+// Called only for NEW Save/correction intent, after exact RequestKey replay.
+function preflightPurchaseBindingM3_(normalized, runtime, items) {
+  var config = runtime.readPurchaseBindingM3 ? runtime.readPurchaseBindingM3() : null;
+  if (config === null) return null;
+  var suppliers = readCanonicalTable(runtime.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS);
+  return validatePurchaseBindingM3Intent_(normalized, config, suppliers, items);
+}
+
+// =============================================================================
+// UNIVERSAL PURCHASE AUTHORITY (Local Foundation)
+// Owner-authorized binding for all 27 Purchase Items.
+// Does not activate, deploy, or replace M3 V1/V2.
+// =============================================================================
+
+var PURCHASE_AUTHORITY_CODES = Object.freeze({
+  BINDING_CONFIG_MISSING: 'BINDING_CONFIG_MISSING',
+  BINDING_ROW_INACTIVE: 'BINDING_ROW_INACTIVE',
+  BINDING_ROW_NOT_FOUND: 'BINDING_ROW_NOT_FOUND',
+  SUPPLIER_NOT_FOUND: 'SUPPLIER_NOT_FOUND',
+  SUPPLIER_INACTIVE: 'SUPPLIER_INACTIVE',
+  INVALID_PACKAGE_CAPACITY: 'INVALID_PACKAGE_CAPACITY',
+  BINDING_EXPIRED: 'BINDING_EXPIRED',
+  BINDING_FUTURE_EFFECTIVE: 'BINDING_FUTURE_EFFECTIVE',
+  CONFLICTING_BINDING: 'CONFLICTING_BINDING',
+  DUPLICATE_BINDING_ROW: 'DUPLICATE_BINDING_ROW'
+});
+
+function purchaseAuthorityFail_(code, field) {
+  var error = new Error(code);
+  error.code = code;
+  error.field = field || null;
+  throw error;
+}
+
+function purchaseAuthorityDate_(value) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value) ||
+      !isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value) {
+    purchaseAuthorityFail_('INVALID_DATE', 'date');
+  }
+  return value;
+}
+
+function purchaseAuthorityIsActive_(value) {
+  return value === true || value === 'true' || value === 'TRUE' || value === 1 || value === '1';
+}
+
+function purchaseAuthorityIsExpired_(row, date) {
+  if (row.effectiveTo) {
+    var end = purchaseAuthorityDate_(row.effectiveTo);
+    return date > end;
+  }
+  return false;
+}
+
+function purchaseAuthorityIsFuture_(row, date) {
+  if (row.effectiveFrom) {
+    var start = purchaseAuthorityDate_(row.effectiveFrom);
+    return date < start;
+  }
+  return false;
+}
+
+function validatePurchaseAuthorityConfig_(config) {
+  if (!config || typeof config !== 'object') purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_CONFIG_MISSING, 'config');
+  if (config.version !== 'PURCHASE-SUPPLIER-BINDING-V1') purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_CONFIG_MISSING, 'version');
+  if (!config.evidenceRef || typeof config.evidenceRef !== 'string' || !config.evidenceRef.trim()) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_CONFIG_MISSING, 'evidenceRef');
+  if (!Array.isArray(config.rows) || config.rows.length !== 27) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_CONFIG_MISSING, 'rows');
+  var seen = Object.create(null);
+  config.rows.forEach(function(row) {
+    if (!row || typeof row.expenseItemId !== 'string' || !row.expenseItemId.trim()) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'expenseItemId');
+    var key = row.expenseItemId.trim();
+    if (seen[key]) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.DUPLICATE_BINDING_ROW, key);
+    seen[key] = true;
+    if (!row.supplierId || typeof row.supplierId !== 'string' || !row.supplierId.trim()) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'supplierId');
+    if (!row.purchaseUOM || typeof row.purchaseUOM !== 'string' || !row.purchaseUOM.trim()) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'purchaseUOM');
+    var cap = Number(row.packageCapacity);
+    if (!isFinite(cap) || cap <= 0) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.INVALID_PACKAGE_CAPACITY, 'packageCapacity');
+    if (!row.usageUOM || typeof row.usageUOM !== 'string' || !row.usageUOM.trim()) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'usageUOM');
+    if (row.inventoryItemId !== null && row.inventoryItemId !== undefined && (typeof row.inventoryItemId !== 'string' || !row.inventoryItemId.trim())) {
+      purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'inventoryItemId');
+    }
+    if (row.inventoryItemId !== null && row.inventoryItemId !== undefined && (!row.packageIdentity || !row.packageIdentity.trim())) {
+      purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'packageIdentity');
+    }
+    if (row.inventoryItemId === null || row.inventoryItemId === undefined) {
+      if (row.packageIdentity !== null && row.packageIdentity !== undefined && row.packageIdentity !== '') {
+        purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, 'packageIdentity must be null when inventoryItemId is null');
+      }
+    }
+    if (!purchaseAuthorityIsActive_(row.isActive)) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_INACTIVE, 'isActive');
+    if (row.effectiveFrom) purchaseAuthorityDate_(row.effectiveFrom);
+    if (row.effectiveTo) purchaseAuthorityDate_(row.effectiveTo);
+  });
+  return config;
+}
+
+// Immutable, versioned binding configuration for all 27 owner-approved Purchase Items.
+// Source of truth: docs/evidence/purchase-business-data-matrix-20261019.md
+// Production SupplierIDs verified 2026-10-19.
+var PURCHASE_SUPPLIER_BINDING_V1 = Object.freeze({
+  version: 'PURCHASE-SUPPLIER-BINDING-V1',
+  effectiveFrom: '2026-10-19',
+  evidenceRef: 'docs/evidence/purchase-business-data-matrix-20261019.md',
+  rows: Object.freeze([
+    // DIRECT_HPP_COMPONENT (10)
+    Object.freeze({ expenseItemId: 'OSK01', supplierId: 'SUP-20261019-4F990F51DDBE', purchaseUOM: 'gallon', packageCapacity: 19000, usageUOM: 'ml', inventoryItemId: 'ING-011', packageIdentity: 'ING-011|SUP-20261019-4F990F51DDBE|Air|NO-SKU|19 L gallon|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSK03', supplierId: 'SUP-20261019-43167539196F', purchaseUOM: 'bag', packageCapacity: 1000, usageUOM: 'gr', inventoryItemId: 'ING-020', packageIdentity: 'ING-020|SUP-20261019-43167539196F|Gula|NO-SKU|1 kg bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSK04', supplierId: 'SUP-20261019-FD04141B6410', purchaseUOM: 'pack', packageCapacity: 10000, usageUOM: 'gr', inventoryItemId: 'ING-021', packageIdentity: 'ING-021|SUP-20261019-FD04141B6410|Es|NO-SKU|10 kg pack|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR02', supplierId: 'SUP-20261019-03BE1BA08D9D', purchaseUOM: 'bag', packageCapacity: 1000, usageUOM: 'gr', inventoryItemId: 'ING-006', packageIdentity: 'ING-006|SUP-20261019-03BE1BA08D9D|Bean Robusta|NO-SKU|1 kg bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR04', supplierId: 'SUP-20261019-EA941F1BE483', purchaseUOM: 'bag', packageCapacity: 1000, usageUOM: 'gr', inventoryItemId: 'ING-018', packageIdentity: 'ING-018|SUP-20261019-EA941F1BE483|Lemon|NO-SKU|1 kg bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR05', supplierId: 'SUP-20261019-03BE1BA08D9D', purchaseUOM: 'bag', packageCapacity: 500, usageUOM: 'gr', inventoryItemId: 'ING-015', packageIdentity: 'ING-015|SUP-20261019-03BE1BA08D9D|Powder Choco|NO-SKU|500 gr bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR06', supplierId: 'SUP-20261019-03BE1BA08D9D', purchaseUOM: 'bag', packageCapacity: 100, usageUOM: 'gr', inventoryItemId: 'ING-016', packageIdentity: 'ING-016|SUP-20261019-03BE1BA08D9D|Powder Matcha|NO-SKU|100 gr bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR18', supplierId: 'SUP-20261019-43167539196F', purchaseUOM: 'carton', packageCapacity: 6000, usageUOM: 'ml', inventoryItemId: 'ING-019', packageIdentity: 'ING-019|SUP-20261019-43167539196F|Soda|NO-SKU|24x250ml carton|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR19', supplierId: 'SUP-20261019-43167539196F', purchaseUOM: 'carton', packageCapacity: 12000, usageUOM: 'ml', inventoryItemId: 'ING-009', packageIdentity: 'ING-009|SUP-20261019-43167539196F|UHT|NO-SKU|12x1L carton|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR20', supplierId: 'SUP-20261019-43167539196F', purchaseUOM: 'carton', packageCapacity: 11760, usageUOM: 'gr', inventoryItemId: 'ING-010', packageIdentity: 'ING-010|SUP-20261019-43167539196F|SKM|NO-SKU|24x490gr carton|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    // HPP_COST_POOL — single governing package per item (3)
+    Object.freeze({ expenseItemId: 'OSR01', supplierId: 'SUP-20261019-03BE1BA08D9D', purchaseUOM: 'bag', packageCapacity: 1000, usageUOM: 'gr', inventoryItemId: 'ING-004', packageIdentity: 'ING-004|SUP-20261019-03BE1BA08D9D|Bean Ar 100%|NO-SKU|1 kg bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR03', supplierId: 'SUP-20261019-43167539196F', purchaseUOM: 'bag', packageCapacity: 880, usageUOM: 'gr', inventoryItemId: 'ING-007', packageIdentity: 'ING-007|SUP-20261019-43167539196F|Kopi Badau|NO-SKU|880 gr bag|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR21', supplierId: 'SUP-20261019-43167539196F', purchaseUOM: 'pack', packageCapacity: 1400, usageUOM: 'gr', inventoryItemId: 'ING-012', packageIdentity: 'ING-012|SUP-20261019-43167539196F|Teh Bendera|NO-SKU|1400 gr pack|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    // M3 SYRUPS — all bottle, distinct packageIdentity per flavor (13)
+    Object.freeze({ expenseItemId: 'OSR07', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Blue Citrus|NO-SKU|100 ml syrup bottle|V02', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR08', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 750, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Caramel|NO-SKU|750 ml syrup bottle|V01', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR09', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Hazelnut|NO-SKU|100 ml syrup bottle|V03', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR10', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Lychee|NO-SKU|100 ml syrup bottle|V04', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR11', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Mango|NO-SKU|100 ml syrup bottle|V05', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR12', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Mojito|NO-SKU|100 ml syrup bottle|V06', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR13', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Passion|NO-SKU|100 ml syrup bottle|V07', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR14', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Peach|NO-SKU|100 ml syrup bottle|V08', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR15', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Peppermint|NO-SKU|100 ml syrup bottle|V09', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR17', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Vanilla|NO-SKU|100 ml syrup bottle|V10', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR22', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Cranberry|NO-SKU|100 ml syrup bottle|V11', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR23', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Kiwi|NO-SKU|100 ml syrup bottle|V12', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    Object.freeze({ expenseItemId: 'OSR24', supplierId: 'SUP-20261016-BRYVN8YPS72M', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: 'ING-017', packageIdentity: 'ING-017|SUP-20261016-BRYVN8YPS72M|Sirup Apple|NO-SKU|100 ml syrup bottle|V13', isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null }),
+    // OSR16 — no InventoryItem, no conversion, no packageIdentity (1)
+    Object.freeze({ expenseItemId: 'OSR16', supplierId: 'SUP-20261019-03BE1BA08D9D', purchaseUOM: 'bottle', packageCapacity: 100, usageUOM: 'ml', inventoryItemId: null, packageIdentity: null, isActive: true, effectiveFrom: '2026-10-19', effectiveTo: null })
+  ])
+});
+
+validatePurchaseAuthorityConfig_(PURCHASE_SUPPLIER_BINDING_V1);
+
+function readPurchaseSupplierBindingV1_() { return PURCHASE_SUPPLIER_BINDING_V1; }
+
+// Pure resolver: ExpenseItemID + date + supplier master + binding config → authority DTO.
+// Does not read production, does not mutate, does not require Inventory conversion when inventoryItemId is null.
+function resolvePurchaseAuthority_(expenseItemId, transactionDate, bindingConfig, suppliers) {
+  var config = validatePurchaseAuthorityConfig_(bindingConfig);
+  var date = purchaseAuthorityDate_(transactionDate);
+  
+  if (purchaseAuthorityDate_(config.effectiveFrom) > date) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_FUTURE_EFFECTIVE, 'effectiveFrom');
+  
+  var row = null;
+  config.rows.forEach(function(r) {
+    if (r.expenseItemId === expenseItemId) {
+      if (row) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.CONFLICTING_BINDING, expenseItemId);
+      row = r;
+    }
+  });
+  if (!row) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_NOT_FOUND, expenseItemId);
+  if (!purchaseAuthorityIsActive_(row.isActive)) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_ROW_INACTIVE, expenseItemId);
+  if (purchaseAuthorityIsFuture_(row, date)) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_FUTURE_EFFECTIVE, 'effectiveFrom');
+  if (purchaseAuthorityIsExpired_(row, date)) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.BINDING_EXPIRED, 'effectiveTo');
+  
+  var supplierMap = transactionOperationalMap_(suppliers, 'SupplierID');
+  var supplier = supplierMap[row.supplierId];
+  if (!supplier) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.SUPPLIER_NOT_FOUND, row.supplierId);
+  if (!masterSelectionEligible(supplier.IsActive)) purchaseAuthorityFail_(PURCHASE_AUTHORITY_CODES.SUPPLIER_INACTIVE, row.supplierId);
+  
+  return {
+    expenseItemId: row.expenseItemId,
+    supplierId: row.supplierId,
+    supplierSource: supplier.Name,
+    purchaseUOM: row.purchaseUOM,
+    packageCapacity: Number(row.packageCapacity),
+    usageUOM: row.usageUOM,
+    packageIdentity: row.packageIdentity,
+    inventoryIdentity: row.inventoryItemId == null ? null : row.inventoryItemId,
+    authorityAsOfDate: date,
+    authorityVersion: config.version,
+    authorityRevision: 1
+  };
+}

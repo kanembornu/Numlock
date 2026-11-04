@@ -393,6 +393,8 @@
       getFinanceElement("assetsTabDepreciation").setAttribute("aria-selected", String(showDepreciation));
       getFinanceElement("assetsPanelRegister").hidden = showDepreciation;
       getFinanceElement("assetsPanelDepreciation").hidden = !showDepreciation;
+      getFinanceElement("financeAssetsPagination").hidden = showDepreciation;
+      getFinanceElement("financeDepreciationPagination").hidden = !showDepreciation;
     }
 
     function setFinanceDestination(destination)

@@ -14,11 +14,17 @@ var RECIPE_STANDARD_COST_CONTRACT = Object.freeze({
 });
 
 function runBootstrapRecipeStandardCost() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   return bootstrapRecipeStandardCostSheet(ss);
 }
 
 function bootstrapRecipeStandardCostSheet(ss) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -43,6 +49,9 @@ function bootstrapRecipeStandardCostSheet(ss) {
 }
 
 function applyRecipeStandardCost(proposals, ss) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;

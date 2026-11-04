@@ -37,6 +37,7 @@ var PURCHASE_RESOLUTION_POLICY = Object.freeze({ version: 'PURCHASE-RESOLUTIONS-
 
 // Construction is lazy: disabled dispatch never reads or writes the purchase store.
 function purchaseEventProductionRuntime_(ss, lock, expenses, timestamp, policies) {
+  ss = requireNumlockProductionSpreadsheet();
   if (policies === undefined) policies = { expenseEnabled: EXPENSE_PURCHASE_POLICY.enabled, purchaseEnabled: PURCHASE_EVENT_POLICY.enabled };
   return { environment: 'PRODUCTION', enabled: !!policies && policies.expenseEnabled === true && policies.purchaseEnabled === true,
     lock: lock, receipt: inventoryReceiptProductionRuntime_(ss, lock),
@@ -46,7 +47,7 @@ function purchaseEventProductionRuntime_(ss, lock, expenses, timestamp, policies
       var events = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers).map(function(row) {
         delete row.sourceRowIndex; return row;
       });
-      return { events: events, expenses: expenses,
+      return { events: events, expenses: readCanonicalTable(ss, 'ExpenseItems', ['ID_Ops', 'Item', 'IsActive']),
         items: readCanonicalTable(ss, 'InventoryItems', BALANCE_FOUNDATION_POLICY.INVENTORY_ITEM_HEADERS),
         conversions: readCanonicalTable(ss, 'InventoryUOMConversions', BALANCE_FOUNDATION_POLICY.INVENTORY_UOM_CONVERSION_HEADERS) };
     },
@@ -195,7 +196,62 @@ function normalizePurchaseEventRequest_(payload) {
   return normalizePurchaseEventRequestWithCompatibility_(payload, false);
 }
 
+function purchaseAuthoritySnapshot_(authority) {
+  return { AuthorityVersion: authority.authorityVersion, AuthorityRevision: authority.authorityRevision,
+    ExpenseItemID: authority.expenseItemId, SupplierID: authority.supplierId,
+    PurchaseUOM: authority.purchaseUOM, PackageIdentity: authority.packageIdentity,
+    PackageCapacity: authority.packageCapacity, UsageUOM: authority.usageUOM,
+    InventoryIdentity: authority.inventoryIdentity, AuthorityAsOfDate: authority.authorityAsOfDate };
+}
+
+// Stored evidence validation is pure: never consult current bindings or masters.
+function validatePurchaseAuthoritySnapshot_(s) {
+  var keys = ['AuthorityVersion','AuthorityRevision','ExpenseItemID','SupplierID','PurchaseUOM',
+    'PackageIdentity','PackageCapacity','UsageUOM','InventoryIdentity','AuthorityAsOfDate'];
+  if (!s || JSON.stringify(Object.keys(s)) !== JSON.stringify(keys) ||
+      s.AuthorityVersion !== 'PURCHASE-SUPPLIER-BINDING-V1' ||
+      !Number.isInteger(s.AuthorityRevision) || s.AuthorityRevision <= 0 ||
+      typeof s.PackageCapacity !== 'number' || !isFinite(s.PackageCapacity) || s.PackageCapacity <= 0) {
+    inventoryReceiptFail_('INVALID_AUTHORITY_SNAPSHOT');
+  }
+  ['ExpenseItemID','SupplierID','PurchaseUOM','UsageUOM'].forEach(function(k) {
+    if (typeof s[k] !== 'string' || !s[k] || s[k] !== s[k].trim()) inventoryReceiptFail_('INVALID_AUTHORITY_SNAPSHOT');
+  });
+  ['PackageIdentity','InventoryIdentity'].forEach(function(k) {
+    if (s[k] !== null && (typeof s[k] !== 'string' || !s[k] || s[k] !== s[k].trim())) inventoryReceiptFail_('INVALID_AUTHORITY_SNAPSHOT');
+  });
+  if ((s.PackageIdentity === null) !== (s.InventoryIdentity === null) ||
+      s.PurchaseUOM !== s.PurchaseUOM.toLowerCase() || s.UsageUOM !== s.UsageUOM.toLowerCase()) inventoryReceiptFail_('INVALID_AUTHORITY_SNAPSHOT');
+  purchaseAuthorityDate_(s.AuthorityAsOfDate);
+  return s;
+}
+
+function purchaseAuthorityEventPayload_(request, snapshot, supplierSource) {
+  validatePurchaseAuthoritySnapshot_(snapshot);
+  var input = Object.assign({}, request.input, { PurchaseUOM: snapshot.PurchaseUOM,
+    SupplierSource: supplierSource, PackageIdentity: snapshot.PackageIdentity || '' });
+  return { payloadVersion: 2, transactionType: 'EXPENSE', requestKey: request.requestKey,
+    expenseItemId: request.expenseItemId, input: input, normalizedRequest: request,
+    authoritySnapshot: snapshot };
+}
+
 function normalizePurchaseEventHistoryRequest_(payload) {
+  if (payload && Object.prototype.hasOwnProperty.call(payload, 'payloadVersion')) {
+    if (payload.payloadVersion !== 2 || JSON.stringify(Object.keys(payload)) !== JSON.stringify(
+        ['payloadVersion','transactionType','requestKey','expenseItemId','input','normalizedRequest','authoritySnapshot'])) inventoryReceiptFail_('INVALID_PURCHASE_PAYLOAD_VERSION');
+    var s = validatePurchaseAuthoritySnapshot_(payload.authoritySnapshot), r = payload.normalizedRequest;
+    var normalized = purchaseSingleCommitNormalize_({ transactionType: 'EXPENSE', requestKey: r && r.requestKey,
+      expenseItemId: r && r.expenseItemId, supplierID: r && r.supplierID, input: r && r.input });
+    if (JSON.stringify(r) !== JSON.stringify(normalized) || s.ExpenseItemID !== r.expenseItemId ||
+        s.AuthorityAsOfDate !== r.input.ExpenseDate || (r.supplierID && r.supplierID !== s.SupplierID) ||
+        r.input.PurchaseUOM !== s.PurchaseUOM ||
+        (r.input.PackageIdentity && r.input.PackageIdentity !== s.PackageIdentity)) inventoryReceiptFail_('PURCHASE_AUTHORITY_CONFLICT');
+    var legacy = normalizePurchaseEventRequestWithCompatibility_({ transactionType: payload.transactionType,
+      requestKey: payload.requestKey, expenseItemId: payload.expenseItemId, input: payload.input }, true);
+    var expected = purchaseAuthorityEventPayload_(r, s, legacy.input.SupplierSource);
+    if (JSON.stringify(payload) !== JSON.stringify(expected) || JSON.stringify(payload.input) !== JSON.stringify(legacy.input)) inventoryReceiptFail_('PURCHASE_AUTHORITY_CONFLICT');
+    return expected;
+  }
   return normalizePurchaseEventRequestWithCompatibility_(payload, true);
 }
 
@@ -257,57 +313,37 @@ function purchaseEventHistory_(rows) {
         !row.RequestKey || keys[row.RequestKey] || ids[row.EventID] || row.EventID !== 'PE-' + row.RequestKey ||
         row.RecoveryKey !== 'pe-receipt-' + row.RequestKey ||
         !isValidPurchaseEventLifecycleState_(row.Lifecycle, row.IsActive)) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-    // Canonical transaction purchase events (CANONICAL_TRANSACTION_PURCHASE) store a different NormalizedPayload schema.
-    // Skip purchase-event-specific validation for these rows.
-    var parsedPayload;
-    try { parsedPayload = JSON.parse(row.NormalizedPayload); } catch (e) { inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT'); }
-    if (parsedPayload.transactionType === 'CANONICAL_TRANSACTION_PURCHASE') {
-      // Canonical transactions: validate only cross-field consistency using row data directly
-      if (parsedPayload.requestKey !== row.RequestKey || parsedPayload.expenseItemId !== row.ExpenseID) {
-        inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-      }
-    } else {
-      // Regular purchase events: full normalization and validation
-      var request = normalizePurchaseEventHistoryRequest_(parsedPayload);
-      if (JSON.stringify(request) !== row.NormalizedPayload || request.requestKey !== row.RequestKey || request.expenseItemId !== row.ExpenseID ||
-          ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].some(function(k) { return request.input[k] !== row[k]; })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    var request = normalizePurchaseEventHistoryRequest_(JSON.parse(row.NormalizedPayload));
+    if (request.payloadVersion === 2 && (row.SupplierID !== request.authoritySnapshot.SupplierID || row.ReceiptPlan !== 'null')) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    if (JSON.stringify(request) !== row.NormalizedPayload || request.requestKey !== row.RequestKey || request.expenseItemId !== row.ExpenseID ||
+        ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].some(function(k) { return request.input[k] !== row[k]; })) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    // Pinned-route field equality: historical CostType/Relationship interpret
+    // under stored Version+Revision, never under the active pointer.
+    // Unknown Version/Revision fail closed under the single history code
+    // so existing readers keep one conflict contract.
+    var pinnedExpenses = [{ ID_Ops: row.ExpenseID, Item: String(row.BusinessLabel || row.ExpenseID), IsActive: true }];
+    var route = null;
+    try {
+      route = resolveExpensePurchasePolicyVersioned_(row.ExpenseID, pinnedExpenses, row.PolicyVersion, Number(row.PolicyRevision));
+    } catch (pinnedError) {
+      inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     }
-    var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === row.ExpenseID; })[0];
-    if (!route || !expensePolicyIsPurchase_(route) || row.PolicyVersion !== EXPENSE_PURCHASE_POLICY.version ||
-        row.PolicyRevision !== EXPENSE_PURCHASE_POLICY.revision || row.CostType !== route.CostType ||
+    if (!expensePolicyIsPurchase_(route) || row.CostType !== route.CostType ||
         row.PurchaseRelationship !== route.PurchaseRelationship || !inventoryReceiptText_(row.BusinessLabel) ||
         !inventoryReceiptText_(row.CreatedBy) || inventoryTimestampMillis(row.CreatedAt) === null) {
       inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     }
-    if (parsedPayload.transactionType === 'CANONICAL_TRANSACTION_PURCHASE') {
-      // Canonical transactions: validate attestation and plan using row data directly
-      var expectedAttestation = row.Attestation; // Already validated at write time
-      var plan = JSON.parse(row.ReceiptPlan);
-      if (plan) {
-        if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !plan.input || plan.input.ItemID !== route.inventoryItemIds[0] ||
-            row.AllocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' || !plan.conversionSnapshot) {
-          inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-        }
-      } else if (row.AllocationStatus !== (route.PurchaseRelationship.indexOf('HPP_COST_POOL') === 0 ?
-          'COST_POOL_ALLOCATION_UNDEFINED' : 'QUANTITY_PACKAGE_UNRESOLVED')) {
-        inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-      }
-    } else {
-      // Regular purchase events
-      var expectedAttestation = JSON.stringify({ attested: request.input.Attested === true, conversionEvidenceConfirmed: request.input.ConversionEvidenceConfirmed === true });
-      if (row.Attestation !== expectedAttestation) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-      var plan = JSON.parse(row.ReceiptPlan), p = request.input;
-      if (plan) {
-        if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !p.ConversionEvidenceConfirmed || !p.ExternalRef ||
-            !plan.input || plan.input.ItemID !== route.inventoryItemIds[0] || row.AllocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' ||
-            ['ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus','PackageIdentity','SupplierRef','Attested'].some(function(k) {
-              return plan.input[k] !== p[k];
-            }) || !plan.conversionSnapshot) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-      } else if (row.AllocationStatus !== (route.PurchaseRelationship.indexOf('HPP_COST_POOL') === 0 ?
-          'COST_POOL_ALLOCATION_UNDEFINED' : 'QUANTITY_PACKAGE_UNRESOLVED')) {
-        inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
-      }
-    }
+    var expectedAttestation = JSON.stringify({ attested: request.input.Attested === true, conversionEvidenceConfirmed: request.input.ConversionEvidenceConfirmed === true });
+    if (row.Attestation !== expectedAttestation) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    var plan = JSON.parse(row.ReceiptPlan), p = request.input;
+    if (plan) {
+      if (route.PurchaseRelationship !== 'DIRECT_HPP_COMPONENT' || !p.ConversionEvidenceConfirmed || !p.ExternalRef ||
+          !plan.input || plan.input.ItemID !== route.inventoryItemIds[0] || row.AllocationStatus !== 'SINGLE_COMPONENT_EVIDENCED' ||
+          ['ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus','PackageIdentity','SupplierRef','Attested'].some(function(k) {
+            return plan.input[k] !== p[k];
+          }) || !plan.conversionSnapshot) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+    } else if (row.AllocationStatus !== (route.PurchaseRelationship.indexOf('HPP_COST_POOL') === 0 ?
+        'COST_POOL_ALLOCATION_UNDEFINED' : 'QUANTITY_PACKAGE_UNRESOLVED')) inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
     keys[row.RequestKey] = row; ids[row.EventID] = true;
   });
   return keys;
@@ -335,9 +371,11 @@ function orchestratePurchaseEventUnderLock_(payload, runtime, scope, policies) {
     if (['read', 'appendEvent', 'audit'].some(function(name) { return typeof runtime[name] !== 'function'; }) ||
         !runtime.receipt || runtime.receipt.lock !== runtime.lock || typeof runtime.receipt.read !== 'function' ||
         ['LOCAL_FIXTURE', 'PRODUCTION'].indexOf(runtime.receipt.environment) === -1) inventoryReceiptFail_('INVALID_PURCHASE_RUNTIME');
-    var request = normalizePurchaseEventRequest_(payload), state = runtime.read();
+    var state = runtime.read();
     var history = purchaseEventHistory_(state.events);
     row = history[key] || null;
+    if (row && JSON.parse(row.NormalizedPayload).payloadVersion === 2) return purchaseEventResult_('RECOVERY_REQUIRED', 'OPERATION_EVIDENCE_REQUIRED', row, key, 0);
+    var request = row ? normalizePurchaseEventHistoryRequest_(payload) : normalizePurchaseEventRequest_(payload);
     if (row && row.NormalizedPayload !== JSON.stringify(request)) inventoryReceiptFail_('CONFLICT');
     if (!row) {
       row = buildPurchaseEvent_(request, state.expenses, state, runtime.audit());
@@ -458,7 +496,7 @@ function lookupPurchaseEventStatus_(requestKey, pendingPayload) {
     return { status: 'LOOKUP_FAILED', reason: 'INVALID_REQUEST_KEY', requestKey: requestKey || null };
   }
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!sheet || sheet.getLastRow() <= 1) return { status: 'NOT_FOUND', requestKey: requestKey };
     var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
@@ -481,6 +519,13 @@ function lookupPurchaseEventStatus_(requestKey, pendingPayload) {
     }
     // Payload matching: normalize pending payload and compare with stored NormalizedPayload
     try {
+      var stored = normalizePurchaseEventHistoryRequest_(JSON.parse(match.NormalizedPayload));
+      if (stored.payloadVersion === 2) {
+        purchaseEventHistory_([match]);
+        var pending = purchaseSingleCommitNormalize_(pendingPayload);
+        return { status: JSON.stringify(pending) === JSON.stringify(stored.normalizedRequest) ? 'RECOVERY_REQUIRED' : 'CONFLICT',
+          reason: 'OPERATION_EVIDENCE_REQUIRED', requestKey: requestKey, writeCount: 0 };
+      }
       var normalized = normalizePurchaseEventRequest_(pendingPayload);
       if (match.NormalizedPayload !== JSON.stringify(normalized)) {
         return { status: 'CONFLICT', requestKey: requestKey, reason: 'PAYLOAD_MISMATCH' };
@@ -510,7 +555,7 @@ function resolvePurchaseEventEvidence_(requestKey, resolution) {
     return { status: 'LOOKUP_FAILED', reason: 'INVALID_RESOLUTION_PAYLOAD', requestKey: requestKey };
   }
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     // Read PurchaseEvents
     var peSheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!peSheet || peSheet.getLastRow() <= 1) return { status: 'NOT_FOUND', requestKey: requestKey };
@@ -548,8 +593,13 @@ function resolvePurchaseEventEvidence_(requestKey, resolution) {
     if (resolution.ConversionEvidenceConfirmed !== true) {
       return { status: 'LOOKUP_FAILED', reason: 'CONVERSION_EVIDENCE_NOT_CONFIRMED', requestKey: requestKey };
     }
-    // Build receipt plan from resolution
-    var route = EXPENSE_PURCHASE_POLICY.rows.filter(function(r) { return r.expenseItemId === match.ExpenseID; })[0];
+    // Build receipt plan from resolution under the event's pinned policy version.
+    var route = null;
+    try {
+      route = resolveExpensePurchasePolicyVersioned_(match.ExpenseID,
+        [{ ID_Ops: match.ExpenseID, Item: String(match.BusinessLabel || match.ExpenseID), IsActive: true }],
+        match.PolicyVersion, Number(match.PolicyRevision));
+    } catch (e) { route = null; }
     if (!route) return { status: 'LOOKUP_FAILED', reason: 'INVALID_EXPENSE_POLICY', requestKey: requestKey };
     var plan = null, allocation = match.AllocationStatus;
     if (route.PurchaseRelationship === 'DIRECT_HPP_COMPONENT' && resolution.PurchaseQty &&
@@ -616,14 +666,467 @@ function resolvePurchaseEventEvidence_(requestKey, resolution) {
 // Public RPC — callable from google.script.run.
 function resolvePurchaseEventEvidence(requestKey, resolution) {
   var result = resolvePurchaseEventEvidence_(requestKey, resolution);
-  if (result.status === 'RESOLVED') invalidateDashboardCache();
+  if (result.status === 'RESOLVED') invalidateDashboardCache_();
   return result;
 }
 
+// Gate A READ compatibility only. Pins come from the 2026-10-21T15:43:15.117Z
+// bounded capture; they are evidence constraints, never metadata/write authority.
+// Raw inspectors, frozen plans, writers and purchaseEventHistory_ stay strict.
+function purchaseReadEvidenceSHA256_(value) {
+  function canonical(v) {
+    if (Object.prototype.toString.call(v) === '[object Date]') {
+      if (!isFinite(v.getTime())) throw new Error('INVALID_EVIDENCE_DATE');
+      return { numlockDateEpochMs: v.getTime() };
+    }
+    if (Array.isArray(v)) return v.map(canonical);
+    if (v && typeof v === 'object') {
+      var out = {};
+      Object.keys(v).sort().forEach(function(k) { out[k] = canonical(v[k]); });
+      return out;
+    }
+    return v;
+  }
+  var text = typeof value === 'string' ? value : JSON.stringify(canonical(value));
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8)
+    .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+
+// ============================================================
+// CONTRACT A: HISTORICAL INCIDENT ANCHOR (Immutable)
+// Preserves the deployed v734 historical pin exactly.
+// Used ONLY for repair record validation (line 729), NOT for current evidence.
+// ============================================================
+var HAKAES_HISTORICAL_ANCHOR = Object.freeze({
+  // DEPLOYED PIN — NEVER CHANGE. Captured 2026-10-21T15:43:15.117Z via Sheets API SERIAL_NUMBER.
+  incidentPreimageSHA256: 'd5a97d8ac978d2b83dffc7365d6c6ffb6280d4a7f4446172232c3acd942be937',
+  frozenPlanSHA256: '70ee0dc73b00001f323309521375296f0835b280993cc83b018bde2b09f6e35f',
+  capturedAt: '2026-10-21T15:43:15.117Z',
+  captureMethod: 'Sheets API SERIAL_NUMBER',
+  // Exact record allowlist from original capture (incident-scoped)
+  recordAllowlist: Object.freeze({
+    purchaseEvents: Object.freeze({
+      eventIDs: Object.freeze(['PE-purchase-1792554905400-aip3a98j5lq', 'PE-corr-pcorr-TBMmKYG07Z4OEreN']),
+      requestKeys: Object.freeze(['purchase-1792554905400-aip3a98j5lq', 'corr-pcorr-TBMmKYG07Z4OEreN'])
+    }),
+    transactionOperations: Object.freeze({
+      operationIDs: Object.freeze(['TXOP-68876AA0-PURCHASESING', 'TXOP-4D8971DA-PURCHASEEVEN']),
+      businessIDs: Object.freeze(['PE-purchase-1792554905400-aip3a98j5lq', 'PE-corr-pcorr-TBMmKYG07Z4OEreN']),
+      requestKeys: Object.freeze(['purchase-1792554905400-aip3a98j5lq', 'pcorr-TBMmKYG07Z4OEreN'])
+    }),
+    balanceLedger: Object.freeze({
+      journalIDs: Object.freeze([
+        'POLICYC-PEXP-PURCHASE-PE-purchase-1792554905400-aip3a98j5lq',
+        'POLICYC-PEXP-CORRECT-PE-purchase-1792554905400-aip3a98j5lq',
+        'POLICYC-PEXP-PURCHASE-PE-corr-pcorr-TBMmKYG07Z4OEreN'
+      ]),
+      sourceIDs: Object.freeze(['PE-purchase-1792554905400-aip3a98j5lq', 'PE-corr-pcorr-TBMmKYG07Z4OEreN'])
+    }),
+    logs: Object.freeze({
+      logIDs: Object.freeze(['LOG-ENTRY-eae5ac98-3aa9-4543-9c60-afce4f07b890', 'LOG-ENTRY-2d5f064c-6aa1-46cb-b96a-524fe2180680']),
+      recordIDs: Object.freeze(['PE-purchase-1792554905400-aip3a98j5lq', 'PE-corr-pcorr-TBMmKYG07Z4OEreN'])
+    })
+  }),
+  // Field allowlist per table (preserves exact column ordering for hash stability)
+  // Evaluated lazily via getHakaesFieldAllowlist_() to allow forward references
+  fieldAllowlist: null
+});
+
+function getHakaesFieldAllowlist_() {
+  if (HAKAES_HISTORICAL_ANCHOR.fieldAllowlist) return HAKAES_HISTORICAL_ANCHOR.fieldAllowlist;
+  var fa = Object.freeze({
+    purchaseEvents: Object.freeze(PURCHASE_EVENT_POLICY.headers),
+    transactionOperations: Object.freeze(TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS),
+    balanceLedger: Object.freeze(BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS),
+    logs: Object.freeze(CANONICAL_ENTRY.LOG_HEADERS)
+  });
+  HAKAES_HISTORICAL_ANCHOR.fieldAllowlist = fa;
+  return fa;
+}
+
+// ============================================================
+// CONTRACT B: CURRENT INCIDENT INTEGRITY (Production-Derived)
+// Computes hash of current production evidence for the Hakaes incident
+// using Apps Script canonicalization (Date -> {numlockDateEpochMs}).
+// Used for mutation detection, NOT compared against historical pin.
+// ============================================================
+function computeHakaesCurrentIncidentPreimage_(ss) {
+  var ra = HAKAES_HISTORICAL_ANCHOR.recordAllowlist;
+  var fa = getHakaesFieldAllowlist_();
+  var peHeaders = fa.purchaseEvents;
+  var opHeaders = fa.transactionOperations;
+  var ledgerHeaders = fa.balanceLedger;
+  var logHeaders = fa.logs;
+
+  // Filter PurchaseEvents
+  var peRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, peHeaders).filter(function(r) {
+    return ra.purchaseEvents.eventIDs.indexOf(r.EventID) !== -1 ||
+           ra.purchaseEvents.requestKeys.indexOf(r.RequestKey) !== -1;
+  });
+
+  // Filter TransactionOperations
+  var opHeadersFull = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS;
+  var opRows = readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET, opHeadersFull).filter(function(r) {
+    return ra.transactionOperations.operationIDs.indexOf(r.OperationID) !== -1 ||
+           ra.transactionOperations.businessIDs.indexOf(r.BusinessID) !== -1 ||
+           ra.transactionOperations.requestKeys.indexOf(r.RequestKey) !== -1;
+  });
+
+  // Filter BalanceLedger
+  var ledgerRows = readCanonicalTable(ss, 'BalanceLedger', ledgerHeaders).filter(function(r) {
+    return ra.balanceLedger.journalIDs.indexOf(r.JournalID) !== -1 ||
+           ra.balanceLedger.sourceIDs.indexOf(r.SourceID) !== -1;
+  });
+
+  // Filter Logs
+  var logRows = readCanonicalTable(ss, 'Logs', logHeaders).filter(function(r) {
+    return ra.logs.logIDs.indexOf(r.ID_Log) !== -1 ||
+           ra.logs.recordIDs.indexOf(r.RecordID) !== -1;
+  });
+
+  function fields(rs, headers) {
+    return rs.map(function(r) { return headers.map(function(h) { return r[h] === undefined ? '' : r[h]; }); });
+  }
+
+  var preimages = {
+    events: fields(peRows, peHeaders),
+    operations: fields(opRows, opHeaders),
+    ledger: fields(ledgerRows, ledgerHeaders),
+    logs: fields(logRows, logHeaders)
+  };
+
+  // Apply canonicalization (Date -> {numlockDateEpochMs}) — matches purchaseReadEvidenceSHA256_
+  function canonicalize(v) {
+    if (Object.prototype.toString.call(v) === '[object Date]') {
+      if (!isFinite(v.getTime())) throw new Error('INVALID_EVIDENCE_DATE');
+      return { numlockDateEpochMs: v.getTime() };
+    }
+    if (Array.isArray(v)) return v.map(canonicalize);
+    if (v && typeof v === 'object') {
+      var out = {};
+      Object.keys(v).sort().forEach(function(k) { out[k] = canonicalize(v[k]); });
+      return out;
+    }
+    return v;
+  }
+
+  var canonicalPreimages = canonicalize(preimages);
+  var hash = purchaseReadEvidenceSHA256_(canonicalPreimages);
+
+  return {
+    preimageHash: hash,
+    preimages: canonicalPreimages,
+    counts: { pe: peRows.length, op: opRows.length, ledger: ledgerRows.length, logs: logRows.length }
+  };
+}
+
+// ============================================================
+// CONTRACT C: READER STATE MACHINE
+// Classifies exact-incident state for reader acceptance.
+// Replaces hash comparison against historical pin at line 869.
+// ============================================================
+var HAKAES_REPAIR_STATE = Object.freeze({
+  PRE_REPAIR: 'PRE_REPAIR',
+  PARTIAL_REPAIR: 'PARTIAL_REPAIR',
+  POST_REPAIR: 'POST_REPAIR',
+  UNKNOWN: 'UNKNOWN'
+});
+
+function classifyHakaesRepairState_(evidence) {
+  // evidence: { peRows, opRows, ledgerRows, logRows, repairSheetExists, repairMarkers, registryState, frozenPlanMatches, attestationRaw, normalizedAttested }
+  var op = evidence.opRows && evidence.opRows[0]; // correction operation
+  var replacementEvent = evidence.peRows && evidence.peRows.find(function(r) { return r.EventID === 'PE-corr-pcorr-TBMmKYG07Z4OEreN'; });
+  var originalEvent = evidence.peRows && evidence.peRows.find(function(r) { return r.EventID === 'PE-purchase-1792554905400-aip3a98j5lq'; });
+
+  var registryState = op ? op.State : null;
+  var frozenPlanMatches = evidence.frozenPlanMatches === true;
+  var repairSheetExists = evidence.repairSheetExists === true;
+  var repairMarkers = evidence.repairMarkers && evidence.repairMarkers.length > 0;
+  var attestationRaw = replacementEvent ? replacementEvent.Attestation : null;
+  var normalizedAttested = (replacementEvent && replacementEvent.NormalizedPayload) ?
+    JSON.parse(replacementEvent.NormalizedPayload).input.Attested : null;
+
+  // FAIL-CLOSED: Check for conflicts first
+  var conflicts = [];
+  if (registryState === 'COMMITTED' && !repairSheetExists) conflicts.push('Registry COMMITTED but repair sheet absent');
+  if (repairMarkers && !repairSheetExists) conflicts.push('Repair markers present but sheet absent');
+  if (registryState === 'COMMITTED' && normalizedAttested !== false) conflicts.push('Registry COMMITTED but attestation not corrected');
+  if (!originalEvent || !replacementEvent) conflicts.push('Missing original or replacement event');
+  if (!op) conflicts.push('Missing correction operation');
+  if (!frozenPlanMatches) conflicts.push('Frozen plan hash mismatch');
+  if (registryState && registryState !== 'IN_PROGRESS' && registryState !== 'COMMITTED') conflicts.push('Invalid registry state: ' + registryState);
+
+  if (conflicts.length > 0) {
+    return { state: HAKAES_REPAIR_STATE.UNKNOWN, conflicts: conflicts, reason: conflicts.join('; '), readerAcceptance: 'REJECT_PURCHASE_HISTORY_CONFLICT', repairAuthorization: 'BLOCKED' };
+  }
+
+  // PRE_REPAIR: Registry IN_PROGRESS, no repair sheet/markers, attestation discrepancy confirmed
+  if (registryState === 'IN_PROGRESS' &&
+      !repairSheetExists &&
+      !repairMarkers &&
+      attestationRaw === '{"attested":true,"conversionEvidenceConfirmed":false}' &&
+      normalizedAttested === false &&
+      frozenPlanMatches &&
+      originalEvent && replacementEvent && op) {
+    return { state: HAKAES_REPAIR_STATE.PRE_REPAIR, conflicts: [], readerAcceptance: 'ACCEPT_PRE_REPAIR', repairAuthorization: 'MAY_CONSIDER' };
+  }
+
+  // POST_REPAIR: Registry COMMITTED, repair sheet exists, markers present, attestation corrected
+  if (registryState === 'COMMITTED' &&
+      repairSheetExists &&
+      repairMarkers &&
+      normalizedAttested === false &&
+      frozenPlanMatches &&
+      originalEvent && replacementEvent && op) {
+    return { state: HAKAES_REPAIR_STATE.POST_REPAIR, conflicts: [], readerAcceptance: 'ACCEPT_POST_REPAIR', repairAuthorization: 'COMPLETE' };
+  }
+
+  // PARTIAL_REPAIR: Registry COMMITTED but repair incomplete (valid rejected state)
+  if (registryState === 'COMMITTED' && (!repairSheetExists || !repairMarkers) &&
+      originalEvent && replacementEvent && op && frozenPlanMatches) {
+    return { state: HAKAES_REPAIR_STATE.PARTIAL_REPAIR, conflicts: ['Registry COMMITTED but repair incomplete'], readerAcceptance: 'REJECT_PURCHASE_HISTORY_CONFLICT', repairAuthorization: 'BLOCKED' };
+  }
+
+  // Any other state is UNKNOWN
+  return { state: HAKAES_REPAIR_STATE.UNKNOWN, conflicts: ['Insufficient or contradictory evidence'], readerAcceptance: 'REJECT_PURCHASE_HISTORY_CONFLICT', repairAuthorization: 'BLOCKED' };
+}
+
+// Disabled until a separate reviewed authorization binds exact record bytes,
+// executor email, approval artifact and commit epoch. Never accept client policy.
+function purchaseHakaesRepairAuthorization_() { return null; }
+
+function purchaseHakaesRepairHeaders_() {
+  return ['RepairID', 'Protocol', 'OperationType', 'OperationID', 'RequestKey', 'EventID',
+    'PlanBytesSHA256', 'EventRowCanonicalSHA256', 'BusinessPreimagesSHA256', 'OriginalAttestation',
+    'EffectiveAttestation', 'ApprovalID', 'ApprovalArtifactSHA256', 'Executor', 'RecordedAt'];
+}
+
+// Checks actual metadata before projecting ONLY the three approved fields back
+// to the immutable historical hash. Caller-owned raw rows remain untouched.
+function purchaseHakaesRepairEvidence_(ss, operation, preimages, event) {
+  var headers = purchaseHakaesRepairHeaders_(), sheet = ss.getSheetByName('PurchaseMetadataRepairs');
+  var records = sheet ? readCanonicalTable(ss, 'PurchaseMetadataRepairs', headers) : [];
+  var claims = records.filter(function(r) {
+    return r.RepairID === 'REPAIR-ATTESTATION-pcorr-TBMmKYG07Z4OEreN' ||
+      r.RequestKey === operation.RequestKey || r.OperationID === operation.OperationID || r.EventID === event.EventID;
+  });
+  if (!claims.length) {
+    if (operation.State !== 'IN_PROGRESS') throw new Error('REPAIR_RECORD_MISSING');
+    return;
+  }
+  var auth = purchaseHakaesRepairAuthorization_(), record = claims[0];
+  var values = headers.map(function(h) { return record[h]; });
+  if (claims.length !== 1 || !auth || !/^[a-f0-9]{64}$/.test(auth.recordSHA256) ||
+      purchaseReadEvidenceSHA256_(values) !== auth.recordSHA256 ||
+      record.RepairID !== 'REPAIR-ATTESTATION-pcorr-TBMmKYG07Z4OEreN' ||
+      record.Protocol !== 'HAKAES-ATTESTATION-V1' || record.OperationType !== operation.OperationType ||
+      record.OperationID !== operation.OperationID || record.RequestKey !== operation.RequestKey ||
+      record.EventID !== event.EventID || record.Executor !== auth.executor ||
+      record.ApprovalArtifactSHA256 !== auth.approvalArtifactSHA256 || !record.ApprovalID ||
+      record.PlanBytesSHA256 !== purchaseReadEvidenceSHA256_(operation.OperationPlan) ||
+      record.EventRowCanonicalSHA256 !== purchaseReadEvidenceSHA256_(PURCHASE_EVENT_POLICY.headers.map(function(h) { return event[h]; })) ||
+      record.BusinessPreimagesSHA256 !== 'd5a97d8ac978d2b83dffc7365d6c6ffb6280d4a7f4446172232c3acd942be937' ||
+      record.OriginalAttestation !== event.Attestation ||
+      record.EffectiveAttestation !== '{"attested":false,"conversionEvidenceConfirmed":false}' ||
+      !Number.isSafeInteger(auth.commitEpochMs) || auth.commitEpochMs <= 1792568592992 ||
+      record.RecordedAt !== new Date(auth.commitEpochMs).toISOString() || operation.LastError !== '') {
+    throw new Error('REPAIR_RECORD_UNAUTHORIZED');
+  }
+  var epoch = Object.prototype.toString.call(operation.UpdatedAt) === '[object Date]' ? operation.UpdatedAt.getTime() : NaN;
+  if (operation.State === 'COMMITTED' ? epoch !== auth.commitEpochMs :
+      operation.State !== 'IN_PROGRESS' || [1792568592992, auth.commitEpochMs].indexOf(epoch) === -1) {
+    throw new Error('REPAIR_METADATA_DRIFT');
+  }
+  preimages.operations = preimages.operations.map(function(r) {
+    if (r[0] !== operation.OperationID) return r;
+    var historical = r.slice(); historical[4] = 'IN_PROGRESS';
+    historical[8] = new Date(1792568592992); historical[9] = '';
+    return historical;
+  });
+}
+
+// Editor-only private entrypoint: trailing underscore prevents google.script.run.
+// No schema creation, no financial adapter, no retry after uncertain mutation.
+function repairHakaesMetadata_() {
+  var auth = purchaseHakaesRepairAuthorization_();
+  if (!auth || Session.getActiveUser().getEmail() !== auth.executor ||
+      Session.getEffectiveUser().getEmail() !== auth.executor) throw new Error('REPAIR_NOT_AUTHORIZED');
+  var lock = LockService.getScriptLock(), held = false, attempted = false;
+  try {
+    lock.waitLock(30000); held = true;
+    var ss = requireNumlockProductionSpreadsheet(), headers = purchaseHakaesRepairHeaders_();
+    var sheet = ss.getSheetByName('PurchaseMetadataRepairs'), ops = ss.getSheetByName('TransactionOperations');
+    if (!sheet || !ops) throw new Error('REPAIR_SCHEMA_MISSING');
+    var actualHeaders = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
+    if (JSON.stringify(actualHeaders) !== JSON.stringify(headers)) throw new Error('REPAIR_SCHEMA_DRIFT');
+    function verify() {
+      if (!lock.hasLock()) throw new Error('REPAIR_LOCK_LOST');
+      var now = Date.now();
+      if (!Number.isSafeInteger(auth.windowStartMs) || !Number.isSafeInteger(auth.windowEndMs) ||
+          auth.windowStartMs >= auth.windowEndMs || now < auth.windowStartMs || now >= auth.windowEndMs ||
+          auth.commitEpochMs < auth.windowStartMs || auth.commitEpochMs >= auth.windowEndMs) throw new Error('REPAIR_WINDOW_CLOSED');
+      if (ss.getId() !== '1ubfWtRVdrToBYZIxewgT9H-scIeszZHDUHDrLd64e9M' ||
+          auth.spreadsheetID !== ss.getId() || auth.requestKey !== 'pcorr-TBMmKYG07Z4OEreN' ||
+          !Number.isInteger(auth.operationRow) || auth.operationRow < 2 ||
+          !Number.isInteger(auth.appendRow) || auth.appendRow < 2 ||
+          !auth.sheetIDs || !['PurchaseMetadataRepairs', 'TransactionOperations', 'PurchaseEvents', 'BalanceLedger', 'Logs'].every(function(name) {
+            var current = ss.getSheetByName(name);
+            return current && Number.isInteger(auth.sheetIDs[name]) && current.getSheetId() === auth.sheetIDs[name];
+          })) throw new Error('REPAIR_COORDINATE_DRIFT');
+      if (sheet.getSheetId() !== auth.sheetIDs.PurchaseMetadataRepairs ||
+          ops.getSheetId() !== auth.sheetIDs.TransactionOperations ||
+          JSON.stringify(sheet.getDataRange().getValues()[0]) !== JSON.stringify(headers)) throw new Error('REPAIR_SCHEMA_DRIFT');
+      var rows = readCanonicalTable(ss, 'PurchaseEvents', PURCHASE_EVENT_POLICY.headers);
+      purchaseEventReadHistory_(ss, rows);
+      var grid = ops.getDataRange().getValues();
+      if (JSON.stringify(grid[0]) !== JSON.stringify(TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS)) throw new Error('OPERATION_SCHEMA_DRIFT');
+      var matches = [];
+      grid.forEach(function(r, i) { if (i && r[0] === 'TXOP-4D8971DA-PURCHASEEVEN') matches.push(i + 1); });
+      if (matches.length !== 1 || matches[0] !== auth.operationRow) throw new Error('REPAIR_OPERATION_AMBIGUOUS');
+      var recordGrid = sheet.getDataRange().getValues();
+      recordGrid.forEach(function(r, i) {
+        if (i && (r[0] === 'REPAIR-ATTESTATION-pcorr-TBMmKYG07Z4OEreN' || r[3] === 'TXOP-4D8971DA-PURCHASEEVEN' || r[4] === auth.requestKey) && i + 1 !== auth.appendRow) throw new Error('REPAIR_RECORD_MOVED');
+      });
+      return matches[0];
+    }
+    var row = verify(), records = readCanonicalTable(ss, 'PurchaseMetadataRepairs', headers);
+    var claims = records.filter(function(r) { return r.RepairID === 'REPAIR-ATTESTATION-pcorr-TBMmKYG07Z4OEreN'; });
+    if (!claims.length) {
+      if (!Array.isArray(auth.record) || auth.record.length !== headers.length ||
+          purchaseReadEvidenceSHA256_(auth.record) !== auth.recordSHA256 || sheet.getLastRow() + 1 !== auth.appendRow) throw new Error('REPAIR_PACKET_DRIFT');
+      // Validate the proposed record against actual evidence BEFORE append.
+      var proxy = {};
+      proxy.getSheetByName = function(name) {
+        if (name !== 'PurchaseMetadataRepairs') return ss.getSheetByName(name);
+        return { getDataRange: function() { return { getValues: function() { return [headers, auth.record]; } }; } };
+      };
+      purchaseEventReadHistory_(proxy, readCanonicalTable(ss, 'PurchaseEvents', PURCHASE_EVENT_POLICY.headers));
+      row = verify();
+      if (sheet.getLastRow() + 1 !== auth.appendRow ||
+          sheet.getRange(auth.appendRow, 1, 1, headers.length).getValues()[0].some(function(v) { return v !== ''; }) ||
+          sheet.getRange(auth.appendRow, 1, 1, headers.length).getFormulas()[0].some(function(v) { return v !== ''; })) throw new Error('REPAIR_APPEND_NOT_EMPTY');
+      attempted = true;
+      sheet.getRange(auth.appendRow, 1, 1, headers.length).setValues([auth.record]);
+      SpreadsheetApp.flush(); row = verify();
+    }
+    if (ops.getRange(row, 5).getValue() === 'COMMITTED') return { status: 'DONE', replay: true };
+    // State last. One narrow setter; full gate plus typed expected-old check
+    // immediately before each mutation. No generic range supplied by approval.
+    function writeMetadata(column, value) {
+      row = verify();
+      if ([5, 9, 10].indexOf(column) === -1) throw new Error('REPAIR_WRITE_FORBIDDEN');
+      var cell = ops.getRange(row, column), old = cell.getValue();
+      if (cell.getFormulas()[0][0] !== '' || (column === 5 ? old !== 'IN_PROGRESS' : column === 10 ? old !== '' :
+          Object.prototype.toString.call(old) !== '[object Date]' || [1792568592992, auth.commitEpochMs].indexOf(old.getTime()) === -1)) throw new Error('REPAIR_OLD_VALUE_DRIFT');
+      attempted = true; cell.setValue(value); SpreadsheetApp.flush(); verify();
+    }
+    writeMetadata(9, new Date(auth.commitEpochMs));
+    writeMetadata(10, '');
+    writeMetadata(5, 'COMMITTED');
+    return { status: 'DONE', replay: false };
+  } catch (error) {
+    return { status: attempted ? 'UNKNOWN' : 'REFUSED', detail: error.message };
+  } finally { if (held) lock.releaseLock(); }
+}
+
+// Returns RAW rows after validating one effective interpretation on a shallow
+// copy. Never returns a rewritten attestation to a raw inspector or writer.
+function purchaseEventReadHistory_(ss, rows) {
+  var key = 'pcorr-TBMmKYG07Z4OEreN', eventID = 'PE-corr-' + key;
+  var claims = rows.filter(function(r) { return r.EventID === eventID || r.RequestKey === 'corr-' + key; });
+  if (!claims.length) { purchaseEventHistory_(rows); return rows; }
+  try {
+    if (claims.length !== 1) throw new Error('INCIDENT_IDENTITY_AMBIGUOUS');
+    var originalID = 'PE-purchase-1792554905400-aip3a98j5lq';
+    var ids = [originalID, eventID], requestKeys = ["purchase-1792554905400-aip3a98j5lq","corr-pcorr-TBMmKYG07Z4OEreN"];
+    var opIDs = ["TXOP-68876AA0-PURCHASESING","TXOP-4D8971DA-PURCHASEEVEN"], opKeys = ["purchase-1792554905400-aip3a98j5lq","pcorr-TBMmKYG07Z4OEreN"];
+    var journalIDs = ["POLICYC-PEXP-PURCHASE-PE-purchase-1792554905400-aip3a98j5lq","POLICYC-PEXP-CORRECT-PE-purchase-1792554905400-aip3a98j5lq","POLICYC-PEXP-PURCHASE-PE-corr-pcorr-TBMmKYG07Z4OEreN"], auditIDs = ["LOG-ENTRY-eae5ac98-3aa9-4543-9c60-afce4f07b890","LOG-ENTRY-2d5f064c-6aa1-46cb-b96a-524fe2180680"];
+    var opHeaders = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS;
+    var operations = readCanonicalTable(ss, TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET, opHeaders)
+      .filter(function(r) { return opIDs.indexOf(r.OperationID) !== -1 || ids.indexOf(r.BusinessID) !== -1 || opKeys.indexOf(r.RequestKey) !== -1; });
+    var matching = operations.filter(function(r) { return r.OperationID === opIDs[1] || r.RequestKey === key || r.BusinessID === eventID; });
+    if (matching.length !== 1) throw new Error('INCIDENT_OPERATION_AMBIGUOUS');
+    var operation = matching[0];
+    if (operation.OperationID !== opIDs[1] || operation.OperationType !== 'PURCHASE_EVENT_CORRECT' ||
+        operation.RequestKey !== key || operation.BusinessID !== eventID ||
+        ['IN_PROGRESS', 'COMMITTED'].indexOf(operation.State) === -1 ||
+        purchaseReadEvidenceSHA256_(operation.OperationPlan) !== '70ee0dc73b00001f323309521375296f0835b280993cc83b018bde2b09f6e35f') throw new Error('FROZEN_PLAN_DRIFT');
+    var plan = JSON.parse(operation.OperationPlan);
+    var ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS, logHeaders = CANONICAL_ENTRY.LOG_HEADERS;
+    function fields(rs, headers) { return rs.map(function(r) { return headers.map(function(h) { return r[h]; }); }); }
+    var peRows = rows.filter(function(r) { return ids.indexOf(r.EventID) !== -1 || requestKeys.indexOf(r.RequestKey) !== -1; });
+    var opRows = operations;
+    var ledgerRows = readCanonicalTable(ss, 'BalanceLedger', ledgerHeaders).filter(function(r) {
+      return ids.indexOf(r.SourceID) !== -1 || journalIDs.indexOf(r.JournalID) !== -1;
+    });
+    var logRows = readCanonicalTable(ss, 'Logs', logHeaders).filter(function(r) {
+      return ids.indexOf(r.RecordID) !== -1 || auditIDs.indexOf(r.ID_Log) !== -1;
+    });
+    var preimages = {
+      events: fields(peRows, PURCHASE_EVENT_POLICY.headers),
+      operations: fields(opRows, opHeaders),
+      ledger: fields(ledgerRows, ledgerHeaders),
+      logs: fields(logRows, logHeaders)
+    };
+    purchaseHakaesRepairEvidence_(ss, operation, preimages, claims[0]);
+
+    // CONTRACT C: State machine replaces historical pin comparison for reader acceptance
+    // Check repair sheet existence and markers
+    var repairSheetExists = false, repairMarkers = [];
+    try {
+      var repairSheet = ss.getSheetByName('PurchaseMetadataRepairs');
+      if (repairSheet) {
+        repairSheetExists = true;
+        var repairHeaders = purchaseHakaesRepairHeaders_();
+        var repairRecords = readCanonicalTable(ss, 'PurchaseMetadataRepairs', repairHeaders);
+        repairMarkers = repairRecords.filter(function(r) {
+          return r.RepairID === 'REPAIR-ATTESTATION-pcorr-TBMmKYG07Z4OEreN' ||
+                 r.RequestKey === 'pcorr-TBMmKYG07Z4OEreN' ||
+                 r.OperationID === 'TXOP-4D8971DA-PURCHASEEVEN' ||
+                 r.EventID === 'PE-corr-pcorr-TBMmKYG07Z4OEreN';
+        });
+      }
+    } catch (e) { /* sheet absent or unreadable — treat as PRE_REPAIR */ }
+
+    var state = classifyHakaesRepairState_({
+      peRows: peRows,
+      opRows: [operation],
+      ledgerRows: ledgerRows,
+      logRows: logRows,
+      repairSheetExists: repairSheetExists,
+      repairMarkers: repairMarkers,
+      registryState: operation.State,
+      frozenPlanMatches: true, // already validated above
+      attestationRaw: claims[0].Attestation,
+      normalizedAttested: JSON.parse(claims[0].NormalizedPayload).input.Attested
+    });
+
+    if (state.readerAcceptance !== 'ACCEPT_PRE_REPAIR' && state.readerAcceptance !== 'ACCEPT_POST_REPAIR') {
+      throw new Error('INCIDENT_EVIDENCE_DRIFT');
+    }
+
+    // Verify plan and attestation (preserved from original logic)
+    if (!purchaseCorrectionVerifyPlan_(plan).ok || purchaseCorrectionInspect_(plan, ss).state !== 'EXACT') throw new Error('INCIDENT_EVIDENCE_DRIFT');
+    var row = claims[0], raw = '{"attested":true,"conversionEvidenceConfirmed":false}';
+    var effective = '{"attested":false,"conversionEvidenceConfirmed":false}';
+    if (row.EventID !== eventID || row.Attestation !== raw ||
+        JSON.parse(row.NormalizedPayload).input.Attested !== false) throw new Error('INCIDENT_ATTESTATION_DRIFT');
+
+    // Apply effective attestation for readers (shallow copy, never mutates raw)
+    purchaseEventHistory_(rows.map(function(r) {
+      return r === row ? Object.assign({}, r, { Attestation: effective }) : r;
+    }));
+  } catch (error) {
+    inventoryReceiptFail_('PURCHASE_HISTORY_CONFLICT');
+  }
+  return rows;
+}
+
 function readPurchaseEventTransactionRows_(ss) {
+  ss = requireNumlockProductionSpreadsheet();
   if (!ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet)) return [];
   var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
-  purchaseEventHistory_(rows);
+  purchaseEventReadHistory_(ss, rows);
   // Build resolution index
   var resolutions = {};
   if (ss.getSheetByName(PURCHASE_RESOLUTION_POLICY.sheet)) {
@@ -642,7 +1145,7 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
     return { error: 'INVALID_REQUEST_KEY', requestKey: requestKey || null };
   }
   try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!sheet || sheet.getLastRow() <= 1) return { matchingRowCount: 0, error: 'NO_SHEET_DATA' };
     var headers = PURCHASE_EVENT_POLICY.headers;
@@ -799,7 +1302,17 @@ function diagnosePurchaseEventIntegrity_(requestKey) {
 
 // Validate that a PurchaseEvent row is eligible for void.
 // Returns null on success, or a result object on refusal.
+// C9 Option A: both legacy and durable Correct reserve corr- replacement keys.
+// Check either immutable identity independently; inconsistent markers also refuse.
+function isPurchaseCorrectionReplacement_(row) {
+  return !!row && (String(row.RequestKey || '').indexOf('corr-') === 0 ||
+    String(row.EventID || '').indexOf('PE-corr-') === 0);
+}
+
 function validatePurchaseEventVoidEligibility_(row) {
+  if (isPurchaseCorrectionReplacement_(row)) {
+    return { status: 'REFUSED', reason: 'CORRECTION_REPLACEMENT_VOID_NOT_SUPPORTED', writeCount: 0 };
+  }
   if (!row || typeof row !== 'object') return { status: 'INVALID_REQUEST', reason: 'MISSING_EVENT' };
   if (row.Lifecycle === PURCHASE_EVENT_LIFECYCLE_STATES.VOIDED && row.IsActive === false) {
     return { status: 'ALREADY_VOIDED' };
@@ -845,6 +1358,17 @@ function checkPurchaseEventDownstreamEvidence_(ss, row) {
 // Throws on write failure (caller handles rollback).
 function persistPurchaseEventVoid_(sheet, rowNumber, before, runtime) {
   var headers = PURCHASE_EVENT_POLICY.headers;
+  // Guard the stored target as well as the supplied snapshot before any write/flush.
+  var current = sheet.getRange(rowNumber, 1, 1, headers.length).getValues()[0];
+  function identity(values) {
+    return { EventID: values[headers.indexOf('EventID')],
+      RequestKey: values[headers.indexOf('RequestKey')] };
+  }
+  if (isPurchaseCorrectionReplacement_(identity(current)) ||
+      isPurchaseCorrectionReplacement_(identity(before))) {
+    throw canonicalEntryError('CORRECTION_REPLACEMENT_VOID_NOT_SUPPORTED',
+      'Void of a correction replacement is not supported.', null);
+  }
   var after = before.slice();
   var lifecycleIdx = headers.indexOf('Lifecycle');
   var isActiveIdx = headers.indexOf('IsActive');
@@ -944,11 +1468,11 @@ function voidPurchaseEvent(payload) {
       return canonicalEntryFailure(canonicalEntryError('INVALID_VOID_REASON', 'Reason must be meaningful and no more than 500 characters.', 'reason'));
     }
     lock.waitLock(30000); acquired = true;
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     var timestamp = new Date();
     var runtime = { flush: function() { SpreadsheetApp.flush(); } };
     var result = voidPurchaseEventUnderLock_(identity.trim(), reason, ss, runtime);
-    if (result.status === 'VOIDED') invalidateDashboardCache();
+    if (result.status === 'VOIDED') invalidateDashboardCache_();
     return result;
   } catch (error) {
     return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0 };
@@ -1034,6 +1558,7 @@ function correctPurchaseEventUnderLock_(payload, ss, runtime) {
     if (rows[i].EventID === identity || rows[i].RequestKey === identity) { original = rows[i]; break; }
   }
   if (!original) return { status: 'NOT_FOUND', writeCount: 0 };
+  if (JSON.parse(original.NormalizedPayload).payloadVersion !== undefined) return { status: 'REFUSED', reason: 'SINGLE_COMMIT_COHORT_ROUTED', writeCount: 0 };
 
   // T11.8/U6: single-commit cohort never enters the legacy in-place
   // correction (it would mutate lifecycle without the Policy C reversal).
@@ -1108,9 +1633,9 @@ function correctPurchaseEventUnderLock_(payload, ss, runtime) {
       throw canonicalEntryError('WRITE_FAILED', 'Original correction mutation could not be verified.', null);
     }
     var timestamp = new Date().toISOString();
-    audits.push(appendLifecycleAudit(logs, timestamp, 'CORRECT_VOID_PURCHASE', original.EventID,
+    audits.push(appendLifecycleAudit_(logs, timestamp, 'CORRECT_VOID_PURCHASE', original.EventID,
       { reason: payload.reason, replacementId: replacementEvent.EventID, correctionRequestKey: correctionKey, before: beforeOriginal }, runtime));
-    audits.push(appendLifecycleAudit(logs, timestamp, 'CORRECT_CREATE_PURCHASE', replacementEvent.EventID,
+    audits.push(appendLifecycleAudit_(logs, timestamp, 'CORRECT_CREATE_PURCHASE', replacementEvent.EventID,
       { reason: payload.reason, originalId: original.EventID, correctionRequestKey: correctionKey,
         replacement: headers.map(function(header) { return replacementEvent[header]; }) }, runtime));
     var finalRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, headers);
@@ -1124,7 +1649,7 @@ function correctPurchaseEventUnderLock_(payload, ss, runtime) {
       replacementRequestKey: replacementRequestKey, writeCount: 1 };
   } catch (error) {
     try {
-      for (var j = audits.length - 1; j >= 0; j--) rollbackLifecycleLog(logs, audits[j]);
+      for (var j = audits.length - 1; j >= 0; j--) rollbackLifecycleLog_(logs, audits[j]);
       sheet.getRange(originalRow, 1, 1, beforeOriginal.length).setValues([beforeOriginal]);
       if (String(sheet.getRange(replacementRow, 1).getValue()) === replacementEvent.EventID) sheet.deleteRow(replacementRow);
       runtime.flush();
@@ -1150,8 +1675,8 @@ function correctPurchaseEvent(payload) {
     var runtime = { flush: function() { SpreadsheetApp.flush(); },
       audit: function() { return { actor: CANONICAL_ENTRY.USER, at: new Date().toISOString() }; },
       uuid: function() { return Utilities.getUuid(); } };
-    var result = correctPurchaseEventUnderLock_(payload, SpreadsheetApp.getActiveSpreadsheet(), runtime);
-    if (result.status === 'CORRECTED') invalidateDashboardCache();
+    var result = correctPurchaseEventUnderLock_(payload, requireNumlockProductionSpreadsheet(), runtime);
+    if (result.status === 'CORRECTED') invalidateDashboardCache_();
     return result;
   } catch (error) { return { status: 'WRITE_UNCERTAIN', reason: error.message, writeCount: 0 }; }
   finally { if (acquired) lock.releaseLock(); }
@@ -1161,7 +1686,7 @@ function correctPurchaseEvent(payload) {
 // string "true" instead of boolean true. All other integrity predicates must pass.
 // If dryRun is true, returns eligibility report without writing.
 function remediatePurchaseEventIsActiveType_(dryRun) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = requireNumlockProductionSpreadsheet();
   var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
   if (!sheet || sheet.getLastRow() <= 1) return { remediated: 0, reason: 'NO_DATA' };
   var headers = PURCHASE_EVENT_POLICY.headers;
@@ -1201,7 +1726,7 @@ function remediatePurchaseEventIsActiveType_(dryRun) {
 // Read-only eligibility scan: reports which rows need IsActive remediation
 // without performing any writes. Returns full inventory before any mutation.
 function scanPurchaseEventIsActiveEligibility_() {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = requireNumlockProductionSpreadsheet();
   var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
   if (!sheet || sheet.getLastRow() <= 1) return { total: 0, eligible: 0, reason: 'NO_DATA' };
   var headers = PURCHASE_EVENT_POLICY.headers;
@@ -1258,7 +1783,7 @@ function lookupPurchaseVoidStatus(payload) {
       return { status: 'LOOKUP_FAILED', reason: 'INVALID_IDENTITY' };
     }
     identity = identity.trim();
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!sheet || sheet.getLastRow() <= 1) return { status: 'LOOKUP_FAILED', reason: 'NO_DATA' };
     var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
@@ -1294,7 +1819,7 @@ function lookupPurchaseCorrectionStatus(payload) {
     }
     identity = identity.trim();
     correctionKey = correctionKey.trim();
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     var sheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!sheet || sheet.getLastRow() <= 1) return { status: 'LOOKUP_FAILED', reason: 'NO_DATA' };
     var rows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);
@@ -1337,7 +1862,7 @@ function lookupPurchaseResolutionStatus(payload) {
     if (typeof requestKey !== 'string' || !requestKey || !PURCHASE_LOOKUP_KEY_PATTERN.test(requestKey)) {
       return { status: 'LOOKUP_FAILED', reason: 'INVALID_REQUEST_KEY' };
     }
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var ss = requireNumlockProductionSpreadsheet();
     var peSheet = ss.getSheetByName(PURCHASE_EVENT_POLICY.sheet);
     if (!peSheet || peSheet.getLastRow() <= 1) return { status: 'LOOKUP_FAILED', reason: 'NO_DATA' };
     var peRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers);

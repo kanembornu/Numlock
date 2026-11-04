@@ -123,13 +123,13 @@ function resolveSupplierHistorical(supplierId) {
 }
 
 function createSupplier(request) {
-  return createSupplierWithRuntime_(request, supplierSpreadsheetRuntime_(SpreadsheetApp.getActiveSpreadsheet()));
+  throw new Error("Administrative execution is disabled");
 }
 
 function updateSupplier(request) {
-  return updateSupplierWithRuntime_(request, supplierSpreadsheetRuntime_(SpreadsheetApp.getActiveSpreadsheet()));
+  throw new Error("Administrative execution is disabled");
 }
 
 function deleteSupplier(supplierId) {
-  return deleteSupplierWithRuntime_(supplierId, supplierSpreadsheetRuntime_(SpreadsheetApp.getActiveSpreadsheet()), null);
+  throw new Error("Administrative execution is disabled");
 }

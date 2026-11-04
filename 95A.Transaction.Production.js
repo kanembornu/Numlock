@@ -200,7 +200,20 @@ function transactionProductionRuntime_() {
   return runtime;
 }
 
-function transactionResponse_(operation) { try { return { success: true, data: operation() }; } catch (error) { return { success: false, error: { code: error.code || error.entryCode || "WRITE_FAILED", message: error.message, field: error.field || error.entryField || null } }; } }
+function transactionResponse_(operation) {
+  try { return { success: true, data: operation() }; }
+  catch (error) {
+    var response = { success: false, error: { code: error.code || error.entryCode || "WRITE_FAILED",
+      message: error.message, field: error.field || error.entryField || null } };
+    if (error.purchaseSingleCommitResult) {
+      Object.assign(response, purchaseSingleCommitEnvelope_(error.purchaseSingleCommitResult));
+      if (error.purchaseSingleCommitResult.auditID !== undefined) {
+        response.auditID = error.purchaseSingleCommitResult.auditID;
+      }
+    }
+    return response;
+  }
+}
 
 function transactionPayloadHash_(value) {
   function canonical(v) { if (Array.isArray(v)) return v.map(canonical); if (v && typeof v === "object" && !(v instanceof Date)) { var out = {}; Object.keys(v).sort().forEach(function(k) { out[k] = canonical(v[k]); }); return out; } return v instanceof Date ? v.toISOString() : v; }
@@ -455,26 +468,38 @@ function purchaseOperationalSingleCommit_(payload, gate) {
   try {
     r.lock.waitLock(30000); acquired = true;
     var p = payload || {};
-    var expenses = readCanonicalTable(r.spreadsheet, "ExpenseItems",
-      ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]);
-    var corePayload = purchaseOperationalCorePayload_(p, r);
     var runtime = {
       now: function() { return new Date(); },
       uuid: function() { return Utilities.getUuid(); },
       flush: function() { SpreadsheetApp.flush(); },
-      invalidate: function() { invalidateDashboardCache(); }
+      invalidate: function() { invalidateDashboardCache_(); }
     };
-    var core = purchaseSingleCommitCoreRuntime_(r.spreadsheet, runtime, expenses, gate);
-    var result = purchaseSingleCommitSaveWithRuntime_(corePayload, core);
-    if (result.status !== "DONE") {
-      throw transactionOperationalError_(result.code || result.status, result.field || null,
-        result.detail || result.status);
+    var core = purchaseSingleCommitCoreRuntime_(r.spreadsheet, runtime, null, gate);
+    var key = transactionOperationalText_(p.requestKey, "REQUEST_KEY_REQUIRED", "requestKey");
+    var existing = null, result;
+    try { existing = core.repository.findOperation(PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE, key); }
+    catch (lookupError) {
+      result = purchaseSingleCommitResult_("RECOVERY_REQUIRED", {
+        code: lookupError.message === "DUPLICATE_OPERATION" ?
+          PURCHASE_SINGLE_COMMIT_V1.CODES.DUPLICATE_OPERATION_EVIDENCE :
+          PURCHASE_SINGLE_COMMIT_V1.CODES.IDENTITY_CONFLICT,
+        requestKey: key, detail: String(lookupError.message || lookupError) });
     }
-    return result.data;
+    if (!result) {
+      var corePayload = purchaseOperationalCorePayload_(p, r, existing);
+      result = purchaseSingleCommitSaveWithRuntime_(corePayload, core);
+    }
+    if (result.status !== "DONE") {
+      var error = transactionOperationalError_(result.code || result.status, result.field || null,
+        result.detail || result.status);
+      error.purchaseSingleCommitResult = result;
+      throw error;
+    }
+    return result.entry;
   } finally { if (acquired) r.lock.releaseLock(); }
 }
 
-function purchaseOperationalCorePayload_(p, r) {
+function purchaseOperationalCorePayload_(p, r, existing) {
   var payload = { transactionType: "EXPENSE",
     requestKey: transactionOperationalText_(p.requestKey, "REQUEST_KEY_REQUIRED", "requestKey"),
     expenseItemId: transactionOperationalText_(p.expenseItemID, "EXPENSE_ITEM_REQUIRED", "expenseItemID") };
@@ -485,7 +510,23 @@ function purchaseOperationalCorePayload_(p, r) {
   if (p.paymentStatus) payload.paymentStatus = p.paymentStatus;
   if (p.cashAccountCode) payload.cashAccountCode = p.cashAccountCode;
   var supplierSource = "";
-  if (payload.supplierID) {
+  if (existing) {
+    // Recover only the original server-derived input, not the V2 authority label.
+    // Rebuild every other field from this request; the core verifies hash + plan.
+    try {
+      var plan = JSON.parse(existing.OperationPlan);
+      supplierSource = plan.normalizedPayload.input.SupplierSource;
+      if (typeof supplierSource !== "string" || !supplierSource.trim()) throw new Error("SUPPLIER_SOURCE_MISSING");
+    } catch (error) {
+      var malformed = transactionOperationalError_(PURCHASE_SINGLE_COMMIT_V1.CODES.PLAN_MALFORMED,
+        null, "PLAN_SUPPLIER_SOURCE:" + String(error.message || error));
+      malformed.purchaseSingleCommitResult = purchaseSingleCommitResult_("RECOVERY_REQUIRED", {
+        code: PURCHASE_SINGLE_COMMIT_V1.CODES.PLAN_MALFORMED, requestKey: payload.requestKey,
+        operationID: existing.OperationID || "", entryID: existing.BusinessID || "",
+        detail: malformed.message });
+      throw malformed;
+    }
+  } else if (payload.supplierID) {
     var suppliers = readCanonicalTable(r.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET,
       SUPPLIER_MASTER_CONTRACT.HEADERS);
     var supplier = suppliers.filter(function(row) {
@@ -540,6 +581,9 @@ function runTransactionProductionPreflightDiagnostic() {
 }
 
 function executeTransactionSchemaActivationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = runtime.lock, acquired = false, ss = runtime.spreadsheet;
   try {
     lock.waitLock(30000); acquired = true;
@@ -556,6 +600,9 @@ function executeTransactionSchemaActivationWithRuntime(runtime) {
 }
 
 function runTransactionSchemaActivation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var runtime = transactionProductionRuntime_(), state = {};
   Object.keys(TRANSACTION_PRODUCTION_CONTRACT).forEach(function(key) { state[key] = transactionSchemaState_(runtime.spreadsheet.getSheetByName(TRANSACTION_PRODUCTION_CONTRACT[key].SHEET), TRANSACTION_PRODUCTION_CONTRACT[key]); });
   var plan = buildTransactionSchemaActivationPlan(state), evaluated = Object.keys(TRANSACTION_PRODUCTION_CONTRACT).map(function(key) { return TRANSACTION_PRODUCTION_CONTRACT[key].SHEET; });
@@ -583,6 +630,9 @@ function transactionAppendExactRows_(sheet, headers, rows) {
 }
 
 function executeProductVariantBootstrapWithRuntime(runtime, activationBoundary) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = runtime.lock, acquired = false, ss = runtime.spreadsheet;
   try {
     lock.waitLock(30000); acquired = true;
@@ -598,6 +648,9 @@ function executeProductVariantBootstrapWithRuntime(runtime, activationBoundary) 
 }
 
 function runProductVariantProductionBootstrap() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var expected = 53, boundary = new Date(), runtime = transactionProductionRuntime_();
   var contract = TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS;
   var schema = transactionSchemaState_(runtime.spreadsheet.getSheetByName(contract.SHEET), contract);
@@ -612,6 +665,9 @@ function runProductVariantProductionBootstrap() {
 }
 
 function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = runtime.lock, acquired = false, ss = runtime.spreadsheet;
   try {
     lock.waitLock(30000); acquired = true;
@@ -631,6 +687,9 @@ function executeRecipeVersionBootstrapWithRuntime(runtime, activationBoundary) {
 }
 
 function runRecipeVersionProductionBootstrap() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var expected = 53, boundary = new Date(), runtime = transactionProductionRuntime_(), source = transactionBootstrapSource_(runtime.spreadsheet);
   source.productVariants = readCanonicalTable(runtime.spreadsheet, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.SHEET, TRANSACTION_PRODUCTION_CONTRACT.PRODUCT_VARIANTS.HEADERS);
   var plan = buildRecipeVersionBootstrapPlan(source, boundary);
@@ -672,9 +731,5 @@ function recoverTransactionOperationWithRuntime_(operationID, r) {
 }
 
 function recoverTransactionOperation(operationID) {
-  return transactionResponse_(function() {
-    var r = transactionProductionRuntime_(), acquired = false;
-    try { r.lock.waitLock(30000); acquired = true; return recoverTransactionOperationWithRuntime_(operationID, r); }
-    finally { if (acquired) r.lock.releaseLock(); }
-  });
+  throw new Error("Administrative execution is disabled");
 }

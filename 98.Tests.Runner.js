@@ -5,6 +5,9 @@
  */
 function getBackendTestRegistry()
 {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   return [
     { name: "testExpensePurchasePolicyContracts", run: testExpensePurchasePolicyContracts },
     { name: "getDashboardData", run: getDashboardData },
@@ -142,6 +145,9 @@ function getBackendTestRegistry()
  */
 function runAllBackendTests()
 {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var tests = getBackendTestRegistry();
   var passedTests = [];
 
@@ -192,6 +198,9 @@ function runAllBackendTests()
  */
 function runAllBackendTestsDiagnostic()
 {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var tests = getBackendTestRegistry();
   var passedTests = [];
   var failures = [];

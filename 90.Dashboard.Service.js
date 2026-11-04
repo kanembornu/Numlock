@@ -8,6 +8,10 @@ function getDashboardCacheRevision() {
 }
 
 function invalidateDashboardCache() {
+  throw new Error("Administrative execution is disabled");
+}
+
+function invalidateDashboardCache_() {
   var properties = PropertiesService.getScriptProperties();
   var revision = Number(properties.getProperty(DASHBOARD_CACHE.REVISION_PROPERTY) || 0) + 1;
   properties.setProperty(DASHBOARD_CACHE.REVISION_PROPERTY, String(revision));

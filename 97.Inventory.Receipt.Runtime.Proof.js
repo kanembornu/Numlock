@@ -63,6 +63,9 @@ function inventoryReceiptProofProductionSnapshot_() {
 }
 
 function runInventoryReceiptDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var before = inventoryReceiptProofProductionSnapshot_(), result, failure;
   try {
     if (before.InventoryReceipts.exists) throw new Error("PRODUCTION_RECEIPTS_ALREADY_PRESENT");

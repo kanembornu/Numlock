@@ -92,12 +92,13 @@
       var entry = initializeStableDashboardElements().transactionEntry;
       var state = transactionEntryState;
       var validSales = isValidActiveSalesEntry_();
-      // T11.4 U2: ACTIVE single-commit normal Expense never requires a payment
-      // channel. Every other mode — including the Purchase receipt entry and
-      // correction — keeps the exact legacy cash requirement.
+      // Single-commit Expense saves and corrections do not select a payment
+      // channel. The persisted cohort owns correction routing; legacy
+      // corrections and Purchase receipt entries retain their cash requirement.
       var singleCommitNormalExpense = state.transactionType === "EXPENSE" &&
-        state.mode !== "correction" && !isPurchaseExpenseEntry() &&
-        singleCommitExpenseSurface_() === "ACTIVE";
+        !isPurchaseExpenseEntry() && (state.mode === "correction"
+          ? Boolean(state.originalDetail && state.originalDetail.singleCommit === true)
+          : singleCommitExpenseSurface_() === "ACTIVE");
       var validExpense = state.transactionType === "EXPENSE" && state.selectedExpense &&
         (isPurchaseExpenseEntry() || Number.isInteger(state.amount) && state.amount > 0) &&
         (singleCommitNormalExpense || state.cashAccountCode);
@@ -238,8 +239,8 @@
         transactionEntryState.cashAccountCode = null;
         transactionEntryState.pricingRequestVersion++;
         entry.expenseSearch.value = ""; entry.amount.value = ""; entry.productSearch.value = "";
-        entry.purchaseSearch.value = ""; entry.purchaseQty.value = "1"; entry.purchaseTotal.value = ""; entry.purchaseSupplier.value = "";
-        entry.expenseMeta.innerText = ""; entry.productMeta.innerText = ""; entry.purchaseMeta.innerText = ""; entry.purchaseUom.innerText = "—";
+        entry.purchaseSearch.value = ""; entry.purchaseQty.value = "1"; entry.purchaseTotal.value = ""; entry.purchaseUom.innerText = "Unit: —"; purchaseSupplierDisplayEl_(entry).innerText = "Supplier: —"; entry.purchaseSupplierError.innerText = "";
+        entry.expenseMeta.innerText = ""; entry.productMeta.innerText = ""; entry.purchaseMeta.innerText = ""; entry.purchaseUom.innerText = "Unit: —";
         entry.typeHot.setAttribute("aria-checked", "false"); entry.typeCold.setAttribute("aria-checked", "false");
         ["1000", "1010", "1020"].forEach(function(c) {
           var salesBtn = document.getElementById("salesCashAccount" + c);
@@ -400,7 +401,7 @@
       } else if (type === "purchase") {
         transactionEntryState.selectedPurchase = option;
         entry.purchaseSearch.value = option.item;
-        entry.purchaseMeta.innerText = [option.category, option.group, option.kind].filter(Boolean).join(" · ");
+        entry.purchaseMeta.innerText = "";
         entry.purchaseError.innerText = "";
         updatePurchaseEntryFields();
       } else {
@@ -527,14 +528,24 @@
       updateTransactionEntrySubmitState();
     }
 
+    // Purchase info simplification: UOM/Supplier render as compact
+    // read-only text from authoritative entry options only. No input, no
+    // override, no invented fallback. Missing supplier renders "—".
+    // The 190 shell registry owns purchaseEntrySupplierDisplay; older
+    // DOM mirrors predate it, so resolve with a getElementById fallback.
+    function purchaseSupplierDisplayEl_(entry)
+    {
+      return entry.purchaseSupplierDisplay || document.getElementById("purchaseEntrySupplierDisplay");
+    }
+
     function updatePurchaseEntryFields()
     {
       var state = transactionEntryState, entry = initializeStableDashboardElements().transactionEntry;
       if (!state.selectedPurchase) {
-        entry.purchaseUom.innerText = "—";
+        entry.purchaseUom.innerText = "Unit: —";
+        purchaseSupplierDisplayEl_(entry).innerText = "Supplier: —";
         entry.purchaseQty.value = "1";
         entry.purchaseTotal.value = "";
-        entry.purchaseSupplier.value = "";
         state.purchaseQty = 1;
         state.purchaseTotal = null;
         state.purchaseUom = null;
@@ -543,8 +554,17 @@
         entry.purchaseTotalError.innerText = "";
         entry.purchaseSupplierError.innerText = "";
       } else {
-        entry.purchaseUom.innerText = state.selectedPurchase.uom || "—";
+        var option = state.selectedPurchase;
+        var explicitCapacity = Object.prototype.hasOwnProperty.call(option, "packageCapacity") ||
+          Object.prototype.hasOwnProperty.call(option, "capacityUnit");
+        var capacity = explicitCapacity ? option.packageCapacity : option.packageMl;
+        var unit = explicitCapacity ? option.capacityUnit : "ml";
+        var capacityLabel = typeof capacity === "number" && isFinite(capacity) && capacity > 0 &&
+          (unit === "gr" || unit === "ml") ? " / " + capacity + " " + (unit === "gr" ? "g" : unit) : "";
+        entry.purchaseUom.innerText = "Unit: " + (option.uom || "—") + capacityLabel;
         state.purchaseUom = state.selectedPurchase.uom || null;
+        purchaseSupplierDisplayEl_(entry).innerText = "Supplier: " + (state.selectedPurchase.supplier || "—");
+        state.purchaseSupplier = state.selectedPurchase.supplier || null;
         if (!state.purchaseQty || state.purchaseQty < 1) {
           state.purchaseQty = 1;
           entry.purchaseQty.value = "1";
@@ -586,14 +606,6 @@
       entry.purchaseTotal.value = total ? total.toLocaleString("id-ID") : "";
       entry.purchaseTotalError.innerText = total && total > 0 ? "" : "Total must be greater than 0.";
       entry.purchaseTotal.setAttribute("aria-invalid", String(!(total && total > 0)));
-      updateTransactionEntrySubmitState();
-    }
-
-    function updatePurchaseEntrySupplier()
-    {
-      var entry = initializeStableDashboardElements().transactionEntry;
-      transactionEntryState.purchaseSupplier = entry.purchaseSupplier.value.trim();
-      invalidateCorrectionReview();
       updateTransactionEntrySubmitState();
     }
 
@@ -717,7 +729,7 @@
       });
       var receiptCashSelect = document.getElementById("receiptCashAccount");
       if (receiptCashSelect) receiptCashSelect.value = "";
-      entry.productMeta.innerText = ""; entry.expenseMeta.innerText = ""; entry.purchaseMeta.innerText = ""; entry.purchaseUom.innerText = "—";
+      entry.productMeta.innerText = ""; entry.expenseMeta.innerText = ""; entry.purchaseMeta.innerText = ""; entry.purchaseUom.innerText = "Unit: —"; purchaseSupplierDisplayEl_(entry).innerText = "Supplier: —"; entry.purchaseSupplierError.innerText = "";
       entry.productError.innerText = ""; entry.expenseError.innerText = ""; entry.purchaseError.innerText = "";
       entry.salesTypeError.innerText = ""; entry.qtyError.innerText = "";
       entry.amountError.innerText = ""; entry.purchaseQtyError.innerText = ""; entry.purchaseTotalError.innerText = ""; entry.purchaseSupplierError.innerText = "";

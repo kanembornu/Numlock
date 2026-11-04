@@ -152,6 +152,9 @@ function validateInventoryConversionPopulationAcceptance(after, candidates) {
 }
 
 function executeInventoryConversionCandidatePopulationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var candidates;
   try { candidates = runtime.candidateRows ? runtime.candidateRows.map(function(row) { return Object.assign({}, row); }) :
@@ -192,6 +195,9 @@ function executeInventoryConversionCandidatePopulationWithRuntime(runtime) {
 }
 
 function inventoryConversionPopulationDisposableFixture(runtime, canonicalId, owned, label, sourceState) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var token = runtime.createToken(), name = INVENTORY_SCHEMA_RUNTIME.DISPOSABLE_NAME_PREFIX + "Population " + label + " " + token;
   var spreadsheet = runtime.createSpreadsheet(name, 1000, 26);
   var ownership = { token: token, spreadsheetId: String(spreadsheet.getId()), spreadsheetName: name };
@@ -219,6 +225,9 @@ function inventoryConversionPopulationDisposableContext(runtime, ownership, cand
 }
 
 function executeInventoryConversionCandidateDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], failure = null, cleanupFailures = [], result = null, productionBefore = null;
   try {
     var canonical = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
@@ -300,6 +309,9 @@ function executeInventoryConversionCandidateDisposableRuntimeProofWithRuntime(ru
 }
 
 function runInventoryConversionCandidateDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   // Off-repo retirement: manifest evidence bytes are repository-authoritative and Apps Script
   // cannot read the repository, so this proof fails closed with a deterministic status.
   // Future activation requires a separately authorized design (docs/evidence/off-repo-retirement.md).
@@ -325,6 +337,9 @@ function runInventoryConversionCandidateDisposableRuntimeProof() {
 }
 
 function executeInventoryConversionCandidateRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   if (!record || record.migrationId !== INVENTORY_CONVERSION_CANDIDATE_POPULATION.MIGRATION_ID ||
       record.version !== INVENTORY_CONVERSION_CANDIDATE_POPULATION.VERSION || !record.preState || !record.acceptedPostState ||
@@ -360,6 +375,9 @@ function inventoryConversionCandidateProductionRuntime(spreadsheet) {
 }
 
 function runInventoryConversionCandidatePopulation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -371,6 +389,9 @@ function runInventoryConversionCandidatePopulation() {
 }
 
 function runInventoryConversionCandidateRecovery(record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -437,6 +458,9 @@ function validateInventoryConversionActivationAcceptance(after, candidates) {
 }
 
 function executeInventoryConversionActivationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var candidates;
   try { candidates = runtime.candidateRows ? runtime.candidateRows.map(function(row) { return Object.assign({}, row); }) :
@@ -493,6 +517,9 @@ function inventoryConversionActivationHasLedgerDependency(state, candidates) {
 }
 
 function executeInventoryConversionActivationRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   if (!record || record.migrationId !== INVENTORY_CONVERSION_ACTIVATION.MIGRATION_ID ||
       record.version !== INVENTORY_CONVERSION_ACTIVATION.VERSION || !record.preState || !record.acceptedPostState ||
@@ -523,6 +550,9 @@ function executeInventoryConversionActivationRecoveryWithRuntime(runtime, record
 }
 
 function inventoryConversionActivationDisposableFixture(runtime, canonicalId, owned, label, sourceState) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ownership = inventoryConversionPopulationDisposableFixture(runtime, canonicalId, owned, "Activation " + label, sourceState);
   var spreadsheet = runtime.openById(ownership.spreadsheetId);
   spreadsheet.getSheetByName("InventoryUOMConversions").getRange(1, 1, sourceState.conversions.values.length, 24)
@@ -531,6 +561,9 @@ function inventoryConversionActivationDisposableFixture(runtime, canonicalId, ow
 }
 
 function executeInventoryConversionActivationDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], failure = null, cleanupFailures = [], result = null, productionBefore = null;
   try {
     var canonical = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
@@ -649,6 +682,9 @@ function executeInventoryConversionActivationDisposableRuntimeProofWithRuntime(r
 }
 
 function runInventoryConversionActivationDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   // Off-repo retirement: manifest evidence bytes are repository-authoritative and Apps Script
   // cannot read the repository, so this proof fails closed with a deterministic status.
   // Future activation requires a separately authorized design (docs/evidence/off-repo-retirement.md).
@@ -674,6 +710,9 @@ function runInventoryConversionActivationDisposableRuntimeProof() {
 }
 
 function runInventoryConversionActivation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -685,6 +724,9 @@ function runInventoryConversionActivation() {
 }
 
 function runInventoryConversionActivationRecovery(record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -900,6 +942,9 @@ function validateInventoryLemonProductionAcceptance(before, after, evidence, ope
 }
 
 function executeInventoryLemonProductionWithRuntime(runtime, operation) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var before, expected, evidence, writeAttempted = false, writes = 0;
   try {
     inventoryMigrationRequireRuntime(runtime);
@@ -946,6 +991,9 @@ function inventoryLemonRecoveryDependency(state) {
 }
 
 function executeInventoryLemonProductionRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var attempted = false, writes = 0;
   try {
     inventoryMigrationRequireRuntime(runtime);
@@ -978,6 +1026,9 @@ function executeInventoryLemonProductionRecoveryWithRuntime(runtime, record) {
 }
 
 function inventoryLemonProductionLocked(operation, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -991,7 +1042,19 @@ function inventoryLemonProductionLocked(operation, record) {
   } finally { if (acquired) lock.releaseLock(); }
 }
 
-function runInventoryLemonProductionPreflight() { return inventoryLemonProductionLocked("preflight"); }
-function runInventoryLemonProductionPopulation() { return inventoryLemonProductionLocked("population"); }
-function runInventoryLemonProductionActivation() { return inventoryLemonProductionLocked("activation"); }
-function runInventoryLemonProductionRecovery(record) { return inventoryLemonProductionLocked("recovery", record); }
+function runInventoryLemonProductionPreflight() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+ return inventoryLemonProductionLocked("preflight"); }
+function runInventoryLemonProductionPopulation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+ return inventoryLemonProductionLocked("population"); }
+function runInventoryLemonProductionActivation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+ return inventoryLemonProductionLocked("activation"); }
+function runInventoryLemonProductionRecovery(record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+ return inventoryLemonProductionLocked("recovery", record); }

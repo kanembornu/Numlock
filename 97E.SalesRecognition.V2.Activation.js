@@ -254,6 +254,9 @@ function salesRecognitionV2ActivateRuntime_() {
 // Public Execution-API entry: the ONLY outer lock, acquired before any config
 // read/write. Takes no parameters — client cannot choose T or ActivationID.
 function salesRecognitionV2Activate() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var act = SALES_V2_ACTIVATION, runtime = null, acquired = false, result;
   try {
     runtime = salesRecognitionV2ActivateRuntime_();

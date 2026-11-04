@@ -872,6 +872,9 @@ function cashFingerprint(value) {
 }
 
 function cashRestoreSheet(sheet, snapshot) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   balanceFoundationRestoreGridDimensions(sheet, snapshot);
   sheet.getDataRange().clearContent();
   if (snapshot.values.length) sheet.getRange(1, 1, snapshot.values.length, snapshot.values[0].length).setValues(snapshot.values);
@@ -902,6 +905,9 @@ function validateCashMigrationAcceptance(before, plan, after) {
 }
 
 function executeCashFoundationSchemaRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   cashRequireSchemaExecutionRuntime(runtime);
   if (!record || record.migrationId !== CASH_SCHEMA_MIGRATION.MIGRATION_ID || record.version !== CASH_SCHEMA_MIGRATION.VERSION ||
       !record.snapshot || !record.acceptedPostState || record.preStateFingerprint !== cashFingerprint(record.snapshot) ||
@@ -936,6 +942,9 @@ function executeCashFoundationSchemaRecoveryWithRuntime(runtime, record) {
 }
 
 function executeCashFoundationSchemaMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   cashRequireSchemaExecutionRuntime(runtime);
   var before = readCashSchemaMigrationState(runtime.spreadsheet);
   var plan = buildCashSchemaMigrationPlan(before, runtime.timestamp);
@@ -979,6 +988,9 @@ function executeCashFoundationSchemaMigrationWithRuntime(runtime) {
 }
 
 function runCashFoundationSchemaMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -993,6 +1005,9 @@ function runCashFoundationSchemaMigration() {
 }
 
 function runCashFoundationSchemaRecovery(migrationRecord) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -1258,6 +1273,9 @@ function cashDisposableRowsToValues(headers, rows) {
 }
 
 function cashDisposableCreateFixture(runtime, canonicalId, owned, label, storageState) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var token = runtime.createToken(), name = CASH_SCHEMA_RUNTIME.DISPOSABLE_NAME_PREFIX + label + " " + token;
   var spreadsheet = runtime.createSpreadsheet(name, 1000, CASH_SCHEMA_MIGRATION.ACCOUNTS_HEADERS.length);
   var id = String(spreadsheet && spreadsheet.getId ? spreadsheet.getId() : "");
@@ -1337,6 +1355,9 @@ function cashDisposableAssertMigration(first, spreadsheet) {
 }
 
 function executeCashFoundationDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], failure = null, cleanupFailures = [], result = null, canonical = null, productionBefore = null;
   try {
     canonical = resolveNumlockProductionSpreadsheetWithRuntime(runtime.storage);
@@ -1509,6 +1530,9 @@ function executeCashFoundationDisposableRuntimeProofWithRuntime(runtime) {
 }
 
 function runCashFoundationDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = executeCashFoundationDisposableRuntimeProofWithRuntime({
     storage: { openById: function(id) { return SpreadsheetApp.openById(id); } },
     createToken: function() { return new Date().getTime() + "-" + Utilities.getUuid(); },

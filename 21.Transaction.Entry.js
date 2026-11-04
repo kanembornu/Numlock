@@ -85,7 +85,7 @@ function prepareCanonicalExpenseEntry(payload, context) {
     category: String(item.Kategori).trim(), kind: String(item.Kind).trim(), group: String(item.Group).trim(), amount: amount };
 }
 
-function persistCanonicalEntry(ss, specification, services) {
+function persistCanonicalEntry_(ss, specification, services) {
   var runtime = services || { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };
   var sheet = ss.getSheetByName(specification.sheetName);
   var logs = ss.getSheetByName("Logs");
@@ -158,22 +158,115 @@ function buildTransactionEntryOptions(products, expenseItems, pricingRows, refer
   return { sales: sales, expenses: expenses, purchases: purchases };
 }
 
+// Compose only an explicitly supplied governed binding; never activate policy or infer IDs.
+function composePurchaseEntryMetadata_(data, items, suppliers, config, at) {
+  if (config === null || config === undefined) return data;
+  validatePurchaseBindingM3Config_(config, suppliers, items);
+  var routes = validateExpensePurchasePolicy_(items), date = purchaseBindingM3Date_(capitalEquityDateKey(at));
+  config.rows.forEach(function(row) {
+    if (!routes[row.expenseItemId] || !expensePolicyIsPurchase_(routes[row.expenseItemId])) {
+      purchaseBindingM3Fail_('M3_ITEM_AUTHORITY');
+    }
+  });
+  data.purchases = data.purchases.filter(function(option) {
+    var binding = config.rows.filter(function(row) { return row.expenseItemId === option.expenseItemId; })[0];
+    if (!binding) return true;
+    var route = routes[option.expenseItemId];
+    var from = [config.effectiveFrom, route.effectiveFrom, EXPENSE_PURCHASE_POLICY.effectiveFrom].sort().pop();
+    if (date < from || route.effectiveTo && date > route.effectiveTo) return false;
+    var supplier = suppliers.filter(function(row) { return row.SupplierID === binding.SupplierID; })[0];
+    option.supplierID = binding.SupplierID;
+    option.supplier = supplier.Name;
+    option.uom = binding.PurchaseUOM;
+    option.packageMl = binding.PackageMl; // Metadata only; never a stock conversion.
+    option.policyVersion = EXPENSE_PURCHASE_POLICY.version;
+    option.policyRevision = EXPENSE_PURCHASE_POLICY.revision;
+    option.effectiveFrom = from;
+    option.effectiveTo = route.effectiveTo || null;
+    return true;
+  });
+  return data;
+}
+
+function requirePurchaseEntryPolicyDate_(route, date) {
+  // Prospective window is route-owned; policy-wide effectiveFrom is descriptive
+  // and must not retroactively refuse legacy routes (OSK01 etc.) whose
+  // route-effectiveFrom predates activation. New V2 rows (OSR22-24) carry
+  // activation date in route.effectiveFrom so prospective enforcement still holds.
+  // ponytail: if a future policy needs a global cutoff, add an explicit
+  // prospectiveOnlyAllowlist rather than re-adding a global date compare.
+  if (date < route.effectiveFrom || route.effectiveTo && date > route.effectiveTo) purchaseBindingM3Fail_('M3_POLICY_DATE_INVALID');
+}
+
+function readCanonicalPurchaseEntryOptions_(binding, gate) {
+  gate = gate || purchaseSingleCommitGate_(null);
+  if (gate.mode === "REFUSE") throw canonicalEntryError(gate.code, gate.detail || gate.code, null);
+  var ss = requireNumlockProductionSpreadsheet();
+  var items = readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"]);
+  var suppliers = readCanonicalTable(ss, SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS);
+  var data = buildTransactionEntryOptions([], items, [], new Date());
+  if (gate.mode === "LEGACY") {
+    return composePurchaseEntryMetadata_(data, items, suppliers, binding, new Date()).purchases;
+  }
+  var activeBinding = binding || PURCHASE_SUPPLIER_BINDING_V1;
+  var referenceDate = purchaseRecordingDateKey_(new Date());
+  data.purchases = data.purchases.map(function(option) {
+    try {
+      var authority = resolvePurchaseAuthority_(option.expenseItemId, referenceDate, activeBinding, suppliers);
+      return Object.assign({}, option, {
+        supplierID: authority.supplierId,
+        supplier: authority.supplierSource,
+        uom: authority.purchaseUOM,
+        packageCapacity: authority.packageCapacity,
+        capacityUnit: authority.usageUOM,
+        packageMl: authority.usageUOM === 'ml' ? authority.packageCapacity : null,
+        packageIdentity: authority.packageIdentity,
+        authorityVersion: authority.authorityVersion,
+        authorityRevision: authority.authorityRevision
+      });
+    } catch (error) {
+      return Object.assign({}, option, {
+        supplierID: '',
+        supplier: '',
+        uom: '',
+        packageCapacity: null,
+        capacityUnit: null,
+        packageMl: 0,
+        packageIdentity: null,
+        authorityVersion: '',
+        authorityRevision: 0,
+        resolutionError: error.code || error.message
+      });
+    }
+  });
+  return data.purchases;
+}
+
 function getTransactionEntryOptions() {
   try {
     var revision = typeof getDashboardCacheRevision === "function" ? getDashboardCacheRevision() : "0";
     var cache = CacheService.getScriptCache();
-    var cacheKey = "transaction-entry-options-v4|" + EXPENSE_PURCHASE_POLICY.version + "|" + revision;
-    var cached = cache.get(cacheKey);
-    if (cached) return { success: true, data: JSON.parse(cached), cacheHit: true };
+    var gate = purchaseSingleCommitGate_(null);
+    if (gate.mode === "REFUSE") throw canonicalEntryError(gate.code, gate.detail || gate.code, null);
+    var binding = gate.mode === "ACTIVE" ? readPurchaseSupplierBindingV1_() : readPurchaseBindingM3Config_();
+    var cacheKey = "transaction-entry-options-v7|" + gate.mode + "|" + EXPENSE_PURCHASE_POLICY.version + "|" + revision;
+    // Governed metadata is read fresh: cached names/IDs must not mask inactive authority.
+    var cached = binding === null ? cache.get(cacheKey) : null;
+    if (cached) {
+      var cachedData = JSON.parse(cached);
+      cachedData.purchases = readCanonicalPurchaseEntryOptions_(binding, gate);
+      return { success: true, data: cachedData, cacheHit: true };
+    }
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var products = readCanonicalTable(ss, "Products", ["ID_Prod", "Produk", "Kategori", "Kind", "IsActive"]);
     var expenses = readCanonicalTable(ss, "ExpenseItems", ["ID_Ops", "Item", "Kategori", "Kind", "Group", "IsActive"]);
     var pricing = readCanonicalTable(ss, "ProductPricing", ["ID_Prod", "Tipe", "EffectiveFrom", "EffectiveTo", "HPP", "Harga", "IsActive"]);
     var data = buildTransactionEntryOptions(products, expenses, pricing, new Date());
+    data.purchases = readCanonicalPurchaseEntryOptions_(binding, gate);
     data.policyVersion = EXPENSE_PURCHASE_POLICY.version;
     data.purchaseEnabled = EXPENSE_PURCHASE_POLICY.enabled;
     data.revision = revision;
-    cache.put(cacheKey, JSON.stringify(data), 300);
+    if (binding === null) cache.put(cacheKey, JSON.stringify(data), 300);
     return { success: true, data: data, cacheHit: false };
   } catch (error) { return canonicalEntryFailure(error); }
 }
@@ -252,7 +345,7 @@ function submitCanonicalTransaction(payload) {
     environment: "PRODUCTION", lock: LockService.getScriptLock(),
     spreadsheet: function() { return SpreadsheetApp.getActiveSpreadsheet(); },
     now: function() { return new Date(); }, uuid: function() { return Utilities.getUuid(); },
-    flush: function() { SpreadsheetApp.flush(); }, invalidate: function() { invalidateDashboardCache(); }
+    flush: function() { SpreadsheetApp.flush(); }, invalidate: function() { invalidateDashboardCache_(); }
   });
 }
 
@@ -284,7 +377,53 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
     lock.waitLock(30000);
     acquired = true;
     scope = { lock: lock, active: true };
-    var ss = runtime.spreadsheet(), timestamp = runtime.now();
+    // Persisted operation identity precedes mutable policy/master admission.
+    if (type === "EXPENSE" && runtime.environment !== "LOCAL_FIXTURE" && expenseSingleCommitPayloadKey_(payload)) {
+      try {
+        var canonicalRecovery = requireNumlockProductionSpreadsheet();
+        var expenseRecovery = runtime.spreadsheet();
+        var recoveryKind = purchaseCrossStoreRecoveryIdentity_(payload, canonicalRecovery, expenseRecovery);
+        var historicalEvents = readCanonicalTable(canonicalRecovery, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers)
+          .filter(function(row) { return String(row.RequestKey).trim() === expenseSingleCommitPayloadKey_(payload).trim(); })
+          .map(function(row) { delete row.sourceRowIndex; return row; });
+        if (historicalEvents.length > 1) throw new Error("AMBIGUOUS_RECOVERY_IDENTITY");
+        if (historicalEvents.length && recoveryKind === EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+          throw new Error("CONFLICTING_RECOVERY_IDENTITY");
+        }
+      } catch (identityError) {
+        // Lookup failure cannot establish absence or the outcome of a prior
+        // attempt. Keep the same intent retryable; never admit a fallback save.
+        return { success: false, status: "UNKNOWN", unknown: true,
+          requestKey: expenseSingleCommitPayloadKey_(payload), writeCount: 0,
+          error: { code: "RECOVERY_IDENTITY_UNRESOLVED", message: identityError.message, field: "requestKey" } };
+      }
+      if (historicalEvents.length && !recoveryKind) {
+        // Legacy events carry their own pinned policy, normalized payload and
+        // recovery key. Validate persisted authority before entering resume.
+        purchaseEventHistory_(historicalEvents);
+        var orphan = JSON.parse(historicalEvents[0].NormalizedPayload);
+        if (orphan.payloadVersion === 2) {
+          var orphanRequest = purchaseSingleCommitNormalize_(payload);
+          return purchaseSingleCommitResult_(JSON.stringify(orphanRequest) === JSON.stringify(orphan.normalizedRequest) ?
+            'RECOVERY_REQUIRED' : 'CONFLICT', { requestKey: orphanRequest.requestKey,
+              code: 'ORPHAN_V2_EVENT', detail: 'OPERATION_EVIDENCE_MISSING' });
+        }
+        return orchestratePurchaseEventUnderLock_(payload,
+          purchaseEventProductionRuntime_(canonicalRecovery, lock, null, runtime.now()), scope);
+      }
+      if (recoveryKind === PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+        return purchaseSingleCommitDispatch_(payload, canonicalRecovery, runtime, null, expenseSingleCommitGate_(runtime));
+      }
+      if (recoveryKind === EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+        return expenseSingleCommitDispatch_(payload, expenseRecovery, runtime, null, expenseSingleCommitGate_(runtime));
+      }
+    }
+    var purchaseRoute = type === "EXPENSE" && EXPENSE_PURCHASE_POLICY.rows.filter(function(row) {
+      return row.expenseItemId === payload.expenseItemId;
+    })[0];
+    var ss = runtime.environment !== "LOCAL_FIXTURE" && purchaseRoute && expensePolicyIsPurchase_(purchaseRoute) ?
+      requireNumlockProductionSpreadsheet() : runtime.spreadsheet();
+    var timestamp = runtime.now();
     var settle = typeof runtime.settle === "function" ? runtime.settle : runCashSettleAndPersist;
     var settlementCashAccount = payload && typeof payload.cashAccountCode === "string" ? payload.cashAccountCode.trim() : "";
     var dateKey = canonicalDateKey(timestamp);
@@ -367,7 +506,8 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
           ["ID_Ops", "Item", "Kategori", "Kind", "Group", "AccountCode", "IsActive"]) };
         var route = resolveExpensePurchasePolicy_(payload.expenseItemId, context.expenseItems);
         if (expensePolicyIsPurchase_(route)) {
-          var purchaseRuntime = purchaseEventProductionRuntime_(ss, lock, context.expenseItems, timestamp);
+          var purchaseRuntime = runtime.environment === "LOCAL_FIXTURE" && runtime.purchase && runtime.purchase.environment === "LOCAL_FIXTURE" ?
+            runtime.purchase : purchaseEventProductionRuntime_(ss, lock, context.expenseItems, timestamp);
           if (runtime.environment === "LOCAL_FIXTURE" && runtime.purchase && runtime.purchase.environment === "LOCAL_FIXTURE") {
             purchaseRuntime = Object.assign({}, runtime.purchase, { lock: lock, read: function() {
               var state = runtime.purchase.read();
@@ -405,7 +545,7 @@ function submitCanonicalTransactionWithRuntime_(payload, runtime) {
     var id = generateCanonicalEntryId(prefix, timestamp,
       runtime.uuid, function(candidate) { return canonicalSheetHasId(sheet, candidate); });
     values[0] = id;
-    persistCanonicalEntry(ss, { sheetName: sheetName, headers: headers,
+    persistCanonicalEntry_(ss, { sheetName: sheetName, headers: headers,
       values: values, timestamp: timestamp, id: id, action: action }, { flush: runtime.flush, uuid: runtime.uuid });
     dateKey = canonicalDateKey(timestamp);
     if (type === "SALES" && (runtime.environment === "PRODUCTION" || typeof runtime.postSalesHpp === "function")) {
@@ -603,6 +743,34 @@ function expenseSingleCommitRefusal_(gate) {
 // operation type ("EXPENSE_SINGLE_COMMIT_SAVE" or "PURCHASE_SINGLE_COMMIT_SAVE")
 // so the dispatcher can route into the core resume path, or "" for a plain
 // refusal. Read-only, zero writes, fail-closed on any lookup error.
+// RequestKey is scoped by OperationType, not globally unique. Never choose
+// between two persisted types or treat a failed store read as absence.
+function purchaseCrossStoreRecoveryIdentity_(payload, canonical, expenseStore) {
+  var key = expenseSingleCommitPayloadKey_(payload).trim();
+  if (!key) return "";
+  var headers = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.HEADERS;
+  var sheet = TRANSACTION_PRODUCTION_CONTRACT.OPERATIONS.SHEET;
+  var purchaseRows = readCanonicalTable(canonical, sheet, headers);
+  var sameStore = expenseStore === canonical || expenseStore && typeof expenseStore.getId === "function" &&
+    String(expenseStore.getId()) === String(canonical.getId());
+  var expenseRows = sameStore ? purchaseRows : readCanonicalTable(expenseStore, sheet, headers);
+  var rows = sameStore ? purchaseRows : purchaseRows.concat(expenseRows);
+  var matches = rows.filter(function(row) { return String(row.RequestKey).trim() === key; });
+  if (matches.length > 1) throw new Error("AMBIGUOUS_RECOVERY_IDENTITY");
+  if (!matches.length) return ""; // Normal new-intent admission remains unchanged.
+  var type = String(matches[0].OperationType || "");
+  if (type !== PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE && type !== EXPENSE_SINGLE_COMMIT_V1.OPERATION_TYPE) {
+    throw new Error("CONFLICTING_RECOVERY_IDENTITY");
+  }
+  // A Purchase in noncanonical storage, or Expense in another store, cannot
+  // authorize cross-workbook writes. Require the designated store's evidence.
+  var designated = type === PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE ? purchaseRows : expenseRows;
+  if (!designated.some(function(row) { return row.OperationType === type && String(row.RequestKey) === key; })) {
+    throw new Error("RECOVERY_STORAGE_CONFLICT");
+  }
+  return type;
+}
+
 function expenseSingleCommitRecoveryRoute_(payload, ss, dispatcherRuntime, gate) {
   var key = expenseSingleCommitPayloadKey_(payload);
   if (!key) return "";
@@ -2000,9 +2168,32 @@ function purchaseSingleCommitNormalize_(payload) {
 // PurchaseEvent row (no payment keys, no supplierID): key order is the frozen
 // normalizePurchaseEventRequestWithCompatibility_ construction order, so
 // purchaseEventHistory_ round-trips it byte-exactly.
-function purchaseSingleCommitEventPayload_(normalized) {
+function purchaseSingleCommitEventPayload_(normalized, snapshot, supplierSource) {
+  if (snapshot) return purchaseAuthorityEventPayload_(normalized, snapshot, supplierSource);
   return { transactionType: "EXPENSE", requestKey: normalized.requestKey,
     expenseItemId: normalized.expenseItemId, input: normalized.input };
+}
+
+function purchaseResolveIntentAuthority_(normalized, suppliers) {
+  var authority = resolvePurchaseAuthority_(normalized.expenseItemId, normalized.input.ExpenseDate,
+    readPurchaseSupplierBindingV1_(), suppliers);
+  if (normalized.supplierID && normalized.supplierID !== authority.supplierId) throw new Error('SUPPLIER_MISMATCH');
+  if (normalized.input.PurchaseUOM !== authority.purchaseUOM) throw new Error('UOM_MISMATCH');
+  if (normalized.input.PackageIdentity && normalized.input.PackageIdentity !== authority.packageIdentity) throw new Error('PACKAGE_IDENTITY_MISMATCH');
+  return authority;
+}
+
+function purchaseVerifyStoredAuthority_(request, snapshot, event, row) {
+  try {
+    normalizePurchaseEventHistoryRequest_(event);
+    return JSON.stringify(request) === JSON.stringify(event.normalizedRequest) &&
+      JSON.stringify(snapshot) === JSON.stringify(event.authoritySnapshot) &&
+      row.ExpenseID === snapshot.ExpenseItemID && row.SupplierID === snapshot.SupplierID &&
+      row.NormalizedPayload === JSON.stringify(event) && row.ReceiptPlan === 'null' &&
+      ['ExpenseDate','ReceiptDate','PurchaseQty','PurchaseUOM','AcquisitionValue','SupplierSource','ExternalRef','ExternalDocumentStatus'].every(function(k) {
+        return row[k] === event.input[k];
+      });
+  } catch (error) { return false; }
 }
 
 function purchaseSingleCommitPayloadKey_(payload) {
@@ -2044,6 +2235,10 @@ function purchaseSingleCommitSchemaGate_(ss) {
 // (repository / batch / crash); production defaults are read-only transport
 // factories.
 function purchaseSingleCommitCoreRuntime_(ss, dispatcherRuntime, items, gate) {
+  if (dispatcherRuntime.environment !== "LOCAL_FIXTURE") {
+    ss = requireNumlockProductionSpreadsheet();
+    items = null; // Re-read authority from canonical storage, never caller metadata.
+  }
   var seam = dispatcherRuntime && dispatcherRuntime.purchaseSingleCommit || {};
   return {
     spreadsheet: ss,
@@ -2053,6 +2248,7 @@ function purchaseSingleCommitCoreRuntime_(ss, dispatcherRuntime, items, gate) {
     invalidate: dispatcherRuntime.invalidate,
     items: items,
     gate: gate,
+    readPurchaseBindingM3: seam.readPurchaseBindingM3 || readPurchaseBindingM3Config_,
     batch: seam.batch || purchaseSingleCommitBatchRequest_,
     crash: seam.crash,
     actor: seam.actor || function() {
@@ -2074,6 +2270,17 @@ function purchaseSingleCommitCoreRuntime_(ss, dispatcherRuntime, items, gate) {
 // canonical integrity digest — derived once. The plan is the single source of
 // truth for every later step; no mutable master is re-read after freeze.
 // ---------------------------------------------------------------------------
+// Server recording/posting date authority: the Asia/Jakarta (UTC+7, fixed, no
+// DST) calendar day of a SERVER timestamp. Deterministic in Apps Script and in
+// the local Node harness alike (never machine-local TZ, never operator input).
+// Owns the Purchase journal posting date (Tanggal) and the Policy C regime for
+// new intents and Correct/Void replacements; operator ExpenseDate stays
+// economic/occurrence metadata only.
+function purchaseRecordingDateKey_(serverDate) {
+  if (!(serverDate instanceof Date) || isNaN(serverDate.getTime())) return null;
+  return new Date(serverDate.getTime() + 7 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
 function purchaseSingleCommitPlan_(input) {
   var save = PURCHASE_SINGLE_COMMIT_V1;
   var normalized = input.normalized, now = input.now, nowISO = now.toISOString();
@@ -2082,7 +2289,8 @@ function purchaseSingleCommitPlan_(input) {
   var journalID = save.JOURNAL_ID_PREFIX + eventID;
   var amount = Number(normalized.input.AcquisitionValue);
   var economicDate = input.economicDate;
-  var eventPayload = purchaseSingleCommitEventPayload_(normalized);
+  var eventPayload = purchaseSingleCommitEventPayload_(normalized, input.authoritySnapshot, input.supplierSource);
+  var facts = eventPayload.input;
   var eventRow = {
     EventID: eventID,
     ExpenseID: normalized.expenseItemId,
@@ -2091,16 +2299,16 @@ function purchaseSingleCommitPlan_(input) {
     PolicyRevision: input.policyRevision,
     CostType: input.route.CostType,
     PurchaseRelationship: input.route.PurchaseRelationship,
-    ExpenseDate: normalized.input.ExpenseDate,
-    ReceiptDate: normalized.input.ReceiptDate,
-    PurchaseQty: normalized.input.PurchaseQty,
-    PurchaseUOM: normalized.input.PurchaseUOM,
-    AcquisitionValue: normalized.input.AcquisitionValue,
-    SupplierSource: normalized.input.SupplierSource,
-    ExternalRef: normalized.input.ExternalRef || '',
-    ExternalDocumentStatus: normalized.input.ExternalDocumentStatus || (normalized.input.ExternalRef ? 'AVAILABLE' : 'EXTERNAL_DOCUMENT_UNAVAILABLE'),
-    Attestation: JSON.stringify({ attested: normalized.input.Attested === true,
-      conversionEvidenceConfirmed: normalized.input.ConversionEvidenceConfirmed === true }),
+    ExpenseDate: facts.ExpenseDate,
+    ReceiptDate: facts.ReceiptDate,
+    PurchaseQty: facts.PurchaseQty,
+    PurchaseUOM: facts.PurchaseUOM,
+    AcquisitionValue: facts.AcquisitionValue,
+    SupplierSource: facts.SupplierSource,
+    ExternalRef: facts.ExternalRef || '',
+    ExternalDocumentStatus: facts.ExternalDocumentStatus || (facts.ExternalRef ? 'AVAILABLE' : 'EXTERNAL_DOCUMENT_UNAVAILABLE'),
+    Attestation: JSON.stringify({ attested: facts.Attested === true,
+      conversionEvidenceConfirmed: facts.ConversionEvidenceConfirmed === true }),
     AllocationStatus: input.allocationStatus,
     RequestKey: normalized.requestKey,
     NormalizedPayload: JSON.stringify(eventPayload),
@@ -2112,7 +2320,7 @@ function purchaseSingleCommitPlan_(input) {
     IsActive: true,
     PaymentStatus: save.PAYMENT_STATUS,
     CashAccountCode: save.MONEY_ACCOUNT_CODE,
-    SupplierID: normalized.supplierID,
+    SupplierID: input.authoritySnapshot ? input.authoritySnapshot.SupplierID : normalized.supplierID,
     AccountingStatus: save.ACCOUNTING_STATUS
   };
   var journalRows = [
@@ -2155,9 +2363,9 @@ function purchaseSingleCommitPlan_(input) {
     savedAt: nowISO,
     transactionTimestamp: timestamp,
     economicDate: economicDate,
-    expenseDate: normalized.input.ExpenseDate,
+    expenseDate: facts.ExpenseDate,
     amount: amount,
-    supplierID: normalized.supplierID,
+    supplierID: input.authoritySnapshot ? input.authoritySnapshot.SupplierID : normalized.supplierID,
     expenseItem: {
       expenseItemId: normalized.expenseItemId,
       item: input.itemLabel,
@@ -2180,6 +2388,7 @@ function purchaseSingleCommitPlan_(input) {
     journalRows: journalRows,
     auditRow: auditRow
   };
+  if (input.authoritySnapshot) { plan.planVersion = 2; plan.authoritySnapshot = input.authoritySnapshot; }
   plan.planDigest = transactionPayloadHash_(plan);
   return plan;
 }
@@ -2192,7 +2401,7 @@ function purchaseSingleCommitVerifyPlan_(plan) {
   function malformed(reason) { return { ok: false, kind: "MALFORMED", reason: reason }; }
   function tampered(reason) { return { ok: false, kind: "TAMPERED", reason: reason }; }
   if (!plan || typeof plan !== "object" || Array.isArray(plan)) return malformed("PLAN_NOT_OBJECT");
-  if (plan.planVersion !== save.PLAN_VERSION) return malformed("PLAN_VERSION_MISMATCH");
+  if (plan.planVersion !== 1 && plan.planVersion !== 2) return malformed("PLAN_VERSION_MISMATCH");
   if (plan.operationType !== save.OPERATION_TYPE) return malformed("OPERATION_TYPE_MISMATCH");
   if (typeof plan.requestKey !== "string" || !plan.requestKey) return malformed("REQUEST_KEY_MISSING");
   if (plan.operationID !== transactionOperationID_(save.OPERATION_TYPE, plan.requestKey)) {
@@ -2220,8 +2429,10 @@ function purchaseSingleCommitVerifyPlan_(plan) {
     return tampered("CASH_ACCOUNT_IN_PLAN");
   }
   if (typeof payload.supplierID !== "string") return malformed("SUPPLIER_ID_MALFORMED");
-  if (JSON.stringify(plan.eventNormalizedPayload) !==
-      JSON.stringify(purchaseSingleCommitEventPayload_(payload))) {
+  if (plan.planVersion === 2) {
+    if (!purchaseVerifyStoredAuthority_(payload, plan.authoritySnapshot, plan.eventNormalizedPayload, plan.eventRow) ||
+        plan.supplierID !== plan.authoritySnapshot.SupplierID) return tampered("AUTHORITY_SNAPSHOT_MISMATCH");
+  } else if (JSON.stringify(plan.eventNormalizedPayload) !== JSON.stringify(purchaseSingleCommitEventPayload_(payload))) {
     return tampered("EVENT_PAYLOAD_MISMATCH");
   }
   var amount = plan.amount;
@@ -2508,7 +2719,9 @@ function purchaseSingleCommitInspect_(plan, ss) {
 // The legacy-shaped Purchase DTO returned to the client on DONE (projected
 // from the frozen plan's event row — the business authority).
 function purchaseSingleCommitEntry_(plan) {
-  return projectPurchaseEventTransaction_(plan.eventRow);
+  return Object.assign(projectPurchaseEventTransaction_(plan.eventRow), {
+    accountingStatus: PURCHASE_SINGLE_COMMIT_V1.ACCOUNTING_STATUS
+  });
 }
 
 // COMMITTED transition: full ten-field readback of the committed operation
@@ -2771,17 +2984,28 @@ function purchaseSingleCommitNewIntent_(normalized, hash, runtime) {
       code: codes.ACCOUNT_PREFLIGHT_FAILED, field: save.DEBIT_ACCOUNT_CODE,
       detail: "PURCHASE_ACCOUNT_METADATA_MISMATCH" });
   }
-  // Prospective Policy C regime only: a pre-transition economic date is
-  // LEGACY_PRE_TRANSITION authority and never enters this normal flow.
-  var economicDate = capitalEquityDateKey(normalized.input.ExpenseDate);
-  var regime = resolvePolicyCAccountingRegime_(normalized.input.ExpenseDate);
+  // Recording/posting-date authority (M3 closure): ONE server-derived
+  // Asia/Jakarta recording day owns the journal posting date (Tanggal), the
+  // plan posting field and the Policy C regime. The operator ExpenseDate never
+  // selects posting date or regime; it stays economic/occurrence metadata
+  // (plan.expenseDate) and remains policy-window gated below
+  // (requirePurchaseEntryPolicyDate_ = fail-closed on early operator dates).
+  // Replay/recovery reuses this frozen persisted plan value unchanged.
+  var now = runtime.now();
+  var recordingDateKey = purchaseRecordingDateKey_(now);
+  if (!recordingDateKey) {
+    return outcome(save.STATUS.REFUSED, {
+      code: codes.PAYLOAD_INVALID, field: "recordingDate",
+      detail: "RECORDING_DATE_INVALID" });
+  }
+  var economicDate = recordingDateKey;
+  var regime = resolvePolicyCAccountingRegime_(recordingDateKey);
   if (regime.status !== "RESOLVED" || regime.regime !== save.REGIME) {
     return outcome(save.STATUS.REFUSED, {
-      code: codes.REGIME_NOT_PROSPECTIVE, field: "ExpenseDate",
+      code: codes.REGIME_NOT_PROSPECTIVE, field: "recordingDate",
       detail: String(regime.reason || regime.regime || "") });
   }
-  var now = runtime.now();
-  var timestamp = new Date(normalized.input.ExpenseDate + "T00:00:00+07:00");
+  var timestamp = now;
   // Business authority: ExpenseItems master -> Policy C route (CostType /
   // PurchaseRelationship / business label). Never operator-derived.
   var items = runtime.items || readCanonicalTable(runtime.spreadsheet,
@@ -2810,24 +3034,41 @@ function purchaseSingleCommitNewIntent_(normalized, hash, runtime) {
     return outcome(save.STATUS.REFUSED,
       { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: "ITEM_LABEL_MISSING" });
   }
-  // SupplierID (D9): OPTIONAL business metadata. Supplied => validated against
-  // the existing supplier master authority; absent => never a refusal reason.
-  if (normalized.supplierID) {
-    var supplierRows;
-    try {
-      supplierRows = readCanonicalTable(runtime.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET,
-        SUPPLIER_MASTER_CONTRACT.HEADERS);
-    } catch (error) {
-      return outcome(save.STATUS.REFUSED,
-        { code: codes.SUPPLIER_INVALID, field: "supplierID", detail: "SUPPLIERS_NOT_READY" });
+  // Prospective universal authority applies only to new intents.
+  // Exact RequestKey replay has already branched to the frozen stored plan.
+  try {
+    requirePurchaseEntryPolicyDate_(route, normalized.input.ExpenseDate);
+  }
+  catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.PAYLOAD_INVALID, detail: error.message });
+  }
+  // Universal Purchase Authority: resolve authoritative Supplier, UOM, Package
+  // for all 27 owner-approved Purchase Items. Client payload MUST match.
+  var supplierRows;
+  try {
+    supplierRows = readCanonicalTable(runtime.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET,
+      SUPPLIER_MASTER_CONTRACT.HEADERS);
+  } catch (error) {
+    return outcome(save.STATUS.REFUSED,
+      { code: codes.SUPPLIER_INVALID, field: "supplierID", detail: "SUPPLIERS_NOT_READY" });
+  }
+  var authority;
+  try {
+    authority = purchaseResolveIntentAuthority_(normalized, supplierRows);
+  } catch (error) {
+    var authCode = error.code;
+    var mappedCode = codes.PAYLOAD_INVALID;
+    if (authCode === 'SUPPLIER_NOT_FOUND' || authCode === 'SUPPLIER_INACTIVE') {
+      mappedCode = codes.SUPPLIER_INVALID;
+    } else if (authCode === 'BINDING_ROW_NOT_FOUND') {
+      mappedCode = codes.PAYLOAD_INVALID;
     }
-    var supplier = supplierRows.filter(function(row) {
-      return String(row.SupplierID || "").trim() === normalized.supplierID;
-    })[0];
-    if (!supplier || !masterSelectionEligible(supplier.IsActive)) {
-      return outcome(save.STATUS.REFUSED,
-        { code: codes.SUPPLIER_INVALID, field: "supplierID", detail: "SUPPLIER_INACTIVE" });
-    }
+    return outcome(save.STATUS.REFUSED, {
+      code: mappedCode,
+      field: error.field || "expenseItemId",
+      detail: error.message
+    });
   }
   var eventID = save.EVENT_ID_PREFIX + normalized.requestKey;
   // Foreign-artifact defenses (dedupe before any write): a PurchaseEvent row
@@ -2868,7 +3109,8 @@ function purchaseSingleCommitNewIntent_(normalized, hash, runtime) {
   var plan;
   try {
     plan = purchaseSingleCommitPlan_({
-      normalized: normalized, hash: hash, operationID: operationID, auditID: auditID,
+      normalized: normalized, authoritySnapshot: purchaseAuthoritySnapshot_(authority), supplierSource: authority.supplierSource,
+      hash: hash, operationID: operationID, auditID: auditID,
       actor: runtime.actor(), now: now, timestamp: timestamp, economicDate: economicDate,
       itemLabel: itemLabel, category: String(itemRow.Kategori || ""),
       kind: String(itemRow.Kind || ""), group: String(itemRow.Group || ""),
@@ -4375,7 +4617,7 @@ function expenseCorrectionPublic_(operationType, payload) {
       now: function() { return new Date(); },
       uuid: function() { return Utilities.getUuid(); },
       flush: function() { SpreadsheetApp.flush(); },
-      invalidate: function() { invalidateDashboardCache(); },
+      invalidate: function() { invalidateDashboardCache_(); },
       expenseSingleCommit: { batch: function(ranges) {
         return expenseCorrectionBatchRequest_(ranges);
       } }
@@ -4582,10 +4824,43 @@ function purchaseCorrectionNormalize_(operationType, payload) {
   return normalized;
 }
 
-// Eligibility + immutable target evidence for a Purchase correction. Genuine
-// committed T11 single-commit lineage only (exact PURCHASE_SINGLE_COMMIT_SAVE
-// operation + committed Policy C prospective journal); legacy/UNPAID/AP/
-// historical events fail closed with a distinct zero-write code.
+// Resolve only a committed durable Correct's replacement. Legacy corr- rows
+// remain ineligible. Recheck the complete parent artifacts on admission/resume.
+function purchaseReplacementVoidOwner_(id, ss, successor) {
+  var c = PURCHASE_EVENT_CORRECTION;
+  var owners = expenseCorrectionOperationRows_(ss).filter(function(op) {
+    return (String(op.OperationType) === c.CORRECT ||
+      String(op.OperationType) === PURCHASE_SINGLE_COMMIT_V1.OPERATION_TYPE) &&
+      String(op.BusinessID) === id;
+  });
+  if (owners.length !== 1 || owners[0].OperationType !== c.CORRECT ||
+      owners[0].State !== "COMMITTED") return null;
+  var op = owners[0], plan;
+  try { plan = JSON.parse(op.OperationPlan); } catch (error) { return null; }
+  if (!plan || !purchaseCorrectionVerifyPlan_(plan).ok ||
+      plan.operationType !== c.CORRECT || plan.operationID !== op.OperationID ||
+      plan.requestKey !== op.RequestKey || plan.payloadHash !== op.PayloadHash ||
+      transactionPayloadHash_(plan.normalizedPayload) !== op.PayloadHash ||
+      plan.businessID !== id || !plan.replacement ||
+      plan.replacement.eventRow.EventID !== id) return null;
+  var after = null;
+  if (successor) {
+    if (successor.operationType !== c.VOID || successor.targetID !== id ||
+        !purchaseCorrectionVerifyPlan_(successor).ok ||
+        successor.target.saveOperationID !== op.OperationID ||
+        successor.target.saveRequestKey !== op.RequestKey ||
+        successor.targetEvidence.savePlan !== transactionPayloadHash_(plan) ||
+        !expenseSingleCommitRowExact_(successor.target.row,
+          plan.replacement.eventRow, PURCHASE_EVENT_POLICY.headers)) return null;
+    after = successor.lifecycle.afterRow;
+  }
+  if (purchaseCorrectionInspect_(plan, ss, after).state !== "EXACT") return null;
+  return { operation: op, plan: plan, journalID: plan.replacement.journalID,
+    amount: plan.replacement.amount };
+}
+
+// Eligible authority: committed Save, or committed durable Correct replacement
+// for Void only. Legacy/UNPAID/AP/historical events still fail closed.
 function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
   var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1,
     codes = c.CODES, ss = runtime.spreadsheet;
@@ -4597,6 +4872,12 @@ function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
     return String(op.OperationType) === save.OPERATION_TYPE &&
       String(op.BusinessID) === normalized.transactionId;
   });
+  var replacementOwner = null;
+  if (!saveOps.length && operationType === c.VOID) {
+    try { replacementOwner = purchaseReplacementVoidOwner_(normalized.transactionId, ss); }
+    catch (error) { return refuse(codes.TARGET_NOT_CLEAN, "REPLACEMENT_LINEAGE:" + error.message); }
+    if (replacementOwner) saveOps = [replacementOwner.operation];
+  }
   if (!saveOps.length) return refuse(codes.TARGET_NOT_SUPPORTED, "NOT_SINGLE_COMMIT");
   if (saveOps.length > 1) return refuse(codes.TARGET_NOT_SUPPORTED, "DUPLICATE_SAVE_OPS");
   var saveOp = saveOps[0];
@@ -4607,7 +4888,8 @@ function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
   try { savePlan = JSON.parse(String(saveOp.OperationPlan || "")); }
   catch (error) { return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_PLAN_JSON"); }
   if (!savePlan || typeof savePlan !== "object" || Array.isArray(savePlan) ||
-      String(savePlan.entryID) !== normalized.transactionId) {
+      (!replacementOwner && (String(savePlan.entryID) !== normalized.transactionId ||
+        !purchaseSingleCommitVerifyPlan_(savePlan).ok))) {
     return refuse(codes.TARGET_NOT_SUPPORTED, "SAVE_PLAN_MISMATCH");
   }
   // One active correction branch per original (same rule as Sales/Expense).
@@ -4653,7 +4935,7 @@ function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
     ledger = readCanonicalTable(ss, "BalanceLedger",
       BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS);
   } catch (error) { return refuse(codes.SCHEMA_NOT_READY, "BalanceLedger:" + error.message); }
-  var originalJournalID = String(savePlan.journalID);
+  var originalJournalID = String(replacementOwner ? replacementOwner.journalID : savePlan.journalID);
   var journalRows = ledger.filter(function(r) {
     return String(r.JournalID) === originalJournalID;
   });
@@ -4672,7 +4954,7 @@ function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
       String(debitRow.MovementType) !== save.MOVEMENT_TYPE ||
       String(creditRow.SourceType) !== save.SOURCE_TYPE ||
       String(creditRow.SourceID) !== normalized.transactionId ||
-      !isFinite(amount) || amount <= 0 || Number(savePlan.amount) !== amount) {
+      !isFinite(amount) || amount <= 0 || Number(replacementOwner ? replacementOwner.amount : savePlan.amount) !== amount) {
     return refuse(codes.TARGET_NOT_CLEAN, "ORIGINAL_JOURNAL");
   }
   return { ok: true, target: {
@@ -4689,7 +4971,8 @@ function purchaseCorrectionResolveTarget_(operationType, normalized, runtime) {
   }, targetEvidence: {
     eventRow: transactionPayloadHash_(row),
     journal: transactionPayloadHash_(journalRows),
-    savePlan: transactionPayloadHash_(savePlan)
+    savePlan: transactionPayloadHash_(savePlan),
+    replacementOwner: replacementOwner ? String(replacementOwner.operation.OperationID) : ""
   } };
 }
 
@@ -4765,6 +5048,9 @@ function purchaseCorrectionPlan_(operationType, input) {
     plan.businessID = input.replacement.eventRow.EventID;
     plan.replacement = input.replacement;
   }
+  if (input.replacement && input.replacement.authoritySnapshot) {
+    plan.planVersion = 2; plan.authoritySnapshot = input.replacement.authoritySnapshot;
+  }
   plan.planDigest = transactionPayloadHash_(plan);
   return plan;
 }
@@ -4775,10 +5061,11 @@ function purchaseCorrectionVerifyPlan_(plan) {
   function malformed(reason) { return { ok: false, kind: "MALFORMED", reason: reason }; }
   function tampered(reason) { return { ok: false, kind: "TAMPERED", reason: reason }; }
   if (!plan || typeof plan !== "object" || Array.isArray(plan)) return malformed("PLAN_NOT_OBJECT");
-  if (plan.planVersion !== c.PLAN_VERSION) return malformed("PLAN_VERSION_MISMATCH");
+  if (plan.planVersion !== 1 && plan.planVersion !== 2) return malformed("PLAN_VERSION_MISMATCH");
   if (plan.operationType !== c.VOID && plan.operationType !== c.CORRECT) {
     return malformed("OPERATION_TYPE_MISMATCH");
   }
+  if (plan.planVersion === 2 && plan.operationType !== c.CORRECT) return malformed("V2_REQUIRES_REPLACEMENT");
   if (typeof plan.requestKey !== "string" || !plan.requestKey) return malformed("REQUEST_KEY_MISSING");
   if (plan.operationID !== transactionOperationID_(plan.operationType, plan.requestKey)) {
     return tampered("OPERATION_ID_MISMATCH");
@@ -4915,7 +5202,9 @@ function purchaseCorrectionVerifyPlan_(plan) {
       return tampered("REPLACEMENT_ID_DERIVATION_MISMATCH");
     }
     if (payload.expenseItemId !== rep.eventRow.ExpenseID ||
-        payload.supplierID !== String(rep.eventRow.SupplierID || "")) {
+        (plan.planVersion === 1 ? payload.supplierID !== String(rep.eventRow.SupplierID || "") :
+          !purchaseVerifyStoredAuthority_(rep.saveNormalized, plan.authoritySnapshot, rep.eventNormalizedPayload, rep.eventRow) ||
+          JSON.stringify(rep.authoritySnapshot) !== JSON.stringify(plan.authoritySnapshot))) {
       return tampered("REPLACEMENT_PAYLOAD_MISMATCH");
     }
     var repEvent = rep.eventRow;
@@ -4948,7 +5237,8 @@ function purchaseCorrectionVerifyPlan_(plan) {
       return malformed("REPLACEMENT_INPUT_INVALID");
     }
     if (JSON.stringify(rederived) !== JSON.stringify(rep.saveNormalized) ||
-        JSON.stringify(purchaseSingleCommitEventPayload_(rederived)) !==
+        JSON.stringify(plan.planVersion === 2 ? purchaseSingleCommitEventPayload_(rederived, plan.authoritySnapshot,
+          rep.eventNormalizedPayload.input.SupplierSource) : purchaseSingleCommitEventPayload_(rederived)) !==
           JSON.stringify(rep.eventNormalizedPayload)) {
       return tampered("REPLACEMENT_INPUT_MISMATCH");
     }
@@ -5012,6 +5302,14 @@ function purchaseCorrectionRowValues_(row, headers) {
 // replacement); surfaces stay exactly {PurchaseEvents, BalanceLedger, Logs}.
 function purchaseCorrectionValueRanges_(plan) {
   var c = PURCHASE_EVENT_CORRECTION;
+  // C9 also fences direct batch construction, independent of Save-lineage admission.
+  if (plan.operationType === c.VOID &&
+      isPurchaseCorrectionReplacement_(plan.target && plan.target.row) &&
+      (!plan.targetEvidence || !plan.targetEvidence.replacementOwner ||
+        plan.targetEvidence.replacementOwner !== plan.target.saveOperationID ||
+        !purchaseCorrectionVerifyPlan_(plan).ok)) {
+    throw new Error("CORRECTION_REPLACEMENT_VOID_NOT_SUPPORTED");
+  }
   var ranges = [
     { range: "PurchaseEvents", updateRow: plan.lifecycle.rowNumber,
       values: [purchaseCorrectionRowValues_(plan.lifecycle.afterRow,
@@ -5075,7 +5373,29 @@ function purchaseCorrectionBounds_(plan) {
 
 // Exact artifact verification against the frozen plan over the three
 // surfaces. NONE / PARTIAL / CONFLICT / EXACT / UNKNOWN.
-function purchaseCorrectionInspect_(plan, ss) {
+// A completed child Void is a legitimate successor to a committed Correct.
+// Verify its own frozen artifacts too; the owner check calls the parent with
+// an exact permitted after-row, so this traversal is bounded to one child.
+function purchaseReplacementVoidSuccessor_(parent, ss) {
+  var c = PURCHASE_EVENT_CORRECTION, id = parent.replacement.eventRow.EventID;
+  var ops = expenseCorrectionOperationRows_(ss).filter(function(op) {
+    return op.OperationType === c.VOID && String(op.BusinessID) === id;
+  });
+  if (ops.length !== 1 || ops[0].State !== "COMMITTED") return null;
+  var op = ops[0], plan;
+  try { plan = JSON.parse(op.OperationPlan); } catch (error) { return null; }
+  if (!plan || !purchaseCorrectionVerifyPlan_(plan).ok ||
+      plan.operationType !== c.VOID || plan.operationID !== op.OperationID ||
+      plan.requestKey !== op.RequestKey || plan.payloadHash !== op.PayloadHash ||
+      transactionPayloadHash_(plan.normalizedPayload) !== op.PayloadHash ||
+      plan.businessID !== id || plan.targetID !== id ||
+      plan.targetEvidence.replacementOwner !== parent.operationID ||
+      plan.targetEvidence.savePlan !== transactionPayloadHash_(parent)) return null;
+  if (purchaseCorrectionInspect_(plan, ss).state !== "EXACT") return null;
+  return plan.lifecycle.afterRow;
+}
+
+function purchaseCorrectionInspect_(plan, ss, replacementAfterRow) {
   var c = PURCHASE_EVENT_CORRECTION, save = PURCHASE_SINGLE_COMMIT_V1,
     ledgerHeaders = BALANCE_FOUNDATION_POLICY.BALANCE_LEDGER_HEADERS;
   var events, ledger, logs, ops;
@@ -5108,7 +5428,14 @@ function purchaseCorrectionInspect_(plan, ss) {
     return String(op.OperationType) === save.OPERATION_TYPE &&
       String(op.BusinessID) === plan.targetID;
   });
-  if (saveOps.length !== 1 || String(saveOps[0].State) !== "COMMITTED") {
+  if (plan.targetEvidence.replacementOwner) {
+    var owner = null;
+    try { owner = purchaseReplacementVoidOwner_(plan.targetID, ss, plan); }
+    catch (error) { owner = null; }
+    if (!owner || owner.operation.OperationID !== plan.targetEvidence.replacementOwner) {
+      conflicts.push("REPLACEMENT_OWNER_INVALID");
+    }
+  } else if (saveOps.length !== 1 || String(saveOps[0].State) !== "COMMITTED") {
     conflicts.push("SAVE_LINEAGE_MISSING");
   } else {
     var lineagePlan = null;
@@ -5175,12 +5502,7 @@ function purchaseCorrectionInspect_(plan, ss) {
       conflicts.push("AUDIT_TAMPERED");
     }
   } else missing.push("AUDIT");
-  // Nothing written yet (intent only) — checked before the replacement
-  // branches so a CORRECT plan with zero artifacts classifies NONE, never
-  // PARTIAL (the resume path then applies the frozen plan exactly once).
-  if (!lifecycleApplied && !reversalById.length && !auditById.length) {
-    return { state: "NONE", detail: "NO_ARTIFACTS" };
-  }
+  var present = lifecycleApplied || reversalById.length || auditById.length;
   var replacement = plan.replacement;
   if (replacement) {
     var expectedEventID = save.EVENT_ID_PREFIX + "corr-" + plan.requestKey;
@@ -5191,8 +5513,16 @@ function purchaseCorrectionInspect_(plan, ss) {
       if (repRows.length) conflicts.push("REPLACEMENT_ROW_DUPLICATE");
       else missing.push("REPLACEMENT_ROW");
     } else if (!expenseSingleCommitRowExact_(repRows[0], replacement.eventRow,
-        PURCHASE_EVENT_POLICY.headers)) {
-      conflicts.push("REPLACEMENT_ROW_TAMPERED");
+        PURCHASE_EVENT_POLICY.headers) &&
+        (!replacementAfterRow || !expenseSingleCommitRowExact_(repRows[0],
+          replacementAfterRow, PURCHASE_EVENT_POLICY.headers))) {
+      var successorRow = null;
+      if (!replacementAfterRow) {
+        try { successorRow = purchaseReplacementVoidSuccessor_(plan, ss); }
+        catch (error) { successorRow = null; }
+      }
+      if (!successorRow || !expenseSingleCommitRowExact_(repRows[0], successorRow,
+          PURCHASE_EVENT_POLICY.headers)) conflicts.push("REPLACEMENT_ROW_TAMPERED");
     }
     var repJournal = ledger.filter(function(row) {
       return String(row.JournalID) === replacement.journalID;
@@ -5228,13 +5558,9 @@ function purchaseCorrectionInspect_(plan, ss) {
         CANONICAL_ENTRY.LOG_HEADERS)) {
       conflicts.push("REPLACEMENT_AUDIT_TAMPERED");
     }
-    if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
-    if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
-    if (!lifecycleApplied) return { state: "PARTIAL", detail: "LIFECYCLE" };
-    return { state: "EXACT", detail: "" };
+    present = present || repRows.length || repJournal.length || repAudit.length;
   }
   if (conflicts.length) return { state: "CONFLICT", detail: conflicts.join(",") };
-  var present = lifecycleApplied || reversalById.length || auditById.length;
   if (!present) return { state: "NONE", detail: "NO_ARTIFACTS" };
   if (missing.length) return { state: "PARTIAL", detail: missing.join(",") };
   if (!lifecycleApplied) return { state: "PARTIAL", detail: "LIFECYCLE" };
@@ -5321,7 +5647,7 @@ function purchaseCorrectionApplyBatch_(plan, operation, runtime) {
 // Resume path: admission is NEVER re-evaluated here — a persisted
 // IN_PROGRESS intent recovers from its frozen plan regardless of a later
 // PAUSED config (T11.7 §3).
-function purchaseCorrectionResume_(operationType, operation, hash, normalized, runtime) {
+function purchaseCorrectionResume_(operationType, operation, hash, normalized, runtime, reconcileOnly) {
   var c = PURCHASE_EVENT_CORRECTION, codes = c.CODES;
   function outcome(status, fields) {
     return purchaseCorrectionResult_(status, Object.assign({
@@ -5407,7 +5733,7 @@ function purchaseCorrectionResume_(operationType, operation, hash, normalized, r
     return outcome(c.STATUS.RECOVERY_REQUIRED,
       { code: closedCode, detail: inspection.detail });
   }
-  if (inspection.state === "NONE") {
+  if (inspection.state === "NONE" && reconcileOnly !== true) {
     return purchaseCorrectionApplyBatch_(plan, operation, runtime);
   }
   return outcome(c.STATUS.RECOVERY_REQUIRED,
@@ -5484,7 +5810,10 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
   }
   var target = resolved.target;
   var now = runtime.now();
-  var economicDate = capitalEquityDateKey(now);
+  // Correct/Void date authority: reversal action date = server recording day
+  // (Asia/Jakarta), the same authority the new-intent posting date uses.
+  // Mirrored original journal content, lineage and ExternalRef stay untouched.
+  var economicDate = purchaseRecordingDateKey_(now);
   if (!economicDate) {
     return outcome(c.STATUS.REFUSED,
       { code: codes.PAYLOAD_INVALID, detail: "ACTION_DATE_INVALID" });
@@ -5511,12 +5840,16 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
         field: error.field || "input",
         detail: "REPLACEMENT_PAYLOAD:" + error.message });
     }
-    var replacementEconomicDate = capitalEquityDateKey(
-      replacementSaveNormalized.input.ExpenseDate);
-    var regime = resolvePolicyCAccountingRegime_(replacementSaveNormalized.input.ExpenseDate);
+    // Replacement posting date + Policy C regime: same server recording
+    // authority as the new-intent path and as this correction's own action
+    // date above. The replacement ExpenseDate stays economic/occurrence
+    // metadata (persisted in the replacement event row) and remains
+    // policy-window gated below.
+    var replacementEconomicDate = purchaseRecordingDateKey_(now);
+    var regime = resolvePolicyCAccountingRegime_(replacementEconomicDate);
     if (regime.status !== "RESOLVED" || regime.regime !== save.REGIME) {
       return outcome(c.STATUS.REFUSED, {
-        code: save.CODES.REGIME_NOT_PROSPECTIVE, field: "ExpenseDate",
+        code: save.CODES.REGIME_NOT_PROSPECTIVE, field: "recordingDate",
         detail: String(regime.reason || regime.regime || "") });
     }
     if (!replacementEconomicDate) {
@@ -5550,25 +5883,19 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
       return outcome(c.STATUS.REFUSED,
         { code: codes.PAYLOAD_INVALID, field: "expenseItemId", detail: "ITEM_LABEL_MISSING" });
     }
-    if (replacementSaveNormalized.supplierID) {
-      var supplierRows;
-      try {
-        supplierRows = readCanonicalTable(runtime.spreadsheet,
-          SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS);
-      } catch (error) {
-        return outcome(c.STATUS.REFUSED,
-          { code: codes.PAYLOAD_INVALID, field: "supplierID",
-            detail: "SUPPLIERS_NOT_READY" });
-      }
-      var supplier = supplierRows.filter(function(row) {
-        return String(row.SupplierID || "").trim() === replacementSaveNormalized.supplierID;
-      })[0];
-      if (!supplier || !masterSelectionEligible(supplier.IsActive)) {
-        return outcome(c.STATUS.REFUSED,
-          { code: codes.PAYLOAD_INVALID, field: "supplierID",
-            detail: "SUPPLIER_INACTIVE" });
-      }
+    try {
+      requirePurchaseEntryPolicyDate_(route, replacementSaveNormalized.input.ExpenseDate);
     }
+    catch (error) {
+      return outcome(c.STATUS.REFUSED,
+        { code: codes.PAYLOAD_INVALID, detail: error.message });
+    }
+    var replacementAuthority;
+    try {
+      replacementAuthority = purchaseResolveIntentAuthority_(replacementSaveNormalized,
+        readCanonicalTable(runtime.spreadsheet, SUPPLIER_MASTER_CONTRACT.SHEET, SUPPLIER_MASTER_CONTRACT.HEADERS));
+    } catch (error) { return outcome(c.STATUS.REFUSED, { code: codes.PAYLOAD_INVALID, detail: error.message }); }
+    var replacementSnapshot = purchaseAuthoritySnapshot_(replacementAuthority);
     // Foreign-artifact defenses for the replacement identity: an existing
     // event row or Policy C journal on the replacement identity is a
     // conflict, never a second append.
@@ -5621,7 +5948,7 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
         UpdatedAt: replacementNowISO, UpdatedBy: input.actor }
     ];
     var replacementEventPayload = purchaseSingleCommitEventPayload_(
-      replacementSaveNormalized);
+      replacementSaveNormalized, replacementSnapshot, replacementAuthority.supplierSource);
     var allocationStatus = route.PurchaseRelationship.indexOf("HPP_COST_POOL") === 0 ?
       "COST_POOL_ALLOCATION_UNDEFINED" : "QUANTITY_PACKAGE_UNRESOLVED";
     var replacementEventRow = {
@@ -5637,10 +5964,10 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
       PurchaseQty: replacementSaveNormalized.input.PurchaseQty,
       PurchaseUOM: replacementSaveNormalized.input.PurchaseUOM,
       AcquisitionValue: replacementSaveNormalized.input.AcquisitionValue,
-      SupplierSource: replacementSaveNormalized.input.SupplierSource,
+      SupplierSource: replacementEventPayload.input.SupplierSource,
       ExternalRef: replacementSaveNormalized.input.ExternalRef,
       ExternalDocumentStatus: replacementSaveNormalized.input.ExternalDocumentStatus,
-      Attestation: JSON.stringify({ attested: true,
+      Attestation: JSON.stringify({ attested: replacementSaveNormalized.input.Attested === true,
         conversionEvidenceConfirmed:
           replacementSaveNormalized.input.ConversionEvidenceConfirmed }),
       AllocationStatus: allocationStatus,
@@ -5652,7 +5979,7 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
       CreatedAt: replacementNowISO, CreatedBy: input.actor, IsActive: true,
       PaymentStatus: save.PAYMENT_STATUS,
       CashAccountCode: save.MONEY_ACCOUNT_CODE,
-      SupplierID: replacementSaveNormalized.supplierID,
+      SupplierID: replacementSnapshot.SupplierID,
       AccountingStatus: save.ACCOUNTING_STATUS
     };
     var replacementAuditID = "LOG-ENTRY-" + runtime.uuid();
@@ -5667,6 +5994,7 @@ function purchaseCorrectionNewIntent_(operationType, normalized, hash, runtime) 
         singleCommit: true })
     };
     input.replacement = {
+      authoritySnapshot: replacementSnapshot,
       eventRow: replacementEventRow,
       eventNormalizedPayload: replacementEventPayload,
       saveNormalized: replacementSaveNormalized,
@@ -5761,10 +6089,30 @@ function purchaseCorrectionRun_(operationType, normalized, runtime) {
   return result;
 }
 
-function purchaseCorrectionDispatch_(operationType, payload, ss, dispatcherRuntime, gate) {
+// Reconcile an existing Void only. Never create an intent or apply a business batch.
+function purchaseCorrectionReconcile_(operationType, payload, runtime) {
+  var c = PURCHASE_EVENT_CORRECTION, key = purchaseCorrectionPayloadKey_(payload);
+  var operation, plan;
+  try {
+    if (operationType !== c.VOID || !key || !payload.transactionId) throw new Error("RECONCILE_IDENTITY_REQUIRED");
+    operation = runtime.repository.findOperation(operationType, key);
+    if (!operation) throw new Error("OPERATION_NOT_FOUND");
+    plan = JSON.parse(operation.OperationPlan);
+    if (!plan.normalizedPayload || plan.targetID !== payload.transactionId) throw new Error("RECONCILE_TARGET_MISMATCH");
+    return purchaseCorrectionResume_(operationType, operation,
+      transactionPayloadHash_(plan.normalizedPayload), plan.normalizedPayload, runtime, true);
+  } catch (error) {
+    return purchaseCorrectionResult_(c.STATUS.RECOVERY_REQUIRED, {
+      requestKey: key, code: c.CODES.ARTIFACTS_INCOMPLETE,
+      detail: String(error && error.message || error) });
+  }
+}
+
+function purchaseCorrectionDispatch_(operationType, payload, ss, dispatcherRuntime, gate, reconcileOnly) {
   var c = PURCHASE_EVENT_CORRECTION;
   var normalized;
-  try { normalized = purchaseCorrectionNormalize_(operationType, payload); }
+  try { normalized = reconcileOnly === true ? { requestKey: purchaseCorrectionPayloadKey_(payload) } :
+    purchaseCorrectionNormalize_(operationType, payload); }
   catch (error) {
     return purchaseCorrectionResult_(c.STATUS.REFUSED, {
       code: error.expenseSingleCommitCode || c.CODES.PAYLOAD_INVALID,
@@ -5783,7 +6131,8 @@ function purchaseCorrectionDispatch_(operationType, payload, ss, dispatcherRunti
       detail: "RUNTIME_UNAVAILABLE:" + String(error && error.message || error) });
   }
   try {
-    return purchaseCorrectionRun_(operationType, normalized, core);
+    return reconcileOnly === true ? purchaseCorrectionReconcile_(operationType, payload, core) :
+      purchaseCorrectionRun_(operationType, normalized, core);
   } catch (error) {
     var identity = { requestKey: normalized.requestKey, operationID: "" };
     try {
@@ -5810,17 +6159,17 @@ function purchaseCorrectionBatchRequest_(valueRanges) {
 // normalize/lookup, released exactly once. Lock/runtime failure happens
 // before any durable intent (definite REFUSED); post-intent uncertainty is
 // UNKNOWN with identity retained. Zero production invocation in local tests.
-function purchaseCorrectionPublic_(operationType, payload) {
+function purchaseCorrectionPublic_(operationType, payload, reconcileOnly) {
   var c = PURCHASE_EVENT_CORRECTION, codes = c.CODES;
   var requestKey = purchaseCorrectionPayloadKey_(payload);
   var ss = null, dispatcher = null, gate = null;
   try {
-    ss = SpreadsheetApp.getActiveSpreadsheet();
+    ss = requireNumlockProductionSpreadsheet();
     dispatcher = {
       now: function() { return new Date(); },
       uuid: function() { return Utilities.getUuid(); },
       flush: function() { SpreadsheetApp.flush(); },
-      invalidate: function() { invalidateDashboardCache(); },
+      invalidate: function() { invalidateDashboardCache_(); },
       purchaseSingleCommit: { batch: function(ranges) {
         return purchaseCorrectionBatchRequest_(ranges);
       } }
@@ -5842,7 +6191,7 @@ function purchaseCorrectionPublic_(operationType, payload) {
       detail: String(error && error.message || error) });
   }
   try {
-    return purchaseCorrectionDispatch_(operationType, payload, ss, dispatcher, gate);
+    return purchaseCorrectionDispatch_(operationType, payload, ss, dispatcher, gate, reconcileOnly);
   } catch (error) {
     return purchaseCorrectionResult_(c.STATUS.UNKNOWN, {
       code: codes.CORRECTION_EXECUTION_UNKNOWN, requestKey: requestKey,
@@ -5860,4 +6209,9 @@ function purchaseEventDurableVoid(payload) {
 
 function purchaseEventDurableCorrect(payload) {
   return purchaseCorrectionPublic_(PURCHASE_EVENT_CORRECTION.CORRECT, payload);
+}
+
+// Metadata-only completion under the existing outer lock and original identity.
+function purchaseEventReconcileVoid(payload) {
+  return purchaseCorrectionPublic_(PURCHASE_EVENT_CORRECTION.VOID, payload, true);
 }

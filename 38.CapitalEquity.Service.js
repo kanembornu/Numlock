@@ -48,6 +48,9 @@ function requireExactFinanceOpeningBalancesHeaders(sheet) {
 }
 
 function initializeFinanceOpeningBalancesSchemaWithRuntime(ss, flush) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var before = financeOpeningBalancesSheetMetadata(ss);
   var sheet = ss.getSheetByName(FINANCE_OPENING_BALANCE_POLICY.SHEET);
   var created = false;
@@ -80,6 +83,9 @@ function initializeFinanceOpeningBalancesSchemaWithRuntime(ss, flush) {
 }
 
 function initializeFinanceOpeningBalancesSchema() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -476,6 +482,9 @@ function validateCapitalEquityMigrationAcceptance(capitalRows, openingRows, acco
 }
 
 function rollbackCapitalEquityMigrationAttempt(state, flush) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var failures = [];
   [{ sheet: state.capitalSheet, lastRow: state.capitalLastRow, name: "CapitalEquity" },
     { sheet: state.openingSheet, lastRow: state.openingLastRow, name: "FinanceOpeningBalances" }]
@@ -492,6 +501,9 @@ function rollbackCapitalEquityMigrationAttempt(state, flush) {
 }
 
 function executeCapitalEquityMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ss = runtime.spreadsheet;
   var capitalSheet = ss.getSheetByName("CapitalEquity");
   var openingSheet = ss.getSheetByName(FINANCE_OPENING_BALANCE_POLICY.SHEET);
@@ -537,6 +549,9 @@ function executeCapitalEquityMigrationWithRuntime(runtime) {
 }
 
 function runCapitalEquityMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;

@@ -588,16 +588,25 @@ function singleCommitControlLockedRun_(runtimeFactory, core) {
 }
 
 function prepareSingleCommitTransactionV1Production() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   return singleCommitControlLockedRun_(singleCommitPreparationRuntime_,
     singleCommitPreparationApplyWithRuntime_);
 }
 
 function activateSingleCommitTransactionV1Production() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   return singleCommitControlLockedRun_(singleCommitActivationRuntime_,
     singleCommitActivationApplyWithRuntime_);
 }
 
 function pauseSingleCommitTransactionV1Production() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   return singleCommitControlLockedRun_(singleCommitPauseRuntime_,
     singleCommitPauseApplyWithRuntime_);
 }

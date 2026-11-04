@@ -37,6 +37,9 @@ function recipeStandardCostWebResponse_(status) {
 }
 
 function runApplyRecipeStandardCost() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
 
   if (!RECIPE_STANDARD_COST_CONTRACT.STANDARD_COST_APPLY_ACTIVATION) {
     return { status: "DISABLED", writeCount: 0, errors: [] };
@@ -120,26 +123,9 @@ function diagnoseCapitalEquityRuntime_() {
 
 function doGet(e) {
 
-  var adminRoute = String(e && e.parameter ? e.parameter.admin || "" : "");
-  if (adminRoute === "bootstrapRecipeStandardCost") {
-    return recipeStandardCostWebResponse_(runBootstrapRecipeStandardCost().status);
-  }
-  if (adminRoute === "verifyRecipeStandardCost") {
-    return recipeStandardCostWebResponse_("VERIFIED");
-  }
-  if (adminRoute === "diagnoseCapitalEquity") {
-    return ContentService.createTextOutput(JSON.stringify(diagnoseCapitalEquityRuntime_()))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  if (adminRoute === "depreciationContinuationDryRun") {
-    var depTarget = e && e.parameter && e.parameter.target ? e.parameter.target : "";
-    return ContentService.createTextOutput(JSON.stringify(runDepreciationContinuationDryRun(depTarget)))
-      .setMimeType(ContentService.MimeType.JSON);
-  }
-  if (adminRoute === "depreciationContinuation") {
-    var depTarget = e && e.parameter && e.parameter.target ? e.parameter.target : "";
-    return ContentService.createTextOutput(JSON.stringify(runDepreciationContinuation(depTarget)))
-      .setMimeType(ContentService.MimeType.JSON);
+  if (e && ((e.parameter && Object.prototype.hasOwnProperty.call(e.parameter, "admin")) ||
+      (e.parameters && Object.prototype.hasOwnProperty.call(e.parameters, "admin")))) {
+    throw new Error("Administrative web actions are disabled");
   }
 
   var template =
@@ -483,6 +469,9 @@ function treasuryActivationRuntime_() {
 // mutation. Never callable from a Treasury write path; never invoked by
 // application load.
 function activateTreasuryReceiptV1Production() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var act = TREASURY_PRODUCTION_ACTIVATION;
   var runtime;
   try { runtime = treasuryActivationRuntime_(); }
@@ -750,6 +739,9 @@ function treasuryProductionPreparationRuntime_() {
 // runtime failure returns before any mutation. Never callable from a Treasury
 // write path; never invoked by application load.
 function prepareTreasuryReceiptV1Production() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var prep = TREASURY_PRODUCTION_PREPARATION;
   var runtime;
   try { runtime = treasuryProductionPreparationRuntime_(); }

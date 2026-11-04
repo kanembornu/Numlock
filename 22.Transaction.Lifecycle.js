@@ -154,7 +154,25 @@ function getCanonicalTransactionDetail(transactionId) {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     var id = String(transactionId || "").trim();
     var detail;
-    if (isSalesRecognitionOrderIdentity_(id)) {
+    if (id.indexOf("PE-") === 0) {
+      // Purchase Correct loads this endpoint directly, without the list snapshot.
+      // Reuse the validated Purchase projection and its server-derived cohort.
+      var purchases = readPurchaseEventTransactionRows_(ss).filter(function(row) {
+        return row.id === id;
+      });
+      if (purchases.length !== 1) {
+        throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Transaction was not found.", "transactionId");
+      }
+      detail = purchases[0];
+      // Preserve the original normalized metadata for a price-only replacement.
+      var originalRows = readCanonicalTable(ss, PURCHASE_EVENT_POLICY.sheet, PURCHASE_EVENT_POLICY.headers)
+        .filter(function(row) { return row.EventID === id; });
+      if (originalRows.length !== 1) throw canonicalEntryError("TRANSACTION_NOT_FOUND", "Purchase detail is ambiguous.", "transactionId");
+      var originalPayload = JSON.parse(originalRows[0].NormalizedPayload);
+      if (!originalPayload.input) throw canonicalEntryError("WRITE_FAILED", "Purchase correction detail is incomplete.", null);
+      detail.correctionInput = originalPayload.input;
+      detail.supplierID = String(originalRows[0].SupplierID || "");
+    } else if (isSalesRecognitionOrderIdentity_(id)) {
       // U4: order-backed Sales resolve from the shared U3 projection only.
       detail = buildSalesRecognitionOrderDetail_(id, buildRecognizedSalesProjectionFromSpreadsheet_(ss));
     } else {
@@ -287,7 +305,7 @@ function previewCanonicalTransactionCorrection(payload) {
   } catch (error) { return canonicalEntryFailure(error); }
 }
 
-function appendLifecycleAudit(logs, timestamp, action, recordId, metadata, runtime) {
+function appendLifecycleAudit_(logs, timestamp, action, recordId, metadata, runtime) {
   var rowNumber = logs.getLastRow() + 1;
   var values = ["LOG-LIFECYCLE-" + runtime.uuid(), timestamp, "INFO", TRANSACTION_LIFECYCLE.MODULE,
     action, recordId, CANONICAL_ENTRY.USER, "Canonical transaction lifecycle recorded.", JSON.stringify(metadata)];
@@ -299,11 +317,11 @@ function appendLifecycleAudit(logs, timestamp, action, recordId, metadata, runti
   return { rowNumber: rowNumber, id: values[0] };
 }
 
-function rollbackLifecycleLog(logs, audit) {
+function rollbackLifecycleLog_(logs, audit) {
   if (audit && String(logs.getRange(audit.rowNumber, 1).getValue()) === audit.id) logs.deleteRow(audit.rowNumber);
 }
 
-function persistCanonicalVoid(ss, original, reason, timestamp, runtime) {
+function persistCanonicalVoid_(ss, original, reason, timestamp, runtime) {
   var logs = ss.getSheetByName("Logs"), activeIndex = original.spec.type === "SALES" ? 8 : 5;
   var updatedAtIndex = original.spec.type === "SALES" ? 11 : 8, updatedByIndex = updatedAtIndex + 1;
   requireCanonicalHeaders(logs, CANONICAL_ENTRY.LOG_HEADERS);
@@ -314,12 +332,12 @@ function persistCanonicalVoid(ss, original, reason, timestamp, runtime) {
     if (!canonicalEntryRowMatches(original.sheet.getRange(original.rowNumber, 1, 1, after.length).getValues()[0], after)) {
       throw canonicalEntryError("WRITE_FAILED", "The void mutation could not be verified.", null);
     }
-    audit = appendLifecycleAudit(logs, timestamp, original.spec.type === "SALES" ? "VOID_SALES" : "VOID_EXPENSE",
+    audit = appendLifecycleAudit_(logs, timestamp, original.spec.type === "SALES" ? "VOID_SALES" : "VOID_EXPENSE",
       String(before[0]), { reason: reason, source: CANONICAL_ENTRY.SOURCE, transactionType: original.spec.type,
         before: before, after: after }, runtime);
     return after;
   } catch (error) {
-    rollbackLifecycleLog(logs, audit);
+    rollbackLifecycleLog_(logs, audit);
     original.sheet.getRange(original.rowNumber, 1, 1, before.length).setValues([before]); runtime.flush();
     if (!canonicalEntryRowMatches(original.sheet.getRange(original.rowNumber, 1, 1, before.length).getValues()[0], before)) {
       throw canonicalEntryError("ROLLBACK_FAILED", "Void rollback could not restore the original transaction.", null);
@@ -337,14 +355,14 @@ function voidCanonicalTransaction(payload) {
     requireSingleCommitCorrectionRoute_(ss, payload && payload.transactionId);
     requireMutableLifecycleRecord(original);
     var timestamp = new Date(), runtime = { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };
-    persistCanonicalVoid(ss, original, reason, timestamp, runtime);
-    invalidateDashboardCache();
+    persistCanonicalVoid_(ss, original, reason, timestamp, runtime);
+    invalidateDashboardCache_();
     return canonicalLifecycleSuccess(normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, payload.transactionId), ss));
   } catch (error) { return canonicalEntryFailure(error); }
   finally { if (acquired) lock.releaseLock(); }
 }
 
-function persistCanonicalCorrection(ss, original, replacement, reason, timestamp, runtime) {
+function persistCanonicalCorrection_(ss, original, replacement, reason, timestamp, runtime) {
   var ledger = original.sheet, logs = ss.getSheetByName("Logs"), before = original.values.slice();
   var activeIndex = original.spec.type === "SALES" ? 8 : 5, updatedAtIndex = original.spec.type === "SALES" ? 11 : 8;
   requireCanonicalHeaders(logs, CANONICAL_ENTRY.LOG_HEADERS);
@@ -366,13 +384,13 @@ function persistCanonicalCorrection(ss, original, replacement, reason, timestamp
     if (!canonicalEntryRowMatches(ledger.getRange(original.rowNumber, 1, 1, afterOriginal.length).getValues()[0], afterOriginal)) {
       throw canonicalEntryError("WRITE_FAILED", "The original correction transaction could not be voided.", null);
     }
-    audits.push(appendLifecycleAudit(logs, timestamp, "CORRECT_VOID_" + original.spec.type, String(before[0]),
+    audits.push(appendLifecycleAudit_(logs, timestamp, "CORRECT_VOID_" + original.spec.type, String(before[0]),
       { reason: reason, replacementId: id, before: before }, runtime));
-    audits.push(appendLifecycleAudit(logs, timestamp, "CORRECT_CREATE_" + original.spec.type, id,
+    audits.push(appendLifecycleAudit_(logs, timestamp, "CORRECT_CREATE_" + original.spec.type, id,
       { reason: reason, originalId: String(before[0]), replacement: replacementValues }, runtime));
     return id;
   } catch (error) {
-    for (var index = audits.length - 1; index >= 0; index--) rollbackLifecycleLog(logs, audits[index]);
+    for (var index = audits.length - 1; index >= 0; index--) rollbackLifecycleLog_(logs, audits[index]);
     ledger.getRange(original.rowNumber, 1, 1, before.length).setValues([before]); runtime.flush();
     if (String(ledger.getRange(replacementRow, 1).getValue()) === id) ledger.deleteRow(replacementRow);
     runtime.flush();
@@ -393,8 +411,8 @@ function correctCanonicalTransaction(payload) {
     requireMutableLifecycleRecord(original);
     var timestamp = new Date(), replacement = buildLifecycleReplacement(payload, original, ss, timestamp);
     var runtime = { flush: function() { SpreadsheetApp.flush(); }, uuid: function() { return Utilities.getUuid(); } };
-    var replacementId = persistCanonicalCorrection(ss, original, replacement, reason, timestamp, runtime);
-    invalidateDashboardCache();
+    var replacementId = persistCanonicalCorrection_(ss, original, replacement, reason, timestamp, runtime);
+    invalidateDashboardCache_();
     return canonicalLifecycleSuccess({ original: normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, payload.transactionId), ss),
       replacement: normalizeCanonicalLifecycleDetail(findCanonicalLifecycleRecord(ss, replacementId), ss) });
   } catch (error) { return canonicalEntryFailure(error); }

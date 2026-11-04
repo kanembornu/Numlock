@@ -1742,7 +1742,7 @@ function treasuryReceiptSaveRuntime_() {
     config: state.config,
     flush: function() { SpreadsheetApp.flush(); },
     batch: function(valueRanges) { return treasuryReceiptBatchRequest_(valueRanges); },
-    invalidateCache: function() { invalidateDashboardCache(); }
+    invalidateCache: function() { invalidateDashboardCache_(); }
   };
 }
 

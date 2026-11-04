@@ -609,9 +609,24 @@
       if (state.transactionType === "SALES") {
         payload = { transactionType: "SALES", productId: state.selectedProduct.productId, type: state.selectedType, qty: state.qty, cashAccountCode: state.cashAccountCode };
       } else if (state.transactionType === "PURCHASE") {
-        // Backend: Purchase = Expense-derived (same transactionType EXPENSE)
-        // Policy routing: expensePolicyIsPurchase_(route)
-        payload = { transactionType: "EXPENSE", expenseItemId: state.selectedPurchase.expenseItemId, amount: state.purchaseTotal, cashAccountCode: state.cashAccountCode, isPurchase: true, purchaseQty: state.purchaseQty, purchaseUom: state.purchaseUom, supplierSource: state.purchaseSupplier };
+        // T11.5 closure: ACTIVE single-commit expects the strict nested input
+        // dispatcher (T11.2 §17). Map the flat three-column fields without
+        // inventing metadata or payment facts. Legacy modes keep the exact
+        // legacy flat shape byte-identical. Visuals/labels frozen.
+        if (singleCommitExpenseSurface_() === "ACTIVE") {
+          payload = { transactionType: "EXPENSE", expenseItemId: state.selectedPurchase.expenseItemId, input: {
+            ExpenseDate: "", ReceiptDate: "",
+            PurchaseQty: state.purchaseQty == null ? "" : String(state.purchaseQty),
+            PurchaseUOM: state.purchaseUom == null ? "" : String(state.purchaseUom),
+            AcquisitionValue: state.purchaseTotal == null ? "" : String(state.purchaseTotal),
+            SupplierSource: state.purchaseSupplier == null ? "" : String(state.purchaseSupplier),
+            ExternalRef: "", ExternalDocumentStatus: "EXTERNAL_DOCUMENT_UNAVAILABLE", Attested: false } };
+          if (state.selectedPurchase.supplierID) payload.supplierID = state.selectedPurchase.supplierID;
+        } else {
+          // Backend: Purchase = Expense-derived (same transactionType EXPENSE)
+          // Policy routing: expensePolicyIsPurchase_(route)
+          payload = { transactionType: "EXPENSE", expenseItemId: state.selectedPurchase.expenseItemId, amount: state.purchaseTotal, cashAccountCode: state.cashAccountCode, isPurchase: true, purchaseQty: state.purchaseQty, purchaseUom: state.purchaseUom, supplierSource: state.purchaseSupplier };
+        }
       } else {
         payload = { transactionType: "EXPENSE", expenseItemId: state.selectedExpense.expenseItemId, amount: state.amount, cashAccountCode: state.cashAccountCode };
       }
@@ -630,7 +645,14 @@
         if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
           receiptEntryElements().expenseDateError.innerText = "Enter a valid expense date."; return;
         }
-        payload.expenseDate = date;
+        // ACTIVE Purchase carries the date inside nested input only;
+        // top-level expenseDate is not in the single-commit allowlist.
+        if (state.transactionType === "PURCHASE" && payload.input) {
+          payload.input.ExpenseDate = date;
+          payload.input.ReceiptDate = date;
+        } else {
+          payload.expenseDate = date;
+        }
       }
       // T11.4 U2: one durable client intent key owns the WHOLE Expense
       // transaction (T11.2 §9). The same key is retained across retries of
@@ -851,7 +873,7 @@
       var state = transactionEntryState;
       var rows = state.transactionType === "SALES"
         ? [["Product", result.product], ["Type", result.type], ["Qty", result.qty], ["Revenue", formatEntryCurrency(result.revenue)], ["Transaction ID", result.id]]
-        : [["Item", result.item], ["Amount", formatEntryCurrency(result.amount)], ["Transaction ID", result.id]];
+        : [["Item", result.item], ["Amount", formatEntryCurrency(result.acquisitionValue != null ? result.acquisitionValue : result.amount)], ["Transaction ID", result.id]];
       entry.form.hidden = true;
       entry.submitRegion.hidden = true;
       entry.successDetails.innerHTML = "";
@@ -1003,9 +1025,7 @@
       var lifecycle = initializeStableDashboardElements().lifecycle;
       if (!pending || !pending.requestKey || !pending.operationType) return;
       lifecycle.state.innerText = "Checking the same request…";
-      operationalServerCall("findOperationalOperation",
-        { operationType: pending.operationType, requestKey: pending.requestKey },
-        function(result) {
+      function confirmed(result) {
           if (result && result.operation && result.operation.State === "COMMITTED") {
             clearSingleCommitPending_();
             lifecycle.voidRegion.hidden = true;
@@ -1017,9 +1037,18 @@
             return;
           }
           lifecycle.state.innerText = "Result belum dapat dipastikan. Periksa lagi transaksi yang sama (RequestKey " + pending.requestKey + ").";
-        },
-        function() { lifecycle.state.innerText = "Result belum dapat dipastikan. Periksa lagi transaksi yang sama (RequestKey " + pending.requestKey + ")."; },
-        function() { lifecycle.state.innerText = "Result belum dapat dipastikan. Periksa lagi transaksi yang sama (RequestKey " + pending.requestKey + ")."; });
+      }
+      function unresolved() { confirmed(null); }
+      if (pending.operationType === "PURCHASE_EVENT_VOID") {
+        google.script.run.withSuccessHandler(function(result) {
+          confirmed(result && result.status === "DONE" ? { operation: { State: "COMMITTED" } } : null);
+        }).withFailureHandler(unresolved).purchaseEventReconcileVoid({
+          requestKey: pending.requestKey, transactionId: pending.transactionId });
+        return;
+      }
+      operationalServerCall("findOperationalOperation",
+        { operationType: pending.operationType, requestKey: pending.requestKey },
+        confirmed, unresolved, unresolved);
     }
 
     function persistSalesV2MutationRecovery_() { try { if (salesV2MutationState.requestKey) localStorage.setItem("numlock.sales.v2pending", JSON.stringify(salesV2MutationState)); else localStorage.removeItem("numlock.sales.v2pending"); } catch (error) {} }
@@ -1767,26 +1796,82 @@
       return key;
     }
 
-    function openPurchaseCorrectDialog(eventId) {
-      openTransactionLifecycleDialog("void");
-      purchaseCorrectState.originalEventOrRequestKey = eventId;
-      purchaseCorrectState.singleCommit = purchaseDetailSingleCommit === true;
-      purchaseCorrectState.correctionRequestKey = generateCorrectionRequestKey();
-      purchaseCorrectState.reason = "";
+    function buildPurchasePriceCorrection_(detail, price) {
+      var qty = Number(detail && detail.purchaseQuantity);
+      var total = qty * Number(price);
+      if (!detail || !detail.correctionInput || !detail.expenseId || !detail.item ||
+          !detail.date || !detail.purchaseUOM || !detail.supplier || !Number.isFinite(qty) || qty <= 0 ||
+          !Number.isFinite(price) || price <= 0 || !Number.isSafeInteger(total) || total <= 0) {
+        throw new Error("Purchase detail or price is invalid. Reload the Purchase; total must be whole rupiah.");
+      }
+      var input = JSON.parse(JSON.stringify(detail.correctionInput));
+      input.AcquisitionValue = String(total);
+      return { expenseItemId: detail.expenseId, input: input };
+    }
+
+    function openPurchaseCorrectDialog(eventId, detail) {
+      var pending = loadSingleCommitPending_();
+      if (pending && pending.operationType === "PURCHASE_EVENT_CORRECT" &&
+          pending.transactionId === eventId && pending.requestKey) {
+        ++transactionLifecycleRequestSequence;
+        openTransactionLifecycleDialog("detail");
+        transactionLifecycleState.mode = "purchase-correct-pending";
+        var pendingLifecycle = initializeStableDashboardElements().lifecycle;
+        pendingLifecycle.title.innerText = "Purchase correction pending";
+        pendingLifecycle.content.innerHTML = "";
+        singleCommitUnknownOutcome_(pending, pendingLifecycle.state);
+        pendingLifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Close</button><button type="button" class="transaction-entry-primary" onclick="checkSingleCommitPending()">Check Status</button>';
+        return;
+      }
+      if (!detail) {
+        var token = ++transactionLifecycleRequestSequence;
+        openTransactionLifecycleDialog("detail");
+        purchaseCorrectState = { originalEventOrRequestKey: eventId, singleCommit: false };
+        transactionLifecycleState.mode = "purchase-correct-loading";
+        // Correct requires a fresh, complete server detail rather than a list/cache projection.
+        delete transactionDetailCache[eventId];
+        function current() { return token === transactionLifecycleRequestSequence && transactionLifecycleState.mode === "purchase-correct-loading" && purchaseCorrectState.originalEventOrRequestKey === eventId; }
+        loadCanonicalTransactionDetail(eventId, function(loaded) {
+          if (!current()) return;
+          if (!loaded || loaded.id !== eventId || loaded.canCorrect !== true) { renderLifecycleLoadError(); return; }
+          openPurchaseCorrectDialog(eventId, loaded);
+        }, function(error) { if (current()) renderLifecycleLoadError(error); });
+        return;
+      }
       var lifecycle = initializeStableDashboardElements().lifecycle;
+      var price = Number(detail.acquisitionValue) / Number(detail.purchaseQuantity);
+      try { buildPurchasePriceCorrection_(detail, price); }
+      catch (error) { renderLifecycleLoadError(); lifecycle.state.innerText = error.message; return; }
+      purchaseCorrectState = { originalEventOrRequestKey: eventId, singleCommit: detail.singleCommit === true,
+        correctionRequestKey: null, detail: JSON.parse(JSON.stringify(detail)) };
+      transactionLifecycleState.mode = "purchase-correct";
       lifecycle.title.innerText = "Correct Purchase";
-      lifecycle.description.innerText = "The original Purchase will remain in history as Corrected. A new replacement Purchase will be created with corrected data.";
+      lifecycle.description.innerText = "Correct the unit price. Original details remain in audit history.";
       lifecycle.state.innerText = "";
-      lifecycle.content.innerHTML = '<section class="transaction-lifecycle-group"><h3>Correction details</h3><div class="transaction-entry-control"><label for="purchaseCorrectReason">Reason</label><input id="purchaseCorrectReason" type="text" maxlength="500" placeholder="Enter a meaningful reason (min 3 characters)" oninput="updatePurchaseCorrectForm()"><p id="purchaseCorrectReasonError" class="transaction-entry-error" role="alert"></p></div><div class="transaction-entry-control"><label for="purchaseCorrectExpenseItem">Expense Item ID</label><input id="purchaseCorrectExpenseItem" type="text" placeholder="e.g. OSR04" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectDate">Purchase Date</label><input id="purchaseCorrectDate" type="date" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectQty">Quantity</label><input id="purchaseCorrectQty" type="number" step="any" min="0" placeholder="Optional" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectUOM">UOM</label><input id="purchaseCorrectUOM" type="text" placeholder="e.g. kg, gr, slice" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectValue">Acquisition Value</label><input id="purchaseCorrectValue" type="number" step="any" min="1" placeholder="Rp" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectSupplier">Supplier</label><input id="purchaseCorrectSupplier" type="text" oninput="updatePurchaseCorrectForm()"></div><div class="transaction-entry-control"><label for="purchaseCorrectRef">External Reference</label><input id="purchaseCorrectRef" type="text" oninput="updatePurchaseCorrectForm()"></div></section>';
+      lifecycle.dialog.setAttribute("data-view-layout", "purchase-price-correction");
+      var rows = [["Purchase ID", detail.id], ["Item", detail.item], ["Purchase date", detail.date],
+        ["Quantity", detail.purchaseQuantity], ["Original unit price", formatEntryCurrency(price)],
+        ["UOM", detail.purchaseUOM], ["Supplier", detail.supplier]];
+      lifecycle.content.innerHTML = '<style>[data-view-layout="purchase-price-correction"]{max-width:640px;width:calc(100vw - 24px)}.purchase-correction-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px 20px;margin:0}.transaction-lifecycle-group .purchase-correction-grid>div{display:block;min-width:0}.transaction-lifecycle-group .purchase-correction-grid dd{text-align:left}.purchase-correction-grid+.purchase-correction-grid{margin-top:16px}.purchase-correction-grid dd{margin:4px 0 0;overflow-wrap:anywhere}.purchase-correction-grid input:focus-visible{outline:2px solid var(--focus,#2563eb);outline-offset:2px}.purchase-correction-grid input{min-height:40px;box-sizing:border-box;width:100%;max-width:100%;padding:8px}.purchase-correction-grid dt{font-size:.875rem}@media(max-width:540px){.purchase-correction-grid{grid-template-columns:1fr}}</style>' +
+        '<section class="transaction-lifecycle-group"><h3>Original Purchase</h3><dl class="purchase-correction-grid">' + rows.map(function(row) {
+          return '<div><dt>' + escapeUiHtml(row[0]) + '</dt><dd>' + escapeUiHtml(row[1]) + '</dd></div>';
+        }).join("") + '</dl><div class="purchase-correction-grid">' +
+        '<div class="transaction-entry-control"><label for="purchaseCorrectValue">New unit price (Rp)</label><input id="purchaseCorrectValue" type="number" step="any" min="0.01" required value="' + price + '" oninput="updatePurchaseCorrectForm()"></div>' +
+        '<div class="transaction-entry-control"><label for="purchaseCorrectReason">Correction reason</label><input id="purchaseCorrectReason" type="text" required minlength="3" maxlength="500" oninput="updatePurchaseCorrectForm()"></div></div><p id="purchaseCorrectReasonError" class="transaction-entry-error" role="alert"></p></section>';
       lifecycle.voidRegion.hidden = true;
-      lifecycle.footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseCorrect()" disabled>Submit Correction</button>';
+      updatePurchaseCorrectForm();
       completeTransactionActionDiagnostic("purchase-correct", eventId);
     }
 
     function updatePurchaseCorrectForm() {
-      var valid = true;
       var reason = (document.getElementById("purchaseCorrectReason") || {}).value || "";
-      if (reason.trim().length < 3) valid = false;
+      var price = Number((document.getElementById("purchaseCorrectValue") || {}).value);
+      var valid = reason.trim().length >= 3;
+      var message = reason && !valid ? "Enter a meaningful correction reason (min 3 characters)." : "";
+      try { buildPurchasePriceCorrection_(purchaseCorrectState.detail, price); }
+      catch (error) { valid = false; message = error.message; }
+      var errorNode = document.getElementById("purchaseCorrectReasonError");
+      if (errorNode) errorNode.innerText = message;
       var footer = initializeStableDashboardElements().lifecycle.footer;
       footer.innerHTML = '<button type="button" class="transaction-entry-secondary" onclick="closeTransactionLifecycleDialog()">Cancel</button><button type="button" class="transaction-entry-primary" onclick="submitPurchaseCorrect()" ' + (valid ? "" : "disabled") + '>Submit Correction</button>';
     }
@@ -1795,38 +1880,18 @@
       if (transactionLifecycleState.submitting) return;
       var reason = (document.getElementById("purchaseCorrectReason") || {}).value || "";
       if (reason.trim().length < 3) { updatePurchaseCorrectForm(); return; }
-      var expenseItemId = (document.getElementById("purchaseCorrectExpenseItem") || {}).value || "";
-      var purchaseDate = (document.getElementById("purchaseCorrectDate") || {}).value || "";
-      var qty = (document.getElementById("purchaseCorrectQty") || {}).value || "";
-      var uom = (document.getElementById("purchaseCorrectUOM") || {}).value || "";
-      var value = (document.getElementById("purchaseCorrectValue") || {}).value || "";
-      var supplier = (document.getElementById("purchaseCorrectSupplier") || {}).value || "";
-      var ref = (document.getElementById("purchaseCorrectRef") || {}).value || "";
-      if (!expenseItemId || !purchaseDate || !value || !supplier) { return; }
-
+      var replacement;
+      try { replacement = buildPurchasePriceCorrection_(purchaseCorrectState.detail,
+        Number((document.getElementById("purchaseCorrectValue") || {}).value)); }
+      catch (error) { updatePurchaseCorrectForm(); return; }
+      var expenseItemId = replacement.expenseItemId;
+      // Allocate an intent only on an explicit valid submission, never on open/load.
+      if (!purchaseCorrectState.correctionRequestKey) purchaseCorrectState.correctionRequestKey = generateCorrectionRequestKey();
       transactionLifecycleState.submitting = true;
       var lifecycle = initializeStableDashboardElements().lifecycle;
       lifecycle.state.innerText = "Submitting correction…";
-      var payload = {
-        originalEventOrRequestKey: purchaseCorrectState.originalEventOrRequestKey,
-        correctionRequestKey: purchaseCorrectState.correctionRequestKey,
-        reason: reason.trim(),
-        replacement: {
-          expenseItemId: expenseItemId.trim(),
-          input: {
-            ExpenseDate: purchaseDate,
-            ReceiptDate: purchaseDate,
-            PurchaseQty: qty || "",
-            PurchaseUOM: (uom || "").toLowerCase(),
-            AcquisitionValue: String(value),
-            SupplierSource: supplier.trim(),
-            ExternalRef: ref.trim() || "",
-            ExternalDocumentStatus: ref.trim() ? "AVAILABLE" : "EXTERNAL_DOCUMENT_UNAVAILABLE",
-            Attested: true,
-            ConversionEvidenceConfirmed: false
-          }
-        }
-      };
+      var payload = { originalEventOrRequestKey: purchaseCorrectState.originalEventOrRequestKey,
+        correctionRequestKey: purchaseCorrectState.correctionRequestKey, reason: reason.trim(), replacement: replacement };
 
       if (purchaseCorrectState.singleCommit === true) {
         // T11.8/U6: durable single-commit correction — linked exact reversal
@@ -1865,7 +1930,7 @@
           .purchaseEventDurableCorrect({ requestKey: purchaseCorrectKey,
             transactionId: purchaseCorrectState.originalEventOrRequestKey,
             reason: reason.trim(), expenseItemId: expenseItemId.trim(),
-            input: payload.replacement.input });
+            input: payload.replacement.input, supplierID: purchaseCorrectState.detail.supplierID });
         return;
       }
 

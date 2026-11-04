@@ -53,6 +53,95 @@ function resolveExpensePurchasePolicy_(id, expenses) {
   return routes[id];
 }
 
+// Version-pinned historical registry. V1 Rev1 immutable; future versions
+// register here without changing the active prospective pointer.
+// Historical events interpret under stored Version+Revision; prospective
+// resolution uses EXPENSE_PURCHASE_POLICY (active) only.
+var EXPENSE_PURCHASE_POLICY_REGISTRY_ = Object.create(null);
+EXPENSE_PURCHASE_POLICY_REGISTRY_[EXPENSE_PURCHASE_POLICY.version + '|' + EXPENSE_PURCHASE_POLICY.revision] = EXPENSE_PURCHASE_POLICY;
+
+function getExpensePurchasePolicy_(version, revision) {
+  if (typeof version !== 'string' || !version || !Number.isSafeInteger(revision)) inventoryReceiptFail_('EXPENSE_POLICY_UNKNOWN_VERSION');
+  var pinned = EXPENSE_PURCHASE_POLICY_REGISTRY_[version + '|' + revision];
+  if (!pinned) inventoryReceiptFail_('EXPENSE_POLICY_UNKNOWN_VERSION');
+  return pinned;
+}
+
+function registerExpensePurchasePolicy_(policy) {
+  if (!policy || typeof policy.version !== 'string' || !policy.version ||
+      !Number.isSafeInteger(policy.revision) || policy.revision < 1 || !Array.isArray(policy.rows)) {
+    inventoryReceiptFail_('EXPENSE_POLICY_INVALID');
+  }
+  var key = policy.version + '|' + policy.revision;
+  if (EXPENSE_PURCHASE_POLICY_REGISTRY_[key]) inventoryReceiptFail_('EXPENSE_POLICY_CONFLICT');
+  EXPENSE_PURCHASE_POLICY_REGISTRY_[key] = Object.freeze(policy);
+  return policy;
+}
+
+function resolveExpensePurchasePolicyVersioned_(id, expenses, version, revision) {
+  if (typeof id !== 'string' || !id || id.trim() !== id) inventoryReceiptFail_('EXPENSE_ID_MALFORMED');
+  var policy = getExpensePurchasePolicy_(version, revision);
+  var routes = validateExpensePurchasePolicy_(expenses, policy);
+  var item = expenses.filter(function(row) { return row.ID_Ops === id && isCanonicalActive(row.IsActive); })[0];
+  if (!item || !routes[id]) inventoryReceiptFail_('EXPENSE_ITEM_NOT_ACTIVE_OR_MAPPED');
+  if (!routes[id].prospectiveEligible) inventoryReceiptFail_('EXPENSE_ROUTE_HOLD');
+  return routes[id];
+}
+
+// M3 prospective Purchase Policy V2 (SPEC-M3-AMENDMENT.md M3-L). Inactive
+// local candidate only: 34 V1 rows byte-identical + three reserved rows
+// (OSR22/23/24 → ING-017, prospectiveEligible, effectiveFrom = activation
+// date). Never registered here; EXPENSE_PURCHASE_POLICY stays V1|1 active.
+// Registration + pointer switch are separately authorized activation acts.
+var EXPENSE_PURCHASE_POLICY_V2_RESERVED_ = Object.freeze([
+  Object.freeze({ expenseItemId: 'OSR22', flavor: 'Cranberry' }),
+  Object.freeze({ expenseItemId: 'OSR23', flavor: 'Kiwi' }),
+  Object.freeze({ expenseItemId: 'OSR24', flavor: 'Apple' })
+]);
+
+function buildExpensePurchasePolicyV2_(activationDate) {
+  if (typeof activationDate !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(activationDate) ||
+      !isFinite(Date.parse(activationDate)) ||
+      new Date(activationDate).toISOString().slice(0, 10) !== activationDate) {
+    inventoryReceiptFail_('EXPENSE_POLICY_INVALID');
+  }
+  // Idempotent: always base on V1|1 registry (frozen 34), not live pointer (37 after activation), so builder stays 37.
+  var base = EXPENSE_PURCHASE_POLICY_REGISTRY_['EXPENSE-PURCHASE-POLICY-V1|1'] || EXPENSE_PURCHASE_POLICY;
+  var rows = base.rows.map(function(r) {
+    return Object.freeze({ expenseItemId: r.expenseItemId, CostType: r.CostType,
+      PurchaseRelationship: r.PurchaseRelationship, labelAuthority: r.labelAuthority,
+      inventoryItemIds: Object.freeze(r.inventoryItemIds.slice()),
+      prospectiveEligible: r.prospectiveEligible, effectiveFrom: r.effectiveFrom,
+      effectiveTo: r.effectiveTo === undefined ? null : r.effectiveTo });
+  }).concat(EXPENSE_PURCHASE_POLICY_V2_RESERVED_.map(function(r) {
+    return Object.freeze({ expenseItemId: r.expenseItemId, CostType: 'VARIABLE_COST',
+      PurchaseRelationship: 'DIRECT_HPP_COMPONENT_PACKAGE_UNRESOLVED',
+      labelAuthority: 'ExpenseItems.Item', inventoryItemIds: Object.freeze(['ING-017']),
+      prospectiveEligible: true, effectiveFrom: activationDate, effectiveTo: null });
+  }));
+  return Object.freeze({ version: 'EXPENSE-PURCHASE-POLICY-V2', revision: 1, enabled: false,
+    effectiveFrom: activationDate, timezone: 'Asia/Jakarta', activationEvent: null,
+    evidenceRef: 'docs/evidence/finance-phase-11v12/SPEC-M3-AMENDMENT.md', rows: Object.freeze(rows) });
+}
+
+// M3 COMBINED ACTIVATION (owner-authorized; placeholder filled at execution).
+// Unfilled placeholder is inert: V1|1 stays seeded alone, pointer stays V1.
+// Guard is shape-based (regex), NOT a literal comparison, so date substitution
+// cannot neutralize it. A filled-but-malformed date throws at load via the
+// builder (fail-closed, never silent). V1 object never mutated; V1|1 never touched.
+// Release gate: valid only if production activation succeeds on 2026-10-19 Asia/Jakarta.
+var M3_ACTIVATION_EFFECTIVE_FROM_ = '2026-10-19';
+if (/^\d{4}-\d{2}-\d{2}$/.test(M3_ACTIVATION_EFFECTIVE_FROM_)) {
+  var M3_V2_BASE_ = buildExpensePurchasePolicyV2_(M3_ACTIVATION_EFFECTIVE_FROM_);
+  // Active pointer requires enabled:true (47:40-41 gating, 21:174 UI flag).
+  // Registry and pointer share ONE object: no version|revision divergence.
+  var M3_V2_ACTIVE_ = Object.freeze({ version: M3_V2_BASE_.version, revision: M3_V2_BASE_.revision, enabled: true,
+    effectiveFrom: M3_V2_BASE_.effectiveFrom, timezone: M3_V2_BASE_.timezone, activationEvent: null,
+    evidenceRef: M3_V2_BASE_.evidenceRef, rows: M3_V2_BASE_.rows });
+  registerExpensePurchasePolicy_(M3_V2_ACTIVE_);
+  EXPENSE_PURCHASE_POLICY = M3_V2_ACTIVE_;
+}
+
 function expensePolicyIsPurchase_(route) {
   return route.CostType === 'VARIABLE_COST' && route.PurchaseRelationship !== 'NON_HPP_VARIABLE_COST';
 }

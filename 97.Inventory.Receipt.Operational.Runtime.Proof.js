@@ -55,6 +55,9 @@ function inventoryReceiptOperationalProof_(authority) {
 }
 
 function runInventoryReceiptOperationalDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var before = inventoryReceiptMigrationRead_(), result, failure;
   try {
     var baseline = inventoryReceiptMigrationEvaluate_(before, inventoryReceiptMigrationDigest_);

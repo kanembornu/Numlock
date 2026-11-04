@@ -624,6 +624,9 @@ function validateInventoryOpeningPopulationAcceptance(state, review) {
 }
 
 function executeInventoryOpeningPopulationWithRuntime(runtime, review) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var before = readInventoryOpeningStagingMigrationState(runtime.freshSpreadsheet ? runtime.freshSpreadsheet() : runtime.spreadsheet);
   var plan = buildInventoryOpeningPopulationPlan(before, review);
@@ -648,6 +651,9 @@ function executeInventoryOpeningPopulationWithRuntime(runtime, review) {
 }
 
 function executeInventoryOpeningPopulationRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   if (!record || record.migrationId !== INVENTORY_OPENING_REVIEW_POLICY.MIGRATION_ID ||
       record.version !== INVENTORY_OPENING_REVIEW_POLICY.VERSION || !record.preState || !record.acceptedPostState ||
@@ -672,6 +678,9 @@ function executeInventoryOpeningPopulationRecoveryWithRuntime(runtime, record) {
 }
 
 function runInventoryOpeningPopulation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var artifact = verifyFrozenArtifactDriveBytes();
   if (!artifact.verified) return artifact;
   var lock = LockService.getScriptLock(), acquired = false;
@@ -713,6 +722,9 @@ function inventoryOpeningReviewSyntheticPackage(state) {
 }
 
 function inventoryOpeningReviewDisposableFixture(runtime, canonicalId, owned, label, sourceState) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var ownership = inventoryOpeningStagingDisposableFixture(runtime, canonicalId, owned, "11S_" + label, sourceState);
   var spreadsheet = runtime.openById(ownership.spreadsheetId);
   var openings = spreadsheet.insertSheet(INVENTORY_OPENING_STAGING_POLICY.SHEET);
@@ -730,6 +742,9 @@ function inventoryOpeningReviewDisposableContext(runtime, ownership) {
 }
 
 function executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], cleanupFailures = [], failure = null, result = null, productionBefore = null;
   try {
     var canonical = runtime.openCanonical();
@@ -841,6 +856,9 @@ function executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime(runtime)
 }
 
 function runInventoryOpeningReviewDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = executeInventoryOpeningReviewDisposableRuntimeProofWithRuntime({
     openCanonical: function() { return resolveNumlockProductionSpreadsheetWithRuntime({
       openById: function(id) { return SpreadsheetApp.openById(id); }
@@ -903,6 +921,9 @@ function buildInventoryOpeningStagingMigrationPlan(state) {
 }
 
 function executeInventoryOpeningStagingMigrationWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   var before = readInventoryOpeningStagingMigrationState(runtime.freshSpreadsheet ? runtime.freshSpreadsheet() : runtime.spreadsheet);
   var plan = buildInventoryOpeningStagingMigrationPlan(before);
@@ -933,6 +954,9 @@ function executeInventoryOpeningStagingMigrationWithRuntime(runtime) {
 }
 
 function executeInventoryOpeningStagingRecoveryWithRuntime(runtime, record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   inventoryMigrationRequireRuntime(runtime);
   if (!record || record.migrationId !== INVENTORY_OPENING_STAGING_POLICY.MIGRATION_ID ||
       record.version !== INVENTORY_OPENING_STAGING_POLICY.VERSION || !record.preState || !record.acceptedPostState ||
@@ -953,6 +977,9 @@ function executeInventoryOpeningStagingRecoveryWithRuntime(runtime, record) {
 }
 
 function runInventoryOpeningStagingMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -967,6 +994,9 @@ function runInventoryOpeningStagingMigration() {
 }
 
 function runInventoryOpeningStagingRecovery(record) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -1001,6 +1031,9 @@ function runInventoryOpeningPreimageDiagnostic() {
 }
 
 function inventoryOpeningStagingDisposableFixture(runtime, canonicalId, owned, label, sourceState) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var token = runtime.createToken();
   var name = "NUMLOCK Inventory Opening Disposable Proof " + label + " " + token;
   var spreadsheet = runtime.createSpreadsheet(name, 1000, 27);
@@ -1034,6 +1067,9 @@ function inventoryOpeningStagingDisposableContext(runtime, ownership) {
 }
 
 function executeInventoryOpeningStagingDisposableRuntimeProofWithRuntime(runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var owned = [], failure = null, cleanupFailures = [], result = null, productionBefore = null;
   try {
     var canonical = runtime.openCanonical();
@@ -1130,6 +1166,9 @@ function executeInventoryOpeningStagingDisposableRuntimeProofWithRuntime(runtime
 }
 
 function runInventoryOpeningStagingDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = executeInventoryOpeningStagingDisposableRuntimeProofWithRuntime({
     openCanonical: function() { return resolveNumlockProductionSpreadsheetWithRuntime({
       openById: function(id) { return SpreadsheetApp.openById(id); }

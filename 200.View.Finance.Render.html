@@ -381,18 +381,11 @@
       getFinanceElement("financeAssetsTotal").textContent = formatFinanceNullableInteger(summary.totalAssets);
       getFinanceElement("financeAssetsActive").textContent = formatFinanceNullableInteger(summary.activeAssets);
       getFinanceElement("financeAssetsCost").textContent = formatFinanceNullableCurrency(summary.totalAcquisitionCost);
-      getFinanceElement("financeAssetsRegisterBody").innerHTML = assets.length
-        ? assets.map(function(asset) {
-          var status = asset.DisposedAt ? "Disposed" : asset.IsActive ? "Active" : "Inactive";
-          return "<tr data-asset-id=\"" + escapeUiHtml(asset.ID_Asset) + "\">" +
-            "<td>" + escapeUiHtml(asset.Nama) + "</td>" +
-            "<td>" + escapeUiHtml(asset.Kategori) + "</td>" +
-            "<td class=\"finance-number\">" + escapeUiHtml(String(asset.Jumlah)) + "</td>" +
-            "<td>" + escapeUiHtml(formatFinanceDate(asset.TanggalPerolehan)) + "</td>" +
-            "<td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.BiayaPerolehan)) + "</td>" +
-            "<td>" + escapeUiHtml(status) + "</td></tr>";
-        }).join("")
-        : "<tr><td colspan=\"6\" class=\"finance-table-empty\">No assets available.</td></tr>";
+      financeAssetsReadModel = assets;
+      financeAssetsPagination.filteredItems = assets;
+      financeAssetsPagination.totalItems = assets.length;
+      financeAssetsPagination.currentPage = 1;
+      renderFinanceAssetsListPage();
       return assets.length === 0;
     }
 
@@ -420,19 +413,10 @@
       getFinanceElement("financeDepActiveAssets").textContent = formatFinanceNullableInteger(summary.activeAssetCount);
       getFinanceElement("financeDepFullyDepreciated").textContent = formatFinanceNullableInteger(summary.fullyDepreciatedAssetCount);
 
-      // Asset table
-      getFinanceElement("financeDepAssetBody").innerHTML = assets.length
-        ? assets.map(function(asset) {
-          var statusLabel = asset.disposedAt ? "Disposed" : asset.fullyDepreciated ? "Fully Dep." : "Active";
-          return "<tr><th scope=\"row\">" + escapeUiHtml(asset.id) + "</th><td>" + escapeUiHtml(asset.name) +
-            "</td><td>" + escapeUiHtml(asset.category) + "</td><td>" + escapeUiHtml(formatFinanceDate(asset.acquisitionDate)) +
-            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.cost)) +
-            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.accumulatedDepreciation)) +
-            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.periodDepreciation)) +
-            "</td><td class=\"finance-number\">" + escapeUiHtml(formatFinanceCurrency(asset.netBookValue)) +
-            "</td><td>" + escapeUiHtml(statusLabel) + "</td></tr>";
-        }).join("")
-        : "<tr><td colspan=\"9\" class=\"finance-table-empty\">No fixed assets available.</td></tr>";
+      financeDepreciationPagination.filteredItems = assets;
+      financeDepreciationPagination.totalItems = assets.length;
+      financeDepreciationPagination.currentPage = 1;
+      renderFinanceDepreciationListPage();
 
       // Reconciliation
       function reconText(row) {

@@ -1569,7 +1569,7 @@ function salesRecognitionV2SaveWithRuntime_(payload, runtime) {
   // contradict the durable DONE (no Sale can be duplicated or falsely failed
   // by a cache-maintenance error).
   if (result.status === save.STATUS.DONE) {
-    try { invalidateDashboardCache(); }
+    try { invalidateDashboardCache_(); }
     catch (cacheError) {
       Logger.log("Sales V2 post-commit cache invalidation skipped: " +
         String(cacheError && cacheError.message || cacheError));

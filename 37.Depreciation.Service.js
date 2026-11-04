@@ -324,6 +324,9 @@ function assertPhysicalDepreciationLedger(assets, physicalRows, candidate) {
 }
 
 function rollbackDepreciationLedger(sheet, preWriteState, runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var dataRows = sheet.getLastRow() - 1;
   if (dataRows > 0) sheet.getRange(2, 1, dataRows, DEPRECIATION_POLICY.LEDGER_HEADERS.length).clearContent();
   runtime.flush();
@@ -344,6 +347,9 @@ function requireEmptyDepreciationLedger(ss) {
 }
 
 function persistDepreciationBackfill(ss, assets, candidate, generatedAt, preWriteState, runtime) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var sheet = ss.getSheetByName("DepreciationLedger");
   requireCanonicalHeaders(sheet, DEPRECIATION_POLICY.LEDGER_HEADERS);
   var values = depreciationRowsForWrite(candidate, generatedAt);
@@ -387,6 +393,9 @@ function validateDepreciationDryRun() {
 }
 
 function backfillDepreciationLedgerThrough202608() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -467,6 +476,9 @@ function buildDepreciationContinuationCandidates(assets, existingLedger, targetP
 }
 
 function executeDepreciationContinuation(ss, targetPeriod, dryRun) {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var lock = LockService.getScriptLock(), acquired = false;
   try {
     lock.waitLock(30000); acquired = true;
@@ -507,12 +519,18 @@ function executeDepreciationContinuation(ss, targetPeriod, dryRun) {
 }
 
 function runDepreciationContinuation() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var target = arguments && arguments[0] ? String(arguments[0]) : null;
   if (!target) return { status: "INVALID_TARGET" };
   return executeDepreciationContinuation(SpreadsheetApp.getActiveSpreadsheet(), target, false);
 }
 
 function runDepreciationContinuationDryRun() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var target = arguments && arguments[0] ? String(arguments[0]) : null;
   if (!target) return { status: "INVALID_TARGET" };
   return executeDepreciationContinuation(SpreadsheetApp.getActiveSpreadsheet(), target, true);

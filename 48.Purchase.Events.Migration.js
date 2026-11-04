@@ -99,6 +99,9 @@ function executePurchaseEventSchemaMigration_(runtime) {
 
 // Future production execution requires separate explicit authorization. No activation writes.
 function runPurchaseEventSchemaMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var actor = Session.getActiveUser().getEmail();
   if (!actor || actor !== Session.getEffectiveUser().getEmail()) throw new Error('AUTHENTICATED_OPERATOR_REQUIRED');
   var lock = LockService.getScriptLock(); lock.waitLock(30000);
@@ -178,6 +181,9 @@ function executePurchaseResolutionSchemaMigration_(runtime) {
 }
 
 function runPurchaseResolutionSchemaMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var actor = Session.getActiveUser().getEmail();
   if (!actor || actor !== Session.getEffectiveUser().getEmail()) throw new Error('AUTHENTICATED_OPERATOR_REQUIRED');
   var lock = LockService.getScriptLock(); lock.waitLock(30000);

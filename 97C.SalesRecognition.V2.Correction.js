@@ -2066,7 +2066,7 @@ function salesRecognitionV2MutationRun_(operationType, normalized, runtime) {
   // Sales authority. Ephemeral maintenance only: best effort, never retried,
   // never allowed to contradict the durable DONE.
   if (result.status === mutation.STATUS.DONE) {
-    try { invalidateDashboardCache(); }
+    try { invalidateDashboardCache_(); }
     catch (cacheError) {
       Logger.log("Sales V2 mutation post-commit cache invalidation skipped: " +
         String(cacheError && cacheError.message || cacheError));

@@ -226,12 +226,18 @@ function executeInventoryReceiptProductionMigration_(runtime) {
 }
 
 function runInventoryReceiptProductionPreflight() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = inventoryReceiptMigrationEvaluate_(inventoryReceiptMigrationRead_(), inventoryReceiptMigrationDigest_);
   result.productionMutation = false;
   Logger.log(JSON.stringify(result)); return result;
 }
 
 function runInventoryReceiptProductionMigration() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var actor = Session.getActiveUser().getEmail();
   if (!actor || actor !== Session.getEffectiveUser().getEmail()) throw new Error("AUTHENTICATED_OPERATOR_REQUIRED");
   var lock = LockService.getScriptLock(); lock.waitLock(30000);
@@ -243,6 +249,9 @@ function runInventoryReceiptProductionMigration() {
 }
 
 function runInventoryReceiptProductionAcceptance() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = inventoryReceiptMigrationEvaluate_(inventoryReceiptMigrationRead_(), inventoryReceiptMigrationDigest_);
   result.migrationState = result.status;
   result.status = result.status === "ALREADY_MIGRATED" && result.businessRows === 0 ? "PASS" : "REFUSE";
@@ -252,6 +261,9 @@ function runInventoryReceiptProductionAcceptance() {
 }
 
 function runInventoryReceiptMigrationDisposableRuntimeProof() {
+  // ponytail: admin execution disabled; restore only with verified owner authorization.
+  throw new Error("Administrative execution is disabled");
+
   var result = testInventoryReceiptMigrationContracts();
   result.headers = inventoryReceiptMigrationContract_(); result.schemaColumns = 31;
   result.postingAllowed = false; result.cleanup = "PASS_FUNCTION_LOCAL_MEMORY";
