@@ -706,7 +706,7 @@ SINGLE_OPERATOR_VERIFIED readiness for each, no production Lemon row, and identi
 Cleanup PASS denotes disposal of in-memory fixtures; no external temporary resources exist.
 
 The management manifest and version/SHA256 reference are in
-[evidence/finance-phase-11u1](evidence/finance-phase-11u1/README.md).
+[evidence/finance-phase-11u1](../evidence/archive/finance-phase-11u1/README.md).
 The 2026-09-05 local proof and focused regressions passed. One authorized `clasp push --force`
 synchronized 66 files. The CLI attempt returned storage `NOT_FOUND`. The user's Phase 11U.2A
 correction supersedes that earlier blocked record: the authenticated editor subsequently ran
@@ -737,7 +737,7 @@ node docs/evidence/finance-phase-11u2a/verify-local.cjs
 The verifier runs the new proof and focused Inventory foundation, migration, conversion, and
 nested governance/Lemon contracts. These additive executors do not change shared conversion
 or posting logic; the impact-radius gate does not rerun the full backend suite. Syntax and
-`git diff --check` are also required. See the [11U.2A execution notes](evidence/finance-phase-11u2a/README.md)
+`git diff --check` are also required. See the [11U.2A execution notes](../evidence/archive/finance-phase-11u2a/README.md)
 for entry points, recovery limitations, and the separate future upload/runtime/production gates.
 
 ## Finance Phase 11V.8 orchestration foundation
@@ -748,7 +748,7 @@ which also tests the real public dispatcher against synthetic Sheets and runs th
 ordered 60-entry backend suite. Receipt foundation (188 scenarios), operational receipt
 (169 checks), conversion/opening, transaction entry/lifecycle and static UI regressions are
 included. Suite membership remains unchanged. Production posting/correction remains disabled.
-See the [11V.8 contract and routing review](evidence/finance-phase-11v8/README.md) for all 34
+See the [11V.8 contract and routing review](../evidence/archive/finance-phase-11v8/README.md) for all 34
 unresolved BLOCKED IDs, recovery states, changed files and evidence boundaries. Local PASS
 does not establish authenticated runtime, browser, upload or deployment acceptance.
 
@@ -762,5 +762,5 @@ Expense IDs and 27 blocked IDs through actual synthetic dispatcher persistence, 
 refusals, selector cache-version isolation, 22 direct InventoryItem choices and historical
 resolution for all 27 blocked IDs. Receipt foundation 188 and operational 169 regressions
 pass. Ordered backend suite membership remains 60 entries, all passing in the local VM.
-See the [approved V2 authority and evidence](evidence/finance-phase-11v8b/README.md).
+See the [approved V2 authority and evidence](../evidence/archive/finance-phase-11v8b/README.md).
 Production operational posting remains disabled; no upload/runtime/browser PASS is implied.

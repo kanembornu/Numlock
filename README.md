@@ -15,18 +15,18 @@ The application uses the completed numbered, flat Apps Script layout:
 - `100.Code.js`: the `doGet()` web entry point.
 - `190.View.Index.html`: dashboard UI and browser runtime.
 
-The ownership model and completed function migration map are documented in [Architecture](docs/ARCHITECTURE.md) and [Source Migration](docs/SOURCE-MIGRATION.md).
+The ownership model and completed function migration map are documented in [Architecture](docs/architecture/ARCHITECTURE.md) and [Source Migration](docs/architecture/SOURCE-MIGRATION.md).
 
 The numbered architecture is frozen as the verified production structure. It has passed local source checks, Apps Script backend validation, deployment, and browser rendering verification. Future changes must preserve file ownership and public behavior unless a separately approved architecture change updates the governing documents.
 
-Version `1.0.0` is in production. Source structure and Sprint 5.7 production hardening are complete. Future releases must update `10.Config.js` and [the changelog](docs/CHANGELOG.md) together and follow the authoritative [Release Workflow](docs/RELEASE.md).
+Version `1.0.0` is in production. Source structure and Sprint 5.7 production hardening are complete. Future releases must update `10.Config.js` and [the changelog](docs/development/CHANGELOG.md) together and follow the authoritative [Release Workflow](docs/development/RELEASE.md).
 
 ## Developer onboarding
 
 Prerequisites are Git, VS Code, Node.js for local syntax checks and the Tailwind build, the Google `clasp` CLI, and access to the NUMLOCK Apps Script project and backing spreadsheet.
 
 1. Clone the repository and open `Numlock.code-workspace`.
-2. Read `AGENTS.md`, [Project Context](.ai/PROJECT_CONTEXT.md), and [Development Workflow](docs/DEVELOPMENT-WORKFLOW.md).
+2. Read `AGENTS.md`, [Project Context](.ai/PROJECT_CONTEXT.md), and [Development Workflow](docs/development/DEVELOPMENT-WORKFLOW.md).
 3. Confirm `git status --short` and preserve unrelated changes.
 4. Confirm the active clasp account and run `clasp status` before any upload.
 5. Use the testing and deployment gates below; never expose `.clasp.json` or credential files.
@@ -41,7 +41,7 @@ Install the pinned development tooling with `npm ci`. Run `npm run build:tailwin
 4. Run syntax, migration, diff, and status validation appropriate to the change.
 5. Review the exact diff and stage every approved path explicitly; never use `git add .`.
 6. Commit locally and push to GitHub only when explicitly requested.
-7. Follow the [Release Workflow](docs/RELEASE.md): use the unified `runAllBackendTests()` runner, compile Tailwind when relevant, and verify the clasp inventory before any authorized upload.
+7. Follow the [Release Workflow](docs/development/RELEASE.md): use the unified `runAllBackendTests()` runner, compile Tailwind when relevant, and verify the clasp inventory before any authorized upload.
 
 ## Validation and deployment flow
 
@@ -55,15 +55,15 @@ Keep evidence levels separate:
 
 ## Engineering documentation
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Testing](docs/TESTING.md)
-- [Source Migration](docs/SOURCE-MIGRATION.md)
-- [Development Workflow](docs/DEVELOPMENT-WORKFLOW.md)
-- [Deployment](docs/DEPLOYMENT.md)
-- [Git Workflow](docs/GIT-WORKFLOW.md)
-- [Decisions](docs/DECISIONS.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
-- [Changelog](docs/CHANGELOG.md)
-- [Release Workflow](docs/RELEASE.md)
-- [Reference Parity Inventory](docs/PARITY-INVENTORY.md)
+- [Architecture](docs/architecture/ARCHITECTURE.md)
+- [Roadmap](docs/development/ROADMAP.md)
+- [Testing](docs/development/TESTING.md)
+- [Source Migration](docs/architecture/SOURCE-MIGRATION.md)
+- [Development Workflow](docs/development/DEVELOPMENT-WORKFLOW.md)
+- [Deployment](docs/operations/DEPLOYMENT.md)
+- [Git Workflow](docs/development/GIT-WORKFLOW.md)
+- [Decisions](docs/development/DECISIONS.md)
+- [Troubleshooting](docs/operations/TROUBLESHOOTING.md)
+- [Changelog](docs/development/CHANGELOG.md)
+- [Release Workflow](docs/development/RELEASE.md)
+- [Reference Parity Inventory](docs/development/PARITY-INVENTORY.md)

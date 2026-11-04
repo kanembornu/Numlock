@@ -8,7 +8,7 @@ Finance Policy C local implementation and acceptance are complete at measured 30
 
 Transactions PaymentStatus compatibility repair — **PRODUCTION COMPLETE / PASS** at canonical `@691` (2026-10-04); deployment ID unchanged; active deployments exactly `@HEAD` + `@691`. **Products Contract Reconciliation: OPEN/DEFERRED.** `96.Tests.Products.Domain.Cases.js` requires whole-contract reconciliation against `92.Products.Domain.js` + `100.Code.js` + `98.Tests.Runner.js` + docs; four successive assertion drifts proved incremental repair unsafe (activation expectation → Component Cost fixture shape → proposedCost ownership → COGS Kind cascade). Cumulative Products work preserved locally (untracked). NOT a cleanup defect; future Products work must begin with a full assertion inventory, not one-assertion-at-a-time chasing. Broad canonical backend suite recorded 97 PASS / 29 FAIL with Products failures inside the unrelated/deferred known-gap classification (intentionally isolated Products expectations). Non-Products working tree reconciliation: in progress — five baseline commits pending downstream.
 
-The v1.0 feature/backend baseline is stable, but UI/UX 2.0 is reopened for the ordered visual and navigation work in the [UI/UX 2.0 Gap Audit](UIUX-2.0-GAP-AUDIT.md). Historical item narratives remain historical.
+The v1.0 feature/backend baseline is stable, but UI/UX 2.0 is reopened for the ordered visual and navigation work in the [UI/UX 2.0 Gap Audit](../features/UIUX-2.0-GAP-AUDIT.md). Historical item narratives remain historical.
 
 | Classification | Count | Items | Resume boundary |
 | --- | ---: | --- | --- |
@@ -233,7 +233,7 @@ The v1.0 release evidence is complete. The three blocked scopes remain non-block
 - **Implementation complexity:** M
 - **Regression risk:** Medium
 - **Validation required:** render-order/stale-response tests, Chart instance-count check, performance trace on representative payload, response-contract compatibility, desktop/narrow browser acceptance.
-- **Dependency on other items:** P0-2 if reloads remain filter-driven; the repository inventory is complete in [`DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md), but external discovery, permission verification, payload measurement, and an additive full-response fallback remain required before payload reduction.
+- **Dependency on other items:** P0-2 if reloads remain filter-driven; the repository inventory is complete in [`../features/DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md), but external discovery, permission verification, payload measurement, and an additive full-response fallback remain required before payload reduction.
 
 ### P2-6 — Pin and resilience-test external frontend dependencies
 

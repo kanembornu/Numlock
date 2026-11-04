@@ -20,7 +20,7 @@ For releases, `docs/RELEASE.md` owns the complete preflight, upload, live-valida
 
 ## Agent execution
 
-Use OpenCode with the project `numlock` entrypoint and 9router provider. Read [Agent Architecture](AGENT-ARCHITECTURE.md) for routing and authorization boundaries. HEAVY/CRITICAL are scope and risk classes, not requests to switch applications.
+Use OpenCode with the project `numlock` entrypoint and 9router provider. Read [Agent Architecture](../architecture/AGENT-ARCHITECTURE.md) for routing and authorization boundaries. HEAVY/CRITICAL are scope and risk classes, not requests to switch applications.
 
 ## Safe loop
 
@@ -43,4 +43,4 @@ The application uses the completed numbered source layout. Every function must c
 
 Git commits and GitHub pushes record repository history. `clasp push` updates mutable Apps Script source. Apps Script versions and deployments publish executable snapshots. None implies another; each external write requires explicit approval.
 
-See [Git Workflow](GIT-WORKFLOW.md), [Testing](TESTING.md), and [Deployment](DEPLOYMENT.md).
+See [Git Workflow](GIT-WORKFLOW.md), [Testing](TESTING.md), and [Deployment](../operations/DEPLOYMENT.md).

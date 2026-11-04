@@ -1,0 +1,344 @@
+{
+  "timestamp": "2026-11-04T22:14:11.027Z",
+  "stats": {
+    "filesScanned": 142,
+    "linksExamined": 148,
+    "validLocal": 108,
+    "brokenWave3": 0,
+    "brokenPreExisting": 38,
+    "external": 3,
+    "unresolvedReference": 3,
+    "repaired": 0
+  },
+  "brokenDetails": [
+    {
+      "file": "docs/development/PRODUCT-BACKLOG.md",
+      "line": 236,
+      "link": "[`../features/DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md)",
+      "url": "DASHBOARD-CONSUMER-INVENTORY.md",
+      "resolved": "docs/development/DASHBOARD-CONSUMER-INVENTORY.md",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/development/ROADMAP.md",
+      "line": 172,
+      "link": "[`../features/DASHBOARD-CONSUMER-INVENTORY.md`](DASHBOARD-CONSUMER-INVENTORY.md)",
+      "url": "DASHBOARD-CONSUMER-INVENTORY.md",
+      "resolved": "docs/development/DASHBOARD-CONSUMER-INVENTORY.md",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11u1/README.md",
+      "line": 14,
+      "link": "[evidence map](drive-evidence-map.json)",
+      "url": "drive-evidence-map.json",
+      "resolved": "docs/evidence/archive/finance-phase-11u1/drive-evidence-map.json",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11u2a/README.md",
+      "line": 18,
+      "link": "[11U.1 evidence map](../finance-phase-11u1/drive-evidence-map.json)",
+      "url": "../finance-phase-11u1/drive-evidence-map.json",
+      "resolved": "docs/evidence/archive/finance-phase-11u1/drive-evidence-map.json",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11u2e/README.md",
+      "line": 49,
+      "link": "[POST-11U.snapshot.json](POST-11U.snapshot.json)",
+      "url": "POST-11U.snapshot.json",
+      "resolved": "docs/evidence/archive/finance-phase-11u2e/POST-11U.snapshot.json",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v1/README.md",
+      "line": 16,
+      "link": "[`INVENTORY_RECEIPT_POLICY.HEADERS`](../../../42.Inventory.Receipt.Foundation.js)",
+      "url": "../../../42.Inventory.Receipt.Foundation.js",
+      "resolved": "docs/42.Inventory.Receipt.Foundation.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v1/README.md",
+      "line": 168,
+      "link": "[41.Inventory.Opening.Staging.js](../../../41.Inventory.Opening.Staging.js)",
+      "url": "../../../41.Inventory.Opening.Staging.js",
+      "resolved": "docs/41.Inventory.Opening.Staging.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v1/README.md",
+      "line": 205,
+      "link": "[receipt cases](../../../96.Tests.Inventory.Receipt.Cases.js)",
+      "url": "../../../96.Tests.Inventory.Receipt.Cases.js",
+      "resolved": "docs/96.Tests.Inventory.Receipt.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v14a/README.md",
+      "line": 8,
+      "link": "[47.Purchase.Events.js](../../../47.Purchase.Events.js)",
+      "url": "../../../47.Purchase.Events.js",
+      "resolved": "docs/47.Purchase.Events.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v14a/README.md",
+      "line": 25,
+      "link": "[48.Purchase.Events.Migration.js](../../../48.Purchase.Events.Migration.js)",
+      "url": "../../../48.Purchase.Events.Migration.js",
+      "resolved": "docs/48.Purchase.Events.Migration.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v14a/README.md",
+      "line": 52,
+      "link": "[testPurchaseEventSchemaMigrationContracts](../../../96.Tests.Purchase.Events.Migration.Cases.js)",
+      "url": "../../../96.Tests.Purchase.Events.Migration.Cases.js",
+      "resolved": "docs/96.Tests.Purchase.Events.Migration.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v2/README.md",
+      "line": 23,
+      "link": "[proof entry point](../../../97.Inventory.Receipt.Runtime.Proof.js)",
+      "url": "../../../97.Inventory.Receipt.Runtime.Proof.js",
+      "resolved": "docs/97.Inventory.Receipt.Runtime.Proof.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v2/README.md",
+      "line": 66,
+      "link": "[.claspignore](../../../.claspignore)",
+      "url": "../../../.claspignore",
+      "resolved": "docs/.claspignore",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v2/README.md",
+      "line": 67,
+      "link": "[97.Inventory.Receipt.Runtime.Proof.js](../../../97.Inventory.Receipt.Runtime.Proof.js)",
+      "url": "../../../97.Inventory.Receipt.Runtime.Proof.js",
+      "resolved": "docs/97.Inventory.Receipt.Runtime.Proof.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v3/README.md",
+      "line": 9,
+      "link": "[43.Inventory.Receipt.Migration.js](../../../43.Inventory.Receipt.Migration.js)",
+      "url": "../../../43.Inventory.Receipt.Migration.js",
+      "resolved": "docs/43.Inventory.Receipt.Migration.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v3/README.md",
+      "line": 69,
+      "link": "[96.Tests.Inventory.Receipt.Migration.Cases.js](../../../96.Tests.Inventory.Receipt.Migration.Cases.js)",
+      "url": "../../../96.Tests.Inventory.Receipt.Migration.Cases.js",
+      "resolved": "docs/96.Tests.Inventory.Receipt.Migration.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v8/README.md",
+      "line": 75,
+      "link": "[expense-items.snapshot.json](expense-items.snapshot.json)",
+      "url": "expense-items.snapshot.json",
+      "resolved": "docs/evidence/archive/finance-phase-11v8/expense-items.snapshot.json",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/evidence/archive/finance-phase-11v8b/README.md",
+      "line": 12,
+      "link": "[34-ID source snapshot](../finance-phase-11v8/expense-items.snapshot.json)",
+      "url": "../finance-phase-11v8/expense-items.snapshot.json",
+      "resolved": "docs/evidence/archive/finance-phase-11v8/expense-items.snapshot.json",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 5,
+      "link": "[`90.Dashboard.Service.js`](../90.Dashboard.Service.js)",
+      "url": "../90.Dashboard.Service.js",
+      "resolved": "docs/90.Dashboard.Service.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 5,
+      "link": "[`190.View.Index.html`](../190.View.Index.html)",
+      "url": "../190.View.Index.html",
+      "resolved": "docs/190.View.Index.html",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 5,
+      "link": "[`96.Tests.Cases.js`](../96.Tests.Cases.js)",
+      "url": "../96.Tests.Cases.js",
+      "resolved": "docs/96.Tests.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 13,
+      "link": "[`190.View.Index.html`](../190.View.Index.html)",
+      "url": "../190.View.Index.html",
+      "resolved": "docs/190.View.Index.html",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 13,
+      "link": "[`90.Dashboard.Service.js`](../90.Dashboard.Service.js)",
+      "url": "../90.Dashboard.Service.js",
+      "resolved": "docs/90.Dashboard.Service.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 14,
+      "link": "[`190.View.Index.html`](../190.View.Index.html)",
+      "url": "../190.View.Index.html",
+      "resolved": "docs/190.View.Index.html",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 14,
+      "link": "[`96.Tests.Cases.js`](../96.Tests.Cases.js)",
+      "url": "../96.Tests.Cases.js",
+      "resolved": "docs/96.Tests.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 15,
+      "link": "[`190.View.Index.html`](../190.View.Index.html)",
+      "url": "../190.View.Index.html",
+      "resolved": "docs/190.View.Index.html",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 15,
+      "link": "[`96.Tests.Cases.js`](../96.Tests.Cases.js)",
+      "url": "../96.Tests.Cases.js",
+      "resolved": "docs/96.Tests.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 16,
+      "link": "[`190.View.Index.html`](../190.View.Index.html)",
+      "url": "../190.View.Index.html",
+      "resolved": "docs/190.View.Index.html",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 16,
+      "link": "[`96.Tests.Cases.js`](../96.Tests.Cases.js)",
+      "url": "../96.Tests.Cases.js",
+      "resolved": "docs/96.Tests.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 17,
+      "link": "[`98.Tests.Runner.js`](../98.Tests.Runner.js)",
+      "url": "../98.Tests.Runner.js",
+      "resolved": "docs/98.Tests.Runner.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 17,
+      "link": "[`90.Dashboard.Service.js`](../90.Dashboard.Service.js)",
+      "url": "../90.Dashboard.Service.js",
+      "resolved": "docs/90.Dashboard.Service.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 18,
+      "link": "[`92.Tests.Fixtures.js`](../92.Tests.Fixtures.js)",
+      "url": "../92.Tests.Fixtures.js",
+      "resolved": "docs/92.Tests.Fixtures.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 18,
+      "link": "[`94.Tests.Assertions.js`](../94.Tests.Assertions.js)",
+      "url": "../94.Tests.Assertions.js",
+      "resolved": "docs/94.Tests.Assertions.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 18,
+      "link": "[`96.Tests.Cases.js`](../96.Tests.Cases.js)",
+      "url": "../96.Tests.Cases.js",
+      "resolved": "docs/96.Tests.Cases.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 18,
+      "link": "[`98.Tests.Runner.js`](../98.Tests.Runner.js)",
+      "url": "../98.Tests.Runner.js",
+      "resolved": "docs/98.Tests.Runner.js",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/DASHBOARD-CONSUMER-INVENTORY.md",
+      "line": 44,
+      "link": "[`docs/../development/DECISIONS.md`](DECISIONS.md)",
+      "url": "DECISIONS.md",
+      "resolved": "docs/features/DECISIONS.md",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/FINANCE-UI-DISPATCH-LIVENESS-REMEDIATION.md",
+      "line": 60,
+      "link": "[cacheType][cacheKey]",
+      "url": "(undefined reference)",
+      "resolved": "(undefined)",
+      "type": "UNRESOLVED_REFERENCE"
+    },
+    {
+      "file": "docs/features/SALES-RECOGNITION-V2-U1.md",
+      "line": 37,
+      "link": "[.mmm](Z|±HH:MM)",
+      "url": "Z|±HH:MM",
+      "resolved": "docs/features/Z|±HH:MM",
+      "type": "PRE_EXISTING"
+    },
+    {
+      "file": "docs/features/TREASURY-T4-DURABLE-RECEIPT-CORE.md",
+      "line": 74,
+      "link": "[A-Za-z0-9][A-Za-z0-9._:-]",
+      "url": "(undefined reference)",
+      "resolved": "(undefined)",
+      "type": "UNRESOLVED_REFERENCE"
+    },
+    {
+      "file": "docs/features/TREASURY-T6-RECEIPT-REVERSAL-AND-CORRECTION.md",
+      "line": 100,
+      "link": "[A-Za-z0-9][A-Za-z0-9._:-]",
+      "url": "(undefined reference)",
+      "resolved": "(undefined)",
+      "type": "UNRESOLVED_REFERENCE"
+    },
+    {
+      "file": "docs/features/UIUX-2.0-INFORMATION-ARCHITECTURE.md",
+      "line": 7,
+      "link": "[`190.View.Index.html`](../190.View.Index.html)",
+      "url": "../190.View.Index.html",
+      "resolved": "docs/190.View.Index.html",
+      "type": "PRE_EXISTING"
+    }
+  ],
+  "repairs": []
+}

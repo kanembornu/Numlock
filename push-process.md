@@ -1,6 +1,6 @@
 # Numlock Push Process
 
-Use [Deployment](docs/DEPLOYMENT.md) and [Release](docs/RELEASE.md) as the owning runbooks. This page is a short pointer, not independent authorization.
+Use [Deployment](docs/operations/DEPLOYMENT.md) and [Release](docs/development/RELEASE.md) as the owning runbooks. This page is a short pointer, not independent authorization.
 
 The supported CLI is Google `@google/clasp`. The existing `.clasp.json` is tracked; do not display its script ID, change the binding, or rewrite Git history during cleanup.
 

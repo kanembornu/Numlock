@@ -6,7 +6,7 @@ Read `AGENTS.md` first. This file is a pointer, not project history.
 
 - Phase: **Design System Foundation**.
 - Start at [NDS](../.codex/NDS.md) and [current workspace state](../.codex/workspace/CURRENT.md).
-- Living status: [PROJECT_STATUS.md](../docs/PROJECT_STATUS.md).
+- Living status: [PROJECT_STATUS.md](../docs/development/PROJECT_STATUS.md).
 - Active package: **Package 025 — Design System Foundation**.
 - Production remains `1.0.0`; five financial modules remain migration-gated.
 - Unified runner has 41 entries. Evidence levels remain non-substitutable.
