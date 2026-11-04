@@ -435,7 +435,7 @@
     //--------------------------------------------------
     // Render Business Overview
     //--------------------------------------------------
-    function renderOverviewKpiCard(label, value, delta, status, valueClass, deltaTooltipId, deltaTooltipContent)
+    function renderOverviewKpiCard(label, value, delta, status, valueClass)
     {
       var supportingText =
         status === "No Comparison"
@@ -455,26 +455,11 @@
             ? "text-red-600"
             : "text-slate-500";
 
-      var deltaHtml = `<strong class="${comparisonClass}">${supportingText}</strong>`;
-      if (deltaTooltipId && deltaTooltipContent)
-      {
-        var tooltipId = escapeUiHtml(deltaTooltipId);
-        deltaHtml = `
-          <span class="hf-kpi-delta">
-            <strong class="${comparisonClass}" tabindex="0" data-tooltip-target="${tooltipId}" aria-describedby="${tooltipId}"
-              onmouseenter="this.parentElement.removeAttribute('data-tooltip-dismissed')"
-              onfocus="this.parentElement.removeAttribute('data-tooltip-dismissed')"
-              onclick="this.focus(); this.parentElement.removeAttribute('data-tooltip-dismissed')"
-              onkeydown="if (event.key === 'Escape') this.parentElement.setAttribute('data-tooltip-dismissed', '')">${supportingText}</strong>
-            <span id="${tooltipId}" role="tooltip" class="hf-kpi-tooltip">${escapeUiHtml(deltaTooltipContent)}</span>
-          </span>`;
-      }
-
       return `
         <div class="hf-kpi-card w-full px-4 py-3 text-left">
           <span class="flex items-center gap-2"><span class="hf-kpi-icon"><i class="fas ${iconByLabel[label]}" aria-hidden="true"></i></span><span class="hf-section-label">${label}</span></span>
           <strong class="overview-kpi-value mt-2 block text-[28px] font-extrabold leading-8 tracking-tight ${valueClass || "text-slate-900"}">${value}</strong>
-          <span class="hf-kpi-comparison"><span>vs Last Period</span>${deltaHtml}</span>
+          <span class="hf-kpi-comparison"><span>vs Last Period</span><strong class="${comparisonClass}">${supportingText}</strong></span>
         </div>`;
     }
 
@@ -487,14 +472,14 @@
         marginPoints === null || !isFinite(Number(marginPoints))
           ? "—"
           : (marginStatus === "Up" ? "▲ " : marginStatus === "Down" ? "▼ -" : "") +
-            Math.abs(Number(marginPoints)).toFixed(1).replace(".", ",") + " poin";
+            Math.abs(Number(marginPoints)).toFixed(1) + " point";
       var negativeClass = "text-red-600";
 
       initializeStableDashboardElements().businessOverview.innerHTML = [
         renderOverviewKpiCard("Revenue", "Rp " + res.summary.revenue.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.revenuePercent, comparison.status.revenue), comparison.status.revenue, res.summary.revenue < 0 ? negativeClass : ""),
         renderOverviewKpiCard("Expense", "Rp " + res.summary.expense.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.expensePercent, comparison.status.expense), comparison.status.expense, res.summary.expense < 0 ? negativeClass : ""),
         renderOverviewKpiCard("Profit", "Rp " + res.summary.profit.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.profitPercent, comparison.status.profit), comparison.status.profit, res.summary.profit >= 0 ? "text-emerald-600" : "text-red-600"),
-        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : "", "profit-margin-tooltip", "Perubahan dalam poin persentase dibanding periode sebelumnya. Contoh: 20% menjadi 21,3% berarti naik 1,3 poin."),
+        renderOverviewKpiCard("Profit Margin", res.insights.profitMargin + "%", marginDelta, marginStatus, Number(res.insights.profitMargin) < 0 ? negativeClass : ""),
         renderOverviewKpiCard("Units Sold", res.summary.unitsSold.toLocaleString("id-ID"), formatPeriodComparisonValue(comparison.changes.unitsSoldPercent, comparison.status.unitsSold), comparison.status.unitsSold, res.summary.unitsSold < 0 ? negativeClass : "")
       ].join("");
       scheduleLayoutDebugMeasurement();

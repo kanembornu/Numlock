@@ -96,6 +96,9 @@
       #dashboardSidebar { width: 248px; background: var(--sidebar); border-right: 1px solid var(--sidebar-divider); box-shadow: none; overflow: hidden; }
       #mainContent { background: var(--canvas); }
       #topUtilityBar { height: 76px; min-height: 76px; background: var(--surface-1); border-color: var(--divider); box-shadow: none; }
+      #utilityPageTitle { font-size: 32px; font-weight: 800; line-height: 35px; letter-spacing: -0.04em; }
+      #utilityPageContext { margin-top: 4px; font-size: 14px; line-height: 18px; }
+      #utilityPageContext,
       #utilityMetadata { color: var(--text-muted); }
       #dashboardUtilityControls { gap: 10px; }
       #dateFilterControls { gap: 10px; }
@@ -343,12 +346,6 @@
       #dashboardPanelOverview #revenueChartTitle { font-size: 20px; font-weight: 700; letter-spacing: -0.025em; line-height: 25px; }
       #dashboardPanelOverview .overview-kpi-value { font-size: 31px; font-weight: 800; letter-spacing: -0.04em; line-height: 35px; }
       #dashboardPanelOverview .hf-kpi-card > span:last-child { color: var(--text-muted); font-weight: 400; line-height: 16px; }
-      .hf-kpi-delta { position: relative; display: inline-flex; }
-      .hf-kpi-delta > strong { cursor: help; outline-offset: 3px; }
-      .hf-kpi-tooltip { position: absolute; z-index: 30; right: 0; bottom: calc(100% + 8px); width: 260px; padding: 10px 12px; border-radius: 8px; background: var(--tooltip-bg, var(--text-primary)); color: var(--tooltip-text, var(--surface-1)); box-shadow: var(--shadow-2); font-size: 12px; font-weight: 400; line-height: 18px; text-align: left; white-space: normal; visibility: hidden; opacity: 0; }
-      .hf-kpi-delta:not([data-tooltip-dismissed]):hover .hf-kpi-tooltip,
-      .hf-kpi-delta:not([data-tooltip-dismissed]):focus-within .hf-kpi-tooltip { visibility: visible; opacity: 1; }
-      html.numlock-phone .hf-kpi-tooltip { width: 180px; }
       #dashboardPanelOverview #revenueChartSection,
       #dashboardPanelOverview #topProductsSection { padding: 20px 20px 10px; }
       #dashboardPanelOverview #revenueChartSection > div:first-child > span { height: 36px; border-color: var(--card-border); border-radius: 9px; padding-left: 12px; padding-right: 12px; background: var(--surface-1); }
@@ -495,8 +492,10 @@
 
         #dashboardSidebar { width: var(--sidebar-width-expanded); transform: translateX(0); }
         #mainContent { display: grid; grid-template-rows: 76px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); min-height: 0; }
-        #mainContent:has(#dashboard.active) { grid-template-rows: 0 minmax(0, 1fr); }
-        #mainContent:has(#dashboard.active) #topUtilityBar { display: none; }
+        #mainContent:has(#dashboard.active) { grid-template-rows: 48px minmax(0, 1fr); }
+        #mainContent:has(#dashboard.active) #topUtilityBar { height: 48px; min-height: 48px; }
+        #mainContent:has(#dashboard.active) #topUtilityBar { height: 0 !important; min-height: 0 !important; }
+        #mainContent:has(#dashboard.active) { grid-template-rows: 0px minmax(0, 1fr) !important; }
         #contentViewport { height: auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 24px 24px; }
         #dashboard.active { display: flex; min-height: 0; flex-direction: column; }
         #dashboardContent { display: grid; min-height: 0; grid-template-rows: 44px auto; gap: 16px; }
@@ -504,17 +503,16 @@
         #dashboardTabPanels { min-height: 0; overflow: visible; }
         .dashboard-tab-panel:not(#dashboardPanelOverview) { min-height: 0; overflow-y: auto; }
         #dashboardPanelOverview { min-height: 0; overflow: visible; container-type: inline-size; }
+        
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 12px; }
         #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 0; }
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection { min-height: 120px; }
         #dashboardPanelOverview .hf-kpi-card { min-height: 130px; }
         #dashboardPanelOverview #revenueChartSection { min-height: 0; margin: 0; overflow: hidden; display: flex; flex-direction: column; }
-        #dashboardPanelOverview #dashboardHeaderRegion { margin-bottom: 8px; }
-        #dashboardPanelOverview #dashboardHeaderRegion { grid-row: 1; }
         #dashboardPanelOverview:not([hidden]) { display: grid; grid-template-rows: max-content auto auto auto; gap: 12px; }
         #dashboardPanelOverview #keyMetricsSection { grid-row: 1; margin: 0; }
-        #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; grid-template-rows: 404px; }
+        #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2; grid-template-rows: minmax(404px, max-content); }
         #dashboardPanelOverview #overviewContextRow { grid-row: 3; }
         #dashboardPanelOverview #executiveSummarySection { grid-row: 4; margin: 0; }
         #dashboardPanelOverview #mainChartWrapper { height: auto; flex: 1; min-height: 0; max-height: none; }
@@ -1950,8 +1948,10 @@
         #dashboardSidebar { width: var(--sidebar-width-expanded); }
         #mainContent { grid-template-rows: 68px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); }
         #topUtilityBar { height: 68px; min-height: 68px; }
-        #mainContent:has(#dashboard.active) { grid-template-rows: 0 minmax(0, 1fr); }
-        #mainContent:has(#dashboard.active) #topUtilityBar { display: none; }
+        #mainContent:has(#dashboard.active) { grid-template-rows: 48px minmax(0, 1fr); }
+        #mainContent:has(#dashboard.active) #topUtilityBar { height: 48px; min-height: 48px; }
+        #mainContent:has(#dashboard.active) #topUtilityBar { height: 0 !important; min-height: 0 !important; }
+        #mainContent:has(#dashboard.active) { grid-template-rows: 0px minmax(0, 1fr) !important; }
       }
 
       /* Extracted non-Dashboard density rules from removed height-bucket query. */
@@ -2332,7 +2332,7 @@
       #dashboardPanelOverview #dataQualityDetails p { margin-top: 2px; color: var(--text-secondary); }
       #dashboardPanelOverview #mainChartWrapper { height: auto !important; flex: 1 !important; min-height: 0 !important; max-height: none !important; }
       #dashboardContent { gap: var(--overview-section-gap) !important; }
-      #dashboardPanelOverview #topProductsSection { overflow: visible; }
+      #dashboardPanelOverview #topProductsSection { overflow-x: auto; }
       .hf-top-products-table { width: 100%; min-width: 320px; table-layout: fixed; }
       .hf-top-products-table th,
       .hf-top-products-table td { height: 34px; padding: 0 6px; border-bottom: 1px solid var(--divider); text-align: left !important; white-space: nowrap; }
@@ -2381,8 +2381,8 @@
       :where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important; font-kerning: normal; text-wrap: balance; }
       :where(button, input, select, textarea, .ui-form-text, .ui-action-label, .ui-badge-label) { letter-spacing: -0.005em; }
       :where(.ui-page-subtitle, .ui-body-text, .ui-meta-text, .ui-empty-state, .hf-section-label) { letter-spacing: 0; }
-      #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
-      #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
+      #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
       #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
@@ -2409,7 +2409,7 @@
       #dashboardPanelOverview #keyMetricsSection { margin: 0 !important; }
       #dashboardPanelOverview #mainChartWrapper { box-sizing: border-box !important; padding-top: 0 !important; padding-left: 12px !important; }
       @media (min-width: 1024px) {
-        #dashboardPanelOverview #keyMetricsSection { grid-row: 1 !important; height: 214px !important; }
+        #dashboardPanelOverview #keyMetricsSection { grid-row: 1 !important; }
         #dashboardPanelOverview #overviewEvidenceRow { grid-row: 2 !important; }
         #dashboardPanelOverview #overviewContextRow { grid-row: 3 !important; }
         #dashboardPanelOverview #executiveSummarySection { grid-row: 4 !important; }
@@ -2445,6 +2445,8 @@
         :root { --mobile-text-section: 1.5rem; --mobile-text-primary: 1.125rem; --mobile-text-supporting: 0.9375rem; --mobile-line-section: 1.875rem; --mobile-line-primary: 1.625rem; --mobile-line-supporting: 1.375rem; }
         #topUtilityBar { min-height: 72px !important; padding: 10px 12px !important; }
         #sidebarMenuButton { width: 52px !important; min-width: 52px !important; min-height: 52px !important; padding: 0 !important; justify-content: center !important; font-size: 20px !important; }
+        #utilityPageTitle { font-size: 28px !important; line-height: 34px !important; }
+        #utilityPageContext { font-size: 16px !important; line-height: 23px !important; }
         #contentViewport { padding: 12px 8px 16px !important; }
         #dashboardTabList { height: 54px !important; min-height: 54px !important; }
         #dashboardTabList [role="tab"], #dashboardTabInsights { height: 52px !important; padding-right: 10px !important; padding-left: 10px !important; font-size: 16px !important; line-height: 22px !important; }
@@ -2808,7 +2810,6 @@
     </div>
 
     <div id="dashboardContent" aria-busy="false">
-      <div id="dashboardHeaderRegion" class="sr-only"></div>
       <div
         id="dashboardTabList"
         class="flex items-center gap-2 overflow-x-auto border-b border-slate-200"
@@ -4634,7 +4635,7 @@
         "sessionLogsErrorCount", "sessionLogsToolbar",
         "clearSessionLogsButton", "sessionLogsAnnouncement",
         "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
-        "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
+        "dashboardTabList", "dashboardTabPanels",
         "dashboardSectionStaging", "newTransactionButton",
         "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
         "periodComparisonLabel", "periodComparisonLead", "periodComparisonPeriod",
@@ -4784,6 +4785,8 @@
         sidebarCollapseButton: required.sidebarCollapseButton,
         mainContent: required.mainContent,
         topUtilityBar: required.topUtilityBar,
+        utilityPageTitle: required.utilityPageTitle,
+        utilityPageContext: required.utilityPageContext,
         sidebarDataStatus: required.sidebarDataStatus,
         products: required.products,
         productsTabCatalog: required.productsTabCatalog,
@@ -4857,7 +4860,6 @@
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging,
-        dashboardHeaderRegion: required.dashboardHeaderRegion,
         performanceGrouping: required.performanceGrouping,
         dateFilterLabel: required.dateFilterLabel,
         transactionCountLabel: required.transactionCountLabel,
@@ -5405,6 +5407,15 @@
           "The requested application destination is unavailable."
         );
         return;
+      }
+
+      if (elements.utilityPageTitle)
+      {
+        elements.utilityPageTitle.innerText = contract.title;
+      }
+      if (elements.utilityPageContext)
+      {
+        elements.utilityPageContext.innerText = contract.context;
       }
 
       var heading = activePage.querySelector("h1");
