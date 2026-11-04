@@ -1,0 +1,57 @@
+{
+  "asOfDate": "2024-12-31",
+  "period": { "start": "2024-01-01", "end": "2024-12-31" },
+  "assets": [
+    { "id": "AST-001", "name": "Espresso Machine", "category": "Equipment", "acquisitionDate": "2024-01-15", "cost": 45000000, "accumulatedDepreciation": 9000000, "periodDepreciation": 750000, "netBookValue": 36000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-002", "name": "Grinder", "category": "Equipment", "acquisitionDate": "2024-02-01", "cost": 12000000, "accumulatedDepreciation": 2000000, "periodDepreciation": 200000, "netBookValue": 10000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-003", "name": "POS System", "category": "Technology", "acquisitionDate": "2024-03-10", "cost": 8500000, "accumulatedDepreciation": 1416667, "periodDepreciation": 141667, "netBookValue": 7083333, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-004", "name": "Refrigerator", "category": "Equipment", "acquisitionDate": "2023-06-01", "cost": 15000000, "accumulatedDepreciation": 5000000, "periodDepreciation": 250000, "netBookValue": 10000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-005", "name": "Commercial Blender", "category": "Equipment", "acquisitionDate": "2024-04-15", "cost": 6500000, "accumulatedDepreciation": 975000, "periodDepreciation": 108333, "netBookValue": 5525000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-006", "name": "Display Case", "category": "Furniture", "acquisitionDate": "2024-05-01", "cost": 8000000, "accumulatedDepreciation": 1066667, "periodDepreciation": 133333, "netBookValue": 6933333, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-007", "name": "Water Filtration System", "category": "Equipment", "acquisitionDate": "2024-05-20", "cost": 12000000, "accumulatedDepreciation": 1500000, "periodDepreciation": 200000, "netBookValue": 10500000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-008", "name": "Air Conditioning Unit", "category": "Equipment", "acquisitionDate": "2024-06-01", "cost": 18000000, "accumulatedDepreciation": 2100000, "periodDepreciation": 300000, "netBookValue": 15900000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-009", "name": "Security Camera System", "category": "Technology", "acquisitionDate": "2024-06-15", "cost": 9500000, "accumulatedDepreciation": 1062500, "periodDepreciation": 158333, "netBookValue": 8437500, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-010", "name": "Outdoor Seating Set", "category": "Furniture", "acquisitionDate": "2024-07-01", "cost": 15000000, "accumulatedDepreciation": 1500000, "periodDepreciation": 250000, "netBookValue": 13500000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-011", "name": "Cold Brew Tower", "category": "Equipment", "acquisitionDate": "2024-07-10", "cost": 7500000, "accumulatedDepreciation": 687500, "periodDepreciation": 125000, "netBookValue": 6812500, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-012", "name": "Pastry Display Cabinet", "category": "Equipment", "acquisitionDate": "2024-08-01", "cost": 14000000, "accumulatedDepreciation": 1166667, "periodDepreciation": 233333, "netBookValue": 12833333, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-013", "name": "Cash Register", "category": "Technology", "acquisitionDate": "2024-08-15", "cost": 5000000, "accumulatedDepreciation": 375000, "periodDepreciation": 83333, "netBookValue": 4625000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-014", "name": "Indoor Seating", "category": "Furniture", "acquisitionDate": "2024-09-01", "cost": 25000000, "accumulatedDepreciation": 2083333, "periodDepreciation": 416667, "netBookValue": 22916667, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-015", "name": "Ice Maker", "category": "Equipment", "acquisitionDate": "2024-09-10", "cost": 8500000, "accumulatedDepreciation": 637500, "periodDepreciation": 141667, "netBookValue": 7862500, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-016", "name": "WiFi Router & Network", "category": "Technology", "acquisitionDate": "2024-10-01", "cost": 4500000, "accumulatedDepreciation": 281250, "periodDepreciation": 75000, "netBookValue": 4218750, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-017", "name": "Dishwasher", "category": "Equipment", "acquisitionDate": "2024-10-15", "cost": 12000000, "accumulatedDepreciation": 700000, "periodDepreciation": 200000, "netBookValue": 11300000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-018", "name": "Signage & Branding", "category": "Furniture", "acquisitionDate": "2024-11-01", "cost": 6000000, "accumulatedDepreciation": 250000, "periodDepreciation": 100000, "netBookValue": 5750000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-019", "name": "Backup Generator", "category": "Equipment", "acquisitionDate": "2024-11-15", "cost": 22000000, "accumulatedDepreciation": 733333, "periodDepreciation": 366667, "netBookValue": 21266667, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-020", "name": "POS Tablets", "category": "Technology", "acquisitionDate": "2024-12-01", "cost": 15000000, "accumulatedDepreciation": 500000, "periodDepreciation": 250000, "netBookValue": 14500000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-021", "name": "Coffee Bean Storage Silo", "category": "Equipment", "acquisitionDate": "2023-03-01", "cost": 35000000, "accumulatedDepreciation": 9800000, "periodDepreciation": 583333, "netBookValue": 25200000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-022", "name": "Delivery Van", "category": "Vehicle", "acquisitionDate": "2023-05-15", "cost": 180000000, "accumulatedDepreciation": 30000000, "periodDepreciation": 3000000, "netBookValue": 150000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-023", "name": "Office Computer", "category": "Technology", "acquisitionDate": "2023-07-01", "cost": 12000000, "accumulatedDepreciation": 4800000, "periodDepreciation": 400000, "netBookValue": 7200000, "disposedAt": "2024-06-30", "fullyDepreciated": false },
+    { "id": "AST-024", "name": "Old Espresso Machine", "category": "Equipment", "acquisitionDate": "2022-01-01", "cost": 25000000, "accumulatedDepreciation": 6250000, "periodDepreciation": 0, "netBookValue": 18750000, "disposedAt": "2024-01-14", "fullyDepreciated": false },
+    { "id": "AST-025", "name": "Roasting Machine", "category": "Equipment", "acquisitionDate": "2024-12-15", "cost": 85000000, "accumulatedDepreciation": 0, "periodDepreciation": 708333, "netBookValue": 85000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-026", "name": "Packaging Station", "category": "Equipment", "acquisitionDate": "2024-12-20", "cost": 18000000, "accumulatedDepreciation": 0, "periodDepreciation": 150000, "netBookValue": 18000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-027", "name": "Label Printer", "category": "Technology", "acquisitionDate": "2024-12-22", "cost": 3500000, "accumulatedDepreciation": 0, "periodDepreciation": 29167, "netBookValue": 3500000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-028", "name": "Storage Racking", "category": "Furniture", "acquisitionDate": "2024-12-25", "cost": 12000000, "accumulatedDepreciation": 0, "periodDepreciation": 100000, "netBookValue": 12000000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-029", "name": "Vacuum Sealer", "category": "Equipment", "acquisitionDate": "2024-12-28", "cost": 4500000, "accumulatedDepreciation": 0, "periodDepreciation": 37500, "netBookValue": 4500000, "disposedAt": null, "fullyDepreciated": false },
+    { "id": "AST-030", "name": "Milk Frother (Commercial)", "category": "Equipment", "acquisitionDate": "2024-12-29", "cost": 9000000, "accumulatedDepreciation": 0, "periodDepreciation": 75000, "netBookValue": 9000000, "disposedAt": null, "fullyDepreciated": false }
+  ],
+  "summary": {
+    "periodDepreciation": 9687500,
+    "accumulatedDepreciation": 84504167,
+    "netBookValue": 476495833,
+    "activeAssetCount": 27,
+    "fullyDepreciatedAssetCount": 0
+  },
+  "reconciliation": {
+    "periodDepreciation": { "status": "RECONCILED", "difference": 0 },
+    "accumulatedDepreciation": { "status": "RECONCILED", "difference": 0 },
+    "netBookValue": { "status": "RECONCILED", "difference": 0 }
+  },
+  "quality": { "completeness": "COMPLETE", "issues": [] },
+  "policy": {
+    "method": "Straight-line",
+    "granularity": "Monthly",
+    "rounding": "Nearest 1000",
+    "startRule": "Following month",
+    "residualTreatment": "Zero residual",
+    "source": "Authoritative DepreciationLedger"
+  }
+}

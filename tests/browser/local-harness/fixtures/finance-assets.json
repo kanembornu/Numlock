@@ -1,0 +1,39 @@
+{
+  "assets": [
+    { "ID_Asset": "AST-001", "Nama": "Espresso Machine", "Kategori": "Equipment", "Jumlah": 2, "TanggalPerolehan": "2024-01-15", "BiayaPerolehan": 45000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-002", "Nama": "Grinder", "Kategori": "Equipment", "Jumlah": 3, "TanggalPerolehan": "2024-02-01", "BiayaPerolehan": 12000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-003", "Nama": "POS System", "Kategori": "Technology", "Jumlah": 1, "TanggalPerolehan": "2024-03-10", "BiayaPerolehan": 8500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-004", "Nama": "Refrigerator", "Kategori": "Equipment", "Jumlah": 2, "TanggalPerolehan": "2023-06-01", "BiayaPerolehan": 15000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-005", "Nama": "Commercial Blender", "Kategori": "Equipment", "Jumlah": 2, "TanggalPerolehan": "2024-04-15", "BiayaPerolehan": 6500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-006", "Nama": "Display Case", "Kategori": "Furniture", "Jumlah": 3, "TanggalPerolehan": "2024-05-01", "BiayaPerolehan": 8000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-007", "Nama": "Water Filtration System", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-05-20", "BiayaPerolehan": 12000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-008", "Nama": "Air Conditioning Unit", "Kategori": "Equipment", "Jumlah": 2, "TanggalPerolehan": "2024-06-01", "BiayaPerolehan": 18000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-009", "Nama": "Security Camera System", "Kategori": "Technology", "Jumlah": 1, "TanggalPerolehan": "2024-06-15", "BiayaPerolehan": 9500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-010", "Nama": "Outdoor Seating Set", "Kategori": "Furniture", "Jumlah": 4, "TanggalPerolehan": "2024-07-01", "BiayaPerolehan": 15000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-011", "Nama": "Cold Brew Tower", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-07-10", "BiayaPerolehan": 7500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-012", "Nama": "Pastry Display Cabinet", "Kategori": "Equipment", "Jumlah": 2, "TanggalPerolehan": "2024-08-01", "BiayaPerolehan": 14000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-013", "Nama": "Cash Register", "Kategori": "Technology", "Jumlah": 2, "TanggalPerolehan": "2024-08-15", "BiayaPerolehan": 5000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-014", "Nama": "Indoor Seating", "Kategori": "Furniture", "Jumlah": 10, "TanggalPerolehan": "2024-09-01", "BiayaPerolehan": 25000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-015", "Nama": "Ice Maker", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-09-10", "BiayaPerolehan": 8500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-016", "Nama": "WiFi Router & Network", "Kategori": "Technology", "Jumlah": 1, "TanggalPerolehan": "2024-10-01", "BiayaPerolehan": 4500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-017", "Nama": "Dishwasher", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-10-15", "BiayaPerolehan": 12000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-018", "Nama": "Signage & Branding", "Kategori": "Furniture", "Jumlah": 1, "TanggalPerolehan": "2024-11-01", "BiayaPerolehan": 6000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-019", "Nama": "Backup Generator", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-11-15", "BiayaPerolehan": 22000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-020", "Nama": "POS Tablets", "Kategori": "Technology", "Jumlah": 5, "TanggalPerolehan": "2024-12-01", "BiayaPerolehan": 15000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-021", "Nama": "Coffee Bean Storage Silo", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2023-03-01", "BiayaPerolehan": 35000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-022", "Nama": "Delivery Van", "Kategori": "Vehicle", "Jumlah": 1, "TanggalPerolehan": "2023-05-15", "BiayaPerolehan": 180000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-023", "Nama": "Office Computer", "Kategori": "Technology", "Jumlah": 3, "TanggalPerolehan": "2023-07-01", "BiayaPerolehan": 12000000, "IsActive": false, "DisposedAt": "2024-06-30" },
+    { "ID_Asset": "AST-024", "Nama": "Old Espresso Machine", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2022-01-01", "BiayaPerolehan": 25000000, "IsActive": false, "DisposedAt": "2024-01-14" },
+    { "ID_Asset": "AST-025", "Nama": "Roasting Machine", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-12-15", "BiayaPerolehan": 85000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-026", "Nama": "Packaging Station", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-12-20", "BiayaPerolehan": 18000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-027", "Nama": "Label Printer", "Kategori": "Technology", "Jumlah": 2, "TanggalPerolehan": "2024-12-22", "BiayaPerolehan": 3500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-028", "Nama": "Storage Racking", "Kategori": "Furniture", "Jumlah": 6, "TanggalPerolehan": "2024-12-25", "BiayaPerolehan": 12000000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-029", "Nama": "Vacuum Sealer", "Kategori": "Equipment", "Jumlah": 1, "TanggalPerolehan": "2024-12-28", "BiayaPerolehan": 4500000, "IsActive": true, "DisposedAt": null },
+    { "ID_Asset": "AST-030", "Nama": "Milk Frother (Commercial)", "Kategori": "Equipment", "Jumlah": 3, "TanggalPerolehan": "2024-12-29", "BiayaPerolehan": 9000000, "IsActive": true, "DisposedAt": null }
+  ],
+  "summary": {
+    "totalAssets": 30,
+    "activeAssets": 27,
+    "totalAcquisitionCost": 561000000
+  }
+}

@@ -14,3 +14,8 @@ node_modules/
 # Private source snapshots used by local evidence verifiers; never publish business exports
 /docs/evidence/finance-phase-11u2e/POST-11U.snapshot.json
 /docs/evidence/finance-phase-11v8/expense-items.snapshot.json
+
+# Historical agent archive (2026-11-02 consolidation) - preserved in permanent backup
+docs/agent-archive/2026-11-02/reference-inventory.json
+docs/agent-archive/2026-11-02/resolved-permission-matrix.json
+docs/agent-archive/2026-11-02/source-manifest.json

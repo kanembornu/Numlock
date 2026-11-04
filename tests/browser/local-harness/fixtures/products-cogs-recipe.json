@@ -1,0 +1,707 @@
+{
+  "effectivePeriod": { "asOf": "2026-10-28" },
+  "products": [
+    {
+      "ID_Prod": "PROD-001",
+      "Produk": "Espresso",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 9903,
+          "sellingPrice": 25000,
+          "margin": 15097,
+          "marginPercent": 60.4,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 9903,
+          "sellingPrice": 28000,
+          "margin": 18097,
+          "marginPercent": 64.6,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-002",
+      "Produk": "Cappuccino",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 150, "BaseUOM": "ml", "standardCost": 60, "componentCost": 9000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 18903,
+          "sellingPrice": 27500,
+          "margin": 8597,
+          "marginPercent": 31.3,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 150, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 150, "BaseUOM": "ml", "standardCost": 60, "componentCost": 9000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 18903,
+          "sellingPrice": 30000,
+          "margin": 11097,
+          "marginPercent": 37.0,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 150, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-003",
+      "Produk": "Latte",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 21903,
+          "sellingPrice": 27500,
+          "margin": 5597,
+          "marginPercent": 20.4,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 21903,
+          "sellingPrice": 30000,
+          "margin": 8097,
+          "marginPercent": 27.0,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-004",
+      "Produk": "Americano",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Water", "UsageQty": 120, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 12 }
+          ],
+          "computedCOGS": 9912,
+          "sellingPrice": 23000,
+          "margin": 13088,
+          "marginPercent": 56.9,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 120, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Water", "UsageQty": 120, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 12 }
+          ],
+          "computedCOGS": 9912,
+          "sellingPrice": 25000,
+          "margin": 15088,
+          "marginPercent": 60.4,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 120, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-005",
+      "Produk": "Cold Brew",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 25, "BaseUOM": "g", "standardCost": 550, "componentCost": 13750 },
+            { "ingredientName": "Water", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 20 }
+          ],
+          "computedCOGS": 13770,
+          "sellingPrice": 27500,
+          "margin": 13730,
+          "marginPercent": 49.9,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 25, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-006",
+      "Produk": "Mocha",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 150, "BaseUOM": "ml", "standardCost": 60, "componentCost": 9000 },
+            { "ingredientName": "Chocolate Syrup", "UsageQty": 20, "BaseUOM": "ml", "standardCost": 200, "componentCost": 4000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 22903,
+          "sellingPrice": 30000,
+          "margin": 7097,
+          "marginPercent": 23.7,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 150, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-004", "ItemName": "Chocolate Syrup", "BaseUOM": "ml", "UsageQty": 20, "currentStandardCost": 200, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 150, "BaseUOM": "ml", "standardCost": 60, "componentCost": 9000 },
+            { "ingredientName": "Chocolate Syrup", "UsageQty": 20, "BaseUOM": "ml", "standardCost": 200, "componentCost": 4000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 22903,
+          "sellingPrice": 32000,
+          "margin": 9097,
+          "marginPercent": 28.4,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 150, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-004", "ItemName": "Chocolate Syrup", "BaseUOM": "ml", "UsageQty": 20, "currentStandardCost": 200, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-007",
+      "Produk": "Caramel Macchiato",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 180, "BaseUOM": "ml", "standardCost": 60, "componentCost": 10800 },
+            { "ingredientName": "Caramel Syrup", "UsageQty": 20, "BaseUOM": "ml", "standardCost": 180, "componentCost": 3600 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 24303,
+          "sellingPrice": 32000,
+          "margin": 7697,
+          "marginPercent": 24.1,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 180, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-005", "ItemName": "Caramel Syrup", "BaseUOM": "ml", "UsageQty": 20, "currentStandardCost": 180, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 180, "BaseUOM": "ml", "standardCost": 60, "componentCost": 10800 },
+            { "ingredientName": "Caramel Syrup", "UsageQty": 20, "BaseUOM": "ml", "standardCost": 180, "componentCost": 3600 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 24303,
+          "sellingPrice": 34000,
+          "margin": 9697,
+          "marginPercent": 28.5,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 180, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-005", "ItemName": "Caramel Syrup", "BaseUOM": "ml", "UsageQty": 20, "currentStandardCost": 180, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-008",
+      "Produk": "Vanilla Latte",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Vanilla Syrup", "UsageQty": 15, "BaseUOM": "ml", "standardCost": 180, "componentCost": 2700 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 24603,
+          "sellingPrice": 29000,
+          "margin": 4397,
+          "marginPercent": 15.2,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-006", "ItemName": "Vanilla Syrup", "BaseUOM": "ml", "UsageQty": 15, "currentStandardCost": 180, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Vanilla Syrup", "UsageQty": 15, "BaseUOM": "ml", "standardCost": 180, "componentCost": 2700 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 24603,
+          "sellingPrice": 31000,
+          "margin": 6397,
+          "marginPercent": 20.6,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-006", "ItemName": "Vanilla Syrup", "BaseUOM": "ml", "UsageQty": 15, "currentStandardCost": 180, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-009",
+      "Produk": "Iced Coffee",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Espresso Beans", "UsageQty": 18, "BaseUOM": "g", "standardCost": 550, "componentCost": 9900 },
+            { "ingredientName": "Water", "UsageQty": 150, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 15 },
+            { "ingredientName": "Ice", "UsageQty": 100, "BaseUOM": "g", "standardCost": 5, "componentCost": 500 }
+          ],
+          "computedCOGS": 10415,
+          "sellingPrice": 24000,
+          "margin": 13585,
+          "marginPercent": 56.6,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-001", "ItemName": "Espresso Beans", "BaseUOM": "g", "UsageQty": 18, "currentStandardCost": 550, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 150, "currentStandardCost": 0.1, "resolved": true },
+            { "ItemID": "ITEM-007", "ItemName": "Ice", "BaseUOM": "g", "UsageQty": 100, "currentStandardCost": 5, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-010",
+      "Produk": "Matcha Latte",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Matcha Powder", "UsageQty": 5, "BaseUOM": "g", "standardCost": 2500, "componentCost": 12500 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 24503,
+          "sellingPrice": 33000,
+          "margin": 8497,
+          "marginPercent": 25.8,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-008", "ItemName": "Matcha Powder", "BaseUOM": "g", "UsageQty": 5, "currentStandardCost": 2500, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Matcha Powder", "UsageQty": 5, "BaseUOM": "g", "standardCost": 2500, "componentCost": 12500 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 24503,
+          "sellingPrice": 35000,
+          "margin": 10497,
+          "marginPercent": 30.0,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-008", "ItemName": "Matcha Powder", "BaseUOM": "g", "UsageQty": 5, "currentStandardCost": 2500, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-011",
+      "Produk": "Chai Latte",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Chai Tea", "UsageQty": 3, "BaseUOM": "g", "standardCost": 800, "componentCost": 2400 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 50, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 5 }
+          ],
+          "computedCOGS": 14405,
+          "sellingPrice": 28000,
+          "margin": 13595,
+          "marginPercent": 48.6,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-009", "ItemName": "Chai Tea", "BaseUOM": "g", "UsageQty": 3, "currentStandardCost": 800, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 50, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Chai Tea", "UsageQty": 3, "BaseUOM": "g", "standardCost": 800, "componentCost": 2400 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 50, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 5 }
+          ],
+          "computedCOGS": 14405,
+          "sellingPrice": 30000,
+          "margin": 15595,
+          "marginPercent": 52.0,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-009", "ItemName": "Chai Tea", "BaseUOM": "g", "UsageQty": 3, "currentStandardCost": 800, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 50, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-012",
+      "Produk": "Hot Chocolate",
+      "Kind": "Hot",
+      "variants": [
+        {
+          "type": "Hot",
+          "components": [
+            { "ingredientName": "Chocolate Powder", "UsageQty": 20, "BaseUOM": "g", "standardCost": 500, "componentCost": 10000 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 22003,
+          "sellingPrice": 29000,
+          "margin": 6997,
+          "marginPercent": 24.1,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-010", "ItemName": "Chocolate Powder", "BaseUOM": "g", "UsageQty": 20, "currentStandardCost": 500, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        },
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Chocolate Powder", "UsageQty": 20, "BaseUOM": "g", "standardCost": 500, "componentCost": 10000 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 22003,
+          "sellingPrice": 31000,
+          "margin": 8997,
+          "marginPercent": 29.0,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-010", "ItemName": "Chocolate Powder", "BaseUOM": "g", "UsageQty": 20, "currentStandardCost": 500, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-013",
+      "Produk": "Green Tea Latte",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Green Tea", "UsageQty": 4, "BaseUOM": "g", "standardCost": 1200, "componentCost": 4800 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Water", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 3 }
+          ],
+          "computedCOGS": 16803,
+          "sellingPrice": 33000,
+          "margin": 16197,
+          "marginPercent": 49.1,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-011", "ItemName": "Green Tea", "BaseUOM": "g", "UsageQty": 4, "currentStandardCost": 1200, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-014",
+      "Produk": "Thai Tea",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Thai Tea Mix", "UsageQty": 5, "BaseUOM": "g", "standardCost": 800, "componentCost": 4000 },
+            { "ingredientName": "Milk", "UsageQty": 180, "BaseUOM": "ml", "standardCost": 60, "componentCost": 10800 },
+            { "ingredientName": "Water", "UsageQty": 50, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 5 }
+          ],
+          "computedCOGS": 14805,
+          "sellingPrice": 28000,
+          "margin": 13195,
+          "marginPercent": 47.1,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-012", "ItemName": "Thai Tea Mix", "BaseUOM": "g", "UsageQty": 5, "currentStandardCost": 800, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 180, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 50, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-015",
+      "Produk": "Lemonade",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Lemon Juice", "UsageQty": 30, "BaseUOM": "ml", "standardCost": 120, "componentCost": 3600 },
+            { "ingredientName": "Simple Syrup", "UsageQty": 20, "BaseUOM": "ml", "standardCost": 250, "componentCost": 5000 },
+            { "ingredientName": "Water", "UsageQty": 150, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 15 }
+          ],
+          "computedCOGS": 8615,
+          "sellingPrice": 20000,
+          "margin": 11385,
+          "marginPercent": 56.9,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-013", "ItemName": "Lemon Juice", "BaseUOM": "ml", "UsageQty": 30, "currentStandardCost": 120, "resolved": true },
+            { "ItemID": "ITEM-014", "ItemName": "Simple Syrup", "BaseUOM": "ml", "UsageQty": 20, "currentStandardCost": 250, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 150, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-016",
+      "Produk": "Iced Tea",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Black Tea", "UsageQty": 3, "BaseUOM": "g", "standardCost": 400, "componentCost": 1200 },
+            { "ingredientName": "Water", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 20 },
+            { "ingredientName": "Ice", "UsageQty": 100, "BaseUOM": "g", "standardCost": 5, "componentCost": 500 }
+          ],
+          "computedCOGS": 1720,
+          "sellingPrice": 17000,
+          "margin": 15280,
+          "marginPercent": 89.9,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-015", "ItemName": "Black Tea", "BaseUOM": "g", "UsageQty": 3, "currentStandardCost": 400, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 0.1, "resolved": true },
+            { "ItemID": "ITEM-007", "ItemName": "Ice", "BaseUOM": "g", "UsageQty": 100, "currentStandardCost": 5, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-018",
+      "Produk": "Apple Juice",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [],
+          "computedCOGS": 8000,
+          "sellingPrice": 22000,
+          "margin": 14000,
+          "marginPercent": 63.6,
+          "standardCostConfiguration": []
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-019",
+      "Produk": "Mineral Water",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [],
+          "computedCOGS": 2500,
+          "sellingPrice": 10000,
+          "margin": 7500,
+          "marginPercent": 75.0,
+          "standardCostConfiguration": []
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-020",
+      "Produk": "Sparkling Water",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [],
+          "computedCOGS": 3500,
+          "sellingPrice": 12000,
+          "margin": 8500,
+          "marginPercent": 70.8,
+          "standardCostConfiguration": []
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-021",
+      "Produk": "Coconut Water",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [],
+          "computedCOGS": 7000,
+          "sellingPrice": 20000,
+          "margin": 13000,
+          "marginPercent": 65.0,
+          "standardCostConfiguration": []
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-022",
+      "Produk": "Protein Shake",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Protein Powder", "UsageQty": 30, "BaseUOM": "g", "standardCost": 400, "componentCost": 12000 },
+            { "ingredientName": "Milk", "UsageQty": 200, "BaseUOM": "ml", "standardCost": 60, "componentCost": 12000 },
+            { "ingredientName": "Banana", "UsageQty": 1, "BaseUOM": "pcs", "standardCost": 5000, "componentCost": 5000 },
+            { "ingredientName": "Water", "UsageQty": 100, "BaseUOM": "ml", "standardCost": 0.1, "componentCost": 10 }
+          ],
+          "computedCOGS": 29010,
+          "sellingPrice": 37000,
+          "margin": 7990,
+          "marginPercent": 21.6,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-016", "ItemName": "Protein Powder", "BaseUOM": "g", "UsageQty": 30, "currentStandardCost": 400, "resolved": true },
+            { "ItemID": "ITEM-003", "ItemName": "Milk - Full Cream", "BaseUOM": "ml", "UsageQty": 200, "currentStandardCost": 60, "resolved": true },
+            { "ItemID": "ITEM-017", "ItemName": "Banana", "BaseUOM": "pcs", "UsageQty": 1, "currentStandardCost": 5000, "resolved": true },
+            { "ItemID": "ITEM-002", "ItemName": "Water", "BaseUOM": "ml", "UsageQty": 100, "currentStandardCost": 0.1, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-023",
+      "Produk": "Smoothie Bowl",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Mixed Berries", "UsageQty": 100, "BaseUOM": "g", "standardCost": 120, "componentCost": 12000 },
+            { "ingredientName": "Banana", "UsageQty": 1, "BaseUOM": "pcs", "standardCost": 5000, "componentCost": 5000 },
+            { "ingredientName": "Yogurt", "UsageQty": 150, "BaseUOM": "g", "standardCost": 80, "componentCost": 12000 },
+            { "ingredientName": "Granola", "UsageQty": 30, "BaseUOM": "g", "standardCost": 200, "componentCost": 6000 },
+            { "ingredientName": "Honey", "UsageQty": 10, "BaseUOM": "ml", "standardCost": 300, "componentCost": 3000 }
+          ],
+          "computedCOGS": 38000,
+          "sellingPrice": 42000,
+          "margin": 4000,
+          "marginPercent": 9.5,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-018", "ItemName": "Mixed Berries", "BaseUOM": "g", "UsageQty": 100, "currentStandardCost": 120, "resolved": true },
+            { "ItemID": "ITEM-017", "ItemName": "Banana", "BaseUOM": "pcs", "UsageQty": 1, "currentStandardCost": 5000, "resolved": true },
+            { "ItemID": "ITEM-019", "ItemName": "Yogurt", "BaseUOM": "g", "UsageQty": 150, "currentStandardCost": 80, "resolved": true },
+            { "ItemID": "ITEM-020", "ItemName": "Granola", "BaseUOM": "g", "UsageQty": 30, "currentStandardCost": 200, "resolved": true },
+            { "ItemID": "ITEM-021", "ItemName": "Honey", "BaseUOM": "ml", "UsageQty": 10, "currentStandardCost": 300, "resolved": true }
+          ]
+        }
+      ]
+    },
+    {
+      "ID_Prod": "PROD-024",
+      "Produk": "Acai Bowl",
+      "Kind": "Cold",
+      "variants": [
+        {
+          "type": "Cold",
+          "components": [
+            { "ingredientName": "Acai Puree", "UsageQty": 100, "BaseUOM": "g", "standardCost": 150, "componentCost": 15000 },
+            { "ingredientName": "Banana", "UsageQty": 1, "BaseUOM": "pcs", "standardCost": 5000, "componentCost": 5000 },
+            { "ingredientName": "Mixed Berries", "UsageQty": 50, "BaseUOM": "g", "standardCost": 120, "componentCost": 6000 },
+            { "ingredientName": "Granola", "UsageQty": 30, "BaseUOM": "g", "standardCost": 200, "componentCost": 6000 },
+            { "ingredientName": "Coconut Flakes", "UsageQty": 10, "BaseUOM": "g", "standardCost": 400, "componentCost": 4000 }
+          ],
+          "computedCOGS": 36000,
+          "sellingPrice": 47000,
+          "margin": 11000,
+          "marginPercent": 23.4,
+          "standardCostConfiguration": [
+            { "ItemID": "ITEM-022", "ItemName": "Acai Puree", "BaseUOM": "g", "UsageQty": 100, "currentStandardCost": 150, "resolved": true },
+            { "ItemID": "ITEM-017", "ItemName": "Banana", "BaseUOM": "pcs", "UsageQty": 1, "currentStandardCost": 5000, "resolved": true },
+            { "ItemID": "ITEM-018", "ItemName": "Mixed Berries", "BaseUOM": "g", "UsageQty": 50, "currentStandardCost": 120, "resolved": true },
+            { "ItemID": "ITEM-020", "ItemName": "Granola", "BaseUOM": "g", "UsageQty": 30, "currentStandardCost": 200, "resolved": true },
+            { "ItemID": "ITEM-023", "ItemName": "Coconut Flakes", "BaseUOM": "g", "UsageQty": 10, "currentStandardCost": 400, "resolved": true }
+          ]
+        }
+      ]
+    }
+  ]
+}
