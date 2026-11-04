@@ -206,7 +206,7 @@ test('routine read-only inspections auto-allow; writes remain gated', () => {
     'git rev-parse --abbrev-ref HEAD',
     'node --check file.js', 'node --test scripts/preflight/test.js',
     'node _test_runner.js', 'node _test_runner.js --watch',
-    'node scripts/preflight/index.js',
+    'node scripts/preflight/preflight.js',
     'clasp status', 'clasp versions', 'clasp deployments',
     'clasp status --json', 'clasp versions --json',
     'clasp logs --json'
