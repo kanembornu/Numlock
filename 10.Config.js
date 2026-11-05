@@ -1,8 +1,8 @@
 var PROJECT_CONFIG = Object.freeze({
   APP_NAME: "NUMLOCK",
-  VERSION: "1.0.0",
+  VERSION: "1.0.1",
   RELEASE_LABEL: "Production",
-  RELEASE_DATE: "2026-08-03",
+  RELEASE_DATE: "2026-11-05",
   ENVIRONMENT: "Production",
   REPOSITORY_NAME: "Numlock"
 });

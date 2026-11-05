@@ -1,5 +1,12 @@
 # NUMLOCK Changelog
 
+## 2026-11-05 — 1.0.1 — PATCH
+
+- Fixed Dashboard Overview desktop spacing for the single-screen layout.
+- Improved mobile KPI layout/value wrapping and Revenue Trend filter responsiveness.
+- Enabled mobile Key Summary text wrapping.
+- Scoped changes to authored Overview CSS and release metadata; no business logic, API, manifest, or data-contract changes.
+
 ## 2026-08-09 — UI/UX 2.1 Package 024 closure
 
 - Closed the Dashboard Overview implementation/upload scope after the final polish upload. Five focused Overview/theme/chart/accessibility contracts, deterministic Tailwind generation, `git diff --check`, and the ordered local 41/41 suite passed. No visual source changed during closure and no additional clasp upload was required. This reconstruction workflow was later retired and superseded by Package 025 — Design System Foundation.
