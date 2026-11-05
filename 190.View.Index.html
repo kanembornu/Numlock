@@ -2437,11 +2437,11 @@
         #dashboardPanelOverview #executiveSummarySection .hf-summary-title-icon { width: 32px !important; height: 32px !important; flex-basis: 32px !important; border-radius: 8px !important; font-size: 13px !important; }
         #dashboardPanelOverview #executiveSummarySection .hf-summary-metrics { margin-top: 8px !important; }
         #dashboardPanelOverview #executiveSummarySection .hf-summary-metrics > * { padding: 3px 8px !important; }
-        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions { gap: 4px !important; margin-top: 4px !important; }
-        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions button { min-height: 36px !important; gap: 6px !important; padding: 4px 8px !important; }
-        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions button > i:first-child { width: 24px !important; height: 24px !important; font-size: 11px !important; }
-        #dashboardPanelOverview #executiveSummarySection .hf-action-copy strong { font-size: 11px !important; line-height: 14px !important; }
-        #dashboardPanelOverview #executiveSummarySection .hf-action-copy span { font-size: 10px !important; line-height: 12px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions { gap: 6px !important; margin-top: 8px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions button { min-height: 46px !important; gap: 8px !important; padding: 6px 10px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-quick-actions button > i:first-child { width: 28px !important; height: 28px !important; font-size: 12px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-action-copy strong { font-size: 12px !important; line-height: 17px !important; }
+        #dashboardPanelOverview #executiveSummarySection .hf-action-copy span { font-size: 11px !important; line-height: 14px !important; }
       }
       @media (max-width: 767px) {
         :root { --mobile-text-section: 1.5rem; --mobile-text-primary: 1.125rem; --mobile-text-supporting: 0.9375rem; --mobile-line-section: 1.875rem; --mobile-line-primary: 1.625rem; --mobile-line-supporting: 1.375rem; }
@@ -2583,6 +2583,16 @@
         --tw-ring-offset-width: 0px !important;
         --tw-ring-offset-shadow: 0 0 #0000 !important;
         --tw-ring-shadow: 0 0 #0000 !important;
+      }
+      /* NUMLOCK_OVERVIEW_EVIDENCE_440 */
+      @media (min-width: 1024px) and (min-height: 900px) {
+        #dashboardPanelOverview #overviewEvidenceRow {
+          grid-template-rows: 440px !important;
+        }
+        #dashboardPanelOverview #revenueChartSection,
+        #dashboardPanelOverview #topProductsSection {
+          min-height: 0 !important;
+        }
       }
     </style>
   </head>
