@@ -71,8 +71,7 @@
     --card-shadow: var(--shadow-1);
   }
 
-  :root,
-  :root[data-theme="light"] {
+  :root {
     color-scheme: light;
     --canvas: #F6F8FC;
     --sidebar: #F8FAFD;
@@ -143,64 +142,6 @@
     --shadow-2: 0 8px 24px rgba(15, 23, 42, 0.10);
   }
 
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --canvas: #07111F;
-    --sidebar: #0B1627;
-    --sidebar-hover: #15243A;
-    --sidebar-divider: #243750;
-    --surface-1: #0F1C2E;
-    --surface-2: #142338;
-    --surface-3: #1A2C45;
-    --border-subtle: #243750;
-    --border-strong: #36506F;
-    --divider: #243750;
-    --text-primary: #F1F5F9;
-    --text-secondary: #CBD5E1;
-    --text-muted: #94A3B8;
-    --text-on-dark: #F8FAFC;
-    --brand: #818CF8;
-    --brand-hover: #A5B4FC;
-    --brand-soft: #252B5B;
-    --success: #34D399;
-    --success-soft: #0B352C;
-    --info: #38BDF8;
-    --info-soft: #0B3044;
-    --warning: #FBBF24;
-    --warning-soft: #3B2A0B;
-    --critical: #FB7185;
-    --critical-soft: #421822;
-    --hover: #17283D;
-    --focus: #60A5FA;
-    --selected: #293263;
-    --active: #293263;
-    --disabled-bg: #162235;
-    --disabled-text: #64748B;
-    --stale: #FBBF24;
-    --stale-soft: #3B2A0B;
-    --unavailable: #64748B;
-    --skeleton-start: #142338;
-    --skeleton-middle: #1A2C45;
-    --tooltip-bg: #F8FAFC;
-    --tooltip-text: #0F172A;
-    --chart-grid: rgba(36, 55, 80, 0.45);
-    --chart-axis: #CBD5E1;
-    --chart-series-1: #818CF8;
-    --chart-series-2: #38BDF8;
-    --chart-series-3: #34D399;
-    --chart-series-4: #FBBF24;
-    --chart-series-5: #FB7185;
-    --chart-series-6: #C084FC;
-    --chart-series-7: #22D3EE;
-    --chart-series-8: #A3E635;
-    --chart-point-ring: #0F1C2E;
-    --chart-point-stroke: #60A5FA;
-    --chart-revenue-fill: rgba(129, 140, 248, 0.12);
-    --chart-revenue-fill-transparent: rgba(129, 140, 248, 0);
-    --overlay: rgba(2, 6, 23, 0.72);
-    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.28);
-    --shadow-2: 0 12px 30px rgba(0, 0, 0, 0.38);
-  }
 
   html,
   body {
@@ -521,8 +462,6 @@
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item > i,
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module > i { width: 24px; flex-basis: 24px; text-align: center; }
     #dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap; }
-    #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px; min-height: 46px; box-sizing: border-box; }
-    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px; min-height: 46px; visibility: hidden; }
     #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr); }
   }
 
@@ -542,19 +481,19 @@
 }
 
 @layer components {
-  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand .text-white {
+  :root #dashboardSidebar .sidebar-brand .text-white {
     color: var(--text-primary) !important;
   }
 
-  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand .text-slate-400 {
+  :root #dashboardSidebar .sidebar-brand .text-slate-400 {
     color: var(--text-muted) !important;
   }
 
-  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand button {
+  :root #dashboardSidebar .sidebar-brand button {
     color: var(--text-secondary) !important;
   }
 
-  :root:not([data-theme="dark"]) #dashboardSidebar .sidebar-brand button:hover {
+  :root #dashboardSidebar .sidebar-brand button:hover {
     background: var(--sidebar-hover) !important;
   }
 
@@ -658,30 +597,17 @@
     #dashboardSidebar > nav + div {
       display: grid !important;
       height: auto !important;
-      grid-template-rows: auto auto 46px !important;
-      padding: 8px 16px 28px !important;
+      grid-template-rows: auto !important;
+      padding: 8px 16px 16px !important;
     }
 
-    #dashboardSidebar > nav + div > .space-y-1 {
-      transform: none !important;
-      margin-bottom: 0 !important;
-    }
 
     #dashboardSidebar #sidebarCollapseButton {
-      grid-row: 2 !important;
+      grid-row: 1 !important;
       width: 100% !important;
       min-height: 42px !important;
       gap: 12px !important;
       padding: 10px 12px !important;
-    }
-
-    #dashboardSidebar #sidebarCollapseButton + div {
-      grid-row: 3 !important;
-      margin-top: 18px !important;
-      padding-top: 0 !important;
-      border-top: 0 !important;
-      font-size: 11px !important;
-      line-height: 16px !important;
     }
 
     #mainContent {
@@ -977,9 +903,7 @@
   }
 
   #utilityPageTitle,
-  #transactionsHeading,
-  #settingsHeading,
-  #logsHeading {
+  #transactionsHeading {
     font-size: 28px !important;
     font-weight: var(--font-weight-bold) !important;
     line-height: 32px !important;
@@ -987,9 +911,7 @@
   }
 
   #utilityPageContext,
-  #transactionsDescription,
-  #settings header p:last-child,
-  #logs header p:last-child {
+  #transactionsDescription {
     font-size: 13px !important;
     font-weight: var(--font-weight-normal) !important;
     line-height: 18px !important;
@@ -1349,16 +1271,13 @@
     #dashboardSidebar .sidebar-brand .text-xl { line-height: 32px !important; }
     #dashboardSidebar > nav { padding-top: 8px !important; }
     #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) 46px !important; }
-    #dashboardSidebar #sidebarCollapseButton { grid-row: 2 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
-    #dashboardSidebar #sidebarCollapseButton + div { grid-row: 3 !important; }
+    #dashboardSidebar #sidebarCollapseButton { grid-row: 1 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
     #dashboardSidebar .ui-sidebar-item,
     #dashboardSidebar .ui-future-module { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; border-radius: var(--sidebar-control-radius) !important; padding-top: 0 !important; padding-bottom: 0 !important; }
     #dashboardSidebar #financialModulesDisclosureButton,
     #dashboardSidebar #financialModulesGroup > * { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
     #dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; max-width: 64px !important; grid-template-columns: 64px !important; justify-items: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
-    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div > .space-y-1 { width: 64px !important; max-width: 64px !important; justify-self: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
-    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { width: 64px !important; max-width: 64px !important; padding-right: 0 !important; padding-left: 0 !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }

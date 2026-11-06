@@ -2606,16 +2606,16 @@ function testPurchaseUIContracts() {
   check(_htmlIndex.indexOf('.transactions-row-action--resolve') !== -1, 'U91: resolve action button CSS class exists');
   check(_htmlIndex.indexOf('--transaction-action-bg: var(--success-soft)') !== -1, 'U92: resolve button uses success-soft background');
 
-  // U93-U97: Dark theme badge overrides
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--active') !== -1, 'U93: dark badge --active override exists');
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--voided') !== -1, 'U94: dark badge --voided override exists');
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--pending') !== -1, 'U95: dark badge --pending override exists');
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--resolved') !== -1, 'U96: dark badge --resolved override exists');
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--corrected') !== -1, 'U97: dark badge --corrected override exists');
+  // U93-U97: OBSOLETE_REQUIREMENT replaced by Light-only absence checks
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--active') === -1, 'U93: obsolete dark badge --active override absent');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--voided') === -1, 'U94: obsolete dark badge --voided override absent');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--pending') === -1, 'U95: obsolete dark badge --pending override absent');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--resolved') === -1, 'U96: obsolete dark badge --resolved override absent');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-status-badge--corrected') === -1, 'U97: obsolete dark badge --corrected override absent');
 
   // U98-U99: Dark theme type badge overrides
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--purchase') !== -1, 'U98: dark type badge --purchase override exists');
-  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') !== -1, 'U99: dark type badge --receipt override exists');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--purchase') === -1, 'U98: obsolete dark type badge --purchase override absent');
+  check(_htmlIndex.indexOf(':root[data-theme="dark"] .transaction-type--receipt') === -1, 'U99: obsolete dark type badge --receipt override absent');
 
   // U100: Column widths sum to 100%
   var colWidths = [21, 8, 7, 10, 9, 7.5, 9, 28.5];

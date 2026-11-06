@@ -409,8 +409,10 @@
       var headingText = isEquity ? "Capital & Equity" : isPP ? "Product Profitability" : isBS ? "Balance Position" : isDep ? "Depreciation" : isAssets ? "Assets" : financeState.destination === "cash-flow" ? "Cash Flow" : "Profit & Loss";
       var contextText = isEquity ? "Owner capital and retained earnings as of the selected date" : isPP ? "Per-product revenue, COGS, and margin analysis" : isBS ? "Assets, liabilities, and equity as of the selected date" : isDep ? "Fixed asset depreciation schedule and reconciliation" : isAssets ? "Fixed-asset register and acquisition summary" : financeState.destination === "cash-flow" ? "Cash movements classified by activity type" : "Transaction-date operating statement";
       getFinanceElement("financeHeading").textContent = headingText;
-      getFinanceElement("utilityPageTitle").textContent = headingText;
-      getFinanceElement("utilityPageContext").textContent = contextText;
+      var utilityTitle = document.getElementById("utilityPageTitle");
+      var utilityContext = document.getElementById("utilityPageContext");
+      if (utilityTitle) utilityTitle.textContent = headingText;
+      if (utilityContext) utilityContext.textContent = contextText;
       getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : isPP ? "Transaction-date operating basis" : isDep ? "Monthly straight-line depreciation" : "Transaction-date operating basis";
       getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : isPP ? "Product-level COGS follows authoritative sales allocation." : isDep ? "Depreciation is calculated from the authoritative DepreciationLedger." : "Depreciation is included from the authoritative DepreciationLedger.";
       if (isDep || isAssets) setAssetsTab(isDep ? "depreciation" : "register");
