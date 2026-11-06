@@ -2004,7 +2004,7 @@
       #dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; height: auto; overflow: visible; }
       #dashboardPanelInsights .insights-plans-column { display: grid; min-width: 0; height: auto; grid-template-rows: none !important; grid-auto-rows: max-content; gap: 8px; align-content: space-between; overflow: visible; }
       #dashboardPanelInsights .insights-plans-header { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
-      #dashboardPanelInsights .insights-plans-header h2 { font-size: 18px !important; line-height: 22px !important; }
+      #dashboardPanelInsights .insights-plans-header h2 { font-size: 20px !important; font-weight: 700 !important; line-height: 22px !important; }
       #dashboardPanelInsights #businessPriorityRegion,
       #dashboardPanelInsights #diagnosisSection,
       #dashboardPanelInsights #riskOpportunitySection,
@@ -2064,7 +2064,15 @@
       #dashboardPanelInsights .recommendations-heading { margin-bottom: 0; }
       #dashboardPanelInsights .recommendations-heading p { margin-top: 2px; }
       #dashboardPanelInsights #recommendationContainer { margin-top: 12px; display: grid; row-gap: 12px; }
-      #dashboardPanelInsights .recommendation-item { padding-block: 0; }
+      #dashboardPanelInsights .recommendation-item { position: relative; z-index: 1; display: grid; grid-template-columns: 28px minmax(0, 1fr); padding-block: 0; gap: 10px; }
+      #dashboardPanelInsights .recommendation-node { position: relative; z-index: 1; }
+      #dashboardPanelInsights #recommendationContainer { position: relative; }
+      #dashboardPanelInsights #recommendationContainer::before { position: absolute; top: 14px; bottom: 14px; left: 13.5px; width: 1px; background: var(--border-strong); content: ""; }
+      @media (min-width: 1024px) {
+        /* ponytail: measured four-action desktop wrapping; remeasure offsets if action content changes. */
+        #dashboardPanelInsights .recommendation-item:nth-child(2) .recommendation-node { top: 5.5px; }
+        #dashboardPanelInsights .recommendation-item:nth-child(3) .recommendation-node { top: -5.5px; }
+      }
       #dashboardPanelInsights .recommendation-copy { margin-top: 4px; }
       @media (min-width: 1024px) {
         #dashboardPanelInsights #recommendationsSection { padding-bottom: 12px; }
