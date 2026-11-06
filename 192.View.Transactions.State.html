@@ -1,7 +1,7 @@
   let latestLifecycleTransactions = [];
   let transactionsLifecycleState = "active";
   let transactionsDateFilter = null;
-  const TRANSACTIONS_DEFAULT_PAGE_SIZE = 25;
+  const TRANSACTIONS_DEFAULT_PAGE_SIZE = 15;
   const TRANSACTIONS_ALLOWED_PAGE_SIZES = { 15: true, 25: true, 50: true };
   let transactionsPageSize = TRANSACTIONS_DEFAULT_PAGE_SIZE;
   let transactionsPages = { recent: 1, sales: 1, expenses: 1, purchases: 1 };
@@ -39,17 +39,21 @@
       var pageSize = Number(value);
       transactionsPageSize = TRANSACTIONS_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : TRANSACTIONS_DEFAULT_PAGE_SIZE;
       var elements = initializeStableDashboardElements();
+      elements.transactionsPageSize.value = String(transactionsPageSize);
       elements.transactionsPageSizeFooter.value = String(transactionsPageSize);
       elements.transactionsTableCard.classList.toggle("is-scrollable", transactionsPageSize > 15);
       transactionsPages = { recent: 1, sales: 1, expenses: 1, purchases: 1 };
       transactionsResultCache = {};
       transactionsResultCacheOrder = [];
+      try { window.localStorage.setItem("numlock.transactions.pageSize", String(transactionsPageSize)); } catch (error) {}
       if (transactionsDateFilter) requestTransactionsPage();
     }
 
     function initializeTransactionsPageSize()
     {
-      setTransactionsPageSize(TRANSACTIONS_DEFAULT_PAGE_SIZE);
+      var saved = "";
+      try { saved = window.localStorage.getItem("numlock.transactions.pageSize") || ""; } catch (error) {}
+      setTransactionsPageSize(saved || TRANSACTIONS_DEFAULT_PAGE_SIZE);
     }
 
     function scheduleTransactionsSearch(value)

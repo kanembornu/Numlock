@@ -905,11 +905,14 @@ function testChartRuntimeThemeSynchronizationContract()
   assertSourceExcludes(helperSource, "new Chart(", "runtime chart recreation");
   scenariosPassed++;
 
-  // OBSOLETE_ASSERTION: system theme switching removed; palette/print updates remain protected above.
-  assertSourceExcludes(source, "function handleSystemThemeChange()", "removed System theme listener");
-  assertSourceExcludes(source, "function synchronizeSystemThemeListener(preference)", "removed System listener lifecycle");
-  assertSourceContains(source, "synchronizeChartTheme(true);", "print palette synchronization");
-  assertSourceContains(source, "synchronizeChartTheme(false);", "Light palette restoration");
+  var systemSource = getSourceRegion(
+    source,
+    "function handleSystemThemeChange()",
+    "function synchronizeSystemThemeListener(preference)",
+    "System effective-theme path"
+  );
+  assertSourceContains(systemSource, 'applyThemePreference("system", false, false);', "System shared theme path");
+  assertSourceContains(source, "synchronizeChartTheme();", "application theme chart synchronization");
   scenariosPassed++;
 
   var summary = {

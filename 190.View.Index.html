@@ -28,6 +28,52 @@
         );
       })();
     </script>
+    <script>
+      (function applyStoredThemeBeforeRender()
+      {
+        var storageKey = "numlock.ui.theme";
+        var allowedThemes = {
+          light: true,
+          dark: true,
+          system: true
+        };
+        var preference = "light";
+
+        try
+        {
+          var storedPreference = window.localStorage.getItem(storageKey);
+
+          if (allowedThemes[storedPreference])
+          {
+            preference = storedPreference;
+          }
+        }
+        catch (error)
+        {
+          preference = "light";
+        }
+
+        var resolvedTheme =
+          preference === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : preference;
+
+        document.documentElement.setAttribute(
+          "data-theme-preference",
+          preference
+        );
+        document.documentElement.setAttribute(
+          "data-theme",
+          resolvedTheme
+        );
+        document.documentElement.setAttribute(
+          "data-effective-theme",
+          resolvedTheme
+        );
+      })();
+    </script>
     <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -375,6 +421,8 @@
       .transactions-search button:disabled { opacity: .45; }
       #exportCsvButton { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; }
       #transactionsTableCard.is-scrollable #transactionsTableScroll { max-height: 608px; overflow-y: auto; }
+      .transactions-page-size-setting { display: flex; margin-top: 16px; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--divider); padding-top: 14px; }
+      .transactions-page-size-setting select { min-width: 96px; min-height: 38px; border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 10px; background: var(--surface-1); color: var(--text-primary); }
       #transactionsTableScroll tbody tr { border-bottom-color: var(--divider); }
       #transactionsTableScroll tbody tr:last-child { border-bottom: 0; }
       .transaction-type { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 2px 8px; font-size: 12px; font-weight: 700; line-height: 18px; }
@@ -429,6 +477,14 @@
       .standard-cost-section { border-top: 1px solid var(--divider); }
       .standard-cost-input { width: 100%; min-width: 120px; height: 36px; border: 1px solid var(--card-border); border-radius: 7px; padding: 4px 8px; background: var(--surface-1); color: var(--text-primary); }
       .standard-cost-apply:disabled { cursor: not-allowed; opacity: .5; }
+      .hf-settings-grid { width: 100%; max-width: 960px; }
+      .hf-setting-choice { min-height: 88px; }
+      .hf-about-row { min-height: 36px; }
+      .hf-log-severity-strip > * + * { border-left: 1px solid var(--divider); }
+      .hf-log-entry { border-left: 2px solid var(--border-subtle); padding: 8px 12px; }
+      .hf-log-entry[data-severity="Info"] { border-left-color: var(--brand); }
+      .hf-log-entry[data-severity="Warning"] { border-left-color: var(--warning); }
+      .hf-log-entry[data-severity="Error"] { border-left-color: var(--critical); }
 
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-header,
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 57px; column-gap: 12px; padding: 5px 4px; font-size: 12px; line-height: 16px; }
@@ -1919,6 +1975,11 @@
         #productsTableRegion { max-height: 100%; overflow-y: auto; padding-bottom: 24px; }
         #productsPanelInventory:not([hidden]) { display: grid; height: 100%; }
         #inventoryItemsTableRegion, #inventoryItemDetail { max-height: 100%; }
+        #settings.active { min-height: 0; }
+        #settingsSections { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; }
+        #logs.active { min-height: 0; }
+        #logsWorkspace { height: 100%; min-height: 0; }
+        #sessionLogsListRegion { min-height: 0; overflow-y: auto; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: var(--sidebar-width-collapsed); }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: var(--sidebar-width-collapsed); }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -2039,6 +2100,8 @@
 
       /* Extracted non-Dashboard density rules from removed height-bucket query. */
       @media (min-width: 1024px) {
+        #dashboardSidebar > nav + div > .space-y-1 { transform: none; margin-bottom: 0; }
+        .hf-setting-choice { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
         #productDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
         #inventoryItemDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
         #financeAssetDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
@@ -2078,7 +2141,12 @@
         #transactionsEvidenceRegion,
         #transactionsTableScroll { height: auto; overflow: visible; }
         #transactionsTableScroll { overflow-x: auto; }
+        #settings.active { height: auto; overflow: visible; }
+        #logs.active,
+        #logsWorkspace { height: auto; overflow: visible; }
+        #sessionLogsListRegion { overflow: visible; }
         #transactionsTableScroll td { height: 44px; }
+        .hf-log-severity-strip > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-executive-fact + .hf-executive-fact { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-summary-action-grid { grid-template-columns: minmax(0, 1fr); }
         .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2103,6 +2171,71 @@
         #dashboardPanelPerformance .performance-snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         #dashboardPanelPerformance #performanceSignalGrid { grid-template-columns: minmax(0, 1fr); }
       }
+
+      :root[data-theme="dark"] .bg-white,
+      :root[data-theme="dark"] .bg-slate-50
+      {
+        background-color: var(--surface-1) !important;
+      }
+
+      :root[data-theme="dark"] .bg-slate-100,
+      :root[data-theme="dark"] .bg-slate-200
+      {
+        background-color: var(--surface-2) !important;
+      }
+
+      :root[data-theme="dark"] .text-slate-900,
+      :root[data-theme="dark"] .text-slate-800,
+      :root[data-theme="dark"] .text-slate-700
+      {
+        color: var(--text-primary) !important;
+      }
+
+      :root[data-theme="dark"] .text-slate-600,
+      :root[data-theme="dark"] .text-slate-500,
+      :root[data-theme="dark"] .text-slate-400
+      {
+        color: var(--text-secondary) !important;
+      }
+
+      :root[data-theme="dark"] .border-slate-100,
+      :root[data-theme="dark"] .border-slate-200,
+      :root[data-theme="dark"] .border-slate-300,
+      :root[data-theme="dark"] .border-b,
+      :root[data-theme="dark"] .border-t
+      {
+        border-color: var(--border-subtle) !important;
+      }
+
+      :root[data-theme="dark"] .bg-indigo-50 { background-color: var(--brand-soft) !important; }
+      :root[data-theme="dark"] .bg-indigo-100 { background-color: var(--brand-soft) !important; }
+      :root[data-theme="dark"] .bg-amber-50 { background-color: var(--warning-soft) !important; }
+      :root[data-theme="dark"] .bg-amber-100 { background-color: var(--warning-soft) !important; }
+      :root[data-theme="dark"] .bg-red-50 { background-color: var(--critical-soft) !important; }
+      :root[data-theme="dark"] .bg-red-100 { background-color: var(--critical-soft) !important; }
+      :root[data-theme="dark"] .bg-emerald-50 { background-color: var(--success-soft) !important; }
+      :root[data-theme="dark"] .bg-emerald-100,
+      :root[data-theme="dark"] .bg-green-100 { background-color: var(--success-soft) !important; }
+      :root[data-theme="dark"] .text-indigo-600,
+      :root[data-theme="dark"] .text-indigo-700 { color: var(--brand) !important; }
+      :root[data-theme="dark"] .text-amber-500,
+      :root[data-theme="dark"] .text-amber-600,
+      :root[data-theme="dark"] .text-amber-700 { color: var(--warning) !important; }
+      :root[data-theme="dark"] .text-red-600,
+      :root[data-theme="dark"] .text-red-700 { color: var(--critical) !important; }
+      :root[data-theme="dark"] .text-emerald-600,
+      :root[data-theme="dark"] .text-emerald-700,
+      :root[data-theme="dark"] .text-green-700 { color: var(--success) !important; }
+      :root[data-theme="dark"] .shadow-lg,
+      :root[data-theme="dark"] .shadow-sm { box-shadow: var(--shadow-1) !important; }
+
+      :root[data-theme="dark"] .transaction-type--purchase { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+      :root[data-theme="dark"] .transaction-type--receipt { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      :root[data-theme="dark"] .transaction-status-badge--active { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      :root[data-theme="dark"] .transaction-status-badge--voided { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
+      :root[data-theme="dark"] .transaction-status-badge--pending { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
+      :root[data-theme="dark"] .transaction-status-badge--resolved { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+      :root[data-theme="dark"] .transaction-status-badge--corrected { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
 
       button:disabled,
       select:disabled,
@@ -2173,6 +2306,18 @@
           --text-primary: var(--print-text);
           --text-secondary: var(--print-text);
           --text-muted: var(--print-text);
+        }
+
+        :root[data-theme="dark"] .bg-white,
+        :root[data-theme="dark"] .bg-slate-50,
+        :root[data-theme="dark"] .bg-slate-100,
+        :root[data-theme="dark"] .bg-slate-200,
+        :root[data-theme="dark"] .ui-theme-surface,
+        :root[data-theme="dark"] .ui-theme-inset
+        {
+          background: var(--print-canvas) !important;
+          color: var(--print-text) !important;
+          border-color: var(--print-border) !important;
         }
 
         html,
@@ -2314,7 +2459,7 @@
         }
       }
       /* WO-028 functional refinement overrides. */
-      #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto !important; border-top: 0 !important; }
+      #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important; border-top: 0 !important; }
       #sidebarCollapseButton { width: 100% !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
       #dashboardTabInsights { white-space: nowrap !important; }
       #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 42px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
@@ -2364,6 +2509,8 @@
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module > i { width: 24px !important; flex-basis: 24px !important; text-align: center !important; }
         #dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap !important; }
         #dashboardSidebar #sidebarCollapseButton { min-height: 44px !important; gap: 11px !important; padding: 8px 12px !important; }
+        #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; box-sizing: border-box !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }
         #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(320px, 2.5fr) minmax(360px, 1.5fr) !important; }
       }
       @media (min-width: 1280px) {
@@ -2378,8 +2525,8 @@
       :where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important; font-kerning: normal; text-wrap: balance; }
       :where(button, input, select, textarea, .ui-form-text, .ui-action-label, .ui-badge-label) { letter-spacing: -0.005em; }
       :where(.ui-page-subtitle, .ui-body-text, .ui-meta-text, .ui-empty-state, .hf-section-label) { letter-spacing: 0; }
-      #utilityPageTitle, #transactionsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
-      #utilityPageContext, #transactionsDescription { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
+      #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
       #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
@@ -2532,12 +2679,15 @@
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-brand > div:first-child > .sidebar-expanded-content { display: none !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; overflow: hidden !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
         #dashboardSidebar .sidebar-brand .text-xl { line-height: 32px !important; }
         #dashboardSidebar > nav { padding-top: 8px !important; }
-        #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto !important; }
-        #dashboardSidebar #sidebarCollapseButton { grid-row: 1 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
+        #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) 46px !important; }
+        #dashboardSidebar #sidebarCollapseButton { grid-row: 2 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
+        #dashboardSidebar #sidebarCollapseButton + div { grid-row: 3 !important; }
         #dashboardSidebar .ui-sidebar-item, #dashboardSidebar .ui-future-module { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; border-radius: var(--sidebar-control-radius) !important; padding-top: 0 !important; padding-bottom: 0 !important; }
         #dashboardSidebar #financialModulesDisclosureButton, #dashboardSidebar #financialModulesGroup > * { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
         #dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; grid-template-columns: var(--sidebar-width-collapsed) !important; justify-items: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div > .space-y-1 { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; justify-self: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
+        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; padding-right: 0 !important; padding-left: 0 !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
@@ -2566,6 +2716,13 @@
       #appShell#appShell#appShell#appShell :where(.ui-custom-select):focus-within {
         outline: none !important;
         outline-offset: 0 !important;
+        box-shadow: none !important;
+        --tw-ring-offset-width: 0px !important;
+        --tw-ring-offset-shadow: 0 0 #0000 !important;
+        --tw-ring-shadow: 0 0 #0000 !important;
+      }
+
+      #appShell#appShell#appShell#appShell .hf-setting-choice:has(:checked) {
         box-shadow: none !important;
         --tw-ring-offset-width: 0px !important;
         --tw-ring-offset-shadow: 0 0 #0000 !important;
@@ -2746,6 +2903,14 @@
       </nav>
 
     <div id="sidebarUtilityNavigation" class="p-2">
+      <div class="space-y-1 pb-2">
+        <button type="button" data-page="settings" data-navigation-destination="settings" aria-label="Settings" title="Settings" class="ui-sidebar-item flex w-full items-center text-left transition">
+          <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
+        </button>
+        <button type="button" data-page="logs" data-navigation-destination="logs" aria-label="Logs" title="Logs" class="ui-sidebar-item flex w-full items-center text-left transition">
+          <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
+        </button>
+      </div>
       <button id="sidebarMobileCloseButton" type="button" class="ui-sidebar-item hidden w-full items-center text-left lg:hidden" aria-label="Close navigation menu" onclick="setSidebarOpen(false, true)">
         <i class="fas fa-times w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Close Menu</span>
       </button>
@@ -2759,6 +2924,9 @@
         <i id="sidebarCollapseIcon" class="fas fa-chevron-left w-6 text-center transition-transform" aria-hidden="true"></i>
         <span class="sidebar-expanded-content">Collapse</span>
       </button>
+      <div class="sidebar-status-region sidebar-expanded-content px-2 pt-2 text-[10px] leading-4 text-slate-400">
+        <div id="sidebarDataStatus" class="truncate">Waiting for data</div>
+      </div>
     </div>
   </aside>
 
@@ -4158,6 +4326,113 @@
     </section>
 
     <!-- SETTINGS -->
+    <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
+      <header class="sr-only">
+        <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Application preferences</p>
+        <h1 id="settingsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Settings</h1>
+        <p class="mt-1 max-w-2xl text-sm ui-theme-secondary">Choose this browser’s appearance and review authoritative application details.</p>
+      </header>
+
+      <div id="settingsSections" class="hf-settings-grid grid grid-cols-1 gap-4">
+        <section id="appearanceSection" class="hf-secondary-surface p-4" aria-labelledby="appearanceHeading">
+          <div>
+            <h2 id="appearanceHeading" class="hf-section-heading">Appearance</h2>
+            <p class="mt-1 text-sm ui-theme-secondary">Your choice applies immediately and is stored only in this browser.</p>
+          </div>
+          <fieldset class="mt-4">
+            <legend class="text-sm font-semibold ui-theme-primary">Theme preference</legend>
+            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+                <input type="radio" name="themePreference" value="light" class="mt-1 h-4 w-4 accent-indigo-600">
+                <span><strong class="ui-theme-primary">Light</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use the light NUMLOCK theme.</span></span>
+              </label>
+              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+                <input type="radio" name="themePreference" value="dark" class="mt-1 h-4 w-4 accent-indigo-600">
+                <span><strong class="ui-theme-primary">Dark</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use deep navy and slate surfaces.</span></span>
+              </label>
+              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
+                <input type="radio" name="themePreference" value="system" class="mt-1 h-4 w-4 accent-indigo-600">
+                <span><strong class="ui-theme-primary">System</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Follow this device’s color preference.</span></span>
+              </label>
+            </div>
+          </fieldset>
+          <p id="themeStatus" class="mt-4 min-h-5 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="transactions-page-size-setting">
+            <label for="transactionsPageSize"><strong class="block text-sm ui-theme-primary">Transactions rows per page</strong><span class="mt-1 block text-xs ui-theme-muted">Stored only in this browser.</span></label>
+            <select id="transactionsPageSize" onchange="setTransactionsPageSize(this.value)">
+              <option value="15">15</option><option value="25">25</option><option value="50">50</option>
+            </select>
+          </div>
+        </section>
+
+        <section id="aboutSection" class="hf-secondary-surface p-4" aria-labelledby="aboutHeading">
+          <h2 id="aboutHeading" class="hf-section-heading">About</h2>
+          <p class="mt-1 text-sm ui-theme-secondary">Read-only details from the application configuration.</p>
+          <dl class="mt-4 divide-y" aria-label="Application metadata">
+            <div class="hf-about-row flex items-center justify-between gap-5">
+              <dt class="text-sm ui-theme-muted">Application</dt>
+              <dd id="aboutApplicationName" data-metadata-source="template.appName" class="text-right text-sm font-semibold ui-theme-primary"><?= appName ?></dd>
+            </div>
+            <div class="hf-about-row flex items-center justify-between gap-5">
+              <dt class="text-sm ui-theme-muted">Version</dt>
+              <dd id="aboutVersion" data-metadata-source="template.version" class="text-right text-sm font-semibold ui-theme-primary"><?= version ?></dd>
+            </div>
+            <div class="hf-about-row flex items-center justify-between gap-5">
+              <dt class="text-sm ui-theme-muted">Release</dt>
+              <dd id="aboutReleaseLabel" data-metadata-source="template.releaseLabel" class="text-right text-sm font-semibold ui-theme-primary"><?= releaseLabel ?></dd>
+            </div>
+            <div class="hf-about-row flex items-center justify-between gap-5">
+              <dt class="text-sm ui-theme-muted">Environment</dt>
+              <dd id="aboutEnvironment" data-metadata-source="template.environment" class="text-right text-sm font-semibold ui-theme-primary"><?= environment ?></dd>
+            </div>
+          </dl>
+          <p class="mt-4 border-t pt-3 text-xs leading-relaxed ui-theme-muted">Business rules and targets remain system-defined and are not editable here.</p>
+        </section>
+      </div>
+    </section>
+
+    <!-- LOGS -->
+    <section id="logs" class="page" hidden aria-labelledby="logsHeading">
+      <header class="sr-only">
+        <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Session diagnostics</p>
+        <h1 id="logsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Logs</h1>
+        <p class="mt-1 max-w-3xl text-sm ui-theme-secondary">Sanitized application events generated during this browser page session.</p>
+      </header>
+
+      <div id="logsWorkspace" class="flex flex-col gap-3">
+        <div id="sessionLogsScopeNotice" class="flex flex-wrap items-start justify-between gap-3 border-b px-1 pb-3">
+          <p class="max-w-3xl text-sm ui-theme-secondary"><strong class="ui-theme-primary">Session-local only.</strong> Entries are held in memory, are not historical audit records, and disappear when this page reloads or closes.</p>
+          <span class="rounded-full border px-3 py-1 text-xs font-semibold ui-theme-muted">Maximum 100 entries</span>
+        </div>
+
+        <div id="sessionLogsSeveritySummary" class="hf-log-severity-strip hf-secondary-surface grid grid-cols-1 sm:grid-cols-3" aria-label="Log severity summary">
+          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Info</span><strong id="sessionLogsInfoCount" class="text-lg ui-theme-primary">0</strong></div>
+          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Warning</span><strong id="sessionLogsWarningCount" class="text-lg ui-theme-primary">0</strong></div>
+          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Error</span><strong id="sessionLogsErrorCount" class="text-lg ui-theme-primary">0</strong></div>
+        </div>
+
+        <div id="sessionLogsToolbar" class="hf-secondary-surface flex min-h-10 flex-wrap items-center justify-between gap-3 px-3 py-1">
+          <fieldset class="flex flex-wrap items-center gap-3">
+            <legend class="sr-only">Filter by severity</legend>
+            <span aria-hidden="true" class="hf-section-label">Severity</span>
+            <div id="sessionLogsFilters" class="flex flex-wrap gap-1">
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="All" checked onchange="setClientLogFilter(this.value)"><span>All</span></label>
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Info" onchange="setClientLogFilter(this.value)"><span>Info</span></label>
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Warning" onchange="setClientLogFilter(this.value)"><span>Warning</span></label>
+              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Error" onchange="setClientLogFilter(this.value)"><span>Error</span></label>
+            </div>
+          </fieldset>
+          <button id="clearSessionLogsButton" type="button" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" onclick="clearSessionClientLogs()" disabled>Clear session logs</button>
+        </div>
+
+        <p id="sessionLogsAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+        <div id="sessionLogsListRegion" class="hf-secondary-surface flex-1 p-3" tabindex="0" aria-label="Session log entries, scrollable">
+          <p id="sessionLogsEmpty" class="p-5 text-sm ui-theme-muted">No client events in this session.</p>
+          <ol id="sessionLogsList" class="hidden divide-y" aria-label="Newest session client events first"></ol>
+        </div>
+      </div>
+    </section>
+    </div>
   </main>
 </div>
 
@@ -4181,7 +4456,11 @@
     export: { activeTab: "", search: "", includeVoided: false, matchingRows: null, exportedRows: null, eventCount: 0 }
   };
   let transactionDiagnosticPending = {};
+  let themeFoundationInitialized = false;
+  let systemThemeQuery = null;
+  let systemThemeListenerAttached = false;
   let sessionClientLogs = [];
+  let activeClientLogSeverity = "All";
   let lastClientLogSignature = "";
   let lastClientLogTimestamp = 0;
   let customSelectRegistry = {};
@@ -4505,9 +4784,9 @@
         "transactionsPanelGroup", "transactionsEvidenceRegion",
         "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
         "transactionDrilldownSummary", "transactionDrilldownText",
-        "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
+        "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSize", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
         "mainContent", "topUtilityBar",
-        "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
+        "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
         "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
         "productsTableBody", "productDetailEmpty", "productDetailContent", "productsCatalogPagination",
         "productsCatalogFirstPage", "productsCatalogPrevPage", "productsCatalogNextPage", "productsCatalogLastPage",
@@ -4520,7 +4799,12 @@
         "inventoryItemsError", "inventoryItemsTableRegion", "inventoryItemsTableBody", "inventoryItemDetailEmpty",
         "inventoryItemDetailContent", "inventoryItemsPagination",
         "inventoryItemsFirstPage", "inventoryItemsPrevPage", "inventoryItemsNextPage", "inventoryItemsLastPage",
-        "inventoryItemsPageInfo", "inventoryItemsPageNumbers",
+        "inventoryItemsPageInfo", "inventoryItemsPageNumbers", "settings", "logs",
+        "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
+        "sessionLogsInfoCount", "sessionLogsWarningCount",
+        "sessionLogsErrorCount", "sessionLogsToolbar",
+        "clearSessionLogsButton", "sessionLogsAnnouncement",
+        "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
         "dashboardTabList", "dashboardTabPanels",
         "dashboardSectionStaging", "newTransactionButton",
         "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
@@ -4663,6 +4947,7 @@
         transactionsNextPage: required.transactionsNextPage,
         transactionsPageIndicator: required.transactionsPageIndicator,
         transactionsRangeSummary: required.transactionsRangeSummary,
+        transactionsPageSize: required.transactionsPageSize,
         transactionsPageSizeFooter: required.transactionsPageSizeFooter,
         transactionsSearch: required.transactionsSearch,
         clearTransactionsSearch: required.clearTransactionsSearch,
@@ -4672,6 +4957,7 @@
         topUtilityBar: required.topUtilityBar,
         utilityPageTitle: required.utilityPageTitle,
         utilityPageContext: required.utilityPageContext,
+        sidebarDataStatus: required.sidebarDataStatus,
         products: required.products,
         productsTabCatalog: required.productsTabCatalog,
         productsTabRecipe: required.productsTabRecipe,
@@ -4727,6 +5013,20 @@
         inventoryItemsLastPage: required.inventoryItemsLastPage,
         inventoryItemsPageInfo: required.inventoryItemsPageInfo,
         inventoryItemsPageNumbers: required.inventoryItemsPageNumbers,
+        settingsPage: required.settings,
+        logsPage: required.logs,
+        themeStatus: required.themeStatus,
+        sessionLogsWorkspace: required.logsWorkspace,
+        sessionLogsSummary: required.sessionLogsSeveritySummary,
+        sessionLogsInfoCount: required.sessionLogsInfoCount,
+        sessionLogsWarningCount: required.sessionLogsWarningCount,
+        sessionLogsErrorCount: required.sessionLogsErrorCount,
+        sessionLogsToolbar: required.sessionLogsToolbar,
+        clearSessionLogsButton: required.clearSessionLogsButton,
+        sessionLogsAnnouncement: required.sessionLogsAnnouncement,
+        sessionLogsListRegion: required.sessionLogsListRegion,
+        sessionLogsEmpty: required.sessionLogsEmpty,
+        sessionLogsList: required.sessionLogsList,
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging,
@@ -4808,6 +5108,8 @@
         footer: required.transactionLifecycleFooter
       };
 
+      elements.themeControls =
+        elements.settingsPage.querySelectorAll('input[name="themePreference"]');
       elements.transactionsTabs =
         elements.transactionsTabList.querySelectorAll('[role="tab"]');
       elements.transactionsPanels =
@@ -5251,7 +5553,14 @@
           title: "Product Profitability",
           context: "Per-product revenue, COGS, and margin analysis"
         },
-
+        settings: {
+          title: "Settings",
+          context: "Appearance and application information"
+        },
+        logs: {
+          title: "Logs",
+          context: "Sanitized events from this browser session"
+        }
       };
       var activePage = Array.prototype.find.call(
         elements.pageElements,
@@ -6218,6 +6527,164 @@
       elements.productDetailContent.hidden = false;
     }
 
+    function getResolvedTheme(preference)
+    {
+      if (preference === "dark" || preference === "light")
+      {
+        return preference;
+      }
+
+      return window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches
+        ? "dark"
+        : "light";
+    }
+
+    function handleSystemThemeChange()
+    {
+      if (
+        document.documentElement.getAttribute(
+          "data-theme-preference"
+        ) === "system"
+      )
+      {
+        applyThemePreference("system", false, false);
+      }
+    }
+
+    function synchronizeSystemThemeListener(preference)
+    {
+      if (!systemThemeQuery)
+      {
+        systemThemeQuery = window.matchMedia(
+          "(prefers-color-scheme: dark)"
+        );
+      }
+
+      if (preference === "system" && !systemThemeListenerAttached)
+      {
+        systemThemeQuery.addEventListener(
+          "change",
+          handleSystemThemeChange
+        );
+        systemThemeListenerAttached = true;
+      }
+      else if (preference !== "system" && systemThemeListenerAttached)
+      {
+        systemThemeQuery.removeEventListener(
+          "change",
+          handleSystemThemeChange
+        );
+        systemThemeListenerAttached = false;
+      }
+    }
+
+    function applyThemePreference(preference, persist, announce)
+    {
+      var allowedThemes = {
+        light: true,
+        dark: true,
+        system: true
+      };
+      var safePreference = allowedThemes[preference]
+        ? preference
+        : "light";
+      var resolvedTheme = getResolvedTheme(safePreference);
+      var elements = initializeStableDashboardElements();
+
+      document.documentElement.setAttribute(
+        "data-theme-preference",
+        safePreference
+      );
+      document.documentElement.setAttribute(
+        "data-theme",
+        resolvedTheme
+      );
+      document.documentElement.setAttribute(
+        "data-effective-theme",
+        resolvedTheme
+      );
+      synchronizeSystemThemeListener(safePreference);
+
+      if (persist)
+      {
+        try
+        {
+          window.localStorage.setItem(
+            "numlock.ui.theme",
+            safePreference
+          );
+        }
+        catch (error)
+        {
+          elements.themeStatus.innerText =
+            "Theme applied for this session; browser storage is unavailable.";
+          logClientEvent(
+            "Warning",
+            "Theme",
+            "Theme preference could not be saved in browser storage."
+          );
+        }
+      }
+
+      elements.themeControls.forEach(function(control)
+      {
+        control.checked = control.value === safePreference;
+      });
+
+      if (announce)
+      {
+        elements.themeStatus.innerText =
+          safePreference.charAt(0).toUpperCase() +
+          safePreference.slice(1) +
+          " theme selected.";
+      }
+
+      synchronizeChartTheme();
+    }
+
+    function initializeThemeFoundation()
+    {
+      if (themeFoundationInitialized)
+      {
+        return;
+      }
+
+      var elements = initializeStableDashboardElements();
+      themeFoundationInitialized = true;
+      var initialPreference =
+        document.documentElement.getAttribute(
+          "data-theme-preference"
+        ) || "light";
+      systemThemeQuery = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      );
+
+      elements.themeControls.forEach(function(control)
+      {
+        control.addEventListener("change", function()
+        {
+          if (control.checked)
+          {
+            applyThemePreference(control.value, true, true);
+          }
+        });
+      });
+
+      window.addEventListener("beforeprint", function()
+      {
+        synchronizeChartTheme(true);
+      });
+
+      window.addEventListener("afterprint", function()
+      {
+        synchronizeChartTheme(false);
+      });
+
+      applyThemePreference(initialPreference, false, false);
+    }
+
     function sanitizeClientLogMessage(value)
     {
       var text;
@@ -6272,6 +6739,7 @@
         "Chart rendering": true,
         "CSV export": true,
         "Print report": true,
+        "Theme": true,
         "Navigation": true,
         "Drill-down": true
       };
@@ -6279,6 +6747,85 @@
       return allowedContexts[context]
         ? context
         : "Navigation";
+    }
+
+    function getFilteredSessionClientLogs()
+    {
+      return sessionClientLogs.filter(function(entry)
+      {
+        return activeClientLogSeverity === "All" ||
+          entry.severity === activeClientLogSeverity;
+      });
+    }
+
+    function renderSessionClientLogs()
+    {
+      var elements = initializeStableDashboardElements();
+      var filteredLogs = getFilteredSessionClientLogs();
+      var counts = {
+        Info: 0,
+        Warning: 0,
+        Error: 0
+      };
+
+      sessionClientLogs.forEach(function(entry)
+      {
+        counts[entry.severity]++;
+      });
+
+      elements.sessionLogsInfoCount.innerText = String(counts.Info);
+      elements.sessionLogsWarningCount.innerText = String(counts.Warning);
+      elements.sessionLogsErrorCount.innerText = String(counts.Error);
+      elements.clearSessionLogsButton.disabled = sessionClientLogs.length === 0;
+      elements.sessionLogsEmpty.classList.toggle("hidden", filteredLogs.length > 0);
+      elements.sessionLogsEmpty.innerText = sessionClientLogs.length === 0
+        ? "No client events in this session."
+        : "No entries match the selected severity.";
+      elements.sessionLogsList.classList.toggle("hidden", filteredLogs.length === 0);
+      elements.sessionLogsList.innerHTML = filteredLogs
+        .map(function(entry)
+        {
+          var severityClass = entry.severity === "Error"
+            ? "text-red-600"
+            : entry.severity === "Warning"
+              ? "text-amber-600"
+              : "text-indigo-700";
+
+          return '<li class="hf-log-entry text-sm" data-severity="' +
+            entry.severity + '">' +
+            '<div class="flex flex-wrap items-center justify-between gap-2">' +
+            '<strong class="' + severityClass + '">' +
+            entry.severity + " · " + entry.context + '</strong>' +
+            '<time class="text-xs ui-theme-muted">' + entry.timestamp + '</time>' +
+            '</div><p class="mt-1 break-words text-[13px] leading-[19px] ui-theme-secondary">' +
+            entry.message + '</p></li>';
+        })
+        .join("");
+    }
+
+    function setClientLogFilter(severity)
+    {
+      var allowedFilters = {
+        All: true,
+        Info: true,
+        Warning: true,
+        Error: true
+      };
+
+      activeClientLogSeverity = allowedFilters[severity]
+        ? severity
+        : "All";
+      renderSessionClientLogs();
+    }
+
+    function clearSessionClientLogs()
+    {
+      sessionClientLogs = [];
+      lastClientLogSignature = "";
+      lastClientLogTimestamp = 0;
+      renderSessionClientLogs();
+      initializeStableDashboardElements().sessionLogsAnnouncement.innerText =
+        "Session logs cleared.";
     }
 
     function logClientEvent(severity, context, message)
@@ -6318,7 +6865,13 @@
         sessionClientLogs.pop();
       }
 
+      renderSessionClientLogs();
 
+      if (safeSeverity === "Error")
+      {
+        initializeStableDashboardElements().sessionLogsAnnouncement.innerText =
+          "New Error log in " + safeContext + ".";
+      }
     }
 
     function toggleKpiTargetDetails()
@@ -6736,8 +7289,7 @@ window.onload = function()
   var __profile = window.__numlockStartupProfile = { t0: 0 };
   __profile.t1 = performance.now();
 
-  window.addEventListener("beforeprint", function() { synchronizeChartTheme(true); });
-  window.addEventListener("afterprint", function() { synchronizeChartTheme(false); });
+  initializeThemeFoundation();
   initializeResponsiveShell();
   initializeDashboardTabs();
   initializeTransactionsTabs();

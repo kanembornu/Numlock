@@ -1,4 +1,4 @@
-var TRANSACTIONS_DEFAULT_PAGE_SIZE = 25;
+var TRANSACTIONS_DEFAULT_PAGE_SIZE = 15;
 
 function getTransactionsPage(request) {
   var startedAt = Date.now();
