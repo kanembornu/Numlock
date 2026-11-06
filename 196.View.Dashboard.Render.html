@@ -1789,18 +1789,18 @@
           diagnosis.slice(0, 2).map(renderDiagnosisCard).join("");
 
         diagnosisContainer.nextElementSibling.innerHTML =
-          '<div class="intelligence-summary-card intelligence-summary-card--revenue">' +
-          '<span class="intelligence-summary-icon" aria-hidden="true"><i class="fas fa-arrow-trend-up"></i></span>' +
+          '<div class="intelligence-summary-card intelligence-summary-card--revenue ' + revenueMovementClass + '">' +
+          '<span class="intelligence-summary-icon" aria-hidden="true"><i class="fas fa-arrow-trend-' + (Number(res.revenueIntelligence.growthRate) < 0 ? 'down' : 'up') + '"></i></span>' +
           '<div class="intelligence-summary-content"><div class="intelligence-summary-title">Revenue Intelligence</div>' +
           '<div class="intelligence-summary-value-row"><strong class="intelligence-summary-metric">' + res.revenueIntelligence.direction +
-          ' · ' + res.revenueIntelligence.growthRate + '%</strong><span class="intelligence-summary-divider" aria-hidden="true"></span>' +
-          '<span class="insights-status-badge bg-emerald-100 text-emerald-700">' + res.revenueIntelligence.momentum + '</span></div></div></div>' +
-          '<div class="intelligence-summary-card intelligence-summary-card--profit">' +
-          '<span class="intelligence-summary-icon" aria-hidden="true"><i class="fas fa-arrow-trend-up"></i></span>' +
+          ' · ' + (Number(res.revenueIntelligence.growthRate) < 0 ? '(' + Math.abs(Number(res.revenueIntelligence.growthRate)).toFixed(1) + '%)' : isFinite(Number(res.revenueIntelligence.growthRate)) ? Number(res.revenueIntelligence.growthRate).toFixed(1) + '%' : 'Unavailable') + '</strong><span class="intelligence-summary-divider" aria-hidden="true"></span>' +
+          '<span class="insights-status-badge ' + revenueMovementClass + '">' + res.revenueIntelligence.momentum + '</span></div></div></div>' +
+          '<div class="intelligence-summary-card intelligence-summary-card--profit ' + profitMovementClass + '">' +
+          '<span class="intelligence-summary-icon" aria-hidden="true"><i class="fas fa-arrow-trend-' + (Number(res.profitIntelligence.changeRate) < 0 ? 'down' : 'up') + '"></i></span>' +
           '<div class="intelligence-summary-content"><div class="intelligence-summary-title">Profit Intelligence</div>' +
           '<div class="intelligence-summary-value-row"><strong class="intelligence-summary-metric">' + res.profitIntelligence.direction +
           ' · ' + res.profitIntelligence.changeRate + '%</strong><span class="intelligence-summary-divider" aria-hidden="true"></span>' +
-          '<span class="insights-status-badge bg-amber-100 text-amber-700">' + res.profitIntelligence.status + '</span>' +
+          '<span class="insights-status-badge ' + profitMovementClass + '">' + res.profitIntelligence.status + '</span>' +
           '<span class="intelligence-summary-divider" aria-hidden="true"></span><span class="intelligence-summary-meta">Rp ' +
           res.summary.profit.toLocaleString("id-ID") + '</span></div></div></div>';
       }

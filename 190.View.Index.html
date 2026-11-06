@@ -2000,6 +2000,60 @@
         #mainContent:has(#dashboard.active) { grid-template-rows: 0px minmax(0, 1fr) !important; }
       }
 
+      /* Insights uses content-sized rows; no stretched timelines or clipped cards. */
+      #dashboardPanelInsights:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 12px; height: auto; overflow: visible; }
+      #dashboardPanelInsights .insights-plans-column { display: grid; min-width: 0; height: auto; grid-template-rows: none !important; grid-auto-rows: max-content; gap: 8px; align-content: space-between; overflow: visible; }
+      #dashboardPanelInsights .insights-plans-header { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+      #dashboardPanelInsights .insights-plans-header h2 { font-size: 18px !important; line-height: 22px !important; }
+      #dashboardPanelInsights #businessPriorityRegion,
+      #dashboardPanelInsights #diagnosisSection,
+      #dashboardPanelInsights #riskOpportunitySection,
+      #dashboardPanelInsights #businessMaturityCard,
+      #dashboardPanelInsights #recommendationsSection,
+      #dashboardPanelInsights #actionRoadmapCard,
+      #dashboardPanelInsights #kpiTargetReference { height: auto; min-height: 0; margin: 0; padding: 10px 12px; overflow: visible; }
+      #dashboardPanelInsights .priority-sentence { margin-top: 4px; font-size: 12px; font-weight: 600; line-height: 16px; color: var(--text-primary); }
+      #dashboardPanelInsights #priorityTitle,
+      #dashboardPanelInsights #priorityReason { font: inherit; color: inherit; letter-spacing: normal; }
+      #dashboardPanelInsights #diagnosisContainer { flex: none; }
+      #dashboardPanelInsights #intelligenceMetricContext { margin-top: 8px; margin-left: 0; }
+      #dashboardPanelInsights #intelligenceMetricContext > .intelligence-summary-card { height: auto; min-height: 56px; padding: 6px; grid-template-columns: 24px minmax(0, 1fr); column-gap: 6px; }
+      #dashboardPanelInsights .intelligence-summary-value-row { flex-wrap: wrap; white-space: normal; gap: 4px; }
+      #dashboardPanelInsights .intelligence-summary-card .intelligence-summary-icon { width: 24px; height: 24px; background: transparent; color: inherit; }
+      #dashboardPanelInsights .intelligence-summary-metric { color: inherit; }
+      #dashboardPanelInsights #riskOpportunitySection { grid-template-rows: auto auto; gap: 8px; }
+      #dashboardPanelInsights .risk-opportunity-cards { margin-left: 0; }
+      #dashboardPanelInsights .risk-opportunity-card { height: auto; padding: 8px; }
+      #dashboardPanelInsights #riskCount { margin: 0; }
+      #dashboardPanelInsights #intelligenceDirectionContext:empty { display: none; }
+      #dashboardPanelInsights #businessMaturityCard .business-maturity-summary { margin-top: 4px; }
+      #dashboardPanelInsights .business-maturity-scale { margin-top: 10px; }
+      #dashboardPanelInsights .business-maturity-node { margin-bottom: 5px; }
+      #dashboardPanelInsights #recommendationContainer { flex: none; align-content: start; gap: 8px; overflow: visible; }
+      #dashboardPanelInsights .recommendation-item { padding: 2px 0; gap: 10px; }
+      #dashboardPanelInsights .recommendation-copy { margin-top: 3px; }
+      #dashboardPanelInsights .action-roadmap-grid { margin-top: 8px; }
+      #dashboardPanelInsights #kpiTargetDetails { margin-top: 8px; margin-left: 0; }
+      #dashboardPanelInsights .target-reference-card-heading { grid-template-columns: 24px minmax(0, 1fr); gap: 6px; }
+      #dashboardPanelInsights .target-reference-card-title { font-size: 14px; line-height: 18px; }
+      #dashboardPanelInsights .target-reference-card-body { margin-left: 0; margin-top: 4px; }
+      @media (min-width: 1024px) {
+        #dashboardPanelInsights:not([hidden]) { min-height: calc(100dvh - 74px); }
+        #contentViewport:has(#dashboardPanelInsights:not([hidden])) { overflow-y: auto; }
+        #dashboard.active:has(#dashboardPanelInsights:not([hidden])) { flex: none; }
+      }
+      @media (max-width: 1023px) {
+        #dashboardPanelInsights:not([hidden]) { grid-template-columns: minmax(0, 1fr); }
+        #dashboardPanelInsights .insights-plans-column { align-content: start; }
+      }
+      @media (max-width: 639px) {
+        #dashboardPanelInsights .risk-opportunity-cards,
+        #dashboardPanelInsights #intelligenceMetricContext,
+        #dashboardPanelInsights #kpiTargetDetails { grid-template-columns: minmax(0, 1fr); }
+        #dashboardPanelInsights .action-roadmap-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+        #dashboardPanelInsights .action-roadmap-grid::before { display: none; }
+      }
+
       /* Extracted non-Dashboard density rules from removed height-bucket query. */
       @media (min-width: 1024px) {
         #dashboardSidebar > nav + div > .space-y-1 { transform: none; margin-bottom: 0; }
@@ -2946,8 +3000,7 @@
             <h2 id="businessPriorityHeading" class="hf-section-label">Business Priority</h2>
             <span id="businessPriorityLevel" class="text-xs font-semibold">Loading</span>
           </div>
-          <div id="priorityTitle" class="mt-0.5 text-lg font-semibold leading-6 text-slate-900">Loading...</div>
-          <div id="priorityReason" class="mt-0.5 text-xs leading-4 text-slate-700">...</div>
+          <p class="priority-sentence"><span id="priorityTitle">Loading...</span> - <span id="priorityReason">...</span></p>
           <div id="priorityMessage" class="mt-1 text-[11px] font-semibold leading-4 text-slate-900">...</div>
           <div id="priorityMeta" class="sr-only">...</div>
         </div>
@@ -3196,8 +3249,7 @@
       <div class="risk-opportunity-cards">
         <div class="risk-opportunity-card risk-opportunity-card--risk">
           <div class="risk-opportunity-card-title mb-1 font-bold text-slate-500">Risk Status</div>
-          <div id="riskLevel" class="font-bold">Loading...</div>
-          <div id="riskCount" class="mt-1 text-xs text-slate-500">...</div>
+          <p class="risk-sentence"><span id="riskLevel" class="font-bold">Loading...</span> - <span id="riskCount" class="text-xs text-slate-500">...</span></p>
           <div id="riskList" class="mt-2 space-y-1"></div>
         </div>
 
