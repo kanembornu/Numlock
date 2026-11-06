@@ -490,6 +490,10 @@
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 57px; column-gap: 12px; padding: 5px 4px; font-size: 12px; line-height: 16px; }
       #dashboardPanelPerformance #categoryMixLegend span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
       #dashboardPanelPerformance #categoryMixLegend span:nth-child(n+2) { text-align: right; }
+      #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(2) { text-align: center !important; }
+      #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2) { text-align: left !important; white-space: nowrap !important; }
+      #dashboardPanelPerformance #categoryPerformanceSection .ui-custom-select-listbox { left: auto; right: 0; }
+      #dashboardPanelPerformance #categoryPerformanceSection { overflow: visible; }
       #dashboardPanelPerformance #categoryMixDataLabels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; padding: 6px 4px; color: var(--text-muted); text-align: center; font-size: 12px; font-weight: 600; line-height: 16px; }
       #dashboardPanelPerformance #categoryMixDataLabels span { overflow-wrap: anywhere; }
       #dashboardPanelPerformance #categoryPerformanceTitle { white-space: nowrap; }
@@ -1171,7 +1175,7 @@
         #dashboardPanelPerformance #categoryMixDataLabels {
           display: grid !important;
           position: absolute;
-          top: 194px;
+          top: 187px;
           left: 4px;
           right: 4px;
           width: auto;
@@ -1276,13 +1280,14 @@
           line-height: 14px !important;
         }
 
+        #dashboardPanelPerformance #performanceSecondaryGrid #categoryPerformanceSection { overflow: visible !important; }
         #dashboardPanelPerformance #categoryPerformanceSection > .mb-2 { flex-wrap: nowrap; gap: 4px; }
         #dashboardPanelPerformance #categoryPerformanceSection .ui-custom-select { width: 90px; min-width: 90px; }
         #dashboardPanelPerformance #categoryPerformanceSection .ui-custom-select-trigger { gap: 4px; padding: 0 6px; }
-        #dashboardPanelPerformance #categoryMixDataLabels { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); padding: 0 4px; gap: 0 4px; font-size: 11px; line-height: 12px; white-space: nowrap; }
+        #dashboardPanelPerformance #categoryMixDataLabels { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); padding: 0 4px; gap: 3px 8px; font-size: 11px; line-height: 14px; white-space: nowrap; }
 
         #dashboardPanelPerformance #categoryPerformanceWrapper {
-          top: 43px !important;
+          top: 36px !important;
           height: 150px !important;
           min-height: 150px !important;
           max-height: 150px !important;
@@ -1626,8 +1631,8 @@
         #dashboardPanelPerformance #categoryMixLegend
         .performance-detail-row {
           display: grid !important;
-          grid-template-columns: minmax(0, 1fr) 80px 57px !important;
-          column-gap: 3px !important;
+          grid-template-columns: minmax(0, 1fr) 84px 57px !important;
+          column-gap: 5px !important;
           align-items: center !important;
         }
 
@@ -1781,7 +1786,9 @@
          * creating the requested breathing room above the grid.
          */
         #dashboardPanelPerformance #categoryMixLegend {
-          top: 215px !important;
+          top: 222px !important;
+          left: 4px !important;
+          right: 4px !important;
         }
 
         /* Phase 7B.3 — Row 2B final bottom alignment */
@@ -1819,12 +1826,11 @@
           background-color: transparent !important;
         }
 
-        #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(2),
-        #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2),
-        #dashboardPanelPerformance #categoryMixLegend .performance-detail-revenue {
-          width: 100% !important;
-          justify-self: stretch !important;
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(2) {
           text-align: center !important;
+        }
+        #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2) {
+          text-align: left !important;
         }
 
         #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(3),
