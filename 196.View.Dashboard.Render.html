@@ -1370,6 +1370,7 @@
       categoryPerformanceChart = destroyChartInstance(categoryPerformanceChart);
       categoryElements.categoryMixCenter.innerHTML = "";
       categoryElements.categoryMixLegend.innerHTML = "";
+      document.getElementById("categoryMixDataLabels").innerHTML = "";
       setChartPresentation("categoryPerformanceChart", "categoryPerformanceEmpty", "categoryPerformanceSummary",
         !chartAvailable || !groups.length, chartAvailable ? "No classification data for the selected period." : "Chart unavailable.", summary);
       if (!chartAvailable || !groups.length) return;
@@ -1412,29 +1413,11 @@
             '<span>' + Number(item.grossMarginPercent || 0).toFixed(1) + '%</span>' +
           '</div>';
         }).join("");
-      var categoryMixLeaderLabelPlugin = {
-        id: "categoryMixLeaderLabels",
-        afterDatasetsDraw: function(chart)
-        {
-          var ctx = chart.ctx;
-          var columns = chart.width < 300 && groups.length <= 2 ? 1 : 2;
-          var rowHeight = 26;
-          var top = chart.height - Math.ceil(groups.length / columns) * rowHeight;
-          ctx.save();
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = chartPalette.axis;
-          ctx.font = "600 12px Inter, sans-serif";
-          groups.forEach(function(item, index)
-          {
-            var share = totalRevenue > 0 ? Number(item.revenue || 0) / totalRevenue * 100 : 0;
-            ctx.fillText(item.label + " · " + share.toFixed(1) + "%",
-              (index % columns + 0.5) * chart.width / columns,
-              top + Math.floor(index / columns) * rowHeight + rowHeight / 2);
-          });
-          ctx.restore();
-        }
-      };
+      document.getElementById("categoryMixDataLabels").innerHTML = groups.map(function(item)
+      {
+        var share = totalRevenue > 0 ? Number(item.revenue || 0) / totalRevenue * 100 : 0;
+        return '<span>' + escapeUiHtml(item.label) + ' · ' + share.toFixed(1) + '%</span>';
+      }).join("");
 
       categoryPerformanceChart = new Chart(initializeStableDashboardElements().chartPresentation.categoryPerformance.canvas.getContext("2d"), {
         type: "doughnut",
@@ -1442,7 +1425,7 @@
           labels: groups.map(function(item) { return item.label; }),
           datasets: [{ label: "Revenue Share", data: groups.map(function(item) { return item.revenue; }), backgroundColor: categoryColors, borderColor: "transparent", borderWidth: 0 }]
         },
-        plugins: [categoryMixLeaderLabelPlugin, {
+        plugins: [{
           id: "categoryMixCenterPosition",
           afterDraw: function(chart)
           {
@@ -1454,12 +1437,13 @@
             center.style.top = (chart.canvas.offsetTop + arc.y) + "px";
             center.style.width = (arc.innerRadius * 1.8) + "px";
             text.style.display = "inline-block";
-            text.style.setProperty("font-size", "14px", "important");
+            var fontSize = arc.innerRadius * 0.5;
+            text.style.setProperty("font-size", fontSize + "px", "important");
             text.style.setProperty("line-height", "1", "important");
             var range = document.createRange();
             range.selectNodeContents(text);
             var scale = Math.min(1, arc.innerRadius * 1.6 / Math.max(range.getBoundingClientRect().width, 1));
-            text.style.setProperty("font-size", (14 * scale) + "px", "important");
+            text.style.setProperty("font-size", (fontSize * scale) + "px", "important");
           }
         }],
         options: {
@@ -1474,7 +1458,7 @@
               left: 8,
               right: 8,
               top: 0,
-              bottom: Math.ceil(groups.length / (categoryElements.categoryMixCenter.parentElement.clientWidth < 300 && groups.length <= 2 ? 1 : 2)) * 26
+              bottom: 0
             }
           },
           plugins: { legend: { display: false }, tooltip: { backgroundColor: chartPalette.tooltipBackground, titleColor: chartPalette.tooltipText, bodyColor: chartPalette.tooltipText,

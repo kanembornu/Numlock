@@ -490,6 +490,9 @@
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 57px; column-gap: 12px; padding: 5px 4px; font-size: 12px; line-height: 16px; }
       #dashboardPanelPerformance #categoryMixLegend span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
       #dashboardPanelPerformance #categoryMixLegend span:nth-child(n+2) { text-align: right; }
+      #dashboardPanelPerformance #categoryMixDataLabels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; padding: 6px 4px; color: var(--text-muted); text-align: center; font-size: 12px; font-weight: 600; line-height: 16px; }
+      #dashboardPanelPerformance #categoryMixDataLabels span { overflow-wrap: anywhere; }
+      #dashboardPanelPerformance #categoryPerformanceTitle { white-space: nowrap; }
       #dashboardPanelPerformance .category-mix-center { position: absolute; transform: translate(-50%, -50%); text-align: center; pointer-events: none; white-space: nowrap; }
       #dashboardPanelPerformance #hotColdChartSection { container-type: inline-size; }
       #dashboardPanelPerformance #hotColdChartTitle { min-width: 0; white-space: nowrap; }
@@ -547,7 +550,7 @@
         #dashboardPanelPerformance .product-profitability-action { flex: 0 0 auto; min-height: 28px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-secondary); font-size: 12px; font-weight: 600; line-height: 16px; }
         #dashboardPanelPerformance .product-profitability-formula { display: flex; min-height: 24px; align-items: center; gap: 6px; border-radius: 7px; padding: 5px 8px; background: var(--surface-2); color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 14px; }
         #dashboardPanelPerformance .product-profitability-formula i { font-size: 9px; }
-        #dashboardPanelPerformance #performanceSecondaryGrid { display: grid; grid-column: span 11; grid-template-columns: minmax(0, 1fr) minmax(312px, 1fr); gap: 12px; padding: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); align-items: start; align-content: start; min-height: 0; contain: size; }
+        #dashboardPanelPerformance #performanceSecondaryGrid { display: grid; grid-column: span 11; grid-template-columns: minmax(0, 1fr) minmax(312px, 1fr); gap: 12px; padding: 16px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); align-items: start; align-content: start; min-height: 457px; contain: size; }
         #dashboardPanelPerformance #performanceSecondaryGrid > section { min-width: 0; min-height: 0; height: auto; overflow: hidden; border: 0 !important; background: transparent !important; box-shadow: none !important; display: flex; flex-direction: column; }
         #dashboardPanelPerformance #categoryPerformanceSection { overflow: hidden; }
         #dashboardPanelPerformance #hotColdChartSection { overflow: hidden; }
@@ -1165,9 +1168,17 @@
           max-height: 132px !important;
         }
 
-        /* Existing DOM side-label layer is retired. */
         #dashboardPanelPerformance #categoryMixDataLabels {
-          display: none !important;
+          display: grid !important;
+          position: absolute;
+          top: 229px;
+          left: 4px;
+          right: 4px;
+          width: auto;
+          min-height: 0;
+          grid-template-rows: none;
+          gap: 4px 8px;
+          overflow: visible;
         }
 
         /* Approved inner value: preserve single-line revenue. */
@@ -1267,14 +1278,14 @@
 
         #dashboardPanelPerformance #categoryPerformanceWrapper {
           top: 78px !important;
-          height: 132px !important;
-          min-height: 132px !important;
-          max-height: 132px !important;
+          height: 150px !important;
+          min-height: 150px !important;
+          max-height: 150px !important;
         }
 
         #dashboardPanelPerformance #categoryPerformanceWrapper canvas {
-          height: 132px !important;
-          max-height: 132px !important;
+          height: 150px !important;
+          max-height: 150px !important;
         }
 
         #dashboardPanelPerformance .category-mix-center {
@@ -1765,7 +1776,7 @@
          * creating the requested breathing room above the grid.
          */
         #dashboardPanelPerformance #categoryMixLegend {
-          top: 215px !important;
+          top: 274px !important;
         }
 
         /* Phase 7B.3 — Row 2B final bottom alignment */
@@ -1791,8 +1802,8 @@
          */
         #dashboardPanelPerformance #categoryPerformanceSection,
         #dashboardPanelPerformance #hotColdChartSection {
-          height: calc(316px + 14px) !important;
-          min-height: calc(316px + 14px) !important;
+          height: 392px !important;
+          min-height: 392px !important;
           transform: translateY(-10px) !important;
           align-self: stretch !important;
         }
