@@ -35,14 +35,13 @@
       }, 120);
     }
 
-    function getCurrentThemePalette(forceLight)
+    function getCurrentThemePalette()
     {
       var styles = window.getComputedStyle(document.documentElement);
-      var prefix = forceLight ? "--print-" : "--";
 
       function readToken(name)
       {
-        return styles.getPropertyValue(prefix + name).trim();
+        return styles.getPropertyValue("--" + name).trim();
       }
 
       return {
@@ -158,9 +157,9 @@
       chart.update("none");
     }
 
-    function synchronizeChartTheme(forceLight)
+    function synchronizeChartTheme()
     {
-      var palette = getCurrentThemePalette(forceLight === true);
+      var palette = getCurrentThemePalette();
 
       [
         { chart: revenueChart, kind: "revenue" },

@@ -29,49 +29,11 @@
       })();
     </script>
     <script>
-      (function applyStoredThemeBeforeRender()
+      (function applyLightThemeBeforeRender()
       {
-        var storageKey = "numlock.ui.theme";
-        var allowedThemes = {
-          light: true,
-          dark: true,
-          system: true
-        };
-        var preference = "light";
-
-        try
-        {
-          var storedPreference = window.localStorage.getItem(storageKey);
-
-          if (allowedThemes[storedPreference])
-          {
-            preference = storedPreference;
-          }
-        }
-        catch (error)
-        {
-          preference = "light";
-        }
-
-        var resolvedTheme =
-          preference === "system"
-            ? window.matchMedia("(prefers-color-scheme: dark)").matches
-              ? "dark"
-              : "light"
-            : preference;
-
-        document.documentElement.setAttribute(
-          "data-theme-preference",
-          preference
-        );
-        document.documentElement.setAttribute(
-          "data-theme",
-          resolvedTheme
-        );
-        document.documentElement.setAttribute(
-          "data-effective-theme",
-          resolvedTheme
-        );
+        document.documentElement.setAttribute("data-theme-preference", "light");
+        document.documentElement.setAttribute("data-theme", "light");
+        document.documentElement.setAttribute("data-effective-theme", "light");
       })();
     </script>
     <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>
@@ -2172,71 +2134,6 @@
         #dashboardPanelPerformance #performanceSignalGrid { grid-template-columns: minmax(0, 1fr); }
       }
 
-      :root[data-theme="dark"] .bg-white,
-      :root[data-theme="dark"] .bg-slate-50
-      {
-        background-color: var(--surface-1) !important;
-      }
-
-      :root[data-theme="dark"] .bg-slate-100,
-      :root[data-theme="dark"] .bg-slate-200
-      {
-        background-color: var(--surface-2) !important;
-      }
-
-      :root[data-theme="dark"] .text-slate-900,
-      :root[data-theme="dark"] .text-slate-800,
-      :root[data-theme="dark"] .text-slate-700
-      {
-        color: var(--text-primary) !important;
-      }
-
-      :root[data-theme="dark"] .text-slate-600,
-      :root[data-theme="dark"] .text-slate-500,
-      :root[data-theme="dark"] .text-slate-400
-      {
-        color: var(--text-secondary) !important;
-      }
-
-      :root[data-theme="dark"] .border-slate-100,
-      :root[data-theme="dark"] .border-slate-200,
-      :root[data-theme="dark"] .border-slate-300,
-      :root[data-theme="dark"] .border-b,
-      :root[data-theme="dark"] .border-t
-      {
-        border-color: var(--border-subtle) !important;
-      }
-
-      :root[data-theme="dark"] .bg-indigo-50 { background-color: var(--brand-soft) !important; }
-      :root[data-theme="dark"] .bg-indigo-100 { background-color: var(--brand-soft) !important; }
-      :root[data-theme="dark"] .bg-amber-50 { background-color: var(--warning-soft) !important; }
-      :root[data-theme="dark"] .bg-amber-100 { background-color: var(--warning-soft) !important; }
-      :root[data-theme="dark"] .bg-red-50 { background-color: var(--critical-soft) !important; }
-      :root[data-theme="dark"] .bg-red-100 { background-color: var(--critical-soft) !important; }
-      :root[data-theme="dark"] .bg-emerald-50 { background-color: var(--success-soft) !important; }
-      :root[data-theme="dark"] .bg-emerald-100,
-      :root[data-theme="dark"] .bg-green-100 { background-color: var(--success-soft) !important; }
-      :root[data-theme="dark"] .text-indigo-600,
-      :root[data-theme="dark"] .text-indigo-700 { color: var(--brand) !important; }
-      :root[data-theme="dark"] .text-amber-500,
-      :root[data-theme="dark"] .text-amber-600,
-      :root[data-theme="dark"] .text-amber-700 { color: var(--warning) !important; }
-      :root[data-theme="dark"] .text-red-600,
-      :root[data-theme="dark"] .text-red-700 { color: var(--critical) !important; }
-      :root[data-theme="dark"] .text-emerald-600,
-      :root[data-theme="dark"] .text-emerald-700,
-      :root[data-theme="dark"] .text-green-700 { color: var(--success) !important; }
-      :root[data-theme="dark"] .shadow-lg,
-      :root[data-theme="dark"] .shadow-sm { box-shadow: var(--shadow-1) !important; }
-
-      :root[data-theme="dark"] .transaction-type--purchase { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
-      :root[data-theme="dark"] .transaction-type--receipt { border-color: var(--success); background: var(--success-soft); color: var(--success); }
-      :root[data-theme="dark"] .transaction-status-badge--active { border-color: var(--success); background: var(--success-soft); color: var(--success); }
-      :root[data-theme="dark"] .transaction-status-badge--voided { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
-      :root[data-theme="dark"] .transaction-status-badge--pending { border-color: var(--warning); background: var(--warning-soft); color: var(--warning); }
-      :root[data-theme="dark"] .transaction-status-badge--resolved { border-color: var(--success); background: var(--success-soft); color: var(--success); }
-      :root[data-theme="dark"] .transaction-status-badge--corrected { border-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
-
       button:disabled,
       select:disabled,
       input:disabled
@@ -2306,18 +2203,6 @@
           --text-primary: var(--print-text);
           --text-secondary: var(--print-text);
           --text-muted: var(--print-text);
-        }
-
-        :root[data-theme="dark"] .bg-white,
-        :root[data-theme="dark"] .bg-slate-50,
-        :root[data-theme="dark"] .bg-slate-100,
-        :root[data-theme="dark"] .bg-slate-200,
-        :root[data-theme="dark"] .ui-theme-surface,
-        :root[data-theme="dark"] .ui-theme-inset
-        {
-          background: var(--print-canvas) !important;
-          color: var(--print-text) !important;
-          border-color: var(--print-border) !important;
         }
 
         html,
@@ -4339,24 +4224,9 @@
             <h2 id="appearanceHeading" class="hf-section-heading">Appearance</h2>
             <p class="mt-1 text-sm ui-theme-secondary">Your choice applies immediately and is stored only in this browser.</p>
           </div>
-          <fieldset class="mt-4">
-            <legend class="text-sm font-semibold ui-theme-primary">Theme preference</legend>
-            <div class="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
-                <input type="radio" name="themePreference" value="light" class="mt-1 h-4 w-4 accent-indigo-600">
-                <span><strong class="ui-theme-primary">Light</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use the light NUMLOCK theme.</span></span>
-              </label>
-              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
-                <input type="radio" name="themePreference" value="dark" class="mt-1 h-4 w-4 accent-indigo-600">
-                <span><strong class="ui-theme-primary">Dark</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Use deep navy and slate surfaces.</span></span>
-              </label>
-              <label class="hf-setting-choice ui-theme-inset flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[:checked]:border-indigo-500 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500">
-                <input type="radio" name="themePreference" value="system" class="mt-1 h-4 w-4 accent-indigo-600">
-                <span><strong class="ui-theme-primary">System</strong><span class="mt-1 block text-xs leading-relaxed ui-theme-muted">Follow this device’s color preference.</span></span>
-              </label>
-            </div>
-          </fieldset>
-          <p id="themeStatus" class="mt-4 min-h-5 text-sm ui-theme-secondary" role="status" aria-live="polite" aria-atomic="true"></p>
+          <div class="mt-4">
+            <p class="text-sm ui-theme-muted">Light theme is the only supported theme.</p>
+          </div>
           <div class="transactions-page-size-setting">
             <label for="transactionsPageSize"><strong class="block text-sm ui-theme-primary">Transactions rows per page</strong><span class="mt-1 block text-xs ui-theme-muted">Stored only in this browser.</span></label>
             <select id="transactionsPageSize" onchange="setTransactionsPageSize(this.value)">
@@ -4456,9 +4326,6 @@
     export: { activeTab: "", search: "", includeVoided: false, matchingRows: null, exportedRows: null, eventCount: 0 }
   };
   let transactionDiagnosticPending = {};
-  let themeFoundationInitialized = false;
-  let systemThemeQuery = null;
-  let systemThemeListenerAttached = false;
   let sessionClientLogs = [];
   let activeClientLogSeverity = "All";
   let lastClientLogSignature = "";
@@ -4800,7 +4667,7 @@
         "inventoryItemDetailContent", "inventoryItemsPagination",
         "inventoryItemsFirstPage", "inventoryItemsPrevPage", "inventoryItemsNextPage", "inventoryItemsLastPage",
         "inventoryItemsPageInfo", "inventoryItemsPageNumbers", "settings", "logs",
-        "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
+        "logsWorkspace", "sessionLogsSeveritySummary",
         "sessionLogsInfoCount", "sessionLogsWarningCount",
         "sessionLogsErrorCount", "sessionLogsToolbar",
         "clearSessionLogsButton", "sessionLogsAnnouncement",
@@ -5015,7 +4882,6 @@
         inventoryItemsPageNumbers: required.inventoryItemsPageNumbers,
         settingsPage: required.settings,
         logsPage: required.logs,
-        themeStatus: required.themeStatus,
         sessionLogsWorkspace: required.logsWorkspace,
         sessionLogsSummary: required.sessionLogsSeveritySummary,
         sessionLogsInfoCount: required.sessionLogsInfoCount,
@@ -5108,8 +4974,6 @@
         footer: required.transactionLifecycleFooter
       };
 
-      elements.themeControls =
-        elements.settingsPage.querySelectorAll('input[name="themePreference"]');
       elements.transactionsTabs =
         elements.transactionsTabList.querySelectorAll('[role="tab"]');
       elements.transactionsPanels =
@@ -6527,164 +6391,6 @@
       elements.productDetailContent.hidden = false;
     }
 
-    function getResolvedTheme(preference)
-    {
-      if (preference === "dark" || preference === "light")
-      {
-        return preference;
-      }
-
-      return window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches
-        ? "dark"
-        : "light";
-    }
-
-    function handleSystemThemeChange()
-    {
-      if (
-        document.documentElement.getAttribute(
-          "data-theme-preference"
-        ) === "system"
-      )
-      {
-        applyThemePreference("system", false, false);
-      }
-    }
-
-    function synchronizeSystemThemeListener(preference)
-    {
-      if (!systemThemeQuery)
-      {
-        systemThemeQuery = window.matchMedia(
-          "(prefers-color-scheme: dark)"
-        );
-      }
-
-      if (preference === "system" && !systemThemeListenerAttached)
-      {
-        systemThemeQuery.addEventListener(
-          "change",
-          handleSystemThemeChange
-        );
-        systemThemeListenerAttached = true;
-      }
-      else if (preference !== "system" && systemThemeListenerAttached)
-      {
-        systemThemeQuery.removeEventListener(
-          "change",
-          handleSystemThemeChange
-        );
-        systemThemeListenerAttached = false;
-      }
-    }
-
-    function applyThemePreference(preference, persist, announce)
-    {
-      var allowedThemes = {
-        light: true,
-        dark: true,
-        system: true
-      };
-      var safePreference = allowedThemes[preference]
-        ? preference
-        : "light";
-      var resolvedTheme = getResolvedTheme(safePreference);
-      var elements = initializeStableDashboardElements();
-
-      document.documentElement.setAttribute(
-        "data-theme-preference",
-        safePreference
-      );
-      document.documentElement.setAttribute(
-        "data-theme",
-        resolvedTheme
-      );
-      document.documentElement.setAttribute(
-        "data-effective-theme",
-        resolvedTheme
-      );
-      synchronizeSystemThemeListener(safePreference);
-
-      if (persist)
-      {
-        try
-        {
-          window.localStorage.setItem(
-            "numlock.ui.theme",
-            safePreference
-          );
-        }
-        catch (error)
-        {
-          elements.themeStatus.innerText =
-            "Theme applied for this session; browser storage is unavailable.";
-          logClientEvent(
-            "Warning",
-            "Theme",
-            "Theme preference could not be saved in browser storage."
-          );
-        }
-      }
-
-      elements.themeControls.forEach(function(control)
-      {
-        control.checked = control.value === safePreference;
-      });
-
-      if (announce)
-      {
-        elements.themeStatus.innerText =
-          safePreference.charAt(0).toUpperCase() +
-          safePreference.slice(1) +
-          " theme selected.";
-      }
-
-      synchronizeChartTheme();
-    }
-
-    function initializeThemeFoundation()
-    {
-      if (themeFoundationInitialized)
-      {
-        return;
-      }
-
-      var elements = initializeStableDashboardElements();
-      themeFoundationInitialized = true;
-      var initialPreference =
-        document.documentElement.getAttribute(
-          "data-theme-preference"
-        ) || "light";
-      systemThemeQuery = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      );
-
-      elements.themeControls.forEach(function(control)
-      {
-        control.addEventListener("change", function()
-        {
-          if (control.checked)
-          {
-            applyThemePreference(control.value, true, true);
-          }
-        });
-      });
-
-      window.addEventListener("beforeprint", function()
-      {
-        synchronizeChartTheme(true);
-      });
-
-      window.addEventListener("afterprint", function()
-      {
-        synchronizeChartTheme(false);
-      });
-
-      applyThemePreference(initialPreference, false, false);
-    }
-
     function sanitizeClientLogMessage(value)
     {
       var text;
@@ -7289,13 +6995,20 @@ window.onload = function()
   var __profile = window.__numlockStartupProfile = { t0: 0 };
   __profile.t1 = performance.now();
 
-  initializeThemeFoundation();
   initializeResponsiveShell();
   initializeDashboardTabs();
   initializeTransactionsTabs();
   initializeCustomSelectSystem();
   initializeFinancePage();
   updateCustomDateVisibility();
+  window.addEventListener("beforeprint", function()
+  {
+    synchronizeChartTheme();
+  });
+  window.addEventListener("afterprint", function()
+  {
+    synchronizeChartTheme();
+  });
   var serverLayoutDebugEnabled =
     document.documentElement.getAttribute("data-layout-debug-enabled") === "true";
   var clientLayoutDebugFallback =
