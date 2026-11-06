@@ -2590,22 +2590,20 @@
           padding-bottom: var(--space-6) !important;
         }
       }
-      /* Reserve 520px for the two-row KPI layout, tabs, context, summary and insets.
-         dvh follows the Apps Script iframe; 395px retains a 311px chart and table scrolling. */
-      @media (min-width: 1024px) and (min-height: 900px) {
-        #dashboardPanelOverview #overviewEvidenceRow {
-          grid-template-rows: clamp(395px, calc(100dvh - 520px), 440px) !important;
-        }
-        /* Five 245px KPI columns plus four 14px gaps fit in one row. */
-        @container (min-width: 1281px) {
-          #dashboardPanelOverview #overviewEvidenceRow {
-            grid-template-rows: 440px !important;
-          }
-        }
-        #dashboardPanelOverview #revenueChartSection,
-        #dashboardPanelOverview #topProductsSection {
-          min-height: 0 !important;
-        }
+      /* Let all ten product rows set the minimum; scroll the page, not the panel. */
+      #dashboardPanelOverview #topProductsSection { overflow: visible; min-height: min-content; }
+      #dashboardPanelOverview #overviewEvidenceRow { grid-template-rows: auto !important; }
+      @media (min-width: 1024px) {
+        /* Fill the iframe between the existing 8px desktop insets when content fits. */
+        #dashboardContent:has(#dashboardPanelOverview:not([hidden])) { min-height: calc(100dvh - 16px); grid-template-rows: 44px minmax(0, 1fr); }
+        #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { display: grid; }
+        #dashboardPanelOverview:not([hidden]) { grid-template-rows: max-content minmax(min-content, 1fr) auto auto; align-content: stretch; }
+        #dashboardPanelOverview #mainChartWrapper { min-height: 260px !important; }
+      }
+      @media (min-width: 1440px) {
+        #dashboardPanelOverview .hf-kpi-strip { grid-template-columns: repeat(5, minmax(0, 1fr)) !important; }
+        #dashboardPanelOverview .hf-kpi-card { grid-template-columns: 32px minmax(0, 1fr) !important; column-gap: 8px !important; padding-left: 12px !important; padding-right: 12px !important; }
+        #dashboardPanelOverview .hf-kpi-icon { width: 32px !important; height: 32px !important; font-size: 15px !important; }
       }
     </style>
   </head>
