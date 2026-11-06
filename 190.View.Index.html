@@ -2584,6 +2584,12 @@
         --tw-ring-offset-shadow: 0 0 #0000 !important;
         --tw-ring-shadow: 0 0 #0000 !important;
       }
+      /* Keep the summary panels' bottom inset balanced with the desktop tab inset. */
+      @media (min-width: 1024px) and (min-height: 900px) {
+        #dashboardPanelOverview #executiveSummarySection > .overview-surface {
+          padding-bottom: var(--space-6) !important;
+        }
+      }
       /* NUMLOCK_OVERVIEW_EVIDENCE_440 */
       @media (min-width: 1024px) and (min-height: 900px) {
         #dashboardPanelOverview #overviewEvidenceRow {
