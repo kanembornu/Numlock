@@ -491,11 +491,17 @@
       #dashboardPanelPerformance #categoryMixLegend span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
       #dashboardPanelPerformance #categoryMixLegend span:nth-child(n+2) { text-align: right; }
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(2) { text-align: center !important; }
-      #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2) { text-align: left !important; white-space: nowrap !important; }
+      #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2) { text-align: center !important; white-space: nowrap !important; }
       #dashboardPanelPerformance #categoryPerformanceSection .ui-custom-select-listbox { left: auto; right: 0; }
       #dashboardPanelPerformance #categoryPerformanceSection { overflow: visible; }
       #dashboardPanelPerformance #categoryMixDataLabels { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 8px; padding: 6px 4px; color: var(--text-muted); text-align: center; font-size: 12px; font-weight: 600; line-height: 16px; }
       #dashboardPanelPerformance #categoryMixDataLabels span { overflow-wrap: anywhere; }
+      #dashboardPanelPerformance #categoryMixDataLabels.category-mix-side-labels { position: absolute; left: 4px; right: 4px; width: auto; min-height: 0; padding: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: none; column-gap: var(--category-mix-label-gap); row-gap: 12px; overflow: visible; }
+      #dashboardPanelPerformance #categoryMixDataLabels.category-mix-side-labels > span > span { display: block; white-space: nowrap; }
+      @media (max-width: 1199px) {
+        #dashboardPanelPerformance #categoryMixDataLabels.category-mix-side-labels + #categoryMixLegend { margin-top: 28px; }
+        #dashboardPanelPerformance #categoryMixDataLabels.category-mix-side-labels:has(> span:nth-child(3)) + #categoryMixLegend { margin-top: 48px; }
+      }
       #dashboardPanelPerformance #categoryPerformanceTitle { white-space: nowrap; }
       #dashboardPanelPerformance .category-mix-center { position: absolute; transform: translate(-50%, -50%); text-align: center; pointer-events: none; white-space: nowrap; }
       #dashboardPanelPerformance #hotColdChartSection { container-type: inline-size; }
@@ -1175,7 +1181,7 @@
         #dashboardPanelPerformance #categoryMixDataLabels {
           display: grid !important;
           position: absolute;
-          top: 187px;
+          top: 184px;
           left: 4px;
           right: 4px;
           width: auto;
@@ -1284,10 +1290,10 @@
         #dashboardPanelPerformance #categoryPerformanceSection > .mb-2 { flex-wrap: nowrap; gap: 4px; }
         #dashboardPanelPerformance #categoryPerformanceSection .ui-custom-select { width: 90px; min-width: 90px; }
         #dashboardPanelPerformance #categoryPerformanceSection .ui-custom-select-trigger { gap: 4px; padding: 0 6px; }
-        #dashboardPanelPerformance #categoryMixDataLabels { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); padding: 0 4px; gap: 3px 8px; font-size: 11px; line-height: 14px; white-space: nowrap; }
+        #dashboardPanelPerformance #categoryMixDataLabels { grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); padding: 0 4px; gap: 6px 8px; font-size: 11px; line-height: 14px; white-space: nowrap; }
 
         #dashboardPanelPerformance #categoryPerformanceWrapper {
-          top: 36px !important;
+          top: 33px !important;
           height: 150px !important;
           min-height: 150px !important;
           max-height: 150px !important;
@@ -1830,7 +1836,7 @@
           text-align: center !important;
         }
         #dashboardPanelPerformance #categoryMixLegend .performance-detail-row > span:nth-child(2) {
-          text-align: left !important;
+          text-align: center !important;
         }
 
         #dashboardPanelPerformance #categoryMixLegend .performance-detail-header > span:nth-child(3),

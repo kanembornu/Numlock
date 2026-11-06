@@ -1416,7 +1416,7 @@
       document.getElementById("categoryMixDataLabels").innerHTML = groups.map(function(item)
       {
         var share = totalRevenue > 0 ? Number(item.revenue || 0) / totalRevenue * 100 : 0;
-        return '<span>' + escapeUiHtml(item.label) + ' · ' + share.toFixed(1) + '%</span>';
+        return '<span><span>' + escapeUiHtml(item.label) + '</span><span> · ' + share.toFixed(1) + '%</span></span>';
       }).join("");
 
       categoryPerformanceChart = new Chart(initializeStableDashboardElements().chartPresentation.categoryPerformance.canvas.getContext("2d"), {
@@ -1444,6 +1444,23 @@
             range.selectNodeContents(text);
             var scale = Math.min(1, arc.innerRadius * 1.6 / Math.max(range.getBoundingClientRect().width, 1));
             text.style.setProperty("font-size", (fontSize * scale) + "px", "important");
+            var labels = document.getElementById("categoryMixDataLabels");
+            if (!labels.offsetParent) return;
+            var requiredWidth = 0;
+            Array.prototype.forEach.call(labels.children, function(label)
+            {
+              Array.prototype.forEach.call(label.children, function(part)
+              {
+                range.selectNodeContents(part);
+                requiredWidth = Math.max(requiredWidth, range.getBoundingClientRect().width);
+              });
+            });
+            var canvasBox = chart.canvas.getBoundingClientRect();
+            var parentBox = labels.offsetParent.getBoundingClientRect();
+            var sideLabels = canvasBox.width >= arc.outerRadius * 2 + requiredWidth * 2 + 32;
+            labels.classList.toggle("category-mix-side-labels", sideLabels);
+            labels.style.top = sideLabels ? (canvasBox.top - parentBox.top + arc.y - 34) + "px" : "";
+            labels.style.setProperty("--category-mix-label-gap", (arc.outerRadius * 2 + 24) + "px");
           }
         }],
         options: {
