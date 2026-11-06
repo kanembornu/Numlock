@@ -2039,6 +2039,10 @@
       #dashboardPanelInsights .target-reference-card-body { margin-left: 0; margin-top: 4px; }
       @media (min-width: 1024px) {
         #dashboardPanelInsights:not([hidden]) { min-height: calc(100dvh - 74px); }
+        #dashboardPanelInsights #plansColumn { align-content: start; row-gap: 0; }
+        #dashboardPanelInsights #plansColumn #recommendationsSection { margin-top: var(--plans-first-gap, 8px); }
+        #dashboardPanelInsights #plansColumn #actionRoadmapCard,
+        #dashboardPanelInsights #plansColumn #kpiTargetReference { margin-top: var(--plans-card-gap, 8px); }
         #contentViewport:has(#dashboardPanelInsights:not([hidden])) { overflow-y: auto; }
         #dashboard.active:has(#dashboardPanelInsights:not([hidden])) { flex: none; }
       }

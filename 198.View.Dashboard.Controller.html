@@ -131,6 +131,20 @@
 
       staging.remove();
 
+      // Only Plans follows the first Insights card; later card boundaries remain independent.
+      new ResizeObserver(function()
+      {
+        if (window.innerWidth < 1024 || !insightsColumn.getClientRects().length) return;
+        var priority = insightsColumn.querySelector('#businessPriorityRegion').getBoundingClientRect();
+        var header = plansColumn.firstElementChild.getBoundingClientRect();
+        var cards = Array.prototype.slice.call(plansColumn.children, 1);
+        var firstGap = Math.max(0, priority.top - header.bottom);
+        var cardHeight = cards.reduce(function(total, card) { return total + card.getBoundingClientRect().height; }, 0);
+        var gap = Math.max(8, (plansColumn.getBoundingClientRect().bottom - priority.top - cardHeight) / 2);
+        plansColumn.style.setProperty('--plans-first-gap', firstGap + 'px');
+        plansColumn.style.setProperty('--plans-card-gap', gap + 'px');
+      }).observe(insightsColumn);
+
       elements.dashboardTabs.forEach(function(tab, index)
       {
         tab.addEventListener("click", function()
