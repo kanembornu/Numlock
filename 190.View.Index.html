@@ -2067,11 +2067,20 @@
       #dashboardPanelInsights .recommendation-item { position: relative; z-index: 1; display: grid; grid-template-columns: 28px minmax(0, 1fr); padding-block: 0; gap: 10px; }
       #dashboardPanelInsights .recommendation-node { position: relative; z-index: 1; }
       #dashboardPanelInsights #recommendationContainer { position: relative; }
-      #dashboardPanelInsights #recommendationContainer::before { position: absolute; top: 14px; bottom: 14px; left: 13.5px; width: 1px; background: var(--border-strong); content: ""; }
+      #dashboardPanelInsights #recommendationContainer::before { content: none; }
+      #dashboardPanelInsights .recommendation-item:not(:last-child)::before { position: absolute; top: 14px; left: 13.5px; width: 1px; height: calc(100% + 12px); background: var(--border-strong); content: ""; }
+      #dashboardPanelInsights .insights-plans-column { align-content: start; row-gap: 8px; }
+      #dashboardPanelInsights .insights-plans-header { margin-bottom: 14px; }
+      #dashboardPanelInsights .recommendation-item > :last-child > :first-child { min-height: 28px; }
       @media (min-width: 1024px) {
-        /* ponytail: measured four-action desktop wrapping; remeasure offsets if action content changes. */
-        #dashboardPanelInsights .recommendation-item:nth-child(2) .recommendation-node { top: 5.5px; }
-        #dashboardPanelInsights .recommendation-item:nth-child(3) .recommendation-node { top: -5.5px; }
+        #dashboardPanelInsights .insights-plans-column { row-gap: 0; }
+        #dashboardPanelInsights .insights-plans-header { margin-bottom: 22px; }
+        #dashboardPanelInsights #insightsColumn > :nth-child(n+3) { margin-top: var(--insights-card-gap, 8px); }
+        #dashboardPanelInsights #plansColumn #recommendationsSection { margin-top: 0; }
+        #dashboardPanelInsights #recommendationContainer { row-gap: 0; }
+        #dashboardPanelInsights .recommendation-item:not(:last-child)::before { height: 100%; }
+        /* ponytail: 69px minimum pitch preserves 41px connectors until desktop text needs taller rows. */
+        #dashboardPanelInsights .recommendation-item:not(:last-child) { min-height: 69px; }
       }
       #dashboardPanelInsights .recommendation-copy { margin-top: 4px; }
       @media (min-width: 1024px) {

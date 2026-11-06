@@ -131,18 +131,17 @@
 
       staging.remove();
 
-      // Only Plans follows the first Insights card; later card boundaries remain independent.
+      // Keep the header gap fixed; distribute spare height only between cards.
       new ResizeObserver(function()
       {
         if (window.innerWidth < 1024 || !insightsColumn.getClientRects().length) return;
-        var priority = insightsColumn.querySelector('#businessPriorityRegion').getBoundingClientRect();
-        var header = plansColumn.firstElementChild.getBoundingClientRect();
-        var cards = Array.prototype.slice.call(plansColumn.children, 1);
-        var firstGap = Math.max(0, priority.top - header.bottom);
-        var cardHeight = cards.reduce(function(total, card) { return total + card.getBoundingClientRect().height; }, 0);
-        var gap = Math.max(8, (plansColumn.getBoundingClientRect().bottom - priority.top - cardHeight) / 2);
-        plansColumn.style.setProperty('--plans-first-gap', firstGap + 'px');
-        plansColumn.style.setProperty('--plans-card-gap', gap + 'px');
+        [insightsColumn, plansColumn].forEach(function(column)
+        {
+          var children = Array.prototype.slice.call(column.children);
+          var contentHeight = children.reduce(function(total, child) { return total + child.getBoundingClientRect().height; }, 0);
+          var gap = Math.max(8, (column.getBoundingClientRect().height - contentHeight - 22) / (children.length - 2));
+          column.style.setProperty(column === insightsColumn ? '--insights-card-gap' : '--plans-card-gap', gap + 'px');
+        });
       }).observe(insightsColumn);
 
       elements.dashboardTabs.forEach(function(tab, index)
