@@ -325,13 +325,6 @@
         button.setAttribute("aria-selected", String(selectedId === optionId));
         button.setAttribute("data-active", String(transactionEntryState.activeOptionIndex[type] === index));
         button.innerText = type === "product" ? option.product : option.item;
-        // U8B frozen contract: product options show the NAME only — never
-        // Category/Kind in the option row (expense/purchase options keep their meta).
-        if (type !== "product") {
-          var meta = document.createElement("span");
-          meta.innerText = [option.category, option.group, option.kind].filter(Boolean).join(" · ");
-          button.appendChild(meta);
-        }
         button.addEventListener("click", function() { selectTransactionEntryOption(type, option); });
         combo.listbox.appendChild(button);
       });
