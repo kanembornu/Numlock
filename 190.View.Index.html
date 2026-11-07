@@ -437,11 +437,6 @@
       .standard-cost-section { border-top: 1px solid var(--divider); }
       .standard-cost-input { width: 100%; min-width: 120px; height: 36px; border: 1px solid var(--card-border); border-radius: 7px; padding: 4px 8px; background: var(--surface-1); color: var(--text-primary); }
       .standard-cost-apply:disabled { cursor: not-allowed; opacity: .5; }
-      .hf-log-severity-strip > * + * { border-left: 1px solid var(--divider); }
-      .hf-log-entry { border-left: 2px solid var(--border-subtle); padding: 8px 12px; }
-      .hf-log-entry[data-severity="Info"] { border-left-color: var(--brand); }
-      .hf-log-entry[data-severity="Warning"] { border-left-color: var(--warning); }
-      .hf-log-entry[data-severity="Error"] { border-left-color: var(--critical); }
 
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-header,
       #dashboardPanelPerformance #categoryMixLegend .performance-detail-row { display: grid; grid-template-columns: minmax(0, 1fr) 80px 57px; column-gap: 12px; padding: 5px 4px; font-size: 12px; line-height: 16px; }
@@ -1932,9 +1927,6 @@
         #productsTableRegion { max-height: 100%; overflow-y: auto; padding-bottom: 24px; }
         #productsPanelInventory:not([hidden]) { display: grid; height: 100%; }
         #inventoryItemsTableRegion, #inventoryItemDetail { max-height: 100%; }
-        #logs.active { min-height: 0; }
-        #logsWorkspace { height: 100%; min-height: 0; }
-        #sessionLogsListRegion { min-height: 0; overflow-y: auto; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar { width: var(--sidebar-width-collapsed); }
         #appShell[data-sidebar-collapsed="true"] #mainContent { margin-left: var(--sidebar-width-collapsed); }
         #appShell[data-sidebar-collapsed="true"] .sidebar-expanded-content { display: none; }
@@ -2095,11 +2087,7 @@
         #transactionsEvidenceRegion,
         #transactionsTableScroll { height: auto; overflow: visible; }
         #transactionsTableScroll { overflow-x: auto; }
-        #logs.active,
-        #logsWorkspace { height: auto; overflow: visible; }
-        #sessionLogsListRegion { overflow: visible; }
         #transactionsTableScroll td { height: 44px; }
-        .hf-log-severity-strip > * + * { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-executive-fact + .hf-executive-fact { border-top: 1px solid var(--border-subtle); border-left: 0; }
         .hf-summary-action-grid { grid-template-columns: minmax(0, 1fr); }
         .hf-summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2401,8 +2389,8 @@
       :where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important; font-kerning: normal; text-wrap: balance; }
       :where(button, input, select, textarea, .ui-form-text, .ui-action-label, .ui-badge-label) { letter-spacing: -0.005em; }
       :where(.ui-page-subtitle, .ui-body-text, .ui-meta-text, .ui-empty-state, .hf-section-label) { letter-spacing: 0; }
-      #utilityPageTitle, #transactionsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
-      #utilityPageContext, #transactionsDescription, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #utilityPageTitle, #transactionsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
+      #utilityPageContext, #transactionsDescription { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
       #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
@@ -2773,11 +2761,6 @@
       </nav>
 
     <div id="sidebarUtilityNavigation" class="p-2">
-      <div class="space-y-1 pb-2">
-        <button type="button" data-page="logs" data-navigation-destination="logs" aria-label="Logs" title="Logs" class="ui-sidebar-item flex w-full items-center text-left transition">
-          <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
-        </button>
-      </div>
       <button id="sidebarMobileCloseButton" type="button" class="ui-sidebar-item hidden w-full items-center text-left lg:hidden" aria-label="Close navigation menu" onclick="setSidebarOpen(false, true)">
         <i class="fas fa-times w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Close Menu</span>
       </button>
@@ -4192,47 +4175,6 @@
       </div>
     </section>
 
-    <!-- LOGS -->
-    <section id="logs" class="page" hidden aria-labelledby="logsHeading">
-      <header class="sr-only">
-        <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Session diagnostics</p>
-        <h1 id="logsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Logs</h1>
-        <p class="mt-1 max-w-3xl text-sm ui-theme-secondary">Sanitized application events generated during this browser page session.</p>
-      </header>
-
-      <div id="logsWorkspace" class="flex flex-col gap-3">
-        <div id="sessionLogsScopeNotice" class="flex flex-wrap items-start justify-between gap-3 border-b px-1 pb-3">
-          <p class="max-w-3xl text-sm ui-theme-secondary"><strong class="ui-theme-primary">Session-local only.</strong> Entries are held in memory, are not historical audit records, and disappear when this page reloads or closes.</p>
-          <span class="rounded-full border px-3 py-1 text-xs font-semibold ui-theme-muted">Maximum 100 entries</span>
-        </div>
-
-        <div id="sessionLogsSeveritySummary" class="hf-log-severity-strip hf-secondary-surface grid grid-cols-1 sm:grid-cols-3" aria-label="Log severity summary">
-          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Info</span><strong id="sessionLogsInfoCount" class="text-lg ui-theme-primary">0</strong></div>
-          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Warning</span><strong id="sessionLogsWarningCount" class="text-lg ui-theme-primary">0</strong></div>
-          <div class="flex min-h-12 items-center justify-between gap-3 px-4"><span class="text-xs font-semibold ui-theme-muted">Error</span><strong id="sessionLogsErrorCount" class="text-lg ui-theme-primary">0</strong></div>
-        </div>
-
-        <div id="sessionLogsToolbar" class="hf-secondary-surface flex min-h-10 flex-wrap items-center justify-between gap-3 px-3 py-1">
-          <fieldset class="flex flex-wrap items-center gap-3">
-            <legend class="sr-only">Filter by severity</legend>
-            <span aria-hidden="true" class="hf-section-label">Severity</span>
-            <div id="sessionLogsFilters" class="flex flex-wrap gap-1">
-              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="All" checked onchange="setClientLogFilter(this.value)"><span>All</span></label>
-              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Info" onchange="setClientLogFilter(this.value)"><span>Info</span></label>
-              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Warning" onchange="setClientLogFilter(this.value)"><span>Warning</span></label>
-              <label class="flex min-h-10 cursor-pointer items-center gap-2 rounded-lg px-3 has-[:checked]:bg-indigo-50 has-[:checked]:text-indigo-700"><input type="radio" name="sessionLogSeverity" value="Error" onchange="setClientLogFilter(this.value)"><span>Error</span></label>
-            </div>
-          </fieldset>
-          <button id="clearSessionLogsButton" type="button" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" onclick="clearSessionClientLogs()" disabled>Clear session logs</button>
-        </div>
-
-        <p id="sessionLogsAnnouncement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-        <div id="sessionLogsListRegion" class="hf-secondary-surface flex-1 p-3" tabindex="0" aria-label="Session log entries, scrollable">
-          <p id="sessionLogsEmpty" class="p-5 text-sm ui-theme-muted">No client events in this session.</p>
-          <ol id="sessionLogsList" class="hidden divide-y" aria-label="Newest session client events first"></ol>
-        </div>
-      </div>
-    </section>
     </div>
   </main>
 </div>
@@ -4258,7 +4200,6 @@
   };
   let transactionDiagnosticPending = {};
   let sessionClientLogs = [];
-  let activeClientLogSeverity = "All";
   let lastClientLogSignature = "";
   let lastClientLogTimestamp = 0;
   let customSelectRegistry = {};
@@ -4597,12 +4538,7 @@
         "inventoryItemsError", "inventoryItemsTableRegion", "inventoryItemsTableBody", "inventoryItemDetailEmpty",
         "inventoryItemDetailContent", "inventoryItemsPagination",
         "inventoryItemsFirstPage", "inventoryItemsPrevPage", "inventoryItemsNextPage", "inventoryItemsLastPage",
-        "inventoryItemsPageInfo", "inventoryItemsPageNumbers", "logs",
-        "logsWorkspace", "sessionLogsSeveritySummary",
-        "sessionLogsInfoCount", "sessionLogsWarningCount",
-        "sessionLogsErrorCount", "sessionLogsToolbar",
-        "clearSessionLogsButton", "sessionLogsAnnouncement",
-        "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
+        "inventoryItemsPageInfo", "inventoryItemsPageNumbers",
         "dashboardTabList", "dashboardTabPanels",
         "dashboardSectionStaging", "newTransactionButton",
         "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
@@ -4810,18 +4746,6 @@
         inventoryItemsLastPage: required.inventoryItemsLastPage,
         inventoryItemsPageInfo: required.inventoryItemsPageInfo,
         inventoryItemsPageNumbers: required.inventoryItemsPageNumbers,
-        logsPage: required.logs,
-        sessionLogsWorkspace: required.logsWorkspace,
-        sessionLogsSummary: required.sessionLogsSeveritySummary,
-        sessionLogsInfoCount: required.sessionLogsInfoCount,
-        sessionLogsWarningCount: required.sessionLogsWarningCount,
-        sessionLogsErrorCount: required.sessionLogsErrorCount,
-        sessionLogsToolbar: required.sessionLogsToolbar,
-        clearSessionLogsButton: required.clearSessionLogsButton,
-        sessionLogsAnnouncement: required.sessionLogsAnnouncement,
-        sessionLogsListRegion: required.sessionLogsListRegion,
-        sessionLogsEmpty: required.sessionLogsEmpty,
-        sessionLogsList: required.sessionLogsList,
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging,
@@ -5286,6 +5210,8 @@
       var destination = arguments.length > 1 ? arguments[1] : null;
       var elements = initializeStableDashboardElements();
 
+      if (pageId === "logs") pageId = "dashboard";
+
       elements.pageElements.forEach(function(page)
       {
         var isActivePage = page.id === pageId;
@@ -5345,10 +5271,6 @@
         "finance:product-profitability": {
           title: "Product Profitability",
           context: "Per-product revenue, COGS, and margin analysis"
-        },
-        logs: {
-          title: "Logs",
-          context: "Sanitized events from this browser session"
         }
       };
       var activePage = Array.prototype.find.call(
@@ -6380,85 +6302,6 @@
         : "Navigation";
     }
 
-    function getFilteredSessionClientLogs()
-    {
-      return sessionClientLogs.filter(function(entry)
-      {
-        return activeClientLogSeverity === "All" ||
-          entry.severity === activeClientLogSeverity;
-      });
-    }
-
-    function renderSessionClientLogs()
-    {
-      var elements = initializeStableDashboardElements();
-      var filteredLogs = getFilteredSessionClientLogs();
-      var counts = {
-        Info: 0,
-        Warning: 0,
-        Error: 0
-      };
-
-      sessionClientLogs.forEach(function(entry)
-      {
-        counts[entry.severity]++;
-      });
-
-      elements.sessionLogsInfoCount.innerText = String(counts.Info);
-      elements.sessionLogsWarningCount.innerText = String(counts.Warning);
-      elements.sessionLogsErrorCount.innerText = String(counts.Error);
-      elements.clearSessionLogsButton.disabled = sessionClientLogs.length === 0;
-      elements.sessionLogsEmpty.classList.toggle("hidden", filteredLogs.length > 0);
-      elements.sessionLogsEmpty.innerText = sessionClientLogs.length === 0
-        ? "No client events in this session."
-        : "No entries match the selected severity.";
-      elements.sessionLogsList.classList.toggle("hidden", filteredLogs.length === 0);
-      elements.sessionLogsList.innerHTML = filteredLogs
-        .map(function(entry)
-        {
-          var severityClass = entry.severity === "Error"
-            ? "text-red-600"
-            : entry.severity === "Warning"
-              ? "text-amber-600"
-              : "text-indigo-700";
-
-          return '<li class="hf-log-entry text-sm" data-severity="' +
-            entry.severity + '">' +
-            '<div class="flex flex-wrap items-center justify-between gap-2">' +
-            '<strong class="' + severityClass + '">' +
-            entry.severity + " · " + entry.context + '</strong>' +
-            '<time class="text-xs ui-theme-muted">' + entry.timestamp + '</time>' +
-            '</div><p class="mt-1 break-words text-[13px] leading-[19px] ui-theme-secondary">' +
-            entry.message + '</p></li>';
-        })
-        .join("");
-    }
-
-    function setClientLogFilter(severity)
-    {
-      var allowedFilters = {
-        All: true,
-        Info: true,
-        Warning: true,
-        Error: true
-      };
-
-      activeClientLogSeverity = allowedFilters[severity]
-        ? severity
-        : "All";
-      renderSessionClientLogs();
-    }
-
-    function clearSessionClientLogs()
-    {
-      sessionClientLogs = [];
-      lastClientLogSignature = "";
-      lastClientLogTimestamp = 0;
-      renderSessionClientLogs();
-      initializeStableDashboardElements().sessionLogsAnnouncement.innerText =
-        "Session logs cleared.";
-    }
-
     function logClientEvent(severity, context, message)
     {
       var allowedSeverity = {
@@ -6496,13 +6339,7 @@
         sessionClientLogs.pop();
       }
 
-      renderSessionClientLogs();
 
-      if (safeSeverity === "Error")
-      {
-        initializeStableDashboardElements().sessionLogsAnnouncement.innerText =
-          "New Error log in " + safeContext + ".";
-      }
     }
 
     function toggleKpiTargetDetails()

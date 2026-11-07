@@ -50,14 +50,13 @@ const SIDEBAR_AUTHORITY = {
 
 const KPI_LABELS = ["Profit Margin", "Units Sold", "Revenue", "Expense", "Profit"];
 
-const PAGES = ["Dashboard", "Transactions", "Products", "Finance", "Settings", "Logs"];
+const PAGES = ["Dashboard", "Transactions", "Products", "Finance", "Settings"];
 const PAGE_KEYS = {
   Dashboard: "dashboard",
   Transactions: "transactions",
   Products: "products",
   Finance: "finance",
   Settings: "settings",
-  Logs: "logs",
 };
 
 // Required width/height matrix per task contract. No extra widths.
@@ -96,8 +95,8 @@ function buildMatrix() {
   for (const width of [1024, 1180]) {
     cells.push({ page: "Finance", width, height: 900, collapsed: true });
   }
-  // Settings / Logs: 1024 + 1440 expanded @900.
-  for (const page of ["Settings", "Logs"]) {
+  // Settings: 1024 + 1440 expanded @900.
+  for (const page of ["Settings"]) {
     for (const width of [1024, 1440]) {
       cells.push({ page, width, height: 900, collapsed: false });
     }
@@ -1612,7 +1611,7 @@ function classifyCell(raw) {
       }
     }
   } else {
-    // Transactions / Products / Finance / Settings / Logs
+    // Transactions / Products / Finance / Settings
     const controls = raw.controlsEvidence || { total: 0, outsideCount: 0, inaccessibleCount: 0 };
     if (controls.total > 0) {
       if (controls.outsideCount > 0 || controls.inaccessibleCount > 0) {
@@ -1739,7 +1738,6 @@ function emptyPageBucket() {
     products: emptyPageBucket(),
     finance: emptyPageBucket(),
     settings: emptyPageBucket(),
-    logs: emptyPageBucket(),
   };
   const concreteProductDefects = [];
   const matrix = buildMatrix();

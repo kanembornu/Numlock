@@ -441,7 +441,7 @@ function testDesktopCollapsedSidebarSharedGeometryContract()
     '#appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton > i { position: relative; z-index: 1; width: 24px !important; flex-basis: 24px !important;',
     '<p class="ui-page-subtitle ui-theme-muted mt-0.5">Business Intelligence</p>',
     "#dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }",
-    "#utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important;",
+    "#utilityPageContext, #transactionsDescription, #settings header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important;",
     '#dashboardSidebar { width: 264px !important; }',
     "html.numlock-phone { --numlock-phone-scale: 1.6;"
   ].forEach(function(token)
@@ -670,7 +670,7 @@ function testThemeParityTokenContract()
   scenariosPassed++;
 
   [
-    'id="dashboard"', 'id="transactions"', 'id="settings"', 'id="logs"',
+    'id="dashboard"', 'id="transactions"', 'id="settings"',
     'data-sidebar-collapsed="false"', 'aria-current="page"',
     'aria-disabled="true"', 'id="dashboardStatus"', 'id="transactionDrilldownSummary"'
   ].forEach(function(token)
@@ -967,7 +967,7 @@ function testUiShellThemeContract()
   });
   scenariosPassed++;
 
-  ["dashboard", "transactions", "settings", "logs"]
+  ["dashboard", "transactions", "settings"]
     .forEach(function(pageId)
     {
       assertSourceContainsOnce(
@@ -1097,7 +1097,6 @@ function testUiShellThemeContract()
     'aria-label="Dashboard"',
     'aria-label="Transactions"',
     'aria-label="Settings"',
-    'aria-label="Logs"',
     'aria-current="page"',
     'title="Dashboard"',
     'heading.focus();',
@@ -1240,8 +1239,7 @@ function testNineDestinationNavigationContract()
     { page: "finance", destination: "capital-equity" },
     { page: "finance", destination: "depreciation" },
     { page: "finance", destination: "balance-sheet" },
-    { page: "settings", destination: "settings" },
-    { page: "logs", destination: "logs" }
+    { page: "settings", destination: "settings" }
   ];
   var unavailableDestinations = [
     { id: "assets", label: "Assets" },
@@ -1548,8 +1546,7 @@ function testFullShellVisualContract()
   [
     '<div id="dashboardHeaderRegion" class="sr-only">',
     '<section id="transactions" class="page" hidden aria-labelledby="transactionsHeading">\n      <header class="sr-only">',
-    '<section id="settings" class="page" hidden aria-labelledby="settingsHeading">\n      <header class="sr-only">',
-    '<section id="logs" class="page" hidden aria-labelledby="logsHeading">\n      <header class="sr-only">'
+    '<section id="settings" class="page" hidden aria-labelledby="settingsHeading">\n      <header class="sr-only">'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "single visible page identity");
@@ -2543,12 +2540,7 @@ function testClientRenderPerformanceContract()
     "transactionDrilldownSummary", "transactionDrilldownText",
     "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsPageSize", "appShell", "sidebarCollapseButton",
     "mainContent", "topUtilityBar", "utilityPageTitle",
-    "utilityPageContext", "sidebarDataStatus", "settings", "logs",
-    "themeStatus", "logsWorkspace", "sessionLogsSeveritySummary",
-    "sessionLogsInfoCount", "sessionLogsWarningCount",
-    "sessionLogsErrorCount", "sessionLogsToolbar",
-    "clearSessionLogsButton", "sessionLogsAnnouncement",
-    "sessionLogsListRegion", "sessionLogsEmpty", "sessionLogsList",
+    "utilityPageContext", "sidebarDataStatus", "settings", "themeStatus",
     "dashboardHeaderRegion", "dashboardTabList", "dashboardTabPanels",
     "dashboardSectionStaging"
   ];
@@ -2735,10 +2727,9 @@ function testSecondaryDestinationsHighFidelityContract()
     .replace("<?!= include('191.View.Diagnostics'); ?>", diagnosticsSource);
   var scenariosPassed = 0;
   var transactionsRegion = getSourceRegion(source, '<section id="transactions"', '<section id="settings"', "high-fidelity Transactions");
-  var settingsRegion = getSourceRegion(source, '<section id="settings"', '<section id="logs"', "high-fidelity Settings");
-  var logsRegion = getSourceRegion(source, '<section id="logs"', "</main>", "high-fidelity Logs");
+  var settingsRegion = getSourceRegion(source, '<section id="settings"', "</main>", "high-fidelity Settings");
 
-  [transactionsRegion, settingsRegion, logsRegion].forEach(function(region, index)
+  [transactionsRegion, settingsRegion].forEach(function(region, index)
   {
     if (!region.length)
     {
@@ -2832,17 +2823,6 @@ function testSecondaryDestinationsHighFidelityContract()
   scenariosPassed++;
 
   [
-    'id="sessionLogsScopeNotice"', 'id="sessionLogsSeveritySummary"',
-    'id="sessionLogsToolbar"', 'id="sessionLogsListRegion"',
-    "hf-log-severity-strip", "hf-log-entry", "data-severity=",
-    "Session-local only.", "Maximum 100 entries"
-  ].forEach(function(token)
-  {
-    assertSourceContains(source, token, "session Logs hierarchy");
-  });
-  scenariosPassed++;
-
-  [
     "sessionClientLogs.unshift({", "sessionClientLogs.length > 100",
     "now - lastClientLogTimestamp < 5000", ".slice(0, 240)",
     "timestamp:", "severity:", "context:", "message:"
@@ -2852,17 +2832,10 @@ function testSecondaryDestinationsHighFidelityContract()
   });
   scenariosPassed++;
 
-  ["Search logs", "Export logs", "Pagination", "Server refresh", "audit history"].forEach(function(token)
-  {
-    assertSourceExcludes(logsRegion, token, "unsupported Logs feature");
-  });
-  scenariosPassed++;
-
   [
     "hf-secondary-surface", "border-radius: var(--radius-card)", "box-shadow: var(--card-shadow)",
     ":root[data-theme=\"dark\"]", "@media print",
     "#settings.active { height: 100%; overflow: hidden; }",
-    "#sessionLogsListRegion { min-height: 0; overflow-y: auto; }",
     "@media (max-width: 1023px)", "overflow-x: auto"
   ].forEach(function(token)
   {
@@ -2952,7 +2925,7 @@ function testSettingsVisualContract()
   var settingsRegion = getSourceRegion(
     source,
     'id="settings"',
-    'id="logs"',
+    "</main>",
     "Settings destination"
   );
 
@@ -3023,7 +2996,7 @@ function testSettingsVisualContract()
   scenariosPassed++;
 
   var themeControllerStart = source.indexOf("function handleSystemThemeChange()");
-  var themeControllerEnd = source.indexOf("function renderSessionClientLogs", themeControllerStart);
+  var themeControllerEnd = source.indexOf("function logClientEvent", themeControllerStart);
   var themeSource = getSourceRegion(
     source,
     "function applyChartThemeTokens(chart, palette, chartKind)",
@@ -3240,26 +3213,13 @@ function testLogsVisualContract()
 {
   var source = getAssembledFrontendSource();
   var scenariosPassed = 0;
-  var logsRegion = getSourceRegion(
-    source,
-    'id="logs"',
-    "</main>",
-    "Logs destination"
-  );
-
-  assertSourceContainsOnce(source, 'id="logs"', "Logs destination ID");
-  [
-    'id="logsHeading"',
-    "Session diagnostics",
-    "Session-local only.",
-    "held in memory",
-    "not historical audit records",
-    "disappear when this page reloads or closes",
-    "Maximum 100 entries"
-  ].forEach(function(token)
+  ['data-page="logs"', 'id="logs"', 'sessionLogs', 'hf-log-',
+    'function renderSessionClientLogs', 'function setClientLogFilter',
+    'function clearSessionClientLogs'].forEach(function(token)
   {
-    assertSourceContains(logsRegion, token, "truthful session-local Logs scope");
+    assertSourceExcludes(source, token, "removed Logs UI");
   });
+  assertSourceContains(source, 'if (pageId === "logs") pageId = "dashboard";', "stale Logs fallback");
   scenariosPassed++;
 
   var entryStart = source.indexOf("sessionClientLogs.unshift({");
@@ -3277,7 +3237,7 @@ function testLogsVisualContract()
   scenariosPassed++;
 
   var contextStart = source.indexOf("function getAllowedClientLogContext(");
-  var contextEnd = source.indexOf("function getFilteredSessionClientLogs", contextStart);
+  var contextEnd = source.indexOf("function logClientEvent", contextStart);
   var contextFunction =
     Function("return (" + source.slice(contextStart, contextEnd).trim() + ");")();
   var allowedContexts = [
@@ -3366,142 +3326,9 @@ function testLogsVisualContract()
   });
   scenariosPassed++;
 
-  [
-    'name="sessionLogSeverity" value="All"',
-    'name="sessionLogSeverity" value="Info"',
-    'name="sessionLogSeverity" value="Warning"',
-    'name="sessionLogSeverity" value="Error"',
-    "getFilteredSessionClientLogs()",
-    "entry.severity === activeClientLogSeverity",
-    'id="sessionLogsInfoCount"',
-    'id="sessionLogsWarningCount"',
-    'id="sessionLogsErrorCount"',
-    "No client events in this session.",
-    "No entries match the selected severity."
-  ].forEach(function(token)
-  {
-    assertSourceContains(source, token, "Logs filtering, summary, and empty states");
-  });
-  scenariosPassed++;
-
-  [
-    'id="clearSessionLogsButton"',
-    'onclick="clearSessionClientLogs()"',
-    "sessionClientLogs = [];",
-    '"Session logs cleared."',
-    "elements.clearSessionLogsButton.disabled = sessionClientLogs.length === 0;"
-  ].forEach(function(token)
-  {
-    assertSourceContains(source, token, "clear-session behavior");
-  });
-  var clearStart = source.indexOf("function clearSessionClientLogs()");
-  var clearEnd = source.indexOf("function logClientEvent", clearStart);
-  var clearSource = source.slice(clearStart, clearEnd);
-  ["google.script.run", "getDashboardData(", "console.clear"].forEach(function(token)
-  {
-    assertSourceExcludes(clearSource, token, "clear-session external effect");
-  });
-  scenariosPassed++;
-
-  [
-    'role="status" aria-live="polite" aria-atomic="true"',
-    '"New Error log in " + safeContext + "."',
-    'aria-label="Log severity summary"',
-    '>Filter by severity</legend>',
-    'aria-label="Newest session client events first"',
-    'aria-label="Session log entries, scrollable"',
-    "entry.severity + \" · \" + entry.context",
-    "button:focus-visible",
-    "input:focus-visible"
-  ].forEach(function(token)
-  {
-    assertSourceContains(source, token, "Logs accessibility contract");
-  });
-  scenariosPassed++;
-
-  [
-    "ui-theme-surface", "ui-theme-inset", "ui-theme-primary",
-    "ui-theme-secondary", "ui-theme-muted",
-    '#logs.active { height: 100%; overflow: hidden; }',
-    '#logsWorkspace { height: 100%; min-height: 0; }',
-    '#sessionLogsListRegion { min-height: 0; overflow-y: auto; }',
-    '#logs.active,',
-    '#logsWorkspace { height: auto; overflow: visible; }',
-    "break-words"
-  ].forEach(function(token)
-  {
-    assertSourceContains(source, token, "Logs theme and responsive containment");
-  });
-  scenariosPassed++;
-
-  var navigationStart = source.indexOf("function showPage(pageId)");
-  var navigationEnd = source.indexOf("function getResolvedTheme", navigationStart);
-  var navigationSource = source.slice(navigationStart, navigationEnd);
-  ["getDashboardData(", "requestDashboardData(", "google.script.run"].forEach(function(token)
-  {
-    assertSourceExcludes(navigationSource, token, "Logs navigation backend request");
-  });
-  [
-    'logs: {',
-    'title: "Logs"',
-    'context: "Sanitized events from this browser session"',
-    "heading.focus();"
-  ].forEach(function(token)
-  {
-    assertSourceContains(navigationSource, token, "Logs independent navigation");
-  });
-  scenariosPassed++;
-
-  [
-    'console.error(\n              "Dashboard render failed"',
-    'console.error(\n            "Dashboard request failed"',
-    'console.error(\n        "Chart.js unavailable',
-    'console.error("CSV export failed", error);'
-  ].forEach(function(token)
-  {
-    assertSourceContains(source, token, "preserved actionable console diagnostics");
-  });
-  assertSourceExcludes(source, "JSON.stringify(res", "raw response logging");
-  assertSourceExcludes(source, "console.log(res", "raw response console logging");
-  scenariosPassed++;
-
-  var idQueryCount = (source.match(/document\.getElementById\(/g) || []).length;
-  var selectorQueryCount =
-    (source.match(/document\.querySelector(?:All)?\(/g) || []).length;
-
-  if (idQueryCount > 73 || selectorQueryCount > 2)
-  {
-    throw new Error("Logs query budget exceeded");
-  }
-  assertSourceContainsOnce(source, "function scheduleDeferredDashboardRender(res, requestToken)", "single deferred phase owner preserved");
-  assertNoDirectDashboardResponseSort(source, "Logs");
-  [".reverse(", ".splice("].forEach(function(token)
-  {
-    assertSourceExcludes(source, token, "Logs response mutation");
-  });
-  scenariosPassed++;
-
-  var summary = {
-    passed: true,
-    scenarios: scenariosPassed,
-    maxEntries: 100,
-    severities: 3,
-    contexts: allowedContexts.length,
-    idQueries: idQueryCount,
-    selectorQueries: selectorQueryCount,
-    backendRequests: 0
-  };
-
-  Logger.log(
-    "PASS: testLogsVisualContract | scenarios=" + summary.scenarios +
-    " | maxEntries=" + summary.maxEntries +
-    " | severities=" + summary.severities +
-    " | contexts=" + summary.contexts +
-    " | backendRequests=" + summary.backendRequests +
-    " | idQueries=" + summary.idQueries +
-    " | selectorQueries=" + summary.selectorQueries
-  );
-
+  var summary = { passed: true, scenarios: scenariosPassed, maxEntries: 100,
+    severities: 3, contexts: allowedContexts.length, backendRequests: 0 };
+  Logger.log("PASS: testLogsVisualContract | scenarios=" + summary.scenarios);
   return summary;
 }
 
@@ -3542,7 +3369,7 @@ function testBoundedUiRefactorContract()
   [
     "function renderBusinessOverview(", "function renderCharts(",
     "function renderBusinessIntelligence(", "function renderExecutiveCenter(",
-    "function renderTransactions(", "function renderSessionClientLogs("
+    "function renderTransactions("
   ].forEach(function(token)
   {
     assertSourceContainsOnce(source, token, "single authoritative render owner");
@@ -3965,7 +3792,7 @@ function testUiFinalStabilizationContract()
   });
   scenariosPassed++;
 
-  ["dashboard", "transactions", "settings", "logs"].forEach(function(pageId)
+  ["dashboard", "transactions", "settings"].forEach(function(pageId)
   {
     assertSourceContainsOnce(source, 'id="' + pageId + '"', "primary destination " + pageId);
   });
@@ -4082,9 +3909,7 @@ function testUiFinalStabilizationContract()
   scenariosPassed++;
 
   [
-    'id="appearanceSection"', 'id="aboutSection"',
-    'id="sessionLogsListRegion"', "Session-local only.",
-    "not historical audit records"
+    'id="appearanceSection"', 'id="aboutSection"'
   ].forEach(function(token)
   {
     assertSourceContains(source, token, "truthful Settings and Logs scope");
