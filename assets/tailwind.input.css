@@ -410,7 +410,7 @@
   th[aria-sort="ascending"] .hf-top-products-sort::after { content: "\2191"; color: var(--brand); opacity: 1; }
   th[aria-sort="descending"] .hf-top-products-sort::after { content: "\2193"; color: var(--brand); opacity: 1; }
   .ui-native-select { position: absolute !important; width: 1px !important; height: 1px !important; overflow: hidden !important; clip: rect(0, 0, 0, 0) !important; white-space: nowrap !important; }
-  #dashboardSidebar > nav + div { display: grid; height: auto; margin-top: auto; grid-template-rows: auto auto auto 46px; border-top: 0; }
+  #dashboardSidebar > nav + div { display: grid; height: auto; margin-top: auto; grid-template-rows: auto auto auto; border-top: 0; }
   #filter,
   .hf-period-select { width: 148px; min-width: 148px; height: 44px; border-radius: 9px; padding-left: 14px; padding-right: 34px; }
   .hf-period-secondary { display: flex; align-items: center; gap: 10px; }
@@ -461,8 +461,6 @@
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item > i,
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module > i { width: 24px; flex-basis: 24px; text-align: center; }
     #dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap; }
-    #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px; min-height: 46px; box-sizing: border-box; }
-    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px; min-height: 46px; visibility: hidden; }
     #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(0, 3fr) minmax(270px, 1fr); }
   }
 
@@ -598,7 +596,7 @@
     #dashboardSidebar > nav + div {
       display: grid !important;
       height: auto !important;
-      grid-template-rows: auto auto 46px !important;
+      grid-template-rows: auto auto !important;
       padding: 8px 16px 28px !important;
     }
 
@@ -615,14 +613,6 @@
       padding: 10px 12px !important;
     }
 
-    #dashboardSidebar #sidebarCollapseButton + div {
-      grid-row: 3 !important;
-      margin-top: 18px !important;
-      padding-top: 0 !important;
-      border-top: 0 !important;
-      font-size: 11px !important;
-      line-height: 16px !important;
-    }
 
     #mainContent {
       grid-template-rows: 96px minmax(0, 1fr) !important;
@@ -1288,7 +1278,6 @@
     #dashboardSidebar > nav { padding-top: 8px !important; }
     #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) 46px !important; }
     #dashboardSidebar #sidebarCollapseButton { grid-row: 2 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
-    #dashboardSidebar #sidebarCollapseButton + div { grid-row: 3 !important; }
     #dashboardSidebar .ui-sidebar-item,
     #dashboardSidebar .ui-future-module { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; border-radius: var(--sidebar-control-radius) !important; padding-top: 0 !important; padding-bottom: 0 !important; }
     #dashboardSidebar #financialModulesDisclosureButton,
@@ -1296,7 +1285,6 @@
     #dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: 64px !important; max-width: 64px !important; grid-template-columns: 64px !important; justify-items: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div > .space-y-1 { width: 64px !important; max-width: 64px !important; justify-self: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
-    #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { width: 64px !important; max-width: 64px !important; padding-right: 0 !important; padding-left: 0 !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
     #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }

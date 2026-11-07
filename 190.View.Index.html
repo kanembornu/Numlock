@@ -2323,7 +2323,7 @@
         }
       }
       /* WO-028 functional refinement overrides. */
-      #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto 46px !important; border-top: 0 !important; }
+      #dashboardSidebar > nav + div { display: grid !important; height: auto !important; margin-top: auto !important; grid-template-rows: auto auto !important; border-top: 0 !important; }
       #sidebarCollapseButton { width: 100% !important; border: 0 !important; background: transparent !important; box-shadow: none !important; }
       #dashboardTabInsights { white-space: nowrap !important; }
       #dashboardPanelOverview .hf-overview-context { display: grid !important; min-height: 42px !important; grid-template-columns: minmax(0, 1fr) max-content !important; grid-template-rows: minmax(0, 1fr) !important; align-items: center !important; gap: 16px !important; padding: 8px 14px !important; border: 1px solid var(--card-border) !important; border-radius: var(--radius-card) !important; background: var(--card-bg) !important; box-shadow: var(--card-shadow) !important; }
@@ -2373,8 +2373,6 @@
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module > i { width: 24px !important; flex-basis: 24px !important; text-align: center !important; }
         #dashboardSidebar #financialModulesGroup .sidebar-expanded-content { white-space: nowrap !important; }
         #dashboardSidebar #sidebarCollapseButton { min-height: 44px !important; gap: 11px !important; padding: 8px 12px !important; }
-        #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; box-sizing: border-box !important; }
-        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { display: block !important; height: 46px !important; min-height: 46px !important; visibility: hidden !important; }
         #dashboardPanelOverview .hf-overview-evidence { grid-template-columns: minmax(320px, 2.5fr) minmax(360px, 1.5fr) !important; }
       }
       @media (min-width: 1280px) {
@@ -2543,15 +2541,13 @@
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-brand > div:first-child > .sidebar-expanded-content { display: none !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; overflow: hidden !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
         #dashboardSidebar .sidebar-brand .text-xl { line-height: 32px !important; }
         #dashboardSidebar > nav { padding-top: 8px !important; }
-        #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) 46px !important; }
+        #dashboardSidebar > nav + div { height: auto !important; margin-top: auto !important; grid-template-rows: auto var(--sidebar-control-height) !important; }
         #dashboardSidebar #sidebarCollapseButton { grid-row: 2 !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
-        #dashboardSidebar #sidebarCollapseButton + div { grid-row: 3 !important; }
         #dashboardSidebar .ui-sidebar-item, #dashboardSidebar .ui-future-module { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; border-radius: var(--sidebar-control-radius) !important; padding-top: 0 !important; padding-bottom: 0 !important; }
         #dashboardSidebar #financialModulesDisclosureButton, #dashboardSidebar #financialModulesGroup > * { height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; }
         #dashboardSidebar .sidebar-brand p { margin: 0 !important; font-family: var(--font-sans) !important; font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; color: var(--text-muted) !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; grid-template-columns: var(--sidebar-width-collapsed) !important; justify-items: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar > nav + div > .space-y-1 { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; justify-self: center !important; box-sizing: border-box !important; padding-right: 0 !important; padding-left: 0 !important; }
-        #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .sidebar-status-region { width: var(--sidebar-width-collapsed) !important; max-width: var(--sidebar-width-collapsed) !important; padding-right: 0 !important; padding-left: 0 !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-sidebar-item,
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar .ui-future-module { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
         #appShell[data-sidebar-collapsed="true"] #dashboardSidebar #sidebarCollapseButton { width: 40px !important; min-width: 40px !important; max-width: 40px !important; height: var(--sidebar-control-height) !important; min-height: var(--sidebar-control-height) !important; max-height: var(--sidebar-control-height) !important; margin-right: auto !important; margin-left: auto !important; border-radius: 10px !important; padding: 0 !important; justify-content: center !important; }
@@ -2774,9 +2770,7 @@
         <i id="sidebarCollapseIcon" class="fas fa-chevron-left w-6 text-center transition-transform" aria-hidden="true"></i>
         <span class="sidebar-expanded-content">Collapse</span>
       </button>
-      <div class="sidebar-status-region sidebar-expanded-content px-2 pt-2 text-[10px] leading-4 text-slate-400">
-        <div id="sidebarDataStatus" class="truncate">Waiting for data</div>
-      </div>
+      <div id="sidebarDataStatus" hidden></div>
     </div>
   </aside>
 
