@@ -918,7 +918,6 @@
 
   #utilityPageTitle,
   #transactionsHeading,
-  #settingsHeading,
   #logsHeading {
     font-size: 28px !important;
     font-weight: var(--font-weight-bold) !important;
@@ -928,7 +927,6 @@
 
   #utilityPageContext,
   #transactionsDescription,
-  #settings header p:last-child,
   #logs header p:last-child {
     font-size: 13px !important;
     font-weight: var(--font-weight-normal) !important;

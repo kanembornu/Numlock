@@ -39,7 +39,6 @@
       var pageSize = Number(value);
       transactionsPageSize = TRANSACTIONS_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : TRANSACTIONS_DEFAULT_PAGE_SIZE;
       var elements = initializeStableDashboardElements();
-      elements.transactionsPageSize.value = String(transactionsPageSize);
       elements.transactionsPageSizeFooter.value = String(transactionsPageSize);
       elements.transactionsTableCard.classList.toggle("is-scrollable", transactionsPageSize > 15);
       transactionsPages = { recent: 1, sales: 1, expenses: 1, purchases: 1 };

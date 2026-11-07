@@ -383,8 +383,6 @@
       .transactions-search button:disabled { opacity: .45; }
       #exportCsvButton { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; }
       #transactionsTableCard.is-scrollable #transactionsTableScroll { max-height: 608px; overflow-y: auto; }
-      .transactions-page-size-setting { display: flex; margin-top: 16px; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--divider); padding-top: 14px; }
-      .transactions-page-size-setting select { min-width: 96px; min-height: 38px; border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 10px; background: var(--surface-1); color: var(--text-primary); }
       #transactionsTableScroll tbody tr { border-bottom-color: var(--divider); }
       #transactionsTableScroll tbody tr:last-child { border-bottom: 0; }
       .transaction-type { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 2px 8px; font-size: 12px; font-weight: 700; line-height: 18px; }
@@ -439,9 +437,6 @@
       .standard-cost-section { border-top: 1px solid var(--divider); }
       .standard-cost-input { width: 100%; min-width: 120px; height: 36px; border: 1px solid var(--card-border); border-radius: 7px; padding: 4px 8px; background: var(--surface-1); color: var(--text-primary); }
       .standard-cost-apply:disabled { cursor: not-allowed; opacity: .5; }
-      .hf-settings-grid { width: 100%; max-width: 960px; }
-      .hf-setting-choice { min-height: 88px; }
-      .hf-about-row { min-height: 36px; }
       .hf-log-severity-strip > * + * { border-left: 1px solid var(--divider); }
       .hf-log-entry { border-left: 2px solid var(--border-subtle); padding: 8px 12px; }
       .hf-log-entry[data-severity="Info"] { border-left-color: var(--brand); }
@@ -1937,8 +1932,6 @@
         #productsTableRegion { max-height: 100%; overflow-y: auto; padding-bottom: 24px; }
         #productsPanelInventory:not([hidden]) { display: grid; height: 100%; }
         #inventoryItemsTableRegion, #inventoryItemDetail { max-height: 100%; }
-        #settings.active { min-height: 0; }
-        #settingsSections { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 16px; }
         #logs.active { min-height: 0; }
         #logsWorkspace { height: 100%; min-height: 0; }
         #sessionLogsListRegion { min-height: 0; overflow-y: auto; }
@@ -2063,7 +2056,6 @@
       /* Extracted non-Dashboard density rules from removed height-bucket query. */
       @media (min-width: 1024px) {
         #dashboardSidebar > nav + div > .space-y-1 { transform: none; margin-bottom: 0; }
-        .hf-setting-choice { min-height: 44px; padding-top: 8px; padding-bottom: 8px; }
         #productDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
         #inventoryItemDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
         #financeAssetDetail { min-height: 0; max-height: calc(100vh - 280px); overflow-y: auto; overflow-x: hidden; }
@@ -2103,7 +2095,6 @@
         #transactionsEvidenceRegion,
         #transactionsTableScroll { height: auto; overflow: visible; }
         #transactionsTableScroll { overflow-x: auto; }
-        #settings.active { height: auto; overflow: visible; }
         #logs.active,
         #logsWorkspace { height: auto; overflow: visible; }
         #sessionLogsListRegion { overflow: visible; }
@@ -2410,8 +2401,8 @@
       :where(h1, h2, h3, .ui-page-title, .ui-page-heading, .ui-section-title, .ui-card-title, .ui-kpi-value, .overview-kpi-value, .performance-metric-value) { font-family: var(--font-display) !important; font-kerning: normal; text-wrap: balance; }
       :where(button, input, select, textarea, .ui-form-text, .ui-action-label, .ui-badge-label) { letter-spacing: -0.005em; }
       :where(.ui-page-subtitle, .ui-body-text, .ui-meta-text, .ui-empty-state, .hf-section-label) { letter-spacing: 0; }
-      #utilityPageTitle, #transactionsHeading, #settingsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
-      #utilityPageContext, #transactionsDescription, #settings header p:last-child, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
+      #utilityPageTitle, #transactionsHeading, #logsHeading { font-size: 28px !important; font-weight: 700 !important; line-height: 32px !important; letter-spacing: -0.035em !important; }
+      #utilityPageContext, #transactionsDescription, #logs header p:last-child { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; letter-spacing: 0 !important; }
       #dashboardSidebar .ui-sidebar-item { font-size: 14px !important; font-weight: 500 !important; line-height: 20px !important; }
       #dashboardSidebar .ui-future-module { font-size: 13px !important; font-weight: 400 !important; line-height: 18px !important; }
       #dashboardTabList [role="tab"] { display: flex !important; height: 45px !important; align-items: center !important; justify-content: center !important; border-color: transparent !important; border-radius: 8px 8px 0 0 !important; outline: none !important; padding: 0 12px !important; box-shadow: none !important; font-size: 14px !important; font-weight: 600 !important; line-height: 18px !important; white-space: nowrap !important; transition: background-color 120ms ease, color 120ms ease !important; }
@@ -2607,12 +2598,6 @@
         --tw-ring-shadow: 0 0 #0000 !important;
       }
 
-      #appShell#appShell#appShell#appShell .hf-setting-choice:has(:checked) {
-        box-shadow: none !important;
-        --tw-ring-offset-width: 0px !important;
-        --tw-ring-offset-shadow: 0 0 #0000 !important;
-        --tw-ring-shadow: 0 0 #0000 !important;
-      }
       /* Keep the summary panels' bottom inset balanced with the desktop tab inset. */
       @media (min-width: 1024px) and (min-height: 900px) {
         #dashboardPanelOverview #executiveSummarySection > .overview-surface {
@@ -2789,9 +2774,6 @@
 
     <div id="sidebarUtilityNavigation" class="p-2">
       <div class="space-y-1 pb-2">
-        <button type="button" data-page="settings" data-navigation-destination="settings" aria-label="Settings" title="Settings" class="ui-sidebar-item flex w-full items-center text-left transition">
-          <i class="fas fa-sliders-h w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Settings</span>
-        </button>
         <button type="button" data-page="logs" data-navigation-destination="logs" aria-label="Logs" title="Logs" class="ui-sidebar-item flex w-full items-center text-left transition">
           <i class="fas fa-clipboard-list w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Logs</span>
         </button>
@@ -4210,57 +4192,6 @@
       </div>
     </section>
 
-    <!-- SETTINGS -->
-    <section id="settings" class="page" hidden aria-labelledby="settingsHeading">
-      <header class="sr-only">
-        <p class="text-[11px] font-bold uppercase tracking-[0.22em] ui-theme-muted">Application preferences</p>
-        <h1 id="settingsHeading" class="mt-1 text-3xl font-bold ui-theme-primary" tabindex="-1">Settings</h1>
-        <p class="mt-1 max-w-2xl text-sm ui-theme-secondary">Choose this browser’s appearance and review authoritative application details.</p>
-      </header>
-
-      <div id="settingsSections" class="hf-settings-grid grid grid-cols-1 gap-4">
-        <section id="appearanceSection" class="hf-secondary-surface p-4" aria-labelledby="appearanceHeading">
-          <div>
-            <h2 id="appearanceHeading" class="hf-section-heading">Appearance</h2>
-            <p class="mt-1 text-sm ui-theme-secondary">Your choice applies immediately and is stored only in this browser.</p>
-          </div>
-          <div class="mt-4">
-            <p class="text-sm ui-theme-muted">Light theme is the only supported theme.</p>
-          </div>
-          <div class="transactions-page-size-setting">
-            <label for="transactionsPageSize"><strong class="block text-sm ui-theme-primary">Transactions rows per page</strong><span class="mt-1 block text-xs ui-theme-muted">Stored only in this browser.</span></label>
-            <select id="transactionsPageSize" onchange="setTransactionsPageSize(this.value)">
-              <option value="15">15</option><option value="25">25</option><option value="50">50</option>
-            </select>
-          </div>
-        </section>
-
-        <section id="aboutSection" class="hf-secondary-surface p-4" aria-labelledby="aboutHeading">
-          <h2 id="aboutHeading" class="hf-section-heading">About</h2>
-          <p class="mt-1 text-sm ui-theme-secondary">Read-only details from the application configuration.</p>
-          <dl class="mt-4 divide-y" aria-label="Application metadata">
-            <div class="hf-about-row flex items-center justify-between gap-5">
-              <dt class="text-sm ui-theme-muted">Application</dt>
-              <dd id="aboutApplicationName" data-metadata-source="template.appName" class="text-right text-sm font-semibold ui-theme-primary"><?= appName ?></dd>
-            </div>
-            <div class="hf-about-row flex items-center justify-between gap-5">
-              <dt class="text-sm ui-theme-muted">Version</dt>
-              <dd id="aboutVersion" data-metadata-source="template.version" class="text-right text-sm font-semibold ui-theme-primary"><?= version ?></dd>
-            </div>
-            <div class="hf-about-row flex items-center justify-between gap-5">
-              <dt class="text-sm ui-theme-muted">Release</dt>
-              <dd id="aboutReleaseLabel" data-metadata-source="template.releaseLabel" class="text-right text-sm font-semibold ui-theme-primary"><?= releaseLabel ?></dd>
-            </div>
-            <div class="hf-about-row flex items-center justify-between gap-5">
-              <dt class="text-sm ui-theme-muted">Environment</dt>
-              <dd id="aboutEnvironment" data-metadata-source="template.environment" class="text-right text-sm font-semibold ui-theme-primary"><?= environment ?></dd>
-            </div>
-          </dl>
-          <p class="mt-4 border-t pt-3 text-xs leading-relaxed ui-theme-muted">Business rules and targets remain system-defined and are not editable here.</p>
-        </section>
-      </div>
-    </section>
-
     <!-- LOGS -->
     <section id="logs" class="page" hidden aria-labelledby="logsHeading">
       <header class="sr-only">
@@ -4651,7 +4582,7 @@
         "transactionsPanelGroup", "transactionsEvidenceRegion",
         "exportCsvButton", "transactionsResultHeading", "transactionsScopeText",
         "transactionDrilldownSummary", "transactionDrilldownText",
-        "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSize", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
+        "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
         "mainContent", "topUtilityBar",
         "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
         "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
@@ -4666,7 +4597,7 @@
         "inventoryItemsError", "inventoryItemsTableRegion", "inventoryItemsTableBody", "inventoryItemDetailEmpty",
         "inventoryItemDetailContent", "inventoryItemsPagination",
         "inventoryItemsFirstPage", "inventoryItemsPrevPage", "inventoryItemsNextPage", "inventoryItemsLastPage",
-        "inventoryItemsPageInfo", "inventoryItemsPageNumbers", "settings", "logs",
+        "inventoryItemsPageInfo", "inventoryItemsPageNumbers", "logs",
         "logsWorkspace", "sessionLogsSeveritySummary",
         "sessionLogsInfoCount", "sessionLogsWarningCount",
         "sessionLogsErrorCount", "sessionLogsToolbar",
@@ -4814,7 +4745,6 @@
         transactionsNextPage: required.transactionsNextPage,
         transactionsPageIndicator: required.transactionsPageIndicator,
         transactionsRangeSummary: required.transactionsRangeSummary,
-        transactionsPageSize: required.transactionsPageSize,
         transactionsPageSizeFooter: required.transactionsPageSizeFooter,
         transactionsSearch: required.transactionsSearch,
         clearTransactionsSearch: required.clearTransactionsSearch,
@@ -4880,7 +4810,6 @@
         inventoryItemsLastPage: required.inventoryItemsLastPage,
         inventoryItemsPageInfo: required.inventoryItemsPageInfo,
         inventoryItemsPageNumbers: required.inventoryItemsPageNumbers,
-        settingsPage: required.settings,
         logsPage: required.logs,
         sessionLogsWorkspace: required.logsWorkspace,
         sessionLogsSummary: required.sessionLogsSeveritySummary,
@@ -5416,10 +5345,6 @@
         "finance:product-profitability": {
           title: "Product Profitability",
           context: "Per-product revenue, COGS, and margin analysis"
-        },
-        settings: {
-          title: "Settings",
-          context: "Appearance and application information"
         },
         logs: {
           title: "Logs",
