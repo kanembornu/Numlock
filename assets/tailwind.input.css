@@ -1321,3 +1321,83 @@
   }
 
 }
+
+/* Restore v769 transaction composition; keep rules in source for reproducible builds. */
+@media (min-width:768px){
+/* SALES-UI-V720: Sales entry composition — intentional unequal desktop grid (Sales Details favored, reflow only below 1024px), NUMLOCK-styled full-width Add Line button, PRODUCT|VALUE|ACTION Order Preview rows with a compact destructive X action column and a structured Total row sharing the monetary column, structured METRIC|qty×unit|TOTAL Price Preview rows with structured multi-product Total HPP/Margin rows (bottom totals only for multi-product orders), and Order Type reusing the established ui-custom-select dropdown component scoped to Product-input geometry. */
+#salesEntryFields>.transaction-sales-layout{grid-column:1/-1;grid-row:auto;display:grid;gap:10px 12px;align-items:start;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1024px){#salesEntryFields>.transaction-sales-layout{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) minmax(0,1fr)}}
+.transaction-sales-layout .transaction-sales-detail-card{grid-column:auto;grid-row:auto;align-self:start}
+.transaction-sales-layout #salesOrderPreview,.transaction-sales-layout #salesPricingPreview{grid-column:auto;grid-row:auto;align-self:stretch}
+.transaction-sales-layout .transaction-sales-product{grid-column:auto}
+#operationalAddLine{width:100%;min-height:44px}
+.transaction-sales-add-line{grid-column:1/-1;display:inline-flex;width:100%;min-height:44px;align-items:center;justify-content:center;gap:8px;border:1px solid var(--card-border);border-radius:var(--radius-control);background:var(--surface-1);color:var(--text-primary);padding:10px 16px;font-size:14px;font-weight:var(--font-weight-semibold)}
+.transaction-order-preview-lines,.transaction-price-preview-lines{max-height:min(42vh,420px);overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.transaction-order-line{display:grid;grid-template-columns:minmax(0,1fr) auto 24px;gap:4px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--divider);font-variant-numeric:tabular-nums}
+.transaction-order-line:last-child{border-bottom:0}
+.transaction-order-line-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.transaction-order-line-name{overflow:hidden;color:var(--text-primary);font-size:14px;font-weight:var(--font-weight-semibold);text-overflow:ellipsis;white-space:nowrap}
+.transaction-order-line-label{color:var(--text-muted);font-size:12px;line-height:16px}
+.transaction-order-line-total{text-align:right;color:var(--text-primary);font-size:14px;font-weight:600;white-space:nowrap}
+.transaction-order-line-remove{display:inline-flex;width:24px;height:24px;align-items:center;justify-content:center;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--critical);padding:0;font-size:18px;line-height:1;cursor:pointer}
+.transaction-order-line-remove:hover{border-color:var(--critical);background:var(--surface-2)}
+.transaction-order-line-remove:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+#operationalOrderTotal{display:grid;grid-template-columns:minmax(0,1fr) auto 24px;gap:4px 10px;align-items:baseline;margin-top:10px;padding-top:10px;border-top:1px solid var(--divider);color:var(--text-primary);font-size:16px;font-weight:var(--font-weight-bold);font-variant-numeric:tabular-nums}
+.transaction-order-total-label{text-align:left;white-space:nowrap}
+.transaction-order-total-value{text-align:right;white-space:nowrap}
+.transaction-price-group{padding:6px 0;border-bottom:1px solid var(--divider)}
+.transaction-price-group:last-child{border-bottom:0}
+.transaction-price-group-name{margin-bottom:2px;color:var(--text-primary);font-size:13px;font-weight:var(--font-weight-semibold)}
+.transaction-price-line{padding:2px 0}
+.transaction-price-row{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:0 8px;align-items:baseline;font-variant-numeric:tabular-nums}
+.transaction-price-metric{color:var(--text-secondary);font-size:12px;font-weight:var(--font-weight-semibold)}
+.transaction-price-detail{min-width:0;color:var(--text-muted);font-size:12px}
+.transaction-price-amount{text-align:right;color:var(--text-primary);font-size:12px;font-weight:var(--font-weight-semibold);white-space:nowrap}
+#salesPricingTotals{margin-top:8px;padding-top:8px;border-top:1px solid var(--divider)}
+#salesPricingTotals:empty{display:none;margin:0;padding:0;border:0}
+.transaction-price-total-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 8px;align-items:baseline;padding:2px 0;font-variant-numeric:tabular-nums}
+.transaction-price-total-label{text-align:left;color:var(--text-primary);font-size:13px;font-weight:var(--font-weight-bold)}
+.transaction-price-total-value{text-align:right;color:var(--text-primary);font-size:13px;font-weight:var(--font-weight-bold);white-space:nowrap}
+.transaction-sales-order-type .ui-custom-select{width:100%;min-width:0}
+.transaction-sales-order-type .ui-custom-select-trigger{height:48px;min-height:48px;border:1px solid var(--card-border);border-radius:var(--radius-control);background:var(--surface-1);color:var(--text-primary);padding:10px 12px;font-family:var(--font-sans);font-size:16px !important;font-weight:400 !important;line-height:26px !important}
+.transaction-sales-order-type .ui-custom-select-trigger::after{content:"";width:7px;height:7px;flex:0 0 7px;margin-inline-start:8px;transform:rotate(45deg) translateY(-2px);border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;color:var(--text-secondary)}
+#transactionEntryDialog[data-entry-type=sales]{width:min(100%,1180px)}
+#transactionEntryDialog[data-entry-type=expense],#transactionEntryDialog[data-entry-type=purchase]{width:min(100%,860px)}
+}
+/* EXPENSE & PURCHASE UI: Expense keeps its explicit two-column layout;
+   Purchase uses one explicit three-column grid (Item | Quantity | Total)
+   with shared start alignment. Every column uses the identical label+control
+   vertical structure (20px label, 8px gap, 48px control box); fixed control
+   heights make tops and heights coincide with no offset compensation. */
+#expenseEntryFields>.transaction-expense-layout{display:grid;grid-column:1/-1;grid-template-columns:1fr;gap:10px;align-items:start}
+@media (min-width:768px){#expenseEntryFields>.transaction-expense-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+#expenseEntryFields>h3,#purchaseEntryFields>h3{display:flex;justify-content:space-between;align-items:center;gap:10px}
+#expenseEntryFields .transaction-entry-ready-status,#purchaseEntryFields .transaction-entry-ready-status{margin-inline-start:auto}
+#transactionEntryDialog[data-entry-type=expense] .transaction-entry-submit-region,#transactionEntryDialog[data-entry-type=purchase] .transaction-entry-submit-region{padding-bottom:14px}
+#transactionEntryDialog[data-entry-type=expense] .transaction-entry-submit,#transactionEntryDialog[data-entry-type=purchase] .transaction-entry-submit{margin-top:8px}
+.transaction-expense-layout .transaction-entry-control{display:flex;flex-direction:column;gap:0;min-width:0}
+.transaction-expense-layout .transaction-entry-control>label{display:block;min-height:20px;margin:0 0 8px;line-height:20px}
+.transaction-expense-layout .transaction-entry-combobox{flex:0 0 auto;height:48px}
+.transaction-expense-layout .transaction-entry-combobox input{height:48px;min-height:48px}
+.transaction-expense-layout .transaction-entry-money{flex:0 0 auto;height:48px;min-height:48px}
+.transaction-expense-layout .transaction-entry-money input{height:46px;min-height:46px}
+.transaction-expense-layout .transaction-entry-meta{min-height:18px;margin:4px 0 0}
+
+#purchaseEntryFields>.transaction-purchase-layout{display:grid;grid-column:1/-1;grid-template-columns:1fr;gap:10px;align-items:start}
+@media (min-width:768px){#purchaseEntryFields>.transaction-purchase-layout{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.transaction-purchase-layout .transaction-purchase-column{display:flex;flex-direction:column;gap:10px;min-width:0}
+.transaction-purchase-layout .transaction-entry-control{display:flex;flex-direction:column;gap:0;min-width:0}
+.transaction-purchase-layout .transaction-entry-control>label,.transaction-purchase-layout .transaction-entry-info-label{display:block;min-height:20px;margin:0 0 8px;color:var(--text-primary);font-size:14px;font-weight:var(--font-weight-semibold);line-height:20px}
+.transaction-purchase-layout .transaction-entry-combobox{flex:0 0 auto;height:48px}
+.transaction-purchase-layout .transaction-entry-combobox input{height:48px;min-height:48px}
+.transaction-purchase-layout .transaction-entry-quantity{flex:0 0 auto;display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:8px;height:48px;min-height:48px}
+.transaction-purchase-layout .transaction-entry-quantity button{min-height:48px;height:48px}
+.transaction-purchase-layout .transaction-entry-quantity input{height:46px;min-height:46px}
+.transaction-purchase-layout .transaction-entry-money{flex:0 0 auto;height:48px;min-height:48px}
+.transaction-purchase-layout .transaction-entry-money input{height:46px;min-height:46px}
+.transaction-purchase-layout .transaction-entry-meta{min-height:18px;margin:4px 0 0}
+.transaction-purchase-layout .transaction-purchase-info{display:flex;flex-direction:column;gap:5px;min-width:0;margin-top:10px}
+.transaction-purchase-layout .transaction-purchase-info:empty{display:none}
+.transaction-purchase-layout .transaction-purchase-info+.transaction-entry-meta{display:none}
+.transaction-purchase-layout .transaction-entry-compact-value{margin:0;color:var(--text-muted);font-size:12px;line-height:16px;overflow-wrap:anywhere}
+.transaction-purchase-layout #purchaseEntryMeta[hidden],.transaction-purchase-layout #purchaseEntrySupplier[hidden],.transaction-purchase-layout #purchaseEntrySupplierOverrideButton[hidden]{display:none}
