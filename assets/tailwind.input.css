@@ -615,15 +615,7 @@
 
 
     #mainContent {
-      grid-template-rows: 96px minmax(0, 1fr) !important;
       margin-left: 264px !important;
-    }
-
-    #topUtilityBar {
-      height: 96px !important;
-      min-height: 96px !important;
-      padding-left: 28px !important;
-      padding-right: 28px !important;
     }
 
     #utilityPageTitle {

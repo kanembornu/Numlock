@@ -469,11 +469,8 @@
         #appShell { height: 100dvh; }
 
         #dashboardSidebar { width: var(--sidebar-width-expanded); transform: translateX(0); }
-        #mainContent { display: grid; grid-template-rows: 76px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); min-height: 0; }
-        #mainContent:has(#dashboard.active) { grid-template-rows: 48px minmax(0, 1fr); }
-        #mainContent:has(#dashboard.active) #topUtilityBar { height: 48px; min-height: 48px; }
-        #mainContent:has(#dashboard.active) #topUtilityBar { height: 0 !important; min-height: 0 !important; }
-        #mainContent:has(#dashboard.active) { grid-template-rows: 0px minmax(0, 1fr) !important; }
+        #mainContent { display: grid; grid-template-rows: minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); min-height: 0; }
+        #topUtilityBar { display: none; }
         #contentViewport { height: auto; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 20px 24px 24px; }
         #dashboard.active { display: flex; min-height: 0; flex-direction: column; }
         #dashboardContent { display: grid; min-height: 0; grid-template-rows: 44px auto; gap: 16px; }
@@ -1939,12 +1936,7 @@
       @media (min-width: 1024px) and (max-width: 1279px)
       {
         #dashboardSidebar { width: var(--sidebar-width-expanded); }
-        #mainContent { grid-template-rows: 68px minmax(0, 1fr); margin-left: var(--sidebar-width-expanded); }
-        #topUtilityBar { height: 68px; min-height: 68px; }
-        #mainContent:has(#dashboard.active) { grid-template-rows: 48px minmax(0, 1fr); }
-        #mainContent:has(#dashboard.active) #topUtilityBar { height: 48px; min-height: 48px; }
-        #mainContent:has(#dashboard.active) #topUtilityBar { height: 0 !important; min-height: 0 !important; }
-        #mainContent:has(#dashboard.active) { grid-template-rows: 0px minmax(0, 1fr) !important; }
+        #mainContent { margin-left: var(--sidebar-width-expanded); }
       }
 
       /* Insights uses content-sized rows; no stretched timelines or clipped cards. */
