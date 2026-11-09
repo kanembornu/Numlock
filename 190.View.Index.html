@@ -81,6 +81,13 @@
 #transactionsControls #transactionsEntryActionRow { flex: 0 0 auto; align-self: center; }
   .dashboard-tab-panel { min-width: 0; }
       .transactions-tab-panel { min-width: 0; }
+      #productsTabList { height: auto; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); overflow-x: auto; overflow-y: hidden; display: flex; }
+      #productsTabList [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+      #productsTabList [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+      .products-tab-list { height: auto; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); overflow-x: auto; overflow-y: hidden; display: flex; }
+      .products-tab-list [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
+      .products-tab-list [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
+      #productsTabList [role="tab"]:focus-visible, .products-tab-list [role="tab"]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: 7px 7px 0 0; }
       .transactions-table-row:hover { background: var(--surface-2); }
       .transactions-number { text-align: right; font-variant-numeric: tabular-nums; }
       .overview-surface,
@@ -417,7 +424,6 @@
       .product-variant-badge { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 1px 8px; font-size: 12px; font-weight: 600; line-height: 18px; }
       .product-variant-badge--cold { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; }
       .product-variant-badge--hot { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
-      .products-tab[aria-selected="true"] { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
       .products-tab-panel[hidden] { display: none; }
       .inventory-items-layout { display: grid; min-height: 0; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 16px; }
       .inventory-items-panel { min-height: 0; overflow-y: auto; }
@@ -2671,16 +2677,6 @@
           <i class="fas fa-boxes-stacked w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Products</span>
         </button>
 
-        <button
-          type="button"
-          data-page="treasury"
-          data-navigation-destination="treasury"
-          aria-label="Treasury"
-          title="Treasury"
-          class="ui-sidebar-item flex w-full items-center text-left transition">
-          <i class="fas fa-vault w-6 text-center" aria-hidden="true"></i><span class="sidebar-expanded-content">Treasury</span>
-        </button>
-
         </div>
 
         <div class="sidebar-finance-group mt-1">
@@ -3355,8 +3351,8 @@
           <h2 class="hf-section-heading">Assets</h2>
           <p class="mt-1 text-sm ui-theme-secondary">Fixed-asset register, acquisition summary, and depreciation schedule.</p>
           <div class="products-tab-list mt-3" role="tablist" aria-label="Assets sections">
-            <button type="button" id="assetsTabRegister" role="tab" aria-selected="true" aria-controls="assetsPanelRegister" class="products-tab rounded-md px-4 py-2">Asset Register</button>
-            <button type="button" id="assetsTabDepreciation" role="tab" aria-selected="false" aria-controls="assetsPanelDepreciation" class="products-tab rounded-md px-4 py-2">Depreciation</button>
+            <button type="button" id="assetsTabRegister" role="tab" aria-selected="true" aria-controls="assetsPanelRegister">Asset Register</button>
+            <button type="button" id="assetsTabDepreciation" role="tab" aria-selected="false" aria-controls="assetsPanelDepreciation">Depreciation</button>
           </div>
           <div id="assetsPanelRegister" class="products-tab-panel" role="tabpanel" aria-labelledby="assetsTabRegister">
             <dl class="finance-kpis finance-equity-kpis mt-3" aria-label="Asset summary">
@@ -4029,10 +4025,10 @@
         <h1 id="productsHeading" tabindex="-1">Products</h1>
         <p>Read-only authoritative product catalog.</p>
       </header>
-      <nav id="productsTabList" class="mb-4 flex w-max gap-2 rounded-lg border p-1" role="tablist" aria-label="Products sections">
-        <button id="productsTabCatalog" type="button" role="tab" aria-selected="true" aria-controls="productsPanelCatalog" class="products-tab rounded-md px-4 py-2">Product Catalog</button>
-        <button id="productsTabRecipe" type="button" role="tab" aria-selected="false" aria-controls="productsPanelRecipe" class="products-tab rounded-md px-4 py-2">COGS &amp; Recipe</button>
-        <button id="productsTabInventory" type="button" role="tab" aria-selected="false" aria-controls="productsPanelInventory" class="products-tab rounded-md px-4 py-2">Inventory Items</button>
+      <nav id="productsTabList" class="mb-4" role="tablist" aria-label="Products sections">
+        <button id="productsTabCatalog" type="button" role="tab" aria-selected="true" aria-controls="productsPanelCatalog">Product Catalog</button>
+        <button id="productsTabRecipe" type="button" role="tab" aria-selected="false" aria-controls="productsPanelRecipe">COGS & Recipe</button>
+        <button id="productsTabInventory" type="button" role="tab" aria-selected="false" aria-controls="productsPanelInventory">Inventory Items</button>
       </nav>
       <div id="productsPanelCatalog" class="products-tab-panel flex flex-col gap-4 lg:flex-row" role="tabpanel" aria-labelledby="productsTabCatalog">
         <aside id="productDetail" class="hf-secondary-surface order-1 p-4 lg:order-2 lg:w-1/3 lg:sticky lg:top-4 lg:self-start" aria-labelledby="productDetailHeading">
