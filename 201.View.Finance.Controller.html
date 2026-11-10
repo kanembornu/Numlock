@@ -401,7 +401,6 @@
     {
       var validDestinations = ["profit-loss", "capital-equity", "product-profitability", "balance-sheet", "depreciation", "assets", "cash-flow"];
       financeState.destination = validDestinations.indexOf(destination) !== -1 ? destination : "profit-loss";
-      console.log("[DIAG] setFinanceDestination called with: " + destination + ", new financeState.destination: " + financeState.destination);
       var isEquity = financeState.destination === "capital-equity";
       var isPP = financeState.destination === "product-profitability";
       var isBS = financeState.destination === "balance-sheet";
@@ -433,7 +432,6 @@
       else if (document.getElementById("financeContent")) document.getElementById("financeContent").hidden = false;
 
       if (ppContentEl) {
-        console.log("[DIAG] financeProductProfitabilityContent visibility set, hidden=" + ppContentEl.hidden);
       }
     }
 
