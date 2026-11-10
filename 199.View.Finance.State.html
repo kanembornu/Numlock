@@ -16,6 +16,5 @@
 
     function getFinanceElement(id)
     {
-      if (!financeElementCache[id]) throw new Error("Required Finance element missing: #" + id);
-      return financeElementCache[id];
+      return document.getElementById(id);
     }

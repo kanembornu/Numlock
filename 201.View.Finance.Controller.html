@@ -401,6 +401,7 @@
     {
       var validDestinations = ["profit-loss", "capital-equity", "product-profitability", "balance-sheet", "depreciation", "assets", "cash-flow"];
       financeState.destination = validDestinations.indexOf(destination) !== -1 ? destination : "profit-loss";
+      console.log("[DIAG] setFinanceDestination called with: " + destination + ", new financeState.destination: " + financeState.destination);
       var isEquity = financeState.destination === "capital-equity";
       var isPP = financeState.destination === "product-profitability";
       var isBS = financeState.destination === "balance-sheet";
@@ -416,6 +417,24 @@
       getFinanceElement("financeRecognitionDisclosure").textContent = isEquity ? "As-of selected Finance end date" : isPP ? "Transaction-date operating basis" : isDep ? "Monthly straight-line depreciation" : "Transaction-date operating basis";
       getFinanceElement("financeDepreciationDisclosure").textContent = isEquity ? "Retained earnings follows the migrated opening balance cutoff." : isPP ? "Product-level COGS follows authoritative sales allocation." : isDep ? "Depreciation is calculated from the authoritative DepreciationLedger." : "Depreciation is included from the authoritative DepreciationLedger.";
       if (isDep || isAssets) setAssetsTab(isDep ? "depreciation" : "register");
+      // Panel visibility: hide all finance content panels, show only current destination
+      var panels = ["financeContent", "financeCapitalEquityContent", "financeProductProfitabilityContent", "financeBalanceSheetContent", "financeAssetsContent", "financeDepreciationContent", "financeCashFlowContent"];
+      panels.forEach(function(id) {
+        var el = document.getElementById(id);
+        if (el) el.hidden = true;
+      });
+      var ppContentEl = document.getElementById("financeProductProfitabilityContent");
+      if (isPP && ppContentEl) ppContentEl.hidden = false;
+      else if (isEquity && document.getElementById("financeCapitalEquityContent")) document.getElementById("financeCapitalEquityContent").hidden = false;
+      else if (isBS && document.getElementById("financeBalanceSheetContent")) document.getElementById("financeBalanceSheetContent").hidden = false;
+      else if (isDep && document.getElementById("financeDepreciationContent")) document.getElementById("financeDepreciationContent").hidden = false;
+      else if (isAssets && document.getElementById("financeAssetsContent")) document.getElementById("financeAssetsContent").hidden = false;
+      else if (financeState.destination === "cash-flow" && document.getElementById("financeCashFlowContent")) document.getElementById("financeCashFlowContent").hidden = false;
+      else if (document.getElementById("financeContent")) document.getElementById("financeContent").hidden = false;
+
+      if (ppContentEl) {
+        console.log("[DIAG] financeProductProfitabilityContent visibility set, hidden=" + ppContentEl.hidden);
+      }
     }
 
     var setFinanceViewStateBase = setFinanceViewState;

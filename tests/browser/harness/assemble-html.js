@@ -100,8 +100,19 @@ function assembleHtml() {
                         console.log('[Shim] Call:', prop, args);
                         let result = { success: true, data: {} };
                         switch(prop) {
-                          case 'getDashboardData':
-                            result = window.__NUMLOCK_FIXTURES__.dashboard; break;
+                          case 'getDashboardData': {
+                            const db = JSON.parse(JSON.stringify(window.__NUMLOCK_FIXTURES__.dashboard));
+                            const ppArray = db.performanceAnalytics.productProfitability;
+                            const categories = db.performanceAnalytics.classifications && db.performanceAnalytics.classifications.category
+                              ? db.performanceAnalytics.classifications.category.map(c => c.category)
+                              : ['Unknown'];
+                            db.performanceAnalytics.productProfitability = ppArray.map((p, idx) => ({
+                              ...p,
+                              category: categories[idx % categories.length]
+                            }));
+                            result = db;
+                            break;
+                          }
                           case 'getTransactionEntryOptions':
                             result = window.__NUMLOCK_FIXTURES__.entryOptions; break;
                           case 'getOperationalTransactionAuthority':
@@ -116,6 +127,47 @@ function assembleHtml() {
                           }
                           case 'getTransactionsPage':
                             result = window.__NUMLOCK_FIXTURES__.transactionsPage; break;
+                          case 'getProductProfitabilityData': {
+                            const db = window.__NUMLOCK_FIXTURES__.dashboard;
+                            const ppArray = db.performanceAnalytics.productProfitability;
+                            const categories = db.performanceAnalytics.classifications && db.performanceAnalytics.classifications.category
+                              ? db.performanceAnalytics.classifications.category.map(c => c.category)
+                              : ['Unknown'];
+                            const products = ppArray.map((p, idx) => ({
+                              productId: p.label,
+                              productName: p.label,
+                              label: p.label,
+                              category: categories[idx % categories.length],
+                              type: 'Hot',
+                              units: 100,
+                              revenue: p.revenue,
+                              cogs: p.cogs,
+                              grossProfit: p.grossMargin,
+                              grossMargin: p.grossMarginPercent,
+                              revenueMix: 0.1,
+                              grossProfitMix: 0.1,
+                              revenueRank: 1,
+                              grossProfitRank: 1
+                            }));
+                            const summary = {
+                              revenue: products.reduce((s, p) => s + p.revenue, 0),
+                              cogs: products.reduce((s, p) => s + p.cogs, 0),
+                              grossProfit: products.reduce((s, p) => s + p.grossProfit, 0),
+                              grossMargin: 60.0,
+                              units: products.reduce((s, p) => s + p.units, 0),
+                              distinctProductCount: products.length,
+                              productVariantCount: products.length
+                            };
+                            // Canonical flat response per 50.Analytics.Product.js
+                            result = {
+                              status: 'SUCCESS',
+                              products: products,
+                              summary: summary,
+                              period: db.period || { label: 'Current Year' },
+                              quality: { status: 'GOOD', issueCount: 0 }
+                            };
+                            break;
+                          }
                           case 'submitCanonicalTransaction':
                             result = { success: true, data: { id: 'TXN-' + Date.now() } }; break;
                           case 'submitOperationalOrder': {
@@ -143,7 +195,15 @@ function assembleHtml() {
   `;
 
   // Insert fixture script and shim before closing head tag
-  html = html.replace("</head>", `${fixtureScript}\n${shimScript}\n</head>`);
+  const errorCaptureScript = `
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        console.log('[BROWSER ERROR]', message, 'at', source, ':', lineno, ':', colno);
+        if (error && error.stack) console.log('[STACK]', error.stack);
+      };
+    </script>
+  `;
+  html = html.replace("</head>", `${errorCaptureScript}\n${fixtureScript}\n${shimScript}\n</head>`);
 
   return html;
 }
