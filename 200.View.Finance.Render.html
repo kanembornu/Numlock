@@ -22,6 +22,35 @@
       }).format(financeFiniteNumber(value));
     }
 
+    function formatCompactFinanceNumber(value)
+    {
+      var number = Number(value || 0);
+
+      if (Math.abs(number) >= 1000000000)
+      {
+        return (number / 1000000000).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + "B";
+      }
+
+      if (Math.abs(number) >= 1000000)
+      {
+        return (number / 1000000).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + "M";
+      }
+
+      if (Math.abs(number) >= 1000)
+      {
+        return (number / 1000).toLocaleString("id-ID", { maximumFractionDigits: 0 }) + "K";
+      }
+
+      return number.toLocaleString("id-ID");
+    }
+
+    function formatFinanceAxisTick(value)
+    {
+      return typeof value === "number" && value === 0
+        ? ""
+        : formatCompactFinanceNumber(value);
+    }
+
     function renderFinanceMetricValue(element, value, formatter)
     {
       var number = financeFiniteNumber(value);
@@ -244,6 +273,8 @@
       getFinanceElement("financePPRevenue").textContent = formatFinanceNullableCurrency(summary.revenue);
       getFinanceElement("financePPCogs").textContent = formatFinanceNullableCurrency(summary.cogs);
       getFinanceElement("financePPGrossProfit").textContent = formatFinanceNullableCurrency(summary.grossProfit);
+      getFinanceElement("financePPGrossMargin").textContent = formatFinancePercentage(summary.grossMargin || 0);
+      getFinanceElement("financePPUnits").textContent = formatFinanceNullableInteger(summary.units);
       getFinanceElement("financePPVariantCount").textContent = formatFinanceNullableInteger(summary.distinctProductCount);
       getFinanceElement("financePPRowCount").textContent = formatFinanceNullableInteger(summary.productVariantCount);
       getFinanceElement("financePPQualityStatus").textContent = quality.status === "ATTENTION"
@@ -270,8 +301,365 @@
         warningEl.hidden = true;
       }
 
+      renderFinanceProductProfitabilityTableFromResponse(response);
+
       return products.length === 0;
     }
+
+    //--------------------------------------------------
+    // Finance Product Profitability Table Rendering
+    //--------------------------------------------------
+    var financeProductProfitabilityPageState = {
+      page: 1,
+      pageSize: 25,
+      sort: { key: "revenue", direction: "desc" },
+      filter: { category: "", search: "" }
+    };
+
+    var financeProductProfitabilityDataCache = null;
+    var financeProductProfitabilityChart = null;
+
+    function renderFinanceProductProfitabilityTable()
+    {
+      var tbody = document.getElementById("financeProductProfitabilityTableBody");
+      if (!tbody) return;
+
+      var products = getFinanceFilteredSortedProducts();
+      var pageSize = financeProductProfitabilityPageState.pageSize;
+      var page = financeProductProfitabilityPageState.page;
+      var start = (page - 1) * pageSize;
+      var end = start + pageSize;
+      var pageProducts = products.slice(start, end);
+
+      var formatCurrency = function(value) {
+        return formatFinanceNullableCurrency(value);
+      };
+      var formatNumber = function(value) {
+        return formatFinanceNullableInteger(value);
+      };
+      var formatPercent = function(value) {
+        var num = Number(value || 0);
+        return isFinite(num) ? num.toFixed(1) + "%" : "—";
+      };
+      var formatMixPercent = function(value) {
+        var num = Number(value || 0);
+        return isFinite(num) ? (num * 100).toFixed(1) + "%" : "—";
+      };
+      var getTypeBadge = function(type) {
+        if (type === "Hot") return '<span class="product-variant-badge product-variant-badge--hot">Hot</span>';
+        if (type === "Cold") return '<span class="product-variant-badge product-variant-badge--cold">Cold</span>';
+        return escapeUiHtml(type || "—");
+      };
+
+      var rows = pageProducts.map(function(p, index) {
+        var globalIndex = start + index + 1;
+        var revenueClass = Number(p.revenue || 0) < 0 ? "finance-negative" : "";
+        var gpClass = Number(p.grossProfit || 0) < 0 ? "finance-negative" : "";
+        var marginClass = Number(p.grossMargin || 0) < 0 ? "finance-negative" : "";
+        return '<tr>' +
+          '<td class="text-center">' + globalIndex + '</td>' +
+          '<td class="font-semibold">' + escapeUiHtml(p.productName) + '</td>' +
+          '<td class="text-center">' + escapeUiHtml(p.category || "—") + '</td>' +
+          '<td class="text-center">' + getTypeBadge(p.type) + '</td>' +
+          '<td class="finance-number text-right">' + formatNumber(p.units) + '</td>' +
+          '<td class="finance-number text-right ' + revenueClass + '">' + formatCurrency(p.revenue) + '</td>' +
+          '<td class="finance-number text-right">' + formatCurrency(p.cogs) + '</td>' +
+          '<td class="finance-number text-right ' + gpClass + '">' + formatCurrency(p.grossProfit) + '</td>' +
+          '<td class="finance-number text-right ' + marginClass + '">' + formatPercent(p.grossMargin) + '</td>' +
+          '<td class="finance-number text-right">' + formatMixPercent(p.revenueMix) + '</td>' +
+          '<td class="text-center">' + (p.grossProfitRank || "—") + '</td>' +
+          '<td class="text-center">' + (p.revenueRank || "—") + '</td>' +
+        '</tr>';
+      }).join("");
+
+      if (rows === "")
+      {
+        rows = '<tr><td colspan="12" class="finance-table-empty">No products match the current filter.</td></tr>';
+      }
+
+      tbody.innerHTML = rows;
+      updateFinanceProductProfitabilitySortIndicators();
+    }
+
+    function getFinanceFilteredSortedProducts()
+    {
+      var products = financeProductProfitabilityDataCache || [];
+      var filter = financeProductProfitabilityPageState.filter;
+      var sort = financeProductProfitabilityPageState.sort;
+
+      if (filter.category)
+      {
+        products = products.filter(function(p) { return p.category === filter.category; });
+      }
+
+      if (filter.search)
+      {
+        products = products.filter(function(p) {
+          var searchLower = filter.search;
+          return (p.productName && p.productName.toLowerCase().includes(searchLower)) ||
+                 (p.productId && p.productId.toLowerCase().includes(searchLower));
+        });
+      }
+
+      products = products.slice().sort(function(a, b) {
+        var va = a[sort.key];
+        var vb = b[sort.key];
+        var cmp = 0;
+        if (typeof va === "string" && typeof vb === "string")
+        {
+          cmp = va.localeCompare(vb, "id", { sensitivity: "base" });
+        }
+        else
+        {
+          cmp = Number(va || 0) - Number(vb || 0);
+        }
+        return sort.direction === "asc" ? cmp : -cmp;
+      });
+
+      return products;
+    }
+
+    function filterFinanceProductProfitabilityTable()
+    {
+      var select = document.getElementById("financePPCategoryFilter");
+      var searchInput = document.getElementById("financePPSearchInput");
+      financeProductProfitabilityPageState.filter.category = select.value;
+      financeProductProfitabilityPageState.filter.search = searchInput.value.toLowerCase().trim();
+      financeProductProfitabilityPageState.page = 1;
+      renderFinanceProductProfitabilityTable();
+      renderFinanceProductProfitabilityPagination();
+    }
+
+    function sortFinanceProductProfitabilityTable(key)
+    {
+      var validKeys = {
+        "productName": true, "category": true, "type": true, "units": true,
+        "revenue": true, "cogs": true, "grossProfit": true, "grossMargin": true,
+        "revenueMix": true, "grossProfitRank": true, "revenueRank": true
+      };
+      if (!validKeys[key]) return;
+
+      var state = financeProductProfitabilityPageState.sort;
+      if (state.key === key)
+      {
+        state.direction = state.direction === "asc" ? "desc" : "asc";
+      }
+      else
+      {
+        state.key = key;
+        state.direction = "asc";
+      }
+      financeProductProfitabilityPageState.page = 1;
+      renderFinanceProductProfitabilityTable();
+      renderFinanceProductProfitabilityPagination();
+    }
+
+    function updateFinanceProductProfitabilitySortIndicators()
+    {
+      var sort = financeProductProfitabilityPageState.sort;
+      var table = document.getElementById("financeProductProfitabilityTable");
+      if (!table) return;
+      table.querySelectorAll("th[onclick]").forEach(function(th) {
+        var onclick = th.getAttribute("onclick");
+        if (!onclick) return;
+        var key = onclick.match(/'([^']+)'/);
+        if (!key) return;
+        key = key[1];
+        if (key === sort.key)
+        {
+          th.setAttribute("aria-sort", sort.direction === "asc" ? "ascending" : "descending");
+        }
+        else
+        {
+          th.setAttribute("aria-sort", "none");
+        }
+      });
+    }
+
+    function renderFinanceProductProfitabilityPagination()
+    {
+      var products = getFinanceFilteredSortedProducts();
+      var totalItems = products.length;
+      var pageSize = financeProductProfitabilityPageState.pageSize;
+      var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+      var page = Math.min(financeProductProfitabilityPageState.page, totalPages);
+      financeProductProfitabilityPageState.page = page;
+
+      var firstBtn = document.getElementById("financePPFirstPage");
+      var prevBtn = document.getElementById("financePPPrevPage");
+      var nextBtn = document.getElementById("financePPNextPage");
+      var lastBtn = document.getElementById("financePPLastPage");
+      var pageNumbers = document.getElementById("financePPPageNumbers");
+      var pageInfo = document.getElementById("financePPPageInfo");
+
+      if (firstBtn) firstBtn.disabled = page === 1;
+      if (prevBtn) prevBtn.disabled = page === 1;
+      if (nextBtn) nextBtn.disabled = page === totalPages;
+      if (lastBtn) lastBtn.disabled = page === totalPages;
+
+      var maxVisible = 5;
+      var startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+      var endPage = Math.min(totalPages, startPage + maxVisible - 1);
+      if (endPage - startPage + 1 < maxVisible)
+      {
+        startPage = Math.max(1, endPage - maxVisible + 1);
+      }
+
+      var numbersHtml = "";
+      for (var i = startPage; i <= endPage; i++)
+      {
+        numbersHtml += '<button type="button" class="pagination-btn ' + (i === page ? "bg-indigo-600 text-white" : "") + '" onclick="financeProductProfitabilityPageState.page=' + i + '; renderFinanceProductProfitabilityTable(); renderFinanceProductProfitabilityPagination();" aria-label="Page ' + i + '" ' + (i === page ? 'aria-current="page"' : '') + '>' + i + '</button>';
+      }
+      if (pageNumbers) pageNumbers.innerHTML = numbersHtml;
+
+      var startItem = totalItems === 0 ? 0 : (page - 1) * pageSize + 1;
+      var endItem = Math.min(page * pageSize, totalItems);
+      if (pageInfo) pageInfo.textContent = startItem + "–" + endItem + " of " + totalItems;
+    }
+
+    function renderFinanceProductProfitabilityTableFromResponse(response)
+    {
+      if (!response || !response.products) return;
+      var products = Array.isArray(response.products) ? response.products : [];
+      financeProductProfitabilityDataCache = products.slice();
+      financeProductProfitabilityPageState.page = 1;
+
+      var select = document.getElementById("financePPCategoryFilter");
+      var currentValue = select.value;
+      var categories = [...new Set(products.map(function(p) { return p.category; }).filter(Boolean))].sort();
+      select.innerHTML = '<option value="">All Categories</option>' +
+        categories.map(function(cat) { return '<option value="' + escapeUiHtml(cat) + '">' + escapeUiHtml(cat) + '</option>'; }).join("");
+      select.value = currentValue;
+
+      renderFinanceProductProfitabilityTable();
+      renderFinanceProductProfitabilityPagination();
+      renderFinanceProductProfitabilityChart();
+    }
+
+
+    function renderFinanceProductProfitabilityChart()
+    {
+      var chartPalette = getCurrentThemePalette();
+      var data = financeProductProfitabilityDataCache || [];
+      var displayedProducts = data.slice(0, window.innerWidth < 640 ? 6 : 10);
+      var chartAvailable = isChartLibraryAvailable();
+      var summary = displayedProducts.length
+        ? displayedProducts.length + " products ranked by gross margin. Leader: " + displayedProducts[0].productName +
+          " at " + formatFinanceCurrency(displayedProducts[0].grossProfit) + "."
+        : "No product profitability data for the selected period.";
+
+      financeProductProfitabilityChart = destroyChartInstance(financeProductProfitabilityChart);
+      setChartPresentation("financeProductProfitabilityChart", "financeProductProfitabilityChartEmpty", "financeProductProfitabilitySummary",
+        !chartAvailable || displayedProducts.length === 0, chartAvailable ? "No product sales data for the selected period." : "Chart unavailable.", summary);
+      if (!chartAvailable || displayedProducts.length === 0) return;
+
+      var productProfitabilityLabelPlugin = {
+        id: "financeProductProfitabilityLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var yScale = chart.scales.y;
+          var meta = chart.getDatasetMeta(0);
+          var chartLeft = chart.chartArea.left;
+          var chartRight = chart.chartArea.right;
+          var percentageX = chart.width - 10;
+
+          ctx.save();
+          ctx.textBaseline = "middle";
+
+          displayedProducts.forEach(function(item, index)
+          {
+            var y = yScale.getPixelForValue(index);
+            var bar = meta.data[index];
+            var valueX = bar ? Math.min(bar.x + 12, chartRight + 12) : chartRight + 12;
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "600 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText((index + 1) + ". " + item.productName, chartLeft - 132, y);
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "700 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(formatFinanceCurrency(item.grossProfit), valueX, y);
+
+            ctx.fillStyle = chartPalette.series[2] || chartPalette.axis;
+            ctx.font = "600 11.5px Inter, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(
+              Number(item.grossMargin || 0).toFixed(1) + "%",
+              percentageX,
+              y
+            );
+          });
+
+          ctx.restore();
+        },
+        beforeDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+
+          ctx.save();
+          ctx.fillStyle = chartPalette.axis;
+          ctx.font = "700 10.5px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("Margin %", chart.width - 10, chart.chartArea.top - 2);
+          ctx.restore();
+        }
+      };
+
+      financeProductProfitabilityChart = new Chart(document.getElementById("financeProductProfitabilityChart").getContext("2d"), {
+        type: "bar",
+        data: {
+          labels: displayedProducts.map(function(item) { return item.productName; }),
+          datasets: [
+            { label: "Gross Profit", numlockThemeRole: "margin", data: displayedProducts.map(function(item) { return item.grossProfit; }), backgroundColor: chartPalette.series[1], borderColor: chartPalette.series[1], borderRadius: 5, barPercentage: 0.84, categoryPercentage: 0.80 }
+          ]
+        },
+        plugins: [productProfitabilityLabelPlugin],
+        options: {
+          animation: shouldReduceMotion() ? false : undefined,
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          layout: {
+            padding: {
+              left: 132, // Adjusted to fit longer labels if needed
+              right: 132,
+              top: 20,
+              bottom: 2
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: chartPalette.tooltipBackground,
+              titleColor: chartPalette.tooltipText,
+              bodyColor: chartPalette.tooltipText,
+              callbacks: {
+                label: function(context) { return "Gross Profit: " + formatFinanceCurrency(context.raw); },
+                afterBody: function(context)
+                {
+                  var metric = displayedProducts[context[0].dataIndex];
+                  return ["Revenue: " + formatFinanceCurrency(metric.revenue), "COGS: " + formatFinanceCurrency(metric.cogs), "Margin: " + Number(metric.grossMargin || 0).toFixed(1) + "%"];
+                }
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, font: { weight: "600" }, callback: formatFinanceAxisTick } },
+            y: { grid: { display: false }, ticks: { display: false, autoSkip: false } }
+          }
+        }
+      });
+    }
+
+    // Expose globally for inline onclick handlers
+    window.filterFinanceProductProfitabilityTable = filterFinanceProductProfitabilityTable;
+    window.renderFinanceProductProfitabilityTable = renderFinanceProductProfitabilityTable;
+    window.renderFinanceProductProfitabilityPagination = renderFinanceProductProfitabilityPagination;
+    window.sortFinanceProductProfitabilityTable = sortFinanceProductProfitabilityTable;
 
     function renderFinanceBalanceSheet(response)
     {

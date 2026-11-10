@@ -2968,18 +2968,139 @@
         <div class="product-profitability-header">
           <div>
             <h2 id="productProfitabilityTitle" class="text-sm font-bold">Product Profitability</h2>
-            <p class="text-xs text-slate-500">Top products ranked by gross margin</p>
+            <p class="text-xs text-slate-500">Per-product revenue, COGS, and margin analysis</p>
           </div>
           <button type="button" class="product-profitability-action" onclick="applyTransactionDrilldown('sales', '', 'Sales transactions')">View transactions</button>
         </div>
+
+        <!-- KPI Summary Cards -->
+        <div id="productProfitabilityKpis" class="hf-kpi-strip mb-3" role="region" aria-label="Product Profitability summary">
+          <article class="hf-kpi-card" aria-labelledby="ppKpiRevenueLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon"><i class="fas fa-arrow-trend-up" aria-hidden="true"></i></span><span id="ppKpiRevenueLabel" class="hf-section-label">Revenue</span></div>
+            <strong id="ppKpiRevenueValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="ppKpiRevenueDelta" class="hf-kpi-comparison"><span>vs Last Period</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiCogsLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--success-soft);color:var(--success)"><i class="fas fa-wallet" aria-hidden="true"></i></span><span id="ppKpiCogsLabel" class="hf-section-label">COGS</span></div>
+            <strong id="ppKpiCogsValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="ppKpiCogsDelta" class="hf-kpi-comparison"><span>vs Last Period</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiGrossProfitLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--success-soft);color:var(--success)"><i class="fas fa-coins" aria-hidden="true"></i></span><span id="ppKpiGrossProfitLabel" class="hf-section-label">Gross Profit</span></div>
+            <strong id="ppKpiGrossProfitValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="ppKpiGrossProfitDelta" class="hf-kpi-comparison"><span>vs Last Period</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiGrossMarginLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:color-mix(in srgb, var(--chart-series-6) 12%, transparent);color:var(--chart-series-6)"><i class="fas fa-percent" aria-hidden="true"></i></span><span id="ppKpiGrossMarginLabel" class="hf-section-label">Gross Margin</span></div>
+            <strong id="ppKpiGrossMarginValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="ppKpiGrossMarginDelta" class="hf-kpi-comparison"><span>vs Last Period</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiUnitsLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--warning-soft);color:var(--warning)"><i class="fas fa-mug-hot" aria-hidden="true"></i></span><span id="ppKpiUnitsLabel" class="hf-section-label">Units Sold</span></div>
+            <strong id="ppKpiUnitsValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="ppKpiUnitsDelta" class="hf-kpi-comparison"><span>vs Last Period</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiProductsLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--brand-soft);color:var(--brand)"><i class="fas fa-boxes" aria-hidden="true"></i></span><span id="ppKpiProductsLabel" class="hf-section-label">Products</span></div>
+            <strong id="ppKpiProductsValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="ppKpiProductsDelta" class="hf-kpi-comparison"><span>Variants</span><strong>—</strong></span>
+          </article>
+        </div>
+
         <p id="productProfitabilitySummary" class="sr-only"></p>
-        <div id="productProfitabilityWrapper" class="performance-chart-shell performance-chart-shell-primary relative h-72 min-w-0 sm:h-96">
+
+        <!-- Chart + Table Toggle -->
+        <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2">
+            <button type="button" id="ppViewChart" class="product-profitability-action" onclick="setProductProfitabilityView('chart')" aria-pressed="true">Chart</button>
+            <button type="button" id="ppViewTable" class="product-profitability-action" onclick="setProductProfitabilityView('table')" aria-pressed="false">Table</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="ppSearchInput" class="sr-only">Search products</label>
+            <input type="text" id="ppSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterProductProfitabilityTable()">
+            <label for="ppCategoryFilter" class="text-xs text-slate-500">Category:</label>
+            <select id="ppCategoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterProductProfitabilityTable()">
+              <option value="">All Categories</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Chart View -->
+        <div id="ppChartView" class="performance-chart-shell performance-chart-shell-primary relative h-72 min-w-0 sm:h-96">
           <canvas id="productProfitabilityChart" aria-hidden="true"></canvas>
           <p id="productProfitabilityEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
         </div>
+
+        <!-- Table View -->
+        <div id="ppTableView" class="hidden">
+          <div class="relative overflow-x-auto">
+            <table id="productProfitabilityTable" class="products-grid products-grid--detail w-full min-w-max" role="grid" aria-label="Product Profitability">
+              <caption class="sr-only">Product profitability by product variant</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="w-10">#</th>
+                  <th scope="col" style="width:220px;min-width:220px;text-align:left">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('productName')">Product</button>
+                  </th>
+                  <th scope="col" style="width:100px;min-width:100px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('category')">Category</button>
+                  </th>
+                  <th scope="col" style="width:70px;min-width:70px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('type')">Type</button>
+                  </th>
+                  <th scope="col" style="width:80px;min-width:80px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('units')">Units</button>
+                  </th>
+                  <th scope="col" style="width:120px;min-width:120px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('revenue')">Revenue</button>
+                  </th>
+                  <th scope="col" style="width:120px;min-width:120px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('cogs')">COGS</button>
+                  </th>
+                  <th scope="col" style="width:120px;min-width:120px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('grossProfit')">Gross Profit</button>
+                  </th>
+                  <th scope="col" style="width:100px;min-width:100px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('grossMargin')">Margin %</button>
+                  </th>
+                  <th scope="col" style="width:100px;min-width:100px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('revenueMix')">Rev Mix %</button>
+                  </th>
+                  <th scope="col" style="width:80px;min-width:80px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('grossProfitRank')">GP Rank</button>
+                  </th>
+                  <th scope="col" style="width:80px;min-width:80px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('revenueRank')">Rev Rank</button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="productProfitabilityTableBody"></tbody>
+            </table>
+          </div>
+          <nav id="productProfitabilityPagination" class="mt-2 flex items-center justify-between gap-3" aria-label="Product Profitability pagination">
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-slate-500">Rows per page:</label>
+              <select id="ppPageSize" class="rounded border border-slate-200 bg-white px-2 py-1 text-xs" onchange="productProfitabilityPageState.page=1; renderProductProfitabilityTable()">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1" role="group" aria-label="Product Profitability page navigation">
+              <button id="ppFirstPage" type="button" class="pagination-btn" aria-label="First page" disabled>First</button>
+              <button id="ppPrevPage" type="button" class="pagination-btn" aria-label="Previous page" disabled>Previous</button>
+              <div id="ppPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+              <button id="ppNextPage" type="button" class="pagination-btn" aria-label="Next page" disabled>Next</button>
+              <button id="ppLastPage" type="button" class="pagination-btn" aria-label="Last page" disabled>Last</button>
+            </div>
+            <div id="ppPageInfo" class="text-xs text-slate-500" aria-live="polite"></div>
+          </nav>
+        </div>
+
         <div class="product-profitability-formula">
           <i class="fas fa-circle-info" aria-hidden="true"></i>
-          <span>Gross Margin = Revenue − COGS</span>
+          <span>Gross Margin = Revenue − COGS | Revenue Mix = Product Revenue / Total Revenue</span>
         </div>
       </section>
 
@@ -3273,14 +3394,73 @@
             <div class="finance-kpi finance-surface"><dt>Revenue</dt><dd id="financePPRevenue">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>COGS</dt><dd id="financePPCogs">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>Gross Profit</dt><dd id="financePPGrossProfit">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Gross Margin</dt><dd id="financePPGrossMargin">—</dd></div>
+            <div class="finance-kpi finance-surface"><dt>Units Sold</dt><dd id="financePPUnits">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>Products</dt><dd id="financePPVariantCount">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>Product Rows</dt><dd id="financePPRowCount">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>Quality</dt><dd id="financePPQualityStatus">—</dd></div>
           </dl>
-          <div class="finance-surface p-4" role="region" aria-label="Product Profitability detail">
-            <p id="financePPPeriod" class="hf-section-heading">Product Profitability</p>
-            <p id="financePPComparisonPeriod" class="hf-section-label mt-1" hidden></p>
-            <p id="financePPDetail" class="ui-body-text ui-theme-secondary mt-2">Full product table and analytics coming in a future update.</p>
+          <div id="financePPDetail" class="finance-surface p-4" role="region" aria-label="Product Profitability detail">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <p id="financePPPeriod" class="hf-section-heading">Product Profitability</p>
+                <p id="financePPComparisonPeriod" class="hf-section-label mt-1" hidden></p>
+              </div>
+              <div class="flex items-center gap-2">
+            <label for="financePPSearchInput" class="sr-only">Search products</label>
+            <input type="text" id="financePPSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterFinanceProductProfitabilityTable()">
+                <label for="financePPCategoryFilter" class="text-xs text-slate-500">Category:</label>
+                <select id="financePPCategoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterFinanceProductProfitabilityTable()">
+                  <option value="">All Categories</option>
+                </select>
+              </div>
+            </div>
+            <div class="finance-table-scroll" style="max-height: 600px; overflow-y: auto;">
+              <table id="financeProductProfitabilityTable" class="finance-expense-table" role="grid" aria-label="Product Profitability">
+                <caption class="sr-only">Product profitability by product variant</caption>
+                <thead>
+                  <tr>
+                    <th scope="col" style="width: 40px;">#</th>
+                    <th scope="col" style="min-width: 200px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('productName')">Product</th>
+                    <th scope="col" style="min-width: 100px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('category')">Category</th>
+                    <th scope="col" style="min-width: 70px; text-align: center;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('type')">Type</th>
+                    <th scope="col" class="finance-number" style="min-width: 80px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('units')">Units</th>
+                    <th scope="col" class="finance-number" style="min-width: 130px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('revenue')">Revenue</th>
+                    <th scope="col" class="finance-number" style="min-width: 130px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('cogs')">COGS</th>
+                    <th scope="col" class="finance-number" style="min-width: 130px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('grossProfit')">Gross Profit</th>
+                    <th scope="col" class="finance-number" style="min-width: 100px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('grossMargin')">Margin %</th>
+                    <th scope="col" class="finance-number" style="min-width: 100px;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('revenueMix')">Rev Mix %</th>
+                    <th scope="col" style="min-width: 80px; text-align: center;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('grossProfitRank')">GP Rank</th>
+                    <th scope="col" style="min-width: 80px; text-align: center;" aria-sort="none" onclick="sortFinanceProductProfitabilityTable('revenueRank')">Rev Rank</th>
+                  </tr>
+                </thead>
+                <tbody id="financeProductProfitabilityTableBody"></tbody>
+              </table>
+            </div>
+            <div class="finance-surface h-72 min-h-72 max-h-72 flex flex-col items-center justify-center p-3 text-sm text-slate-500 relative" id="financeProductProfitabilityChartWrapper">
+                <canvas id="financeProductProfitabilityChart"></canvas>
+                <div id="financeProductProfitabilityChartEmpty" class="absolute inset-0 flex items-center justify-center hidden">No product profitability data.</div>
+                <div id="financeProductProfitabilitySummary" class="absolute bottom-2 left-3 text-xs text-slate-500"></div>
+            </div>
+            <nav id="financeProductProfitabilityPagination" class="mt-3 flex items-center justify-between gap-3" aria-label="Product Profitability pagination">
+              <div class="flex items-center gap-2">
+                <label class="text-xs text-slate-500">Rows per page:</label>
+                <select id="financePPPageSize" class="rounded border border-slate-200 bg-white px-2 py-1 text-xs" onchange="financeProductProfitabilityPageState.page=1; renderFinanceProductProfitabilityTable()">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              <div class="flex items-center gap-1" role="group" aria-label="Product Profitability page navigation">
+                <button id="financePPFirstPage" type="button" class="pagination-btn" aria-label="First page" disabled>First</button>
+                <button id="financePPPrevPage" type="button" class="pagination-btn" aria-label="Previous page" disabled>Previous</button>
+                <div id="financePPPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+                <button id="financePPNextPage" type="button" class="pagination-btn" aria-label="Next page" disabled>Next</button>
+                <button id="financePPLastPage" type="button" class="pagination-btn" aria-label="Last page" disabled>Last</button>
+              </div>
+              <div id="financePPPageInfo" class="text-xs text-slate-500" aria-live="polite"></div>
+            </nav>
           </div>
         </div>
         <div id="financeCashFlowContent" class="finance-layout" data-finance-panel="cash-flow" hidden>

@@ -11,6 +11,9 @@
   let latestDashboardResponse = null;
   let latestTopProducts = [];
   let topProductsSort = { key: "qty", direction: "desc" };
+  let latestProductProfitabilityData = null;
+  let productProfitabilityDataRequestInFlight = false;
+  let lastProductProfitabilityDataRequest = null;
 
     function setActiveDashboardTab(tabName, moveFocus)
     {
@@ -457,6 +460,7 @@
       }
 
       loadData();
+      loadProductProfitabilityData();
     }
 
     function renderAvailablePeriodOptions(dateFilter)
@@ -561,6 +565,44 @@
       );
       dashboardRetryInProgress = true;
       requestDashboardData(lastDashboardRequest);
+    }
+
+    function loadProductProfitabilityData() {
+      if (productProfitabilityDataRequestInFlight) {
+        return;
+      }
+
+      var request = getDashboardFilterRequest();
+
+      if (!request) {
+        return;
+      }
+
+      if (lastProductProfitabilityDataRequest &&
+          lastProductProfitabilityDataRequest.filter === request.filter &&
+          lastProductProfitabilityDataRequest.customStart === request.customStart &&
+          lastProductProfitabilityDataRequest.customEnd === request.customEnd &&
+          latestProductProfitabilityData) {
+        // Data is fresh for current filter, just render
+        renderProductProfitabilityFromResponse(latestProductProfitabilityData);
+        return;
+      }
+
+      productProfitabilityDataRequestInFlight = true;
+      lastProductProfitabilityDataRequest = request;
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          productProfitabilityDataRequestInFlight = false;
+          latestProductProfitabilityData = res;
+          renderProductProfitabilityFromResponse(res);
+        })
+        .withFailureHandler(function(error) {
+          productProfitabilityDataRequestInFlight = false;
+          console.error("Product profitability data fetch failed", error);
+          // Optionally render an error state or empty table
+        })
+        .getProductProfitabilityData(request.filter, request.customStart, request.customEnd);
     }
 
     function requestDashboardData(request)
@@ -777,6 +819,8 @@
 
       // 11Y.2 — chart render end
       if (__profile && !__profile.t7) __profile.t7 = performance.now();
+
+      renderProductProfitabilityFromResponse(res);
 
       renderExecutiveSummary(res);
 
