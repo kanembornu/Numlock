@@ -69,6 +69,7 @@ function assembleHtml() {
   const operationalAuth = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "operational-auth.json"), "utf8"));
   const pricingData = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "pricing.json"), "utf8"));
   const transactionsPage = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "transactions-page.json"), "utf8"));
+  const productProfitabilityData = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "product-profitability.json"), "utf8"));
 
   const fixtureScript = `
     <script>
@@ -77,7 +78,8 @@ function assembleHtml() {
         entryOptions: ${JSON.stringify(entryOptions)},
         operationalAuth: ${JSON.stringify(operationalAuth)},
         pricing: ${JSON.stringify(pricingData)},
-        transactionsPage: ${JSON.stringify(transactionsPage)}
+        transactionsPage: ${JSON.stringify(transactionsPage)},
+        productProfitability: ${JSON.stringify(productProfitabilityData)}
       };
       console.log('[Local Harness] Fixtures injected:', Object.keys(window.__NUMLOCK_FIXTURES__));
     </script>
@@ -106,9 +108,12 @@ function assembleHtml() {
                             const categories = db.performanceAnalytics.classifications && db.performanceAnalytics.classifications.category
                               ? db.performanceAnalytics.classifications.category.map(c => c.category)
                               : ['Unknown'];
+                            const ppFixture = window.__NUMLOCK_FIXTURES__.productProfitability;
+                            const ppTypes = (ppFixture.products || []).map(p => p.type);
                             db.performanceAnalytics.productProfitability = ppArray.map((p, idx) => ({
                               ...p,
-                              category: categories[idx % categories.length]
+                              category: categories[idx % categories.length],
+                              type: ppTypes[idx % ppTypes.length] || 'Hot'
                             }));
                             result = db;
                             break;
@@ -128,43 +133,18 @@ function assembleHtml() {
                           case 'getTransactionsPage':
                             result = window.__NUMLOCK_FIXTURES__.transactionsPage; break;
                           case 'getProductProfitabilityData': {
-                            const db = window.__NUMLOCK_FIXTURES__.dashboard;
-                            const ppArray = db.performanceAnalytics.productProfitability;
-                            const categories = db.performanceAnalytics.classifications && db.performanceAnalytics.classifications.category
-                              ? db.performanceAnalytics.classifications.category.map(c => c.category)
-                              : ['Unknown'];
-                            const products = ppArray.map((p, idx) => ({
-                              productId: p.label,
-                              productName: p.label,
-                              label: p.label,
-                              category: categories[idx % categories.length],
-                              type: 'Hot',
-                              units: 100,
-                              revenue: p.revenue,
-                              cogs: p.cogs,
-                              grossProfit: p.grossMargin,
-                              grossMargin: p.grossMarginPercent,
-                              revenueMix: 0.1,
-                              grossProfitMix: 0.1,
-                              revenueRank: 1,
-                              grossProfitRank: 1
-                            }));
-                            const summary = {
-                              revenue: products.reduce((s, p) => s + p.revenue, 0),
-                              cogs: products.reduce((s, p) => s + p.cogs, 0),
-                              grossProfit: products.reduce((s, p) => s + p.grossProfit, 0),
-                              grossMargin: 60.0,
-                              units: products.reduce((s, p) => s + p.units, 0),
-                              distinctProductCount: products.length,
-                              productVariantCount: products.length
-                            };
-                            // Canonical flat response per 50.Analytics.Product.js
+                            const fixture = window.__NUMLOCK_FIXTURES__.productProfitability;
+                            const products = fixture.products || [];
+                            const summary = fixture.summary || {};
+                            const period = fixture.period || { label: 'Current Year' };
+                            const quality = fixture.quality || { status: 'GOOD', issueCount: 0 };
                             result = {
                               status: 'SUCCESS',
                               products: products,
                               summary: summary,
-                              period: db.period || { label: 'Current Year' },
-                              quality: { status: 'GOOD', issueCount: 0 }
+                              period: period,
+                              comparisonPeriod: fixture.comparisonPeriod || null,
+                              quality: quality
                             };
                             break;
                           }

@@ -3974,15 +3974,12 @@ function testChartPresentationContract()
 {
   var phase7B3 = testDashboardPerformanceAnalytics();
   var chartSource = getAssembledFrontendSource();
-  ["function renderRevenueChart(revenueTrend)", "function renderProductProfitabilityChart(performanceAnalytics)",
-    "function renderCategoryPerformanceChart(performanceAnalytics)", "function renderHotColdEconomicsComparison(hotColdEconomics)",
+  ["function renderRevenueChart(revenueTrend)", "function renderCategoryPerformanceChart(performanceAnalytics)", "function renderHotColdEconomicsComparison(hotColdEconomics)",
     "function renderExpenseChart(expenseBreakdown)", "destroyChartInstance", "shouldReduceMotion() ? false : undefined",
     "function synchronizeChartTheme(forceLight)"].forEach(function(token)
   {
     assertSourceContains(chartSource, token, "Phase 7B.3 chart presentation");
   });
-  Logger.log("PASS: testChartPresentationContract | scenarios=16 | performanceAnalytics=true");
-  return { passed:phase7B3.passed, scenarios:16, performanceAnalytics:true };
 
   /* Historical pre-7B.3 chart contract retained below for release archaeology. */
   var source = getAssembledFrontendSource();

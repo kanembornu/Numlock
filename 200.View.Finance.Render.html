@@ -276,12 +276,6 @@
       getFinanceElement("financePPGrossMargin").textContent = formatFinancePercentage(summary.grossMargin || 0);
       getFinanceElement("financePPUnits").textContent = formatFinanceNullableInteger(summary.units);
       getFinanceElement("financePPVariantCount").textContent = formatFinanceNullableInteger(summary.distinctProductCount);
-      getFinanceElement("financePPRowCount").textContent = formatFinanceNullableInteger(summary.productVariantCount);
-      getFinanceElement("financePPQualityStatus").textContent = quality.status === "ATTENTION"
-        ? "Attention"
-        : quality.status === "GOOD"
-          ? "OK"
-          : "—";
 
       getFinanceElement("financePPPeriod").textContent = "Product Profitability — " + String(period.label || "Selected period");
       getFinanceElement("financePeriodLabel").textContent = String(period.label || "Selected period");
@@ -392,6 +386,11 @@
         products = products.filter(function(p) { return p.category === filter.category; });
       }
 
+      if (filter.type)
+      {
+        products = products.filter(function(p) { return p.type === filter.type; });
+      }
+
       if (filter.search)
       {
         products = products.filter(function(p) {
@@ -421,9 +420,11 @@
 
     function filterFinanceProductProfitabilityTable()
     {
-      var select = document.getElementById("financePPCategoryFilter");
+      var categorySelect = document.getElementById("financePPCategoryFilter");
+      var typeSelect = document.getElementById("financePPTypeFilter");
       var searchInput = document.getElementById("financePPSearchInput");
-      financeProductProfitabilityPageState.filter.category = select.value;
+      financeProductProfitabilityPageState.filter.category = categorySelect.value;
+      financeProductProfitabilityPageState.filter.type = typeSelect.value;
       financeProductProfitabilityPageState.filter.search = searchInput.value.toLowerCase().trim();
       financeProductProfitabilityPageState.page = 1;
       renderFinanceProductProfitabilityTable();
@@ -531,9 +532,15 @@
         categories.map(function(cat) { return '<option value="' + escapeUiHtml(cat) + '">' + escapeUiHtml(cat) + '</option>'; }).join("");
       select.value = currentValue;
 
+      var typeSelect = document.getElementById("financePPTypeFilter");
+      var typeCurrentValue = typeSelect.value;
+      var types = [...new Set(products.map(function(p) { return p.type; }).filter(Boolean))].sort();
+      typeSelect.innerHTML = '<option value="">All Types</option>' +
+        types.map(function(t) { return '<option value="' + escapeUiHtml(t) + '">' + escapeUiHtml(t) + '</option>'; }).join("");
+      typeSelect.value = typeCurrentValue;
+
       renderFinanceProductProfitabilityTable();
       renderFinanceProductProfitabilityPagination();
-      renderFinanceProductProfitabilityChart();
     }
 
 

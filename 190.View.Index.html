@@ -2704,12 +2704,6 @@
               </button>
             </div>
             <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="product-profitability" aria-label="Product Profitability" title="Product Profitability" class="ui-sidebar-item flex w-full items-center text-left transition">
-                <i class="fas fa-mug-hot w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Product Profitability</span>
-              </button>
-            </div>
-            <div role="listitem">
               <button type="button" data-page="finance" data-navigation-destination="capital-equity" aria-label="Capital and Equity" title="Capital &amp; Equity" class="ui-sidebar-item flex w-full items-center text-left transition">
                 <i class="fas fa-coins w-6 text-center" aria-hidden="true"></i>
                 <span class="sidebar-expanded-content min-w-0">Capital &amp; Equity</span>
@@ -3007,32 +3001,24 @@
           </article>
         </div>
 
-        <p id="productProfitabilitySummary" class="sr-only"></p>
+        <p id="productProfitabilitySummary" class="mt-2 text-xs text-slate-500" aria-live="polite"></p>
 
-        <!-- Chart + Table Toggle -->
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
           <div class="flex items-center gap-2">
-            <button type="button" id="ppViewChart" class="product-profitability-action" onclick="setProductProfitabilityView('chart')" aria-pressed="true">Chart</button>
-            <button type="button" id="ppViewTable" class="product-profitability-action" onclick="setProductProfitabilityView('table')" aria-pressed="false">Table</button>
-          </div>
-          <div class="flex items-center gap-2">
             <label for="ppSearchInput" class="sr-only">Search products</label>
-            <input type="text" id="ppSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterProductProfitabilityTable()">
+            <input type="text" id="ppSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterDashboardProductProfitabilityTable()">
             <label for="ppCategoryFilter" class="text-xs text-slate-500">Category:</label>
-            <select id="ppCategoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterProductProfitabilityTable()">
+            <select id="ppCategoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterDashboardProductProfitabilityTable()">
               <option value="">All Categories</option>
+            </select>
+            <label for="ppTypeFilter" class="text-xs text-slate-500">Type:</label>
+            <select id="ppTypeFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterDashboardProductProfitabilityTable()">
+              <option value="">All Types</option>
             </select>
           </div>
         </div>
 
-        <!-- Chart View -->
-        <div id="ppChartView" class="performance-chart-shell performance-chart-shell-primary relative h-72 min-w-0 sm:h-96">
-          <canvas id="productProfitabilityChart" aria-hidden="true"></canvas>
-          <p id="productProfitabilityEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
-        </div>
-
-        <!-- Table View -->
-        <div id="ppTableView" class="hidden">
+        <div class="relative overflow-x-auto">
           <div class="relative overflow-x-auto">
             <table id="productProfitabilityTable" class="products-grid products-grid--detail w-full min-w-max" role="grid" aria-label="Product Profitability">
               <caption class="sr-only">Product profitability by product variant</caption>
@@ -3397,8 +3383,6 @@
             <div class="finance-kpi finance-surface"><dt>Gross Margin</dt><dd id="financePPGrossMargin">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>Units Sold</dt><dd id="financePPUnits">—</dd></div>
             <div class="finance-kpi finance-surface"><dt>Products</dt><dd id="financePPVariantCount">—</dd></div>
-            <div class="finance-kpi finance-surface"><dt>Product Rows</dt><dd id="financePPRowCount">—</dd></div>
-            <div class="finance-kpi finance-surface"><dt>Quality</dt><dd id="financePPQualityStatus">—</dd></div>
           </dl>
           <div id="financePPDetail" class="finance-surface p-4" role="region" aria-label="Product Profitability detail">
             <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
@@ -3412,6 +3396,10 @@
                 <label for="financePPCategoryFilter" class="text-xs text-slate-500">Category:</label>
                 <select id="financePPCategoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterFinanceProductProfitabilityTable()">
                   <option value="">All Categories</option>
+                </select>
+                <label for="financePPTypeFilter" class="text-xs text-slate-500">Type:</label>
+                <select id="financePPTypeFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterFinanceProductProfitabilityTable()">
+                  <option value="">All Types</option>
                 </select>
               </div>
             </div>
@@ -3436,11 +3424,6 @@
                 </thead>
                 <tbody id="financeProductProfitabilityTableBody"></tbody>
               </table>
-            </div>
-            <div class="finance-surface h-72 min-h-72 max-h-72 flex flex-col items-center justify-center p-3 text-sm text-slate-500 relative" id="financeProductProfitabilityChartWrapper">
-                <canvas id="financeProductProfitabilityChart"></canvas>
-                <div id="financeProductProfitabilityChartEmpty" class="absolute inset-0 flex items-center justify-center hidden">No product profitability data.</div>
-                <div id="financeProductProfitabilitySummary" class="absolute bottom-2 left-3 text-xs text-slate-500"></div>
             </div>
             <nav id="financeProductProfitabilityPagination" class="mt-3 flex items-center justify-between gap-3" aria-label="Product Profitability pagination">
               <div class="flex items-center gap-2">
@@ -4209,6 +4192,7 @@
         <button id="productsTabCatalog" type="button" role="tab" aria-selected="true" aria-controls="productsPanelCatalog">Product Catalog</button>
         <button id="productsTabRecipe" type="button" role="tab" aria-selected="false" aria-controls="productsPanelRecipe">COGS & Recipe</button>
         <button id="productsTabInventory" type="button" role="tab" aria-selected="false" aria-controls="productsPanelInventory">Inventory Items</button>
+        <button id="productsTabProfitability" type="button" role="tab" aria-selected="false" aria-controls="productsPanelProfitability">Product Profitability</button>
       </nav>
       <div id="productsPanelCatalog" class="products-tab-panel flex flex-col gap-4 lg:flex-row" role="tabpanel" aria-labelledby="productsTabCatalog">
         <aside id="productDetail" class="hf-secondary-surface order-1 p-4 lg:order-2 lg:w-1/3 lg:sticky lg:top-4 lg:self-start" aria-labelledby="productDetailHeading">
@@ -4334,6 +4318,125 @@
           <p id="inventoryItemDetailEmpty" class="mt-3 text-sm ui-theme-secondary">Select an item to view details.</p>
           <div id="inventoryItemDetailContent" class="mt-3" hidden></div>
         </aside>
+      </div>
+    </section>
+    <div id="productsPanelProfitability" class="products-tab-panel" role="tabpanel" aria-labelledby="productsTabProfitability" hidden>
+      <section class="hf-secondary-surface min-w-0 p-4" aria-labelledby="productProfitabilityHeading">
+        <div class="product-profitability-header mb-3 flex flex-wrap items-start justify-between gap-3">
+          <h2 id="productProfitabilityHeading" class="hf-section-heading">Product Profitability</h2>
+          <div class="flex items-center gap-2">
+            <label for="productsPpSearchInput" class="sr-only">Search products</label>
+            <input type="text" id="productsPpSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterProductsTabProfitabilityTable()">
+            <label for="productsPpCategoryFilter" class="text-xs text-slate-500">Category:</label>
+            <select id="productsPpCategoryFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterProductsTabProfitabilityTable()">
+              <option value="">All Categories</option>
+            </select>
+            <label for="productsPpTypeFilter" class="text-xs text-slate-500">Type:</label>
+            <select id="productsPpTypeFilter" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" onchange="filterProductsTabProfitabilityTable()">
+              <option value="">All Types</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+          <article class="hf-kpi-card" aria-labelledby="ppKpiRevenueLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--brand-soft);color:var(--brand)"><i class="fas fa-money-bill-wave" aria-hidden="true"></i></span><span id="ppKpiRevenueLabel" class="hf-section-label">Revenue</span></div>
+            <strong id="productsPpKpiRevenueValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="productsPpKpiRevenueDelta" class="hf-kpi-comparison"><span>vs prior</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiCogsLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--expense-soft);color:var(--expense)"><i class="fas fa-weight-scale" aria-hidden="true"></i></span><span id="ppKpiCogsLabel" class="hf-section-label">COGS</span></div>
+            <strong id="productsPpKpiCogsValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="productsPpKpiCogsDelta" class="hf-kpi-comparison"><span>vs prior</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiGrossProfitLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--profit-soft);color:var(--profit)"><i class="fas fa-hand-holding-usd" aria-hidden="true"></i></span><span id="ppKpiGrossProfitLabel" class="hf-section-label">Gross Profit</span></div>
+            <strong id="productsPpKpiGrossProfitValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="productsPpKpiGrossProfitDelta" class="hf-kpi-comparison"><span>vs prior</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiGrossMarginLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--margin-soft);color:var(--margin)"><i class="fas fa-percent" aria-hidden="true"></i></span><span id="ppKpiGrossMarginLabel" class="hf-section-label">Gross Margin</span></div>
+            <strong id="productsPpKpiGrossMarginValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="productsPpKpiGrossMarginDelta" class="hf-kpi-comparison"><span>vs prior</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiUnitsLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--units-soft);color:var(--units)"><i class="fas fa-boxes" aria-hidden="true"></i></span><span id="ppKpiUnitsLabel" class="hf-section-label">Units Sold</span></div>
+            <strong id="productsPpKpiUnitsValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="productsPpKpiUnitsDelta" class="hf-kpi-comparison"><span>vs prior</span><strong>—</strong></span>
+          </article>
+          <article class="hf-kpi-card" aria-labelledby="ppKpiProductsLabel">
+            <div class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--brand-soft);color:var(--brand)"><i class="fas fa-boxes" aria-hidden="true"></i></span><span id="ppKpiProductsLabel" class="hf-section-label">Products</span></div>
+            <strong id="productsPpKpiProductsValue" class="overview-kpi-value mt-2 block">—</strong>
+            <span id="productsPpKpiProductsDelta" class="hf-kpi-comparison"><span>Variants</span><strong>—</strong></span>
+          </article>
+        </div>
+        <div class="hf-secondary-surface relative rounded-lg border border-slate-200 overflow-hidden">
+          <div class="products-grid-scroll">
+            <table id="productsPpProductProfitabilityTable" class="products-grid products-grid--detail w-full min-w-max" role="grid" aria-label="Product Profitability">
+              <caption class="sr-only">Product profitability by product variant</caption>
+              <thead>
+                <tr>
+                  <th scope="col" class="w-10">#</th>
+                  <th scope="col" style="width:220px;min-width:220px;text-align:left">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('productName')">Product</button>
+                  </th>
+                  <th scope="col" style="width:100px;min-width:100px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('category')">Category</button>
+                  </th>
+                  <th scope="col" style="width:70px;min-width:70px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('type')">Type</button>
+                  </th>
+                  <th scope="col" style="width:80px;min-width:80px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('units')">Units</button>
+                  </th>
+                  <th scope="col" style="width:120px;min-width:120px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('revenue')">Revenue</button>
+                  </th>
+                  <th scope="col" style="width:120px;min-width:120px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('cogs')">COGS</button>
+                  </th>
+                  <th scope="col" style="width:120px;min-width:120px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('grossProfit')">Gross Profit</button>
+                  </th>
+                  <th scope="col" style="width:100px;min-width:100px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('grossMargin')">Margin %</button>
+                  </th>
+                  <th scope="col" style="width:100px;min-width:100px;text-align:right">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('revenueMix')">Rev Mix %</button>
+                  </th>
+                  <th scope="col" style="width:80px;min-width:80px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('grossProfitRank')">GP Rank</button>
+                  </th>
+                  <th scope="col" style="width:80px;min-width:80px;text-align:center">
+                    <button type="button" class="hf-top-products-sort" onclick="sortProductProfitabilityTable('revenueRank')">Rev Rank</button>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="productsPpTableBody"></tbody>
+            </table>
+          </div>
+          <nav id="productProfitabilityPagination" class="mt-2 flex items-center justify-between gap-3" aria-label="Product Profitability pagination">
+            <div class="flex items-center gap-2">
+              <label class="text-xs text-slate-500">Rows per page:</label>
+              <select id="productsPpPageSize" class="rounded border border-slate-200 bg-white px-2 py-1 text-xs" onchange="productProfitabilityPageState.page=1; renderProductProfitabilityTable()">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+            <div class="flex items-center gap-1" role="group" aria-label="Product Profitability page navigation">
+              <button id="productsPpFirstPage" type="button" class="pagination-btn" aria-label="First page" disabled>First</button>
+              <button id="productsPpPrevPage" type="button" class="pagination-btn" aria-label="Previous page" disabled>Previous</button>
+              <div id="productsPpPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
+              <button id="productsPpNextPage" type="button" class="pagination-btn" aria-label="Next page" disabled>Next</button>
+              <button id="productsPpLastPage" type="button" class="pagination-btn" aria-label="Last page" disabled>Last</button>
+            </div>
+            <div id="productsPpPageInfo" class="text-xs text-slate-500"></div>
+          </nav>
+        </div>
+        <p id="productProfitabilitySummary" class="mt-2 text-xs text-slate-500" aria-live="polite"></p>
+      </section>
+    </div>
       </div>
     </section>
 
@@ -4687,8 +4790,8 @@
         "transactionDrilldownSummary", "transactionDrilldownText",
         "transactionsTableCard", "transactionsPagination", "transactionsPreviousPage", "transactionsNextPage", "transactionsPageIndicator", "transactionsRangeSummary", "transactionsPageSizeFooter", "transactionsSearch", "clearTransactionsSearch", "appShell", "sidebarCollapseButton",
         "mainContent", "topUtilityBar",
-        "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory",
-        "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
+        "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory", "productsTabProfitability",
+        "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsPanelProfitability", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
         "productsTableBody", "productDetailEmpty", "productDetailContent", "productsCatalogPagination",
         "productsCatalogFirstPage", "productsCatalogPrevPage", "productsCatalogNextPage", "productsCatalogLastPage",
         "productsCatalogPageInfo", "productsCatalogPageNumbers", "cogsRecipePeriod", "cogsRecipeKind", "cogsRecipeProduct", "cogsRecipeVariant",
@@ -4707,7 +4810,7 @@
         "periodComparisonLabel", "periodComparisonLead", "periodComparisonPeriod",
         "kpiTargetProvenance", "kpiTargetDetails", "topProductsContainer",
         "mainChart", "revenueChartEmpty", "revenueChartSummary",
-        "productProfitabilityChart", "productProfitabilityEmpty", "productProfitabilitySummary",
+        "productProfitabilitySummary",
         "categoryPerformanceChart", "categoryPerformanceEmpty", "categoryPerformanceSummary",
         "expenseChart", "expenseChartEmpty", "expenseChartSummary",
         "expenseSummaryBox", "diagnosisContainer", "forecastContainer",
@@ -4724,7 +4827,7 @@
         "financeRetainedOpening", "financeRetainedOpeningDate", "financeRetainedPostCutoff", "financeRetainedPostCutoffDate",
         "financeRetainedCurrent", "financeRetainedAsOfDate", "financeEquityAsOfStatus", "financeEquityOpeningStatus", "financeEquityCapitalPolicy",
         "financeProductProfitabilityContent", "financePPWarning", "financePPRevenue", "financePPCogs", "financePPGrossProfit",
-        "financePPVariantCount", "financePPRowCount", "financePPQualityStatus", "financePPPeriod", "financePPComparisonPeriod", "financePPDetail",
+        "financePPUnits", "financePPVariantCount", "financePPPeriod", "financePPComparisonPeriod", "financePPDetail",
         "financeCashFlowContent", "financeCfOpening", "financeCfClosing", "financeCfOperating", "financeCfInvesting", "financeCfFinancing", "financeCfNetChange",
         "financeCfOpValue", "financeCfInvValue", "financeCfFinValue", "financeCfNetValue",
         "financeBalanceSheetContent", "financeBSKnownAssets", "financeBSLiabilities", "financeBSEquity", "financeBSPositionStatus",
@@ -4857,9 +4960,11 @@
         productsTabCatalog: required.productsTabCatalog,
         productsTabRecipe: required.productsTabRecipe,
         productsTabInventory: required.productsTabInventory,
+        productsTabProfitability: required.productsTabProfitability,
         productsPanelCatalog: required.productsPanelCatalog,
         productsPanelRecipe: required.productsPanelRecipe,
         productsPanelInventory: required.productsPanelInventory,
+        productsPanelProfitability: required.productsPanelProfitability,
         cogsRecipePeriod: required.cogsRecipePeriod,
         cogsRecipeKind: required.cogsRecipeKind,
         cogsRecipeProduct: required.cogsRecipeProduct,
@@ -4928,7 +5033,6 @@
       };
       elements.chartPresentation = {
         main: { canvas: required.mainChart, empty: required.revenueChartEmpty, summary: required.revenueChartSummary },
-        productProfitability: { canvas: required.productProfitabilityChart, empty: required.productProfitabilityEmpty, summary: required.productProfitabilitySummary },
         categoryPerformance: { canvas: required.categoryPerformanceChart, empty: required.categoryPerformanceEmpty, summary: required.categoryPerformanceSummary },
         expense: { canvas: required.expenseChart, empty: required.expenseChartEmpty, summary: required.expenseChartSummary }
       };
@@ -4993,8 +5097,8 @@
         elements.transactionsTabList.querySelectorAll('[role="tab"]');
       elements.transactionsPanels =
         elements.transactionsPanelGroup.querySelectorAll('[role="tabpanel"]');
-      elements.productsTabs = [elements.productsTabCatalog, elements.productsTabRecipe, elements.productsTabInventory];
-      elements.productsPanels = [elements.productsPanelCatalog, elements.productsPanelRecipe, elements.productsPanelInventory];
+      elements.productsTabs = [elements.productsTabCatalog, elements.productsTabRecipe, elements.productsTabInventory, elements.productsTabProfitability];
+      elements.productsPanels = [elements.productsPanelCatalog, elements.productsPanelRecipe, elements.productsPanelInventory, elements.productsPanelProfitability];
       elements.assetsTabRegister = required.assetsTabRegister;
       elements.assetsTabDepreciation = required.assetsTabDepreciation;
       elements.assetsPanelRegister = required.assetsPanelRegister;
@@ -5218,7 +5322,7 @@
       elements.productsTabs.forEach(function(tab)
       {
         tab.addEventListener("click", function() {
-          setProductsTab(tab.id === "productsTabInventory" ? "inventory" : tab.id === "productsTabRecipe" ? "recipe" : "catalog");
+          setProductsTab(tab.id === "productsTabInventory" ? "inventory" : tab.id === "productsTabRecipe" ? "recipe" : tab.id === "productsTabProfitability" ? "profitability" : "catalog");
         });
       });
 
@@ -5832,14 +5936,16 @@
     function setProductsTab(tabName)
     {
       var elements = initializeStableDashboardElements();
-      elements.productsTabs.forEach(function(tab) { tab.setAttribute("aria-selected", String(tab.id === "productsTab" + (tabName === "recipe" ? "Recipe" : tabName === "inventory" ? "Inventory" : "Catalog"))); });
+      elements.productsTabs.forEach(function(tab) { tab.setAttribute("aria-selected", String(tab.id === "productsTab" + (tabName === "recipe" ? "Recipe" : tabName === "inventory" ? "Inventory" : tabName === "profitability" ? "Profitability" : "Catalog"))); });
       elements.productsPanelCatalog.hidden = tabName !== "catalog";
       elements.productsPanelRecipe.hidden = tabName !== "recipe";
       elements.productsPanelInventory.hidden = tabName !== "inventory";
+      elements.productsPanelProfitability.hidden = tabName !== "profitability";
       elements.productsCatalogPagination.hidden = tabName !== "catalog";
       elements.inventoryItemsPagination.hidden = tabName !== "inventory";
       if (tabName === "inventory") ensureInventoryItemsData();
       else if (tabName === "recipe") ensureCogsRecipeData();
+      else if (tabName === "profitability") ensureProductProfitabilityData();
       else ensureProductsData();
     }
 
@@ -6276,6 +6382,100 @@
         elements.productsError.hidden = false;
         console.error("Products read failed", error);
       }).getProductCatalogReadModel();
+    }
+
+    function ensureProductProfitabilityData()
+    {
+      var elements = initializeStableDashboardElements();
+      elements.products.setAttribute("aria-busy", "true");
+      google.script.run.withSuccessHandler(function(response)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        if (response && response.status === "SUCCESS")
+        {
+          renderProductsTabProfitability(response);
+        }
+      }).withFailureHandler(function(error)
+      {
+        elements.products.setAttribute("aria-busy", "false");
+        console.error("Product Profitability read failed", error);
+      }).getProductProfitabilityData("currentYear", null, null);
+    }
+
+    function renderProductsTabProfitability(response)
+    {
+      if (!response || !response.products) return;
+      
+      // Use the Dashboard render logic but targeting the Products tab panel elements
+      // We can temporarily swap the global IDs or create a scoped render.
+      // Scoped is better.
+      var products = response.products;
+      var summary = response.summary || {};
+      var comparison = response.periodComparison || null;
+
+      var formatCurrency = function(value) {
+        return "Rp " + Number(value || 0).toLocaleString("id-ID");
+      };
+      var formatNumber = function(value) {
+        return Number(value || 0).toLocaleString("id-ID");
+      };
+      var formatPercent = function(value) {
+        var num = Number(value || 0);
+        return isFinite(num) ? num.toFixed(1) + "%" : "—";
+      };
+      var formatDelta = function(change, status) {
+        if (!change || !isFinite(Number(change))) return "—";
+        var val = Number(change);
+        if (val === 0) return "0.0%";
+        return (status === "Up" ? "▲ " : "▼ ") + Math.abs(val).toFixed(1) + "%";
+      };
+
+      document.getElementById("productsPpKpiRevenueValue").textContent = formatCurrency(summary.revenue);
+      document.getElementById("productsPpKpiCogsValue").textContent = formatCurrency(summary.cogs);
+      document.getElementById("productsPpKpiGrossProfitValue").textContent = formatCurrency(summary.grossProfit);
+      document.getElementById("productsPpKpiGrossMarginValue").textContent = formatPercent(summary.grossMargin);
+      document.getElementById("productsPpKpiUnitsValue").textContent = formatNumber(summary.units);
+      document.getElementById("productsPpKpiProductsValue").textContent = formatNumber(summary.productVariantCount);
+
+      // Now reuse the table rendering logic by setting the cache and calling render
+      // But Dashboard render uses productProfitabilityDataCache which is global.
+      // This will overwrite the Dashboard cache, which is fine since we're in a different tab.
+      productProfitabilityDataCache = products.slice();
+      productProfitabilityPageState.page = 1;
+      
+      populateProductsTabProfitabilityCategoryFilter(products);
+      renderProductProfitabilityTable("productsPpTableBody");
+      renderProductProfitabilityPagination("productsPp");
+    }
+
+    function populateProductsTabProfitabilityCategoryFilter(products)
+    {
+      var select = document.getElementById("productsPpCategoryFilter");
+      var currentValue = select.value;
+      var categories = [...new Set(products.map(function(p) { return p.category; }).filter(Boolean))].sort();
+      select.innerHTML = '<option value="">All Categories</option>' +
+        categories.map(function(cat) { return '<option value="' + escapeUiHtml(cat) + '">' + escapeUiHtml(cat) + '</option>'; }).join("");
+      select.value = currentValue;
+
+      var typeSelect = document.getElementById("productsPpTypeFilter");
+      var typeCurrentValue = typeSelect.value;
+      var types = [...new Set(products.map(function(p) { return p.type; }).filter(Boolean))].sort();
+      typeSelect.innerHTML = '<option value="">All Types</option>' +
+        types.map(function(t) { return '<option value="' + escapeUiHtml(t) + '">' + escapeUiHtml(t) + '</option>'; }).join("");
+      typeSelect.value = typeCurrentValue;
+    }
+
+    function filterProductsTabProfitabilityTable()
+    {
+      var categorySelect = document.getElementById("productsPpCategoryFilter");
+      var typeSelect = document.getElementById("productsPpTypeFilter");
+      var searchInput = document.getElementById("productsPpSearchInput");
+      productProfitabilityPageState.filter.category = categorySelect.value;
+      productProfitabilityPageState.filter.type = typeSelect.value;
+      productProfitabilityPageState.filter.search = searchInput.value.toLowerCase().trim();
+      productProfitabilityPageState.page = 1;
+      renderProductProfitabilityTable("productsPpTableBody");
+      renderProductProfitabilityPagination("productsPp");
     }
 
     function renderProductsList()

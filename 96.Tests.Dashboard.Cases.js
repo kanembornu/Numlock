@@ -154,8 +154,8 @@ function testDashboardPerformanceAnalytics()
     throw new Error("Total GM comparison percentage mismatch for >10 products; got " + manyComparison.grossMarginChangePercent + " " + manyComparison.status);
   var frontend = getAssembledFrontendSource();
   ['id="performanceSnapshotSection"', 'id="productProfitabilitySection"', 'id="categoryPerformanceSection"', 'id="hotColdChartSection"', 'id="expenseChartSection"', 'type: "bar"',
-    'renderProductProfitabilityChart(latestPerformanceAnalytics);', 'renderCategoryPerformanceChart(latestPerformanceAnalytics);',
-    'renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);', 'performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]']
+    'renderCategoryPerformanceChart(latestPerformanceAnalytics);',
+    'renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);', 'performance: [categoryPerformanceChart, expenseChart]']
     .forEach(function(token) { if (frontend.indexOf(token) === -1) throw new Error("Performance UI contract missing: " + token); });
   var expenseRendererSource = getSourceRegion(frontend, "function renderExpenseChart(expenseBreakdown)", "function renderCharts(res)", "Expense chart renderer");
   if (expenseRendererSource.indexOf('indexAxis: "y"') !== -1) throw new Error("Expense chart must remain vertical");
@@ -1993,10 +1993,9 @@ function testDashboardTabFrameworkContract()
   [
     "function resizeVisibleDashboardCharts(tabName)",
     "overview: [revenueChart]",
-    "performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]",
+    "performance: [categoryPerformanceChart, expenseChart]",
     "chart.resize();",
     "revenueChart = destroyChartInstance(revenueChart);",
-    "productProfitabilityChart = destroyChartInstance(productProfitabilityChart);",
     "categoryPerformanceChart = destroyChartInstance(categoryPerformanceChart);",
     "hotColdChart = destroyChartInstance(hotColdChart);",
     "expenseChart = destroyChartInstance(expenseChart);"
@@ -2135,7 +2134,7 @@ function testDashboardStableElementCacheLifecycleContract()
     "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
     "periodComparisonLead", "periodComparisonPeriod", "kpiTargetProvenance", "kpiTargetDetails",
     "topProductsContainer", "expenseSummaryBox", "diagnosisContainer", "forecastContainer",
-    "mainChart", "productProfitabilityChart", "categoryPerformanceChart", "expenseChart"
+    "mainChart", "categoryPerformanceChart", "expenseChart"
   ];
 
   assertSourceContains(firstConsumer, "var elements = initializeStableDashboardElements();", "lazy cache initialization by first consumer");
@@ -2148,13 +2147,12 @@ function testDashboardStableElementCacheLifecycleContract()
   {
     assertSourceContains(initializer, '"' + id + '"', "lifecycle-approved cached node " + id);
   });
-  ["businessOverview", "mainChart", "productProfitabilityChart", "categoryPerformanceChart", "expenseChart"]
+  ["businessOverview", "mainChart", "categoryPerformanceChart", "expenseChart"]
     .forEach(function(id)
     {
       assertSourceExcludes(renderSource, 'document.getElementById("' + id + '")', "uncached repeat render lookup " + id);
     });
   assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.main.canvas.getContext(\"2d\")", "main chart cached canvas identity");
-  assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.productProfitability.canvas.getContext(\"2d\")", "profitability chart cached canvas identity");
   assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.categoryPerformance.canvas.getContext(\"2d\")", "category chart cached canvas identity");
   assertSourceContains(renderSource, "initializeStableDashboardElements().chartPresentation.expense.canvas.getContext(\"2d\")", "expense chart cached canvas identity");
   assertSourceContains(tabSource, "chart.resize();", "tab switch chart resize without canvas replacement");
