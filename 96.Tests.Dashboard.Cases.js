@@ -154,8 +154,9 @@ function testDashboardPerformanceAnalytics()
     throw new Error("Total GM comparison percentage mismatch for >10 products; got " + manyComparison.grossMarginChangePercent + " " + manyComparison.status);
   var frontend = getAssembledFrontendSource();
   ['id="performanceSnapshotSection"', 'id="productProfitabilitySection"', 'id="categoryPerformanceSection"', 'id="hotColdChartSection"', 'id="expenseChartSection"', 'type: "bar"',
+    'renderProductProfitabilityChart(latestPerformanceAnalytics);',
     'renderCategoryPerformanceChart(latestPerformanceAnalytics);',
-    'renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);', 'performance: [categoryPerformanceChart, expenseChart]']
+    'renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);', 'performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]']
     .forEach(function(token) { if (frontend.indexOf(token) === -1) throw new Error("Performance UI contract missing: " + token); });
   var expenseRendererSource = getSourceRegion(frontend, "function renderExpenseChart(expenseBreakdown)", "function renderCharts(res)", "Expense chart renderer");
   if (expenseRendererSource.indexOf('indexAxis: "y"') !== -1) throw new Error("Expense chart must remain vertical");
@@ -1993,7 +1994,7 @@ function testDashboardTabFrameworkContract()
   [
     "function resizeVisibleDashboardCharts(tabName)",
     "overview: [revenueChart]",
-    "performance: [categoryPerformanceChart, expenseChart]",
+    "performance: [productProfitabilityChart, categoryPerformanceChart, expenseChart]",
     "chart.resize();",
     "revenueChart = destroyChartInstance(revenueChart);",
     "categoryPerformanceChart = destroyChartInstance(categoryPerformanceChart);",

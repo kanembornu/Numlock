@@ -3974,7 +3974,8 @@ function testChartPresentationContract()
 {
   var phase7B3 = testDashboardPerformanceAnalytics();
   var chartSource = getAssembledFrontendSource();
-  ["function renderRevenueChart(revenueTrend)", "function renderCategoryPerformanceChart(performanceAnalytics)", "function renderHotColdEconomicsComparison(hotColdEconomics)",
+  ["function renderRevenueChart(revenueTrend)", "function renderProductProfitabilityChart(performanceAnalytics)",
+    "function renderCategoryPerformanceChart(performanceAnalytics)", "function renderHotColdEconomicsComparison(hotColdEconomics)",
     "function renderExpenseChart(expenseBreakdown)", "destroyChartInstance", "shouldReduceMotion() ? false : undefined",
     "function synchronizeChartTheme(forceLight)"].forEach(function(token)
   {
@@ -4013,10 +4014,10 @@ function testChartPresentationContract()
   var chartConstructorCount =
     source.split("new Chart(").length - 1;
 
-  if (chartConstructorCount !== 3)
+  if (chartConstructorCount !== 4)
   {
     throw new Error(
-      "Chart presentation expected exactly three Chart constructors: actual=" +
+      "Chart presentation expected exactly four Chart constructors: actual=" +
       chartConstructorCount
     );
   }
@@ -4024,7 +4025,7 @@ function testChartPresentationContract()
   var summary = {
     passed: true,
     scenarios: fixtures.length,
-    charts: ["revenue", "hotCold", "expense"],
+    charts: ["revenue", "productProfitability", "hotCold", "expense"],
     drilldownScenarios: drilldownContract.scenarios
   };
 
