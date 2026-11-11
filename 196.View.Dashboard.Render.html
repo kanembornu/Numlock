@@ -2279,9 +2279,9 @@
       document.querySelectorAll("#productProfitabilityTable thead th, #productsPpProductProfitabilityTable thead th").forEach(function(th) {
         var btn = th.querySelector("button");
         if (!btn) return;
-        var key = btn.getAttribute("onclick").match(/'([^']+)'/);
-        if (!key) return;
-        key = key[1];
+        var keyMatch = btn.getAttribute("onclick").match(/'([^']+)'/);
+        if (!keyMatch) return;
+        var key = keyMatch[1];
         if (key === sort.key)
         {
           th.setAttribute("aria-sort", sort.direction === "asc" ? "ascending" : "descending");
@@ -2400,8 +2400,8 @@
         state.direction = "asc";
       }
       productProfitabilityPageState.page = 1;
-      renderProductProfitabilityTable();
-      renderProductProfitabilityPagination("pp");
+      renderProductProfitabilityTable("productsPpTableBody");
+      renderProductProfitabilityPagination("productsPp");
     }
 
     function filterProductsTabProfitabilityTable()

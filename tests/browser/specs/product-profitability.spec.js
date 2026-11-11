@@ -204,17 +204,30 @@ test.describe("Finance Product Profitability", () => {
   test("Products sort indicators update correctly", async ({ page }) => {
     await navigateToProductsProductProfitability(page);
 
-    await page.waitForTimeout(300);
+    // Wait for table body to be populated (initial render complete)
+    await page.waitForSelector("#productsPpTableBody tr", { state: "visible", timeout: 10000 });
+    // Wait for sort indicators to be initialized
+    await page.waitForFunction(() => {
+      const th = document.querySelector("#productsPpProductProfitabilityTable thead th:nth-child(6)");
+      return th && th.hasAttribute("aria-sort");
+    });
 
     const headerButton = page.locator("#productsPpProductProfitabilityTable thead th:nth-child(6)");
     await headerButton.click();
-    await page.waitForTimeout(300);
+    // Wait for re-render and indicator update
+    await page.waitForFunction(() => {
+      const th = document.querySelector("#productsPpProductProfitabilityTable thead th:nth-child(6)");
+      return th && th.getAttribute("aria-sort") === "ascending";
+    });
 
     const th = page.locator("#productsPpProductProfitabilityTable thead th:nth-child(6)");
     await expect(th).toHaveAttribute("aria-sort", "ascending");
 
     await headerButton.click();
-    await page.waitForTimeout(300);
+    await page.waitForFunction(() => {
+      const th = document.querySelector("#productsPpProductProfitabilityTable thead th:nth-child(6)");
+      return th && th.getAttribute("aria-sort") === "descending";
+    });
 
     await expect(th).toHaveAttribute("aria-sort", "descending");
   });
