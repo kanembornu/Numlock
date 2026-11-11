@@ -174,8 +174,7 @@ test.describe("Product Profitability responsive layout", () => {
     expect(second.cardColumnXs.length).toBe(2);
     expect(second.cardColumnXs).toEqual(first.cardColumnXs);
     expect(second.kpiGridBox.top).toBeCloseTo(first.kpiGridBox.top, 0);
-    expect(second.searchBox.top).toBeGreaterThanOrEqual(second.kpiGridBox.bottom - 1);
-    expect(second.pageScrollWidth).toBeLessThanOrEqual(391);
+    expect(second.searchBox.top).toBeGreaterThanOrEqual(second.kpiGridBox.bottom - 1);    expect(second.pageScrollWidth).toBeLessThanOrEqual(391);
     expect(second.kpiGridBox.bottom).toBeLessThanOrEqual(second.searchBox.top + 1);
 
     await page.screenshot({
@@ -183,6 +182,87 @@ test.describe("Product Profitability responsive layout", () => {
       fullPage: true
     });
   });
+});
+
+test.describe("Product Profitability table geometry", () => {
+  async function tableGeometry(page) {
+    return page.evaluate(() => {
+      const table = document.getElementById("productsPpProductProfitabilityTable");
+      const wrap = table.parentElement;
+      const ths = Array.from(table.querySelectorAll("thead th"));
+      const headers = ths.map(th => {
+        const r = th.getBoundingClientRect();
+        return { left: Math.round(r.left), right: Math.round(r.right), width: Math.round(r.width) };
+      });
+      const rows = Array.from(table.querySelectorAll("tbody tr")).map(tr => Math.round(tr.getBoundingClientRect().height));
+      return {
+        columnCount: ths.length,
+        tableWidth: Math.round(table.getBoundingClientRect().width),
+        containerClientWidth: wrap.clientWidth,
+        containerScrollWidth: wrap.scrollWidth,
+        containerOverflowX: getComputedStyle(wrap).overflowX,
+        headers,
+        rowHeights: rows,
+        cardColumns: (() => {
+          const panel = document.getElementById("productsPanelProfitability");
+          const cards = Array.from(panel.querySelectorAll(".hf-kpi-card"));
+          return new Set(cards.map(c => Math.round(c.getBoundingClientRect().left))).size;
+        })(),
+        pageScrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth
+      };
+    });
+  }
+
+  for (const vp of VIEWPORTS) {
+    test(`${vp.name} ${vp.width}x${vp.height}: table fits, scrolls, 12 columns, KPI grid ${vp.columns}`, async ({ page }) => {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await page.goto(TARGET_URL, { waitUntil: "load", timeout: TIMEOUT });
+      await page.locator("#appShell").waitFor({ state: "visible", timeout: TIMEOUT });
+      await navigateToProductProfitability(page);
+
+      const g = await tableGeometry(page);
+      await page.screenshot({
+        path: path.join(SHOT_DIR, `table-${vp.width}x${vp.height}.png`),
+        fullPage: true
+      });
+
+      console.log(
+        `[MEASURED] table ${vp.width}x${vp.height}: cols=${g.columnCount} tableW=${g.tableWidth} ` +
+          `containerClientW=${g.containerClientWidth} containerScrollW=${g.containerScrollWidth} ` +
+          `overflowX=${g.containerOverflowX} firstColW=${g.headers[0].width} ` +
+          `cardColumns=${g.cardColumns} pageScrollW=${g.pageScrollWidth}/${g.innerWidth}`
+      );
+
+      expect(g.columnCount, "12 table columns").toBe(12);
+      expect(g.cardColumns, "KPI grid columns").toBe(vp.columns);
+      expect(g.pageScrollWidth, "no page-level horizontal overflow").toBeLessThanOrEqual(vp.width + 1);
+
+      expect(g.headers[0].width, "first column not excessive").toBeLessThan(g.tableWidth * 0.25);
+
+      for (let i = 1; i < g.headers.length; i++) {
+        expect(g.headers[i].left, `column ${i} starts after column ${i - 1}`).toBeGreaterThanOrEqual(
+          g.headers[i - 1].right - 1
+        );
+        expect(g.headers[i].width, `column ${i} has width`).toBeGreaterThan(0);
+      }
+      expect(g.headers[g.headers.length - 1].right - g.headers[0].left).toBeLessThanOrEqual(g.tableWidth + 1);
+
+      expect(g.rowHeights.length).toBeGreaterThan(0);
+      g.rowHeights.forEach(h => expect(h).toBeGreaterThan(0));
+
+      expect(g.containerOverflowX).toBe("auto");
+      if (vp.width >= 1536) {
+        expect(g.tableWidth, "desktop table fits container").toBeLessThanOrEqual(g.containerClientWidth + 1);
+        expect(g.containerScrollWidth, "desktop container not scrollable").toBeLessThanOrEqual(
+          g.containerClientWidth + 1
+        );
+      } else {
+        expect(g.tableWidth, "table wider than container").toBeGreaterThan(g.containerClientWidth);
+        expect(g.containerScrollWidth, "table scrolls inside wrapper").toBeGreaterThan(g.containerClientWidth);
+      }
+    });
+  }
 });
 
 test.describe("Product Profitability empty filter state", () => {
