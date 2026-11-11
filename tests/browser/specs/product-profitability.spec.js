@@ -1,5 +1,6 @@
 import { test, expect } from "playwright/test";
 const path = require("node:path");
+const fs = require("node:fs");
 const http = require("node:http");
 const { assembleHtml } = require("../harness/assemble-html.js");
 
@@ -322,5 +323,145 @@ test.describe("Product Profitability Cross-tab Consistency", () => {
 
     const dashCanvas = page.locator("#productProfitabilityChart");
     await expect(dashCanvas).toBeVisible();
+  });
+});
+
+test.describe("Product Profitability product-name contract", () => {
+  const fixture = JSON.parse(
+    fs.readFileSync(path.join(__dirname, "..", "fixtures", "product-profitability.json"), "utf8")
+  );
+  const money = v => "Rp " + Number(v || 0).toLocaleString("id-ID");
+  const num = v => Number(v || 0).toLocaleString("id-ID");
+  const expectedFor = records => {
+    const revenue = records.reduce((s, p) => s + Number(p.revenue || 0), 0);
+    const cogs = records.reduce((s, p) => s + Number(p.cogs || 0), 0);
+    const gp = records.reduce((s, p) => s + Number(p.grossProfit || 0), 0);
+    const units = records.reduce((s, p) => s + Number(p.units || 0), 0);
+    return {
+      revenue: money(revenue),
+      cogs: money(cogs),
+      grossProfit: money(gp),
+      grossMargin: (revenue !== 0 ? (gp / revenue) * 100 : 0).toFixed(1) + "%",
+      units: num(units),
+      products: String(new Set(records.map(p => p.productId)).size)
+    };
+  };
+  const readKpis = page => page.evaluate(() => ({
+    revenue: document.getElementById("productsPpKpiRevenueValue").innerText.trim(),
+    cogs: document.getElementById("productsPpKpiCogsValue").innerText.trim(),
+    grossProfit: document.getElementById("productsPpKpiGrossProfitValue").innerText.trim(),
+    grossMargin: document.getElementById("productsPpKpiGrossMarginValue").innerText.trim(),
+    units: document.getElementById("productsPpKpiUnitsValue").innerText.trim(),
+    products: document.getElementById("productsPpKpiProductsValue").innerText.trim()
+  }));
+  const names = page => page.evaluate(() =>
+    Array.from(document.querySelectorAll("#productsPpTableBody tr"))
+      .map(tr => (tr.children[1] ? tr.children[1].innerText.trim() : ""))
+  );
+
+  async function navigate(page) {
+    await page.evaluate(() => {
+      if (typeof setSidebarOpen === "function") setSidebarOpen(true, false);
+    });
+    await page.locator("[data-page='products'][data-navigation-destination='products']").click();
+    await page.locator("#productsTabProfitability").click();
+    await page.locator("#productsPanelProfitability").waitFor({ state: "visible", timeout: 15000 });
+    await page.waitForSelector("#productsPpTableBody tr", { state: "visible", timeout: 15000 });
+    await page.waitForFunction(
+      () => document.getElementById("productsPpKpiRevenueValue").innerText.trim() !== "—",
+      { timeout: 15000 }
+    );
+  }
+
+  test("fixture represents production shape (productName, no label) with documented exceptions", () => {
+    const onlyName = fixture.products.filter(p => p.productName && !p.label);
+    const both = fixture.products.filter(p => p.productName && p.label);
+    const onlyLabel = fixture.products.filter(p => !p.productName && p.label);
+    expect(onlyName.length).toBeGreaterThan(0);
+    expect(both.length).toBe(1);
+    expect(onlyLabel.length).toBe(1);
+    expect(onlyLabel[0].label).toBe("Affogato");
+  });
+
+  test("production-shaped records render product names", async ({ page }) => {
+    await navigate(page);
+    const rendered = await names(page);
+    expect(rendered.length).toBeGreaterThan(0);
+    rendered.forEach(name => expect(name.length).toBeGreaterThan(0));
+    expect(rendered).toContain("Espresso");
+  });
+
+  test("search by productName filters and updates all six KPIs", async ({ page }) => {
+    await navigate(page);
+    const term = "Espresso";
+    await page.locator("#productsPpSearchInput").fill(term);
+    await page.waitForTimeout(400);
+
+    const records = fixture.products.filter(p => (p.productName || p.label) === term);
+    expect(records.length).toBe(1);
+    await expect(page.locator("#productsPpTableBody tr")).toHaveCount(1);
+    expect(await names(page)).toEqual([term]);
+    expect(await readKpis(page)).toEqual(expectedFor(records));
+  });
+
+  test("search by productId still works", async ({ page }) => {
+    await navigate(page);
+    const term = "PROD-005";
+    await page.locator("#productsPpSearchInput").fill(term);
+    await page.waitForTimeout(400);
+
+    const records = fixture.products.filter(p => p.productId.toLowerCase().includes(term.toLowerCase()));
+    expect(records.length).toBe(1);
+    expect(await names(page)).toEqual([records[0].productName]);
+    expect(await readKpis(page)).toEqual(expectedFor(records));
+  });
+
+  test("label-only record remains supported", async ({ page }) => {
+    await navigate(page);
+    await page.locator("#productsPpSearchInput").fill("Affogato");
+    await page.waitForTimeout(400);
+
+    const records = fixture.products.filter(p => (p.productName || p.label) === "Affogato");
+    expect(records.length).toBe(1);
+    expect(records[0].productName).toBeUndefined();
+    expect(await names(page)).toEqual(["Affogato"]);
+    expect(await readKpis(page)).toEqual(expectedFor(records));
+  });
+
+  test("productName takes precedence when both fields differ", async ({ page }) => {
+    await navigate(page);
+    const search = page.locator("#productsPpSearchInput");
+
+    await search.fill("Frappuccino");
+    await page.waitForTimeout(400);
+    expect(await names(page)).toEqual(["Frappuccino"]);
+
+    await search.fill("Legacy");
+    await page.waitForTimeout(400);
+    await expect(page.locator("#productsPpTableBody tr")).toHaveCount(1);
+    await expect(page.locator("#productsPpTableBody")).toContainText("No products match the current filter.");
+    expect((await readKpis(page)).revenue).toBe("Rp 0");
+  });
+
+  test("empty search keeps six zero KPIs and clear restores totals", async ({ page }) => {
+    await navigate(page);
+    const initial = await readKpis(page);
+    expect(initial).toEqual(expectedFor(fixture.products));
+
+    const search = page.locator("#productsPpSearchInput");
+    await search.fill("zzzz-no-such-product");
+    await page.waitForTimeout(400);
+    expect(await readKpis(page)).toEqual({
+      revenue: "Rp 0",
+      cogs: "Rp 0",
+      grossProfit: "Rp 0",
+      grossMargin: "0.0%",
+      units: "0",
+      products: "0"
+    });
+
+    await search.fill("");
+    await page.waitForTimeout(400);
+    expect(await readKpis(page)).toEqual(initial);
   });
 });

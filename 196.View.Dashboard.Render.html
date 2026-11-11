@@ -2252,7 +2252,7 @@
         var marginClass = Number(p.grossMargin || 0) < 0 ? "text-red-600" : "";
         return '<tr>' +
           '<td class="text-center">' + globalIndex + '</td>' +
-          '<td class="font-semibold text-left">' + escapeUiHtml(p.label) + '</td>' +
+          '<td class="font-semibold text-left">' + escapeUiHtml(p.productName || p.label || "") + '</td>' +
           '<td class="text-center">' + escapeUiHtml(p.category || "—") + '</td>' +
           '<td class="text-center">' + getTypeBadge(p.type) + '</td>' +
           '<td class="tabular-nums text-right">' + formatProductProfitabilityNumber(p.units) + '</td>' +
@@ -2357,9 +2357,10 @@
 
       if (filter.search)
       {
+        var searchLower = filter.search;
         products = products.filter(function(p) {
-          var searchLower = filter.search;
-          return (p.label && p.label.toLowerCase().includes(searchLower)) ||
+          var productName = String(p.productName || p.label || "").toLowerCase();
+          return productName.indexOf(searchLower) !== -1 ||
                  (p.productId && p.productId.toLowerCase().includes(searchLower));
         });
       }
