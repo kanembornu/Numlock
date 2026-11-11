@@ -2210,6 +2210,19 @@
 
     var productProfitabilityDataCache = null;
 
+    // Shared formatting functions for Product Profitability KPIs and table
+    function formatProductProfitabilityCurrency(value) {
+      var num = Number(value || 0);
+      return "Rp " + num.toLocaleString("id-ID");
+    }
+    function formatProductProfitabilityNumber(value) {
+      return Number(value || 0).toLocaleString("id-ID");
+    }
+    function formatProductProfitabilityPercent(value) {
+      var num = Number(value || 0);
+      return isFinite(num) ? num.toFixed(1) + "%" : "—";
+    }
+
     function renderProductProfitabilityTable(tbodyId)
     {
       var tbody = document.getElementById(tbodyId || "productProfitabilityTableBody");
@@ -2222,17 +2235,6 @@
       var end = start + pageSize;
       var pageProducts = products.slice(start, end);
 
-      var formatCurrency = function(value) {
-        var num = Number(value || 0);
-        return "Rp " + num.toLocaleString("id-ID");
-      };
-      var formatNumber = function(value) {
-        return Number(value || 0).toLocaleString("id-ID");
-      };
-      var formatPercent = function(value) {
-        var num = Number(value || 0);
-        return isFinite(num) ? num.toFixed(1) + "%" : "—";
-      };
       var formatMixPercent = function(value) {
         var num = Number(value || 0);
         return isFinite(num) ? (num * 100).toFixed(1) + "%" : "—";
@@ -2253,11 +2255,11 @@
           '<td class="font-semibold text-left">' + escapeUiHtml(p.label) + '</td>' +
           '<td class="text-center">' + escapeUiHtml(p.category || "—") + '</td>' +
           '<td class="text-center">' + getTypeBadge(p.type) + '</td>' +
-          '<td class="tabular-nums text-right">' + formatNumber(p.units) + '</td>' +
-          '<td class="tabular-nums text-right font-semibold ' + revenueClass + '">' + formatCurrency(p.revenue) + '</td>' +
-          '<td class="tabular-nums text-right">' + formatCurrency(p.cogs) + '</td>' +
-          '<td class="tabular-nums text-right font-semibold ' + gpClass + '">' + formatCurrency(p.grossProfit) + '</td>' +
-          '<td class="tabular-nums text-right ' + marginClass + '">' + formatPercent(p.grossMargin) + '</td>' +
+          '<td class="tabular-nums text-right">' + formatProductProfitabilityNumber(p.units) + '</td>' +
+          '<td class="tabular-nums text-right font-semibold ' + revenueClass + '">' + formatProductProfitabilityCurrency(p.revenue) + '</td>' +
+          '<td class="tabular-nums text-right">' + formatProductProfitabilityCurrency(p.cogs) + '</td>' +
+          '<td class="tabular-nums text-right font-semibold ' + gpClass + '">' + formatProductProfitabilityCurrency(p.grossProfit) + '</td>' +
+          '<td class="tabular-nums text-right ' + marginClass + '">' + formatProductProfitabilityPercent(p.grossMargin) + '</td>' +
           '<td class="tabular-nums text-right">' + formatMixPercent(p.revenueMix) + '</td>' +
           '<td class="text-center">' + (p.grossProfitRank || "—") + '</td>' +
           '<td class="text-center">' + (p.revenueRank || "—") + '</td>' +
@@ -2404,6 +2406,43 @@
       renderProductProfitabilityPagination("productsPp");
     }
 
+    function updateProductProfitabilityKpis() {
+      var products = getFilteredSortedProducts();
+
+      var totalRevenue = 0;
+      var totalCogs = 0;
+      var totalGrossProfit = 0;
+      var totalUnits = 0;
+      var uniqueProducts = new Set();
+
+      products.forEach(function(p) {
+        totalRevenue += Number(p.revenue || 0);
+        totalCogs += Number(p.cogs || 0);
+        totalGrossProfit += Number(p.grossProfit || 0);
+        totalUnits += Number(p.units || 0);
+        uniqueProducts.add(p.productId);
+      });
+
+      var totalGrossMargin = totalRevenue !== 0 ? (totalGrossProfit / totalRevenue) * 100 : 0;
+      var totalProducts = uniqueProducts.size;
+
+      document.getElementById("productsPpKpiRevenueValue").innerText = formatProductProfitabilityCurrency(totalRevenue);
+      document.getElementById("productsPpKpiCogsValue").innerText = formatProductProfitabilityCurrency(totalCogs);
+      document.getElementById("productsPpKpiGrossProfitValue").innerText = formatProductProfitabilityCurrency(totalGrossProfit);
+      document.getElementById("productsPpKpiGrossMarginValue").innerText = formatProductProfitabilityPercent(totalGrossMargin);
+      document.getElementById("productsPpKpiUnitsValue").innerText = formatProductProfitabilityNumber(totalUnits);
+      document.getElementById("productsPpKpiProductsValue").innerText = formatProductProfitabilityNumber(totalProducts);
+
+      // Delta calculations are currently not in scope or provided in the original context,
+      // so we will leave them as '—'.
+      document.getElementById("productsPpKpiRevenueDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
+      document.getElementById("productsPpKpiCogsDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
+      document.getElementById("productsPpKpiGrossProfitDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
+      document.getElementById("productsPpKpiGrossMarginDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
+      document.getElementById("productsPpKpiUnitsDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
+      document.getElementById("productsPpKpiProductsDelta").innerHTML = '<span>Variants</span><strong>—</strong>';
+    }
+
     function filterProductsTabProfitabilityTable()
     {
       var categorySelect = document.getElementById("productsPpCategoryFilter");
@@ -2417,6 +2456,7 @@
       productProfitabilityPageState.page = 1;
       renderProductProfitabilityTable("productsPpTableBody");
       renderProductProfitabilityPagination("productsPp");
+      updateProductProfitabilityKpis();
     }
 
     function populateProductsTabProfitabilityCategoryFilter(products)
