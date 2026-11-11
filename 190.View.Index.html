@@ -373,17 +373,20 @@
       .transactions-row-action--resolve:hover { filter: brightness(.96); }
       .transactions-row-action--void { --transaction-action-bg: var(--critical-soft); color: var(--critical); }
       .transactions-row-action--void:hover { filter: brightness(.96); }
-      #transactionsPagination { min-height: 44px; border-top: 1px solid var(--divider); padding: 7px 12px; }
-      #transactionsPagination button { display: inline-flex; min-width: 92px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 5px 12px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
-      #transactionsPagination button:disabled { cursor: default; opacity: .45; }
+      #transactionsPagination, #productProfitabilityPagination { min-height: 44px; border-top: 1px solid var(--divider); padding: 7px 12px; }
+      #transactionsPagination button, .pagination-nav-btn { display: inline-flex; min-width: 92px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 5px 12px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+      #transactionsPagination button:disabled, .pagination-nav-btn:disabled { cursor: default; opacity: .45; }
+      .pagination-nav-btn:hover:not(:disabled) { background: var(--hover); color: var(--text-primary); }
       .pagination-btn { display: inline-flex; min-width: 72px; min-height: 32px; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 10px; color: var(--text-secondary); font-size: 13px; font-weight: 500; background: var(--surface-1); }
       .pagination-btn:hover:not(:disabled) { background: var(--hover); color: var(--text-primary); }
       .pagination-btn:disabled { cursor: default; opacity: .45; }
-      #transactionsPageIndicator { color: var(--text-primary); font-size: 14px; font-weight: 500; }
-      #transactionsRangeSummary { color: var(--text-primary); font-size: 14px; }
-      .transactions-pagination-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
-      .transactions-pagination-controls label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; white-space: nowrap; }
-      .transactions-pagination-controls select { height: 36px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-primary); font-size: 14px; }
+      #transactionsPageIndicator, #productsPpPageIndicator { color: var(--text-primary); font-size: 14px; font-weight: 500; }
+      #transactionsRangeSummary, #productsPpPageInfo { color: var(--text-primary); font-size: 14px; }
+      .transactions-pagination-controls, .pagination-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
+      .transactions-pagination-controls label, .pagination-controls label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; white-space: nowrap; }
+      .transactions-pagination-controls select, .pagination-controls select { height: 36px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-primary); font-size: 14px; }
+      #productProfitabilityPagination { flex-wrap: wrap; }
+      #productProfitabilityPagination .pagination-controls { flex-wrap: wrap; row-gap: 8px; }
       .transactions-search { display: flex; min-width: 300px; flex: 1 1 auto; align-items: center; gap: 8px; }
       .transactions-search input { width: 100%; min-width: 0; height: 42px; border: 1px solid var(--card-border); border-radius: 9px; padding: 0 14px; background: var(--surface-1); color: var(--text-primary); font-size: 14px; }
       .transactions-search button { display: inline-flex; height: 38px; flex: 0 0 auto; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 0 12px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
@@ -4309,23 +4312,23 @@
             </table>
           </div>
           <nav id="productProfitabilityPagination" class="mt-2 flex items-center justify-between gap-3" aria-label="Product Profitability pagination">
-            <div class="flex items-center gap-2">
-              <label class="text-xs text-slate-500">Rows per page:</label>
-              <select id="productsPpPageSize" class="rounded border border-slate-200 bg-white px-2 py-1 text-xs" onchange="productProfitabilityPageState.page=1; renderProductProfitabilityTable()">
-                <option value="10">10</option>
-                <option value="25" selected>25</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-              </select>
+            <span id="productsPpPageInfo">0–0 of 0</span>
+            <div class="pagination-controls" role="group" aria-label="Product Profitability page navigation">
+              <label for="productsPpPageSize">Rows per page
+                <select id="productsPpPageSize" onchange="setProductsTabProfitabilityPageSize(this.value)">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <span id="productsPpPageIndicator">Page 1 of 1</span>
+              <div id="productsPpPageNumbers" class="flex items-center gap-1" role="group" aria-label="Page numbers"></div>
+              <button id="productsPpFirstPage" type="button" class="pagination-nav-btn" aria-label="First page" onclick="changeProductsTabProfitabilityPage('first')"><i class="fas fa-chevrons-left" aria-hidden="true"></i><span>First</span></button>
+              <button id="productsPpPrevPage" type="button" class="pagination-nav-btn" aria-label="Previous page" onclick="changeProductsTabProfitabilityPage(-1)"><i class="fas fa-chevron-left" aria-hidden="true"></i><span>Previous</span></button>
+              <button id="productsPpNextPage" type="button" class="pagination-nav-btn" aria-label="Next page" onclick="changeProductsTabProfitabilityPage(1)"><span>Next</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
+              <button id="productsPpLastPage" type="button" class="pagination-nav-btn" aria-label="Last page" onclick="changeProductsTabProfitabilityPage('last')"><span>Last</span><i class="fas fa-chevrons-right" aria-hidden="true"></i></button>
             </div>
-            <div class="flex items-center gap-1" role="group" aria-label="Product Profitability page navigation">
-              <button id="productsPpFirstPage" type="button" class="pagination-btn" aria-label="First page" disabled>First</button>
-              <button id="productsPpPrevPage" type="button" class="pagination-btn" aria-label="Previous page" disabled>Previous</button>
-              <div id="productsPpPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
-              <button id="productsPpNextPage" type="button" class="pagination-btn" aria-label="Next page" disabled>Next</button>
-              <button id="productsPpLastPage" type="button" class="pagination-btn" aria-label="Last page" disabled>Last</button>
-            </div>
-            <div id="productsPpPageInfo" class="text-xs text-slate-500"></div>
           </nav>
         </div>
         <p id="productProfitabilitySummary" class="mt-2 text-xs text-slate-500" aria-live="polite"></p>
@@ -6326,6 +6329,7 @@
 
       productProfitabilityDataCache = products.slice();
       productProfitabilityPageState.page = 1;
+      initializeProductsTabProfitabilityPageSize();
       populateProductsTabProfitabilityCategoryFilter(products);
       renderProductProfitabilityTable("productsPpTableBody");
       renderProductProfitabilityPagination("productsPp");

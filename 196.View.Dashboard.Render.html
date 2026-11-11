@@ -2208,6 +2208,10 @@
       filter: { category: "", search: "" }
     };
 
+    var PRODUCTS_PP_DEFAULT_PAGE_SIZE = 25;
+    var PRODUCTS_PP_ALLOWED_PAGE_SIZES = { 10: true, 25: true, 50: true, 100: true };
+    var PRODUCTS_PP_PAGE_SIZE_STORAGE_KEY = "numlock.productProfitability.pageSize";
+
     var productProfitabilityDataCache = null;
 
     // Shared formatting functions for Product Profitability KPIs and table
@@ -2230,7 +2234,9 @@
 
       var products = getFilteredSortedProducts();
       var pageSize = productProfitabilityPageState.pageSize;
-      var page = productProfitabilityPageState.page;
+      var totalPages = Math.max(1, Math.ceil(products.length / pageSize));
+      var page = Math.min(Math.max(1, Number(productProfitabilityPageState.page) || 1), totalPages);
+      productProfitabilityPageState.page = page;
       var start = (page - 1) * pageSize;
       var end = start + pageSize;
       var pageProducts = products.slice(start, end);
@@ -2295,14 +2301,67 @@
       });
     }
 
+    function getProductsTabProfitabilityTotalPages()
+    {
+      var pageSize = productProfitabilityPageState.pageSize;
+      return Math.max(1, Math.ceil(getFilteredSortedProducts().length / pageSize));
+    }
+
+    function setProductsTabProfitabilityPage(pageNumber)
+    {
+      var totalPages = getProductsTabProfitabilityTotalPages();
+      var page = Math.min(Math.max(1, Math.floor(Number(pageNumber) || 1)), totalPages);
+      if (page !== productProfitabilityPageState.page)
+      {
+        productProfitabilityPageState.page = page;
+        renderProductProfitabilityTable("productsPpTableBody");
+      }
+      renderProductProfitabilityPagination("productsPp");
+    }
+
+    function changeProductsTabProfitabilityPage(delta)
+    {
+      if (delta === "first")
+      {
+        setProductsTabProfitabilityPage(1);
+        return;
+      }
+      if (delta === "last")
+      {
+        setProductsTabProfitabilityPage(getProductsTabProfitabilityTotalPages());
+        return;
+      }
+      setProductsTabProfitabilityPage(productProfitabilityPageState.page + Number(delta || 0));
+    }
+
+    function setProductsTabProfitabilityPageSize(value)
+    {
+      var pageSize = Number(value);
+      productProfitabilityPageState.pageSize = PRODUCTS_PP_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : PRODUCTS_PP_DEFAULT_PAGE_SIZE;
+      try { window.localStorage.setItem(PRODUCTS_PP_PAGE_SIZE_STORAGE_KEY, String(productProfitabilityPageState.pageSize)); } catch (error) {}
+      productProfitabilityPageState.page = 1;
+      renderProductProfitabilityTable("productsPpTableBody");
+      renderProductProfitabilityPagination("productsPp");
+    }
+
+    function initializeProductsTabProfitabilityPageSize()
+    {
+      var saved = "";
+      try { saved = window.localStorage.getItem(PRODUCTS_PP_PAGE_SIZE_STORAGE_KEY) || ""; } catch (error) {}
+      var pageSize = Number(saved);
+      productProfitabilityPageState.pageSize = PRODUCTS_PP_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : PRODUCTS_PP_DEFAULT_PAGE_SIZE;
+      var select = document.getElementById("productsPpPageSize");
+      if (select) select.value = String(productProfitabilityPageState.pageSize);
+    }
+
     function renderProductProfitabilityPagination(prefix)
     {
-      var p = prefix || "pp";
+      var p = prefix || "productsPp";
       var products = getFilteredSortedProducts();
       var totalItems = products.length;
       var pageSize = productProfitabilityPageState.pageSize;
       var totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
-      var page = Math.min(productProfitabilityPageState.page, totalPages);
+      var page = Math.min(Math.max(1, Number(productProfitabilityPageState.page) || 1), totalPages);
       productProfitabilityPageState.page = page;
 
       var firstBtn = document.getElementById(p + "FirstPage");
@@ -2311,13 +2370,18 @@
       var lastBtn = document.getElementById(p + "LastPage");
       var pageNumbers = document.getElementById(p + "PageNumbers");
       var pageInfo = document.getElementById(p + "PageInfo");
+      var pageIndicator = document.getElementById(p + "PageIndicator");
+      var pageSizeSelect = document.getElementById(p + "PageSize");
 
       if (!firstBtn || !prevBtn || !nextBtn || !lastBtn || !pageNumbers || !pageInfo) return;
 
       firstBtn.disabled = page === 1;
       prevBtn.disabled = page === 1;
-      nextBtn.disabled = page === totalPages;
-      lastBtn.disabled = page === totalPages;
+      nextBtn.disabled = page >= totalPages;
+      lastBtn.disabled = page >= totalPages;
+
+      if (pageSizeSelect) pageSizeSelect.value = String(pageSize);
+      if (pageIndicator) pageIndicator.textContent = "Page " + page + " of " + totalPages;
 
       var maxVisible = 5;
       var startPage = Math.max(1, page - Math.floor(maxVisible / 2));
@@ -2330,7 +2394,7 @@
       var numbersHtml = "";
       for (var i = startPage; i <= endPage; i++)
       {
-        numbersHtml += '<button type="button" class="pagination-btn ' + (i === page ? "bg-indigo-600 text-white" : "") + '" onclick="productProfitabilityPageState.page=' + i + '; renderProductProfitabilityTable(\'' + (p === "productsPp" ? "productsPpTableBody" : "productProfitabilityTableBody") + '\'); renderProductProfitabilityPagination(\'' + p + '\');" aria-label="Page ' + i + '" ' + (i === page ? 'aria-current="page"' : '') + '>' + i + '</button>';
+        numbersHtml += '<button type="button" class="pagination-btn ' + (i === page ? "bg-indigo-600 text-white" : "") + '" onclick="setProductsTabProfitabilityPage(' + i + ')" aria-label="Page ' + i + '" ' + (i === page ? 'aria-current="page"' : '') + '>' + i + '</button>';
       }
       pageNumbers.innerHTML = numbersHtml;
 
@@ -2483,3 +2547,6 @@
     window.sortProductProfitabilityTable = sortProductProfitabilityTable;
     window.renderProductProfitabilityTable = renderProductProfitabilityTable;
     window.renderProductProfitabilityPagination = renderProductProfitabilityPagination;
+    window.setProductsTabProfitabilityPage = setProductsTabProfitabilityPage;
+    window.changeProductsTabProfitabilityPage = changeProductsTabProfitabilityPage;
+    window.setProductsTabProfitabilityPageSize = setProductsTabProfitabilityPageSize;
