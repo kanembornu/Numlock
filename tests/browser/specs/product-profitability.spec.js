@@ -39,12 +39,6 @@ test.beforeEach(async ({ page }) => {
   await page.waitForTimeout(1000);
 });
 
-async function switchToDashboardTableView(page) {
-    await page.locator("#ppViewTable").click();
-    await page.waitForTimeout(300);
-    await page.locator("#productProfitabilityTableBody").waitFor({ state: "visible", timeout: 10000 });
-  }
-
 test.describe("Dashboard Product Profitability", () => {
 
   test("Product Profitability section renders in Performance tab", async ({ page }) => {
@@ -55,193 +49,22 @@ test.describe("Dashboard Product Profitability", () => {
     await expect(section).toBeVisible();
   });
 
-  test("KPI cards display values", async ({ page }) => {
+  test("Chart renders with product data", async ({ page }) => {
     await page.locator("#dashboardTabPerformance").click();
     await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
+    await page.waitForTimeout(500);
 
-    const revenueValue = page.locator("#ppKpiRevenueValue");
-    const cogsValue = page.locator("#ppKpiCogsValue");
-    const grossProfitValue = page.locator("#ppKpiGrossProfitValue");
-    const grossMarginValue = page.locator("#ppKpiGrossMarginValue");
-    const unitsValue = page.locator("#ppKpiUnitsValue");
-    const productsValue = page.locator("#ppKpiProductsValue");
-
-    await expect(revenueValue).not.toHaveText("—");
-    await expect(cogsValue).not.toHaveText("—");
-    await expect(grossProfitValue).not.toHaveText("—");
-    await expect(grossMarginValue).not.toHaveText("—");
-    await expect(unitsValue).not.toHaveText("—");
-    await expect(productsValue).not.toHaveText("—");
+    const canvas = page.locator("#productProfitabilityChart");
+    await expect(canvas).toBeVisible();
   });
 
-  test("Table view renders product data", async ({ page }) => {
+  test("No JavaScript errors on Dashboard Performance tab", async ({ page }) => {
     await page.locator("#dashboardTabPerformance").click();
     await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const tbody = page.locator("#productProfitabilityTableBody");
-    await expect(tbody).toBeVisible();
-
-    const rows = tbody.locator("tr");
-    const count = await rows.count();
-    expect(count).toBeGreaterThan(0);
+    await page.waitForTimeout(1000);
+    // Page errors are captured in beforeEach
   });
 
-  test("Category filter works", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const categoryFilter = page.locator("#ppCategoryFilter");
-    await expect(categoryFilter).toBeVisible();
-
-    const options = categoryFilter.locator("option");
-    const optionCount = await options.count();
-    expect(optionCount).toBeGreaterThan(1);
-
-    const allCategories = await categoryFilter.locator("option[value='']").textContent();
-    expect(allCategories).toContain("All Categories");
-  });
-
-  test("Type filter works", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const typeFilter = page.locator("#ppTypeFilter");
-    await expect(typeFilter).toBeVisible();
-
-    const options = typeFilter.locator("option");
-    const optionCount = await options.count();
-    expect(optionCount).toBeGreaterThan(1);
-
-    const allTypes = await typeFilter.locator("option[value='']").textContent();
-    expect(allTypes).toContain("All Types");
-  });
-
-  test("Free-text search filters products", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const searchInput = page.locator("#ppSearchInput");
-    await expect(searchInput).toBeVisible();
-
-    await searchInput.pressSequentially("Espresso", { delay: 50 });
-    await page.waitForTimeout(300);
-
-    const filteredRows = page.locator("#productProfitabilityTableBody tr");
-    const filteredCount = await filteredRows.count();
-
-    if (filteredCount > 0) {
-      const firstRow = filteredRows.first();
-      await expect(firstRow).toContainText("Espresso");
-    }
-  });
-
-  test("Search is case-insensitive", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    await page.waitForTimeout(300);
-
-    const searchInput = page.locator("#ppSearchInput");
-
-    await searchInput.fill("ESPRESSO");
-    await page.waitForTimeout(300);
-
-    const filteredRows = page.locator("#productProfitabilityTableBody tr");
-    const upperCount = await filteredRows.count();
-
-    await searchInput.fill("espresso");
-    await page.waitForTimeout(300);
-
-    const lowerCount = await filteredRows.count();
-    expect(upperCount).toBe(lowerCount);
-  });
-
-  test("Sorting by product name works", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const headerButton = page.locator("#productProfitabilityTable thead th:nth-child(2) button");
-    await headerButton.click();
-    await page.waitForTimeout(300);
-
-    const firstRow = page.locator("#productProfitabilityTableBody tr:first-child td:nth-child(2)");
-    const firstName = await firstRow.textContent();
-    expect(firstName).toBeTruthy();
-  });
-
-  test("Sorting by type works", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const headerButton = page.locator("#productProfitabilityTable thead th:nth-child(4) button");
-    await headerButton.click();
-    await page.waitForTimeout(300);
-
-    const firstRow = page.locator("#productProfitabilityTableBody tr:first-child td:nth-child(4)");
-    const firstType = await firstRow.textContent();
-    expect(firstType).toBeTruthy();
-  });
-
-  test("Sorting by revenue works", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const headerButton = page.locator("#productProfitabilityTable thead th:nth-child(6) button");
-    await headerButton.click();
-    await page.waitForTimeout(300);
-
-    const firstRow = page.locator("#productProfitabilityTableBody tr:first-child td:nth-child(6)");
-    const firstRevenue = await firstRow.textContent();
-    expect(firstRevenue).toBeTruthy();
-  });
-
-  test("Sort indicators update correctly", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const headerButton = page.locator("#productProfitabilityTable thead th:nth-child(6) button");
-    await headerButton.click();
-    await page.waitForTimeout(300);
-
-    const th = page.locator("#productProfitabilityTable thead th:nth-child(6)");
-    await expect(th).toHaveAttribute("aria-sort", "ascending");
-
-    await headerButton.click();
-    await page.waitForTimeout(300);
-
-    await expect(th).toHaveAttribute("aria-sort", "descending");
-  });
-
-  test("Pagination controls work", async ({ page }) => {
-    await page.locator("#dashboardTabPerformance").click();
-    await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
-
-    const pageInfo = page.locator("#ppPageInfo");
-    await expect(pageInfo).toBeVisible();
-
-    const nextBtn = page.locator("#ppNextPage");
-    const prevBtn = page.locator("#ppPrevPage");
-
-    if (!await nextBtn.isDisabled()) {
-      await nextBtn.click();
-      await page.waitForTimeout(300);
-      await expect(prevBtn).not.toBeDisabled();
-
-      await prevBtn.click();
-      await page.waitForTimeout(300);
-      await expect(prevBtn).toBeDisabled();
-    }
-  });
 });
 
 test.describe("Finance Product Profitability", () => {
@@ -419,19 +242,16 @@ test.describe("Finance Product Profitability", () => {
 
 test.describe("Product Profitability Cross-tab Consistency", () => {
 
-  test("Dashboard and Products tables show consistent data when filtered", async ({ page }) => {
+  test("Dashboard chart and Products table both render data", async ({ page }) => {
+    // Dashboard chart renders
     await page.locator("#dashboardTabPerformance").click();
     await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
+    await page.waitForTimeout(500);
 
-    await page.waitForTimeout(300);
+    const dashCanvas = page.locator("#productProfitabilityChart");
+    await expect(dashCanvas).toBeVisible();
 
-    await page.locator("#ppSearchInput").fill("Espresso");
-    await page.waitForTimeout(300);
-
-    const dashRows = page.locator("#productProfitabilityTableBody tr");
-    const dashCount = await dashRows.count();
-
+    // Products table renders
     await page.evaluate(() => {
       if (typeof setSidebarOpen === 'function') {
         setSidebarOpen(true, false);
@@ -439,7 +259,6 @@ test.describe("Product Profitability Cross-tab Consistency", () => {
     });
     await page.waitForTimeout(300);
 
-    // Navigate to Products tab (Product Profitability moved here per Task 2)
     await page.locator("[data-page='products'][data-navigation-destination='products']").click();
     await page.waitForTimeout(300);
     await page.locator("#productsTabProfitability").click();
@@ -447,13 +266,11 @@ test.describe("Product Profitability Cross-tab Consistency", () => {
 
     await page.locator("#productsPanelProfitability").waitFor({ state: "visible" });
 
-    await page.locator("#productsPpSearchInput").fill("Espresso");
-    await page.waitForTimeout(300);
-
-    const productsRows = page.locator("#productsPpTableBody tr");
+    const productsTbody = page.locator("#productsPpTableBody");
+    await expect(productsTbody).toBeVisible();
+    const productsRows = productsTbody.locator("tr");
     const productsCount = await productsRows.count();
-
-    expect(dashCount).toBe(productsCount);
+    expect(productsCount).toBeGreaterThan(0);
   });
 
   test("Date filter changes refresh Product Profitability", async ({ page }) => {
@@ -488,12 +305,9 @@ test.describe("Product Profitability Cross-tab Consistency", () => {
     // Switch to Performance tab to verify Product Profitability data refreshed
     await page.locator("#dashboardTabPerformance").click();
     await page.locator("#dashboardPanelPerformance").waitFor({ state: "visible" });
-    await switchToDashboardTableView(page);
+    await page.waitForTimeout(500);
 
-    const tbody = page.locator("#productProfitabilityTableBody");
-    await expect(tbody).toBeVisible();
-    const rows = tbody.locator("tr");
-    const count = await rows.count();
-    expect(count).toBeGreaterThan(0);
+    const dashCanvas = page.locator("#productProfitabilityChart");
+    await expect(dashCanvas).toBeVisible();
   });
 });

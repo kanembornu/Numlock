@@ -2185,14 +2185,7 @@
     //--------------------------------------------------
     // Product Profitability — Dashboard Performance Tab
     //--------------------------------------------------
-    var productProfitabilityPageState = {
-      page: 1,
-      pageSize: 25,
-      sort: { key: "revenue", direction: "desc" },
-      filter: { category: "", search: "" }
-    };
 
-    var productProfitabilityDataCache = null;
 
     function renderProductProfitabilityFromResponse(res)
     {
@@ -2201,193 +2194,21 @@
         return;
       }
 
-      var analytics = res.performanceAnalytics;
-      var products = analytics.productProfitability || [];
-      var summary = analytics.summary || {};
-      var comparison = res.periodComparison || null;
-      var hotCold = analytics.hotColdEconomics || [];
-
-      productProfitabilityDataCache = products.slice();
-      productProfitabilityPageState.page = 1;
-
-      renderProductProfitabilityKpis(summary, comparison, hotCold);
-      populateDashboardProductProfitabilityCategoryFilter(products);
-      renderProductProfitabilityTable();
-      renderProductProfitabilityPagination("pp");
+      renderProductProfitabilityChart(res.performanceAnalytics);
     }
 
-    function renderProductProfitabilityKpis(summary, comparison, hotCold)
-    {
-      var formatCurrency = function(value) {
-        return "Rp " + Number(value || 0).toLocaleString("id-ID");
-      };
-      var formatNumber = function(value) {
-        return Number(value || 0).toLocaleString("id-ID");
-      };
-      var formatPercent = function(value) {
-        var num = Number(value || 0);
-        return isFinite(num) ? num.toFixed(1) + "%" : "—";
-      };
-      var formatDelta = function(change, status) {
-        if (!change || !isFinite(Number(change))) return "—";
-        var val = Number(change);
-        if (val === 0) return "0.0%";
-        return (status === "Up" ? "▲ " : "▼ ") + Math.abs(val).toFixed(1) + "%";
-      };
+    //--------------------------------------------------
+    // Product Profitability — Products Tab (Full Table)
+    //--------------------------------------------------
 
-      var revStatus = comparison && comparison.status ? comparison.status.revenue : "No Comparison";
-      var cogsStatus = comparison && comparison.status ? comparison.status.expense : "No Comparison";
-      var gpStatus = comparison && comparison.status ? comparison.status.profit : "No Comparison";
-      var gmStatus = comparison && comparison.status ? comparison.status.profitMargin : "No Comparison";
-      var unitsStatus = comparison && comparison.status ? comparison.status.unitsSold : "No Comparison";
+    var productProfitabilityPageState = {
+      page: 1,
+      pageSize: 25,
+      sort: { key: "revenue", direction: "desc" },
+      filter: { category: "", search: "" }
+    };
 
-      document.getElementById("ppKpiRevenueValue").textContent = formatCurrency(summary.revenue);
-      document.getElementById("ppKpiRevenueDelta").querySelector("strong").textContent = formatDelta(comparison && comparison.changes ? comparison.changes.revenuePercent : null, revStatus);
-
-      document.getElementById("ppKpiCogsValue").textContent = formatCurrency(summary.cogs);
-      document.getElementById("ppKpiCogsDelta").querySelector("strong").textContent = formatDelta(comparison && comparison.changes ? comparison.changes.expensePercent : null, cogsStatus);
-
-      document.getElementById("ppKpiGrossProfitValue").textContent = formatCurrency(summary.grossProfit);
-      document.getElementById("ppKpiGrossProfitDelta").querySelector("strong").textContent = formatDelta(comparison && comparison.changes ? comparison.changes.profitPercent : null, gpStatus);
-
-      document.getElementById("ppKpiGrossMarginValue").textContent = formatPercent(summary.grossMargin);
-      document.getElementById("ppKpiGrossMarginDelta").querySelector("strong").textContent = formatDelta(comparison && comparison.changes ? comparison.changes.profitMarginPoints : null, gmStatus);
-
-      var totalUnits = (hotCold[0] && hotCold[0].units) + (hotCold[1] && hotCold[1].units) || summary.unitsSold || 0;
-      document.getElementById("ppKpiUnitsValue").textContent = formatNumber(totalUnits);
-      document.getElementById("ppKpiUnitsDelta").querySelector("strong").textContent = formatDelta(comparison && comparison.changes ? comparison.changes.unitsSoldPercent : null, unitsStatus);
-
-      var variantCount = summary.productVariantCount || 0;
-      document.getElementById("ppKpiProductsValue").textContent = formatNumber(variantCount);
-      document.getElementById("ppKpiProductsDelta").querySelector("strong").textContent = "Variants";
-
-      var summaryText = "Product Profitability: " + (products.length || 0) + " variants, " + formatCurrency(summary.revenue) + " revenue, " + formatPercent(summary.grossMargin) + " margin";
-      document.getElementById("productProfitabilitySummary").textContent = summaryText;
-    }
-
-    function populateDashboardProductProfitabilityCategoryFilter(products)
-    {
-      var select = document.getElementById("ppCategoryFilter");
-      var currentValue = select.value;
-      var categories = [...new Set(products.map(function(p) { return p.category; }).filter(Boolean))].sort();
-      select.innerHTML = '<option value="">All Categories</option>' +
-        categories.map(function(cat) { return '<option value="' + escapeUiHtml(cat) + '">' + escapeUiHtml(cat) + '</option>'; }).join("");
-      select.value = currentValue;
-
-      var typeSelect = document.getElementById("ppTypeFilter");
-      var typeCurrentValue = typeSelect.value;
-      var types = [...new Set(products.map(function(p) { return p.type; }).filter(Boolean))].sort();
-      typeSelect.innerHTML = '<option value="">All Types</option>' +
-        types.map(function(t) { return '<option value="' + escapeUiHtml(t) + '">' + escapeUiHtml(t) + '</option>'; }).join("");
-      typeSelect.value = typeCurrentValue;
-    }
-
-
-    function sortProductProfitabilityTable(key)
-    {
-      var validKeys = {
-        "productName": true, "category": true, "type": true, "units": true,
-        "revenue": true, "cogs": true, "grossProfit": true, "grossMargin": true,
-        "revenueMix": true, "grossProfitRank": true, "revenueRank": true
-      };
-      if (!validKeys[key]) return;
-
-      var state = productProfitabilityPageState.sort;
-      if (state.key === key)
-      {
-        state.direction = state.direction === "asc" ? "desc" : "asc";
-      }
-      else
-      {
-        state.key = key;
-        state.direction = "asc";
-      }
-      productProfitabilityPageState.page = 1;
-      renderProductProfitabilityTable();
-      renderProductProfitabilityPagination("pp");
-    }
-
-    function filterDashboardProductProfitabilityTable()
-    {
-      var categorySelect = document.getElementById("ppCategoryFilter");
-      var typeSelect = document.getElementById("ppTypeFilter");
-      var searchInput = document.getElementById("ppSearchInput");
-      productProfitabilityPageState.filter.category = categorySelect.value;
-      productProfitabilityPageState.filter.type = typeSelect.value;
-      productProfitabilityPageState.filter.search = searchInput.value.toLowerCase().trim();
-      productProfitabilityPageState.page = 1;
-      renderProductProfitabilityTable();
-      renderProductProfitabilityPagination("pp");
-    }
-
-    function getFilteredSortedProducts()
-    {
-      var products = productProfitabilityDataCache || [];
-      var filter = productProfitabilityPageState.filter;
-      var sort = productProfitabilityPageState.sort;
-
-      if (filter.category)
-      {
-        products = products.filter(function(p) { return p.category === filter.category; });
-      }
-
-      if (filter.type)
-      {
-        products = products.filter(function(p) { return p.type === filter.type; });
-      }
-
-      if (filter.search)
-      {
-        products = products.filter(function(p) {
-          var searchLower = filter.search;
-          return (p.label && p.label.toLowerCase().includes(searchLower)) ||
-                 (p.productId && p.productId.toLowerCase().includes(searchLower));
-        });
-      }
-
-      products = products.slice().sort(function(a, b) {
-        var va = a[sort.key];
-        var vb = b[sort.key];
-        var cmp = 0;
-        if (typeof va === "string" && typeof vb === "string")
-        {
-          cmp = va.localeCompare(vb, "id", { sensitivity: "base" });
-        }
-        else
-        {
-          cmp = Number(va || 0) - Number(vb || 0);
-        }
-        return sort.direction === "asc" ? cmp : -cmp;
-      });
-
-      return products;
-    }
-
-        function setProductProfitabilityView(view)
-    {
-      var chartBtn = document.getElementById("ppViewChart");
-      var tableBtn = document.getElementById("ppViewTable");
-      var chartView = document.getElementById("ppChartView");
-      var tableView = document.getElementById("ppTableView");
-
-      if (view === "chart")
-      {
-        chartBtn.setAttribute("aria-pressed", "true");
-        tableBtn.setAttribute("aria-pressed", "false");
-        chartView.classList.remove("hidden");
-        tableView.classList.add("hidden");
-      }
-      else
-      {
-        chartBtn.setAttribute("aria-pressed", "false");
-        tableBtn.setAttribute("aria-pressed", "true");
-        chartView.classList.add("hidden");
-        tableView.classList.remove("hidden");
-        renderProductProfitabilityTable();
-        renderProductProfitabilityPagination();
-      }
-    }
-    window.setProductProfitabilityView = setProductProfitabilityView;
+    var productProfitabilityDataCache = null;
 
     function renderProductProfitabilityTable(tbodyId)
     {
@@ -2516,8 +2337,108 @@
       pageInfo.textContent = startItem + "–" + endItem + " of " + totalItems;
     }
 
-    // Expose globally for inline onclick handlers
+    function getFilteredSortedProducts()
+    {
+      var products = productProfitabilityDataCache || [];
+      var filter = productProfitabilityPageState.filter;
+      var sort = productProfitabilityPageState.sort;
+
+      if (filter.category)
+      {
+        products = products.filter(function(p) { return p.category === filter.category; });
+      }
+
+      if (filter.type)
+      {
+        products = products.filter(function(p) { return p.type === filter.type; });
+      }
+
+      if (filter.search)
+      {
+        products = products.filter(function(p) {
+          var searchLower = filter.search;
+          return (p.label && p.label.toLowerCase().includes(searchLower)) ||
+                 (p.productId && p.productId.toLowerCase().includes(searchLower));
+        });
+      }
+
+      products = products.slice().sort(function(a, b) {
+        var va = a[sort.key];
+        var vb = b[sort.key];
+        var cmp = 0;
+        if (typeof va === "string" && typeof vb === "string")
+        {
+          cmp = va.localeCompare(vb, "id", { sensitivity: "base" });
+        }
+        else
+        {
+          cmp = Number(va || 0) - Number(vb || 0);
+        }
+        return sort.direction === "asc" ? cmp : -cmp;
+      });
+
+      return products;
+    }
+
+    function sortProductProfitabilityTable(key)
+    {
+      var validKeys = {
+        "productName": true, "category": true, "type": true, "units": true,
+        "revenue": true, "cogs": true, "grossProfit": true, "grossMargin": true,
+        "revenueMix": true, "grossProfitRank": true, "revenueRank": true
+      };
+      if (!validKeys[key]) return;
+
+      var state = productProfitabilityPageState.sort;
+      if (state.key === key)
+      {
+        state.direction = state.direction === "asc" ? "desc" : "asc";
+      }
+      else
+      {
+        state.key = key;
+        state.direction = "asc";
+      }
+      productProfitabilityPageState.page = 1;
+      renderProductProfitabilityTable();
+      renderProductProfitabilityPagination("pp");
+    }
+
+    function filterProductsTabProfitabilityTable()
+    {
+      var categorySelect = document.getElementById("productsPpCategoryFilter");
+      var typeSelect = document.getElementById("productsPpTypeFilter");
+      var searchInput = document.getElementById("productsPpSearchInput");
+      if (!categorySelect || !typeSelect || !searchInput) return;
+
+      productProfitabilityPageState.filter.category = categorySelect.value;
+      productProfitabilityPageState.filter.type = typeSelect.value;
+      productProfitabilityPageState.filter.search = searchInput.value.toLowerCase().trim();
+      productProfitabilityPageState.page = 1;
+      renderProductProfitabilityTable("productsPpTableBody");
+      renderProductProfitabilityPagination("productsPp");
+    }
+
+    function populateProductsTabProfitabilityCategoryFilter(products)
+    {
+      var select = document.getElementById("productsPpCategoryFilter");
+      if (!select) return;
+      var currentValue = select.value;
+      var categories = [...new Set(products.map(function(p) { return p.category; }).filter(Boolean))].sort();
+      select.innerHTML = '<option value="">All Categories</option>' +
+        categories.map(function(cat) { return '<option value="' + escapeUiHtml(cat) + '">' + escapeUiHtml(cat) + '</option>'; }).join("");
+      select.value = currentValue;
+
+      var typeSelect = document.getElementById("productsPpTypeFilter");
+      if (!typeSelect) return;
+      var typeCurrentValue = typeSelect.value;
+      var types = [...new Set(products.map(function(p) { return p.type; }).filter(Boolean))].sort();
+      typeSelect.innerHTML = '<option value="">All Types</option>' +
+        types.map(function(t) { return '<option value="' + escapeUiHtml(t) + '">' + escapeUiHtml(t) + '</option>'; }).join("");
+      typeSelect.value = typeCurrentValue;
+    }
+
+    // Expose globally for inline onclick handlers (Products tab uses these)
     window.sortProductProfitabilityTable = sortProductProfitabilityTable;
-    window.filterDashboardProductProfitabilityTable = filterDashboardProductProfitabilityTable;
     window.renderProductProfitabilityTable = renderProductProfitabilityTable;
     window.renderProductProfitabilityPagination = renderProductProfitabilityPagination;
