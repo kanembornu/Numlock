@@ -3001,9 +3001,14 @@
           </article>
         </div>
 
-        <p id="productProfitabilitySummary" class="mt-2 text-xs text-slate-500" aria-live="polite"></p>
+        <p id="productProfitabilitySummary" class="sr-only"></p>
 
+        <!-- Chart + Table Toggle -->
         <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+          <div class="flex items-center gap-2">
+            <button type="button" id="ppViewChart" class="product-profitability-action" onclick="setProductProfitabilityView('chart')" aria-pressed="true">Chart</button>
+            <button type="button" id="ppViewTable" class="product-profitability-action" onclick="setProductProfitabilityView('table')" aria-pressed="false">Table</button>
+          </div>
           <div class="flex items-center gap-2">
             <label for="ppSearchInput" class="sr-only">Search products</label>
             <input type="text" id="ppSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterDashboardProductProfitabilityTable()">
@@ -3017,6 +3022,15 @@
             </select>
           </div>
         </div>
+
+        <!-- Chart View -->
+        <div id="ppChartView" class="performance-chart-shell performance-chart-shell-primary relative h-72 min-w-0 sm:h-96">
+          <canvas id="productProfitabilityChart" aria-hidden="true"></canvas>
+          <p id="productProfitabilityEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
+        </div>
+
+        <!-- Table View -->
+        <div id="ppTableView" class="hidden">
 
         <div class="relative overflow-x-auto">
           <div class="relative overflow-x-auto">
@@ -4810,7 +4824,7 @@
         "periodComparisonLabel", "periodComparisonLead", "periodComparisonPeriod",
         "kpiTargetProvenance", "kpiTargetDetails", "topProductsContainer",
         "mainChart", "revenueChartEmpty", "revenueChartSummary",
-        "productProfitabilitySummary",
+        "productProfitabilityChart", "productProfitabilityEmpty", "productProfitabilitySummary",
         "categoryPerformanceChart", "categoryPerformanceEmpty", "categoryPerformanceSummary",
         "expenseChart", "expenseChartEmpty", "expenseChartSummary",
         "expenseSummaryBox", "diagnosisContainer", "forecastContainer",
@@ -5033,6 +5047,7 @@
       };
       elements.chartPresentation = {
         main: { canvas: required.mainChart, empty: required.revenueChartEmpty, summary: required.revenueChartSummary },
+        productProfitability: { canvas: required.productProfitabilityChart, empty: required.productProfitabilityEmpty, summary: required.productProfitabilitySummary },
         categoryPerformance: { canvas: required.categoryPerformanceChart, empty: required.categoryPerformanceEmpty, summary: required.categoryPerformanceSummary },
         expense: { canvas: required.expenseChart, empty: required.expenseChartEmpty, summary: required.expenseChartSummary }
       };

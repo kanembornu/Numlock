@@ -1227,6 +1227,126 @@
     }
 
 
+    function renderProductProfitabilityChart(performanceAnalytics)
+    {
+      var chartPalette = getCurrentThemePalette();
+      var data = performanceAnalytics && Array.isArray(performanceAnalytics.productProfitability)
+        ? performanceAnalytics.productProfitability.slice()
+        : [];
+      var displayedProducts = data.slice(0, window.innerWidth < 640 ? 6 : 10);
+      var chartAvailable = isChartLibraryAvailable();
+      var summary = displayedProducts.length
+        ? displayedProducts.length + " products ranked by gross margin. Leader: " + displayedProducts[0].label +
+          " at " + formatChartCurrency(displayedProducts[0].grossMargin) + "."
+        : "No product profitability data for the selected period.";
+
+      productProfitabilityChart = destroyChartInstance(productProfitabilityChart);
+      setChartPresentation("productProfitabilityChart", "productProfitabilityEmpty", "productProfitabilitySummary",
+        !chartAvailable || displayedProducts.length === 0, chartAvailable ? "No product sales data for the selected period." : "Chart unavailable.", summary);
+      if (!chartAvailable || displayedProducts.length === 0) return;
+
+      var productProfitabilityLabelPlugin = {
+        id: "productProfitabilityLabels",
+        afterDatasetsDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+          var yScale = chart.scales.y;
+          var meta = chart.getDatasetMeta(0);
+          var chartLeft = chart.chartArea.left;
+          var chartRight = chart.chartArea.right;
+          var percentageX = chart.width - 10;
+
+          ctx.save();
+          ctx.textBaseline = "middle";
+
+          displayedProducts.forEach(function(item, index)
+          {
+            var y = yScale.getPixelForValue(index);
+            var bar = meta.data[index];
+            var valueX = bar ? Math.min(bar.x + 12, chartRight + 12) : chartRight + 12;
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "600 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText((index + 1) + ". " + item.label, chartLeft - 132, y);
+
+            ctx.fillStyle = chartPalette.axis;
+            ctx.font = "700 11.5px Inter, sans-serif";
+            ctx.textAlign = "left";
+            ctx.fillText(formatChartCurrency(item.grossMargin), valueX, y);
+
+            ctx.fillStyle = chartPalette.series[2] || chartPalette.axis;
+            ctx.font = "600 11.5px Inter, sans-serif";
+            ctx.textAlign = "right";
+            ctx.fillText(
+              Number(item.grossMarginPercent || 0).toFixed(1) + "%",
+              percentageX,
+              y
+            );
+          });
+
+          ctx.restore();
+        },
+        beforeDraw: function(chart)
+        {
+          var ctx = chart.ctx;
+
+          ctx.save();
+          ctx.fillStyle = chartPalette.axis;
+          ctx.font = "700 10.5px Inter, sans-serif";
+          ctx.textAlign = "right";
+          ctx.textBaseline = "bottom";
+          ctx.fillText("Margin %", chart.width - 10, chart.chartArea.top - 2);
+          ctx.restore();
+        }
+      };
+
+      productProfitabilityChart = new Chart(initializeStableDashboardElements().chartPresentation.productProfitability.canvas.getContext("2d"), {
+        type: "bar",
+        data: {
+          labels: displayedProducts.map(function(item) { return item.label; }),
+          datasets: [
+            { label: "Gross Margin", numlockThemeRole: "margin", data: displayedProducts.map(function(item) { return item.grossMargin; }), backgroundColor: chartPalette.series[1], borderColor: chartPalette.series[1], borderRadius: 5, barPercentage: 0.84, categoryPercentage: 0.80 }
+          ]
+        },
+        plugins: [productProfitabilityLabelPlugin],
+        options: {
+          animation: shouldReduceMotion() ? false : undefined,
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          layout: {
+            padding: {
+              left: 136,
+              right: 132,
+              top: 20,
+              bottom: 2
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: chartPalette.tooltipBackground,
+              titleColor: chartPalette.tooltipText,
+              bodyColor: chartPalette.tooltipText,
+              callbacks: {
+                label: function(context) { return "Gross Margin: " + formatChartCurrency(context.raw); },
+                afterBody: function(context)
+                {
+                  var metric = displayedProducts[context[0].dataIndex];
+                  return ["Revenue: " + formatChartCurrency(metric.revenue), "COGS: " + formatChartCurrency(metric.cogs), "Margin: " + Number(metric.grossMarginPercent || 0).toFixed(1) + "%"];
+                }
+              }
+            }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: chartPalette.grid }, ticks: { color: chartPalette.axis, font: { weight: "600" }, callback: formatRevenueAxisTick } },
+            y: { grid: { display: false }, ticks: { display: false, autoSkip: false } }
+          }
+        }
+      });
+    }
+
     function formatPerformanceRevenueMillions(value)
     {
       var revenue = Number(value);
@@ -1624,6 +1744,7 @@
       try
       {
         renderPerformanceSnapshot(latestPerformanceAnalytics);
+        renderProductProfitabilityChart(latestPerformanceAnalytics);
         renderCategoryPerformanceChart(latestPerformanceAnalytics);
         renderHotColdEconomicsComparison(latestPerformanceAnalytics.hotColdEconomics);
         renderExpenseChart(Array.isArray(latestPerformanceAnalytics.expenseGroups) ? latestPerformanceAnalytics.expenseGroups : []);
@@ -2241,6 +2362,32 @@
 
       return products;
     }
+
+        function setProductProfitabilityView(view)
+    {
+      var chartBtn = document.getElementById("ppViewChart");
+      var tableBtn = document.getElementById("ppViewTable");
+      var chartView = document.getElementById("ppChartView");
+      var tableView = document.getElementById("ppTableView");
+
+      if (view === "chart")
+      {
+        chartBtn.setAttribute("aria-pressed", "true");
+        tableBtn.setAttribute("aria-pressed", "false");
+        chartView.classList.remove("hidden");
+        tableView.classList.add("hidden");
+      }
+      else
+      {
+        chartBtn.setAttribute("aria-pressed", "false");
+        tableBtn.setAttribute("aria-pressed", "true");
+        chartView.classList.add("hidden");
+        tableView.classList.remove("hidden");
+        renderProductProfitabilityTable();
+        renderProductProfitabilityPagination();
+      }
+    }
+    window.setProductProfitabilityView = setProductProfitabilityView;
 
     function renderProductProfitabilityTable(tbodyId)
     {
