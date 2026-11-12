@@ -2532,7 +2532,12 @@
       var categories = [...new Set(products.map(function(p) { return p.category; }).filter(Boolean))].sort();
       select.innerHTML = '<option value="">All Categories</option>' +
         categories.map(function(cat) { return '<option value="' + escapeUiHtml(cat) + '">' + escapeUiHtml(cat) + '</option>'; }).join("");
+      // The refreshed payload may no longer offer the selected category. The visible
+      // selection and the filter state must be normalized to the same default value,
+      // otherwise the dropdown and the rendered rows describe different filters.
+      if (currentValue && categories.indexOf(currentValue) === -1) currentValue = "";
       select.value = currentValue;
+      productProfitabilityPageState.filter.category = currentValue;
 
       var typeSelect = document.getElementById("productsPpTypeFilter");
       if (!typeSelect) return;
@@ -2540,7 +2545,9 @@
       var types = [...new Set(products.map(function(p) { return p.type; }).filter(Boolean))].sort();
       typeSelect.innerHTML = '<option value="">All Types</option>' +
         types.map(function(t) { return '<option value="' + escapeUiHtml(t) + '">' + escapeUiHtml(t) + '</option>'; }).join("");
+      if (typeCurrentValue && types.indexOf(typeCurrentValue) === -1) typeCurrentValue = "";
       typeSelect.value = typeCurrentValue;
+      productProfitabilityPageState.filter.type = typeCurrentValue;
     }
 
     // Expose globally for inline onclick handlers (Products tab uses these)
