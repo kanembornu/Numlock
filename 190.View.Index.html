@@ -6281,12 +6281,17 @@
       }).getProductCatalogReadModel();
     }
 
+    // Monotonic request sequence: only the newest Product Profitability request may apply.
+    var productProfitabilityRequestSeq = 0;
+
     function ensureProductProfitabilityData()
     {
       var elements = initializeStableDashboardElements();
+      var requestSeq = ++productProfitabilityRequestSeq;
       elements.products.setAttribute("aria-busy", "true");
       google.script.run.withSuccessHandler(function(response)
       {
+        if (requestSeq !== productProfitabilityRequestSeq) return; // superseded by a newer request
         elements.products.setAttribute("aria-busy", "false");
         if (response && response.status === "SUCCESS")
         {
@@ -6294,6 +6299,7 @@
         }
       }).withFailureHandler(function(error)
       {
+        if (requestSeq !== productProfitabilityRequestSeq) return; // superseded by a newer request
         elements.products.setAttribute("aria-busy", "false");
         console.error("Product Profitability read failed", error);
       }).getProductProfitabilityData("currentYear", null, null);
@@ -6328,7 +6334,7 @@
       };
 
       productProfitabilityDataCache = products.slice();
-      productProfitabilityPageState.page = 1;
+      // Page/filter/sort survive an async refresh; render clamps to the last valid page.
       initializeProductsTabProfitabilityPageSize();
       populateProductsTabProfitabilityCategoryFilter(products);
       renderProductProfitabilityTable("productsPpTableBody");
