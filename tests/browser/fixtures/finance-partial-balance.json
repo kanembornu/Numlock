@@ -1,0 +1,45 @@
+{
+  "_fixture": "SYNTHETIC — contract-valid getPartialBalanceData FINAL shape. No production, customer, or transaction data.",
+  "status": "FINAL",
+  "finalValues": {
+    "inventoryBookValue": 1200000,
+    "inventoryStatus": "FINAL",
+    "accountsPayable": 500000,
+    "hpp": 0,
+    "materialPurchasesExpensed": null,
+    "cashChange": 4000000,
+    "balanced": true
+  },
+  "period": {
+    "filter": "custom",
+    "startDate": "2026-01-01",
+    "endDate": "2026-12-31",
+    "label": "1 Jan 2026 to 31 Dec 2026"
+  },
+  "asOfDate": "2026-12-31",
+  "assets": {
+    "cash": { "status": "FINAL", "amount": 4000000 },
+    "inventory": { "status": "FINAL", "amount": 1200000 },
+    "fixedAssets": {
+      "status": "FINAL",
+      "acquisitionCost": 9000000,
+      "accumulatedDepreciation": 2500000,
+      "netBookValue": 6500000
+    }
+  },
+  "liabilities": { "status": "FINAL", "accountsPayable": 500000, "total": 500000 },
+  "equity": {
+    "ownerContributions": 10000000,
+    "returnOfCapital": 0,
+    "netContributedCapital": 9750000,
+    "ownerDraws": 250000,
+    "retainedEarningsOpening": 1500000,
+    "postCutoffProfit": 750000,
+    "totalEquity": 11750000
+  },
+  "reconciliation": { "status": "FINAL", "finalValues": null, "issues": [] },
+  "availability": { "fixedAssets": "AVAILABLE", "capitalEquity": "AVAILABLE", "balanceLedger": "AVAILABLE" },
+  "qualityIssues": [],
+  "supplemental": { "fixedAssets": { "assetCount": 3 }, "capitalEquity": { "status": "AVAILABLE" } },
+  "accountingPolicy": { "recognitionBasis": "TRANSACTION_DATE_OPERATING", "fixture": true }
+}

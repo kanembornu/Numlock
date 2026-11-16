@@ -1,0 +1,78 @@
+{
+  "_fixture": "SYNTHETIC — contract-valid getFinanceData shape (P&L statement + capitalEquity read model). No production, customer, or transaction data.",
+  "status": "PASS",
+  "period": {
+    "filter": "custom",
+    "startDate": "2026-01-01",
+    "endDate": "2026-12-31",
+    "label": "1 Jan 2026 to 31 Dec 2026"
+  },
+  "accountingRegime": "LEGACY_PRE_TRANSITION",
+  "summary": {
+    "revenue": 20000000,
+    "cogs": 8000000,
+    "grossProfit": 12000000,
+    "operatingExpenses": 3500000,
+    "depreciationExpense": 500000,
+    "operatingNetProfit": 8000000,
+    "operatingProfitMargin": 0.4,
+    "materialPurchasesExpensed": null
+  },
+  "expenseBreakdown": [
+    { "AccountCode": "6100", "AccountName": "Sample Rent", "StatementGroup": "Operating", "amount": 2000000 },
+    { "AccountCode": "6200", "AccountName": "Sample Utilities", "StatementGroup": "Operating", "amount": 1500000 }
+  ],
+  "dataQuality": {
+    "unresolvedProducts": [],
+    "unresolvedExpenseItems": [],
+    "inactiveAccountMappings": [],
+    "duplicateDepreciationLogicalKeys": [],
+    "invalidDepreciationRows": [],
+    "invalidDepreciationPeriods": [],
+    "unresolvedDepreciationAssets": [],
+    "depreciationOverlapTransactions": [],
+    "excludedInactiveTransactions": 0
+  },
+  "policyDisclosures": [],
+  "accountingPolicy": {
+    "recognitionBasis": "TRANSACTION_DATE_OPERATING",
+    "depreciationIncluded": true,
+    "depreciationSource": "DepreciationLedger"
+  },
+  "capitalEquity": {
+    "asOfDate": "2026-12-31",
+    "owners": [
+      { "owner": "Avery Sample", "ownerContributions": 6000000, "returnOfCapital": 0, "ownerDraws": 100000, "contributedCapital": 5900000 },
+      { "owner": "Blake Specimen", "ownerContributions": 4000000, "returnOfCapital": 0, "ownerDraws": 150000, "contributedCapital": 3850000 }
+    ],
+    "ownerContributions": 10000000,
+    "returnOfCapital": 0,
+    "ownerDraws": 250000,
+    "contributedCapital": 9750000,
+    "retainedEarnings": 2250000,
+    "totalEquity": 11750000,
+    "retainedEarningsOpening": 1500000,
+    "retainedEarningsPostCutoffProfit": 750000,
+    "retainedEarningsStatus": "ESTABLISHED",
+    "accountingPolicy": {
+      "recognition": "AS_OF_TANGGAL",
+      "profitAndLossEffect": "NONE",
+      "cashEffect": "NONE",
+      "retainedEarningsOpeningDate": "2026-07-31",
+      "postCutoffProfitAndLossStarts": "2026-08-01",
+      "totalEquityFormula": "CONTRIBUTED_CAPITAL_PLUS_RETAINED_EARNINGS_MINUS_OWNER_DRAW"
+    },
+    "dataQuality": {
+      "duplicateIds": [],
+      "duplicateLogicalKeys": [],
+      "invalidRows": [],
+      "unresolvedAccountMappings": [],
+      "duplicateOpeningBalances": [],
+      "missingOpeningBalance": false,
+      "invalidOpeningBalances": [],
+      "excludedInactiveRows": 0,
+      "excludedInactiveOpeningBalances": 0,
+      "preCutoffProfitAndLossIncluded": false
+    }
+  }
+}

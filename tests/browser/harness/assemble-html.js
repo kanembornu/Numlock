@@ -70,6 +70,12 @@ function assembleHtml() {
   const pricingData = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "pricing.json"), "utf8"));
   const transactionsPage = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "transactions-page.json"), "utf8"));
   const productProfitabilityData = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "product-profitability.json"), "utf8"));
+  // P1-B synthetic Finance fixtures (see each file's _fixture note). Local only.
+  const financeStatement = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "finance-statement.json"), "utf8"));
+  const financePartialBalance = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "finance-partial-balance.json"), "utf8"));
+  const financePartialBalancePending = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "finance-partial-balance-pending.json"), "utf8"));
+  const financeCashFlow = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "finance-cash-flow.json"), "utf8"));
+  const financeAssets = JSON.parse(fs.readFileSync(path.join(FIXTURES_DIR, "finance-assets.json"), "utf8"));
 
   const fixtureScript = `
     <script>
@@ -79,7 +85,12 @@ function assembleHtml() {
         operationalAuth: ${JSON.stringify(operationalAuth)},
         pricing: ${JSON.stringify(pricingData)},
         transactionsPage: ${JSON.stringify(transactionsPage)},
-        productProfitability: ${JSON.stringify(productProfitabilityData)}
+        productProfitability: ${JSON.stringify(productProfitabilityData)},
+        financeStatement: ${JSON.stringify(financeStatement)},
+        financePartialBalance: ${JSON.stringify(financePartialBalance)},
+        financePartialBalancePending: ${JSON.stringify(financePartialBalancePending)},
+        financeCashFlow: ${JSON.stringify(financeCashFlow)},
+        financeAssets: ${JSON.stringify(financeAssets)}
       };
       console.log('[Local Harness] Fixtures injected:', Object.keys(window.__NUMLOCK_FIXTURES__));
     </script>
@@ -148,6 +159,15 @@ function assembleHtml() {
                             };
                             break;
                           }
+                          // P1-B Finance fixtures. Overridable per test via window.__NUMLOCK_FIXTURES__.
+                          case 'getFinanceData':
+                            result = JSON.parse(JSON.stringify(window.__NUMLOCK_FIXTURES__.financeStatement)); break;
+                          case 'getPartialBalanceData':
+                            result = JSON.parse(JSON.stringify(window.__NUMLOCK_FIXTURES__.financePartialBalance || window.__NUMLOCK_FIXTURES__.financePartialBalancePending)); break;
+                          case 'getCashFlowData':
+                            result = JSON.parse(JSON.stringify(window.__NUMLOCK_FIXTURES__.financeCashFlow)); break;
+                          case 'getAssetsReadModel':
+                            result = JSON.parse(JSON.stringify(window.__NUMLOCK_FIXTURES__.financeAssets)); break;
                           case 'submitCanonicalTransaction':
                             result = { success: true, data: { id: 'TXN-' + Date.now() } }; break;
                           case 'submitOperationalOrder': {

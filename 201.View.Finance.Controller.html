@@ -401,6 +401,12 @@
     {
       var validDestinations = ["profit-loss", "capital-equity", "product-profitability", "balance-sheet", "depreciation", "assets", "cash-flow"];
       financeState.destination = validDestinations.indexOf(destination) !== -1 ? destination : "profit-loss";
+      document.querySelectorAll("[data-finance-tab]").forEach(function(tab) {
+        var tabDestination = tab.getAttribute("data-finance-tab");
+        var selected = tabDestination === (financeState.destination === "depreciation" ? "assets" : financeState.destination);
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+      });
       var isEquity = financeState.destination === "capital-equity";
       var isPP = financeState.destination === "product-profitability";
       var isBS = financeState.destination === "balance-sheet";

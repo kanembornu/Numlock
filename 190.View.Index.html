@@ -68,7 +68,7 @@
       .hf-period-select { width: 148px; min-width: 148px; height: 44px; border-radius: 9px; padding-left: 14px; padding-right: 34px; }
       .hf-period-secondary { display: flex; align-items: center; gap: 10px; }
       #utilityMetadata { gap: 20px; font-size: 12px; }
-      #contentViewport { min-height: 0; background: var(--canvas); }
+      #contentViewport { position: relative; min-height: 0; background: var(--canvas); }
       #dashboardTabList { height: auto; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); overflow-x: hidden; overflow-y: hidden; }
       #dashboardTabList [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; }
       #dashboardTabList [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
@@ -130,7 +130,10 @@
       #financialModulesGroup { padding-left: 30px; }
       #financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }
       #financialModulesGroup .ui-sidebar-item { min-height: 35px; padding: 6px 10px; }
-      .finance-layout { display: grid; gap: 14px; }
+      .finance-layout { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .finance-layout > * { min-width: 0; }
+      #financeAssetsPagination, #financeDepreciationPagination, #financeAssetsPagination > div, #financeDepreciationPagination > div { min-width: 0; flex-wrap: wrap; }
+      #financeAssetsPageNumbers, #financeDepreciationPageNumbers { flex-wrap: wrap; }
       .finance-layout[hidden] { display: none; }
       .finance-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
       .finance-period-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
@@ -174,6 +177,11 @@
       .finance-equity-bridge dd { margin-top: 4px; font-size: 16px; font-weight: 750; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
       .finance-equity-operator { color: var(--text-muted); font-size: 20px; font-weight: 700; }
       .finance-equity-cutoff { margin-top: 3px; color: var(--text-muted); font-size: 10px; }
+      #financeDepPolicySource { min-width: 0; overflow-wrap: anywhere; }
+      @media (max-width: 480px) {
+        #finance .finance-kpis, #finance .finance-equity-bridge { grid-template-columns: minmax(0, 1fr); }
+        #finance .finance-kpi dd, #finance .finance-equity-bridge dd { overflow-wrap: normal; white-space: nowrap; }
+      }
       @media (min-width: 768px) {
         .finance-layout { gap: 12px; }
         .finance-header { min-height: 42px; padding: 0 2px 8px; border-bottom: 1px solid var(--divider); }
@@ -417,6 +425,7 @@
       .products-grid--catalog { min-width: 640px; }
       .products-grid--detail th:first-child { width: 42%; text-align: left; }
       .products-grid--detail td { font-weight: 600; }
+      #productDetailContent th, #inventoryItemDetailContent th, #financeAssetDetailContent th { overflow-wrap: anywhere; }
       .products-grid--recipe th:first-child, .products-grid--recipe td:first-child { width: 70%; text-align: left; }
       .products-grid--recipe th:last-child, .products-grid--recipe td:last-child { width: 30%; text-align: right; }
       .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: 700; text-align: left; }
@@ -2059,7 +2068,9 @@
         #dashboardSidebar { width: min(320px, calc(100vw - 32px)); box-shadow: var(--shadow-2); }
         #topUtilityBar { height: auto; min-height: 52px; flex-wrap: wrap; padding: 8px 12px; }
         #dashboardUtilityControls { order: 3; width: 100%; flex-wrap: wrap; }
-        #contentViewport { overflow: visible; padding: var(--space-5); }
+        #appShell { height: 100dvh; min-height: 0; }
+        #mainContent { display: grid; grid-template-rows: auto minmax(0, 1fr); min-height: 0; }
+        #contentViewport { min-height: 0; overflow: auto; padding: var(--space-5); }
         #dashboardPanelPerformance { height: auto; overflow: visible; }
         #dashboardPanelPerformance:not([hidden]) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         #dashboardPanelPerformance #performanceSnapshotSection,
@@ -2515,8 +2526,13 @@
       }
       html.numlock-phone { --numlock-phone-scale: 1.6; width: 100%; max-width: 100%; overflow-x: clip; }
       html.numlock-phone body { width: 100%; max-width: 100%; overflow-x: clip !important; }
-      html.numlock-phone #appShell { width: calc(100% / var(--numlock-phone-scale)); max-width: none; min-height: calc(100vh / var(--numlock-phone-scale)); transform: scale(var(--numlock-phone-scale)); transform-origin: top left; }
-      html.numlock-phone #mainContent { width: 100% !important; max-width: 100% !important; min-height: calc(100vh / var(--numlock-phone-scale)); margin-left: 0 !important; overflow: visible !important; }
+      html.numlock-phone #appShell { width: calc(100% / var(--numlock-phone-scale)); max-width: none; height: calc(100dvh / var(--numlock-phone-scale)); min-height: 0; transform: scale(var(--numlock-phone-scale)); transform-origin: top left; }
+      html.numlock-phone #mainContent { width: 100% !important; max-width: 100% !important; min-height: 0; margin-left: 0 !important; overflow: visible !important; }
+      html.numlock-phone #dashboardSidebar { width: calc((100vw - 32px) / var(--numlock-phone-scale)); }
+      html.numlock-phone #dashboardSidebar .sidebar-brand { gap: 4px; }
+      html.numlock-phone #dashboardSidebar .sidebar-brand > div:first-child { gap: 8px; }
+      html.numlock-phone #dashboardSidebar .sidebar-brand .text-xl { font-size: 16px; }
+      html.numlock-phone #sidebarCloseButton { flex-shrink: 0; }
       html.numlock-phone #sidebarMenuButton, html.numlock-phone #sidebarCloseButton { display: inline-flex !important; }
       html.numlock-phone #sidebarCollapseButton { display: none !important; }
       html.numlock-phone #dashboardSidebar.-translate-x-full { transform: translateX(-100%) !important; }
@@ -2687,59 +2703,19 @@
             id="financialModulesDisclosureButton"
             type="button"
             class="ui-sidebar-item flex w-full items-center text-left text-sm font-normal transition"
-            aria-expanded="true"
-            aria-controls="financialModulesGroup"
-            aria-label="Finance, expanded"
-            title="Finance"
-            onclick="toggleFinancialModulesDisclosure(this)">
+            data-page="finance"
+            aria-label="Finance"
+            title="Finance">
             <i class="fas fa-wallet w-6 text-center" aria-hidden="true"></i>
             <span class="sidebar-expanded-content flex min-w-0 flex-1 items-center justify-between gap-2">
               <span>Finance</span>
             </span>
-            <i class="sidebar-expanded-content fas fa-chevron-up text-[10px]" aria-hidden="true"></i>
           </button>
-
-          <div id="financialModulesGroup" class="mt-1 space-y-0 pl-5" role="list" aria-label="Finance destinations">
-            <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="profit-loss" aria-label="Profit and Loss" title="Profit &amp; Loss" class="ui-sidebar-item flex w-full items-center text-left transition">
-                <i class="fas fa-file-invoice-dollar w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Profit &amp; Loss</span>
-              </button>
-            </div>
-            <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="capital-equity" aria-label="Capital and Equity" title="Capital &amp; Equity" class="ui-sidebar-item flex w-full items-center text-left transition">
-                <i class="fas fa-coins w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Capital &amp; Equity</span>
-              </button>
-            </div>
-            <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="assets" aria-label="Assets" title="Assets" class="ui-sidebar-item flex w-full items-center text-left transition">
-                <i class="fas fa-building-columns w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Assets</span>
-              </button>
-            </div>
-            <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="depreciation" aria-label="Depreciation" title="Depreciation" class="ui-sidebar-item flex w-full items-center text-left transition" style="display:none;">
-                <i class="fas fa-arrow-trend-down w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Depreciation</span>
-              </button>
-            </div>
-            <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="balance-sheet" aria-label="Balance Position" title="Balance Position" class="ui-future-module">
-                <i class="fas fa-scale-balanced w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Balance Position</span>
-              </button>
-            </div>
-            <div role="listitem">
-              <button type="button" data-page="finance" data-navigation-destination="cash-flow" aria-label="Cash Flow" title="Cash Flow" class="ui-sidebar-item flex w-full items-center text-left transition">
-                <i class="fas fa-money-bill-trend-up w-6 text-center" aria-hidden="true"></i>
-                <span class="sidebar-expanded-content min-w-0">Cash Flow</span>
-              </button>
-            </div>
-          </div>
         </div>
 
       </nav>
+
+
 
     <div id="sidebarUtilityNavigation" class="p-2">
       <button id="sidebarMobileCloseButton" type="button" class="ui-sidebar-item hidden w-full items-center text-left lg:hidden" aria-label="Close navigation menu" onclick="setSidebarOpen(false, true)">
@@ -3160,6 +3136,14 @@
 
     <!-- FINANCE: PROFIT & LOSS -->
     <section id="finance" class="page" hidden aria-labelledby="financeHeading" aria-busy="false">
+      <nav id="financeTabList" class="products-tab-list mb-4" role="tablist" aria-label="Finance destinations" style="min-width:0;max-width:100%">
+        <button id="financeTab-profit-loss" type="button" role="tab" data-finance-tab="profit-loss" aria-controls="financeContent" aria-selected="true" tabindex="0">Profit &amp; Loss</button>
+        <button id="financeTab-capital-equity" type="button" role="tab" data-finance-tab="capital-equity" aria-controls="financeCapitalEquityContent" aria-selected="false" tabindex="-1">Capital &amp; Equity</button>
+        <button id="financeTab-assets" type="button" role="tab" data-finance-tab="assets" aria-controls="financeAssetsContent" aria-selected="false" tabindex="-1">Assets</button>
+        <button id="financeTab-depreciation" type="button" role="tab" data-finance-tab="depreciation" aria-controls="financeAssetsContent" aria-selected="false" tabindex="-1" style="display:none;">Depreciation</button>
+        <button id="financeTab-balance-sheet" type="button" role="tab" data-finance-tab="balance-sheet" aria-controls="financeBalanceSheetContent" aria-selected="false" tabindex="-1">Balance Position</button>
+        <button id="financeTab-cash-flow" type="button" role="tab" data-finance-tab="cash-flow" aria-controls="financeCashFlowContent" aria-selected="false" tabindex="-1">Cash Flow</button>
+      </nav>
       <div class="finance-layout">
         <header class="finance-header">
           <h1 id="financeHeading" class="sr-only" tabindex="-1">Profit &amp; Loss</h1>
@@ -5051,23 +5035,6 @@
       return elements;
     }
 
-    function toggleFinancialModulesDisclosure(button)
-    {
-      var group = button.nextElementSibling;
-      var isExpanded = button.getAttribute("aria-expanded") === "true";
-      var nextExpanded = !isExpanded;
-      var disclosureIcon = button.lastElementChild;
-
-      button.setAttribute("aria-expanded", String(nextExpanded));
-      button.setAttribute(
-        "aria-label",
-        "Finance, " + (nextExpanded ? "expanded" : "collapsed")
-      );
-      group.hidden = !nextExpanded;
-      disclosureIcon.classList.toggle("fa-chevron-up", nextExpanded);
-      disclosureIcon.classList.toggle("fa-chevron-down", !nextExpanded);
-    }
-
     function setDesktopSidebarCollapsed(isCollapsed)
     {
       var elements = initializeStableDashboardElements();
@@ -5214,6 +5181,25 @@
 
       elements.lifecycle.overlay.addEventListener("click", function(event) {
         if (event.target === event.currentTarget) closeTransactionLifecycleDialog();
+      });
+
+      document.querySelectorAll("[data-finance-tab]").forEach(function(tab) {
+        tab.addEventListener("click", function() {
+          setFinanceDestination(tab.getAttribute("data-finance-tab"));
+          ensureFinanceData();
+        });
+        tab.addEventListener("keydown", function(event) {
+          var tabs = Array.prototype.filter.call(document.querySelectorAll("[data-finance-tab]"), function(item) { return item.offsetWidth > 0; });
+          var index = tabs.indexOf(tab);
+          if (event.key === "ArrowRight") index = (index + 1) % tabs.length;
+          else if (event.key === "ArrowLeft") index = (index + tabs.length - 1) % tabs.length;
+          else if (event.key === "Home") index = 0;
+          else if (event.key === "End") index = tabs.length - 1;
+          else return;
+          event.preventDefault();
+          tabs[index].focus();
+          tabs[index].click();
+        });
       });
 
       elements.productsTabs.forEach(function(tab)
@@ -5385,8 +5371,7 @@
       elements.pageButtons
         .forEach(function(button)
         {
-          var isActive = button.getAttribute("data-page") === pageId &&
-            (pageId !== "finance" || button.getAttribute("data-navigation-destination") === (destination || "profit-loss"));
+          var isActive = button.getAttribute("data-page") === pageId;
 
           button.classList.toggle("bg-indigo-600", isActive);
           button.classList.toggle("text-white", isActive);
@@ -5475,7 +5460,7 @@
       }
       else if (pageId === "finance")
       {
-        setFinanceDestination(destination || "profit-loss");
+        setFinanceDestination(destination || financeState.destination || "profit-loss");
         ensureFinanceData();
       }
       else if (pageId === "products")
