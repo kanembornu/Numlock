@@ -2655,6 +2655,10 @@
       #productsPanelProfitability .hf-section-label { grid-column: 2; grid-row: 1; font-size: 13px; font-weight: 500; line-height: 18px; }
       #productsPanelProfitability .overview-kpi-value { grid-column: 2; grid-row: 2; margin: 0; font-size: clamp(18px, 1.6vw, 23px); font-weight: 700; line-height: 30px; letter-spacing: -0.03em; overflow-wrap: anywhere; }
       #productsPanelProfitability .hf-kpi-comparison { grid-column: 1 / -1; grid-row: 3; margin: 0; padding-top: 4px; }
+      @media (min-width: 1024px) {
+        #productsPanelProfitability [aria-label="Product Profitability KPIs"] { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+        #productsPanelProfitability .hf-kpi-card { grid-template-rows: auto auto auto; }
+      }
       @media (max-width: 767px) {
         #productsPanelProfitability .hf-kpi-card { min-height: 160px; padding: 16px; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: auto auto auto; }
         #productsPanelProfitability .hf-kpi-icon { width: 48px; height: 48px; font-size: 20px; }
@@ -5551,6 +5555,7 @@
     }
 
     var productsDataLoaded = false;
+    var productsDataLoading = false;
     var productsReadModel = [];
     var productsCatalogPagination = { currentPage: 1, pageSize: 15, totalItems: 0, filteredItems: [] };
     var inventoryItemsDataLoaded = false;
@@ -6315,7 +6320,8 @@
 
     function ensureProductsData()
     {
-      if (productsDataLoaded) return;
+      if (productsDataLoaded || productsDataLoading) return;
+      productsDataLoading = true;
       var elements = initializeStableDashboardElements();
       elements.products.setAttribute("aria-busy", "true");
       elements.productsLoading.hidden = false;
@@ -6323,6 +6329,7 @@
       elements.productsError.hidden = true;
       google.script.run.withSuccessHandler(function(products)
       {
+        productsDataLoading = false;
         elements.products.setAttribute("aria-busy", "false");
         elements.productsLoading.hidden = true;
         if (!Array.isArray(products))
@@ -6338,6 +6345,7 @@
         elements.products.setAttribute("aria-busy", "false");
         elements.productsLoading.hidden = true;
         elements.productsError.hidden = false;
+        productsDataLoading = false;
         console.error("Products read failed", error);
       }).getProductCatalogReadModel();
     }
