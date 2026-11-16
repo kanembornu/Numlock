@@ -8,6 +8,19 @@
   let chartUnavailableDiagnosticLogged = false;
   let responsiveChartResizeTimer = null;
 
+    // Keep transformed phone-shell rectangles out of Chart.js logical sizing.
+    function getDashboardChartPlatform()
+    {
+      return class extends Chart.platforms.DomPlatform {
+        getMaximumSize(canvas, width, height, aspectRatio) {
+          var style = window.getComputedStyle(canvas.parentElement);
+          return super.getMaximumSize(canvas,
+            width === undefined ? parseFloat(style.width) : width,
+            height === undefined ? parseFloat(style.height) : height, aspectRatio);
+        }
+      };
+    }
+
     function resizeVisibleDashboardCharts(tabName)
     {
       var chartsByTab = {

@@ -265,6 +265,13 @@
       .ui-custom-select-check { display: inline-flex; width: 18px; height: 18px; flex: 0 0 18px; align-items: center; justify-content: center; align-self: center; transform: none; font-size: 12px; line-height: 1; visibility: hidden; }
       .ui-custom-select-option[aria-selected="true"] .ui-custom-select-check { visibility: visible; }
       .hf-top-products-sort { display: inline-flex; width: 100%; align-items: center; gap: 5px; color: inherit; font: inherit; text-align: left; }
+      #dashboardPanelOverview .hf-top-products-sort { width: auto; }
+      .product-profitability-scroll { display: contents; }
+      @media (max-width: 1023px) {
+        .product-profitability-scroll { display: block; min-width: 0; overflow-x: auto; }
+        #dashboardPanelPerformance #productProfitabilityWrapper { width: 100%; min-width: 560px; }
+        #productProfitabilityWrapper > canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+      }
       .hf-top-products-sort::after { content: "\2195"; color: var(--text-muted); font-size: 11px; opacity: .55; }
       th[aria-sort="ascending"] .hf-top-products-sort::after { content: "\2191"; color: var(--brand); opacity: 1; }
       th[aria-sort="descending"] .hf-top-products-sort::after { content: "\2193"; color: var(--brand); opacity: 1; }
@@ -2620,6 +2627,17 @@
         #dashboardPanelOverview .hf-kpi-card { grid-template-columns: 32px minmax(0, 1fr) !important; column-gap: 8px !important; padding-left: 12px !important; padding-right: 12px !important; }
         #dashboardPanelOverview .hf-kpi-icon { width: 32px !important; height: 32px !important; font-size: 15px !important; }
       }
+
+      /* 560px chart + card padding; Business Mix needs two 312px tracks. */
+      #dashboardPanelPerformance { container: performance-layout / inline-size; }
+      @media (min-width: 1024px) {
+      @container performance-layout (max-width: 1256px) {
+        #dashboardPanelPerformance #productProfitabilitySection,
+        #dashboardPanelPerformance #performanceSecondaryGrid { grid-column: 1 / -1; }
+        #dashboardPanelPerformance #productProfitabilityWrapper { height: 300px; min-height: 300px; }
+        #dashboardPanelPerformance #performanceSecondaryGrid { contain: none; height: auto; grid-template-columns: repeat(auto-fit, minmax(min(100%, 312px), 1fr)); }
+      }
+      }
     </style>
   </head>
 
@@ -2946,9 +2964,11 @@
           <button type="button" class="product-profitability-action" onclick="applyTransactionDrilldown('sales', '', 'Sales transactions')">View transactions</button>
         </div>
         <p id="productProfitabilitySummary" class="sr-only"></p>
+        <div class="product-profitability-scroll" tabindex="0" role="region" aria-label="Product profitability chart, scroll horizontally for all values">
         <div id="productProfitabilityWrapper" class="performance-chart-shell performance-chart-shell-primary relative h-72 min-w-0 sm:h-96">
           <canvas id="productProfitabilityChart" aria-hidden="true"></canvas>
           <p id="productProfitabilityEmpty" class="hidden absolute inset-0 items-center justify-center p-6 text-center text-sm text-slate-500" role="status"></p>
+        </div>
         </div>
         <div class="product-profitability-formula">
           <i class="fas fa-circle-info" aria-hidden="true"></i>

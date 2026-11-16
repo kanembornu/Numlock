@@ -1303,6 +1303,7 @@
 
       productProfitabilityChart = new Chart(initializeStableDashboardElements().chartPresentation.productProfitability.canvas.getContext("2d"), {
         type: "bar",
+        platform: getDashboardChartPlatform(),
         data: {
           labels: displayedProducts.map(function(item) { return item.label; }),
           datasets: [
@@ -1421,6 +1422,7 @@
       }).join("");
 
       categoryPerformanceChart = new Chart(initializeStableDashboardElements().chartPresentation.categoryPerformance.canvas.getContext("2d"), {
+        platform: getDashboardChartPlatform(),
         type: "doughnut",
         data: {
           labels: groups.map(function(item) { return item.label; }),
@@ -1671,6 +1673,7 @@
         initializeStableDashboardElements().chartPresentation.expense.canvas.getContext("2d"),
         {
           type: "bar",
+          platform: getDashboardChartPlatform(),
           data: {
             labels: expenseData.map(function(item) { return item.group; }),
             datasets: [{

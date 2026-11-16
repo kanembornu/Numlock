@@ -134,19 +134,6 @@
 
       staging.remove();
 
-      // Keep the header gap fixed; distribute spare height only between cards.
-      new ResizeObserver(function()
-      {
-        if (window.innerWidth < 1024 || !insightsColumn.getClientRects().length) return;
-        [insightsColumn, plansColumn].forEach(function(column)
-        {
-          var children = Array.prototype.slice.call(column.children);
-          var contentHeight = children.reduce(function(total, child) { return total + child.getBoundingClientRect().height; }, 0);
-          var gap = Math.max(8, (column.getBoundingClientRect().height - contentHeight - 22) / (children.length - 2));
-          column.style.setProperty(column === insightsColumn ? '--insights-card-gap' : '--plans-card-gap', gap + 'px');
-        });
-      }).observe(insightsColumn);
-
       elements.dashboardTabs.forEach(function(tab, index)
       {
         tab.addEventListener("click", function()
