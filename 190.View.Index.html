@@ -87,7 +87,7 @@
       .products-tab-list { height: auto; min-height: 44px; gap: 10px; padding: 2px 8px 0; border: 1px solid var(--card-border); border-radius: 10px; background: var(--surface-1); box-shadow: var(--card-shadow); overflow-x: auto; overflow-y: hidden; display: flex; }
       .products-tab-list [role="tab"] { height: 41px; border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; padding: 0 22px; font-size: 14px; font-weight: 700; color: var(--text-secondary); white-space: nowrap; flex-shrink: 0; }
       .products-tab-list [aria-selected="true"] { border-bottom-color: var(--brand); background: var(--brand-soft); color: var(--brand); }
-      #productsTabList [role="tab"]:focus-visible, .products-tab-list [role="tab"]:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; border-radius: 7px 7px 0 0; }
+      #productsTabList [role="tab"]:focus-visible, .products-tab-list [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; box-shadow: none !important; }
       .transactions-table-row:hover { background: var(--surface-2); }
       .transactions-number { text-align: right; font-variant-numeric: tabular-nums; }
       .overview-surface,
@@ -130,10 +130,7 @@
       #financialModulesGroup { padding-left: 30px; }
       #financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }
       #financialModulesGroup .ui-sidebar-item { min-height: 35px; padding: 6px 10px; }
-      .finance-layout { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 14px; }
-      .finance-layout > * { min-width: 0; }
-      #financeAssetsPagination, #financeDepreciationPagination, #financeAssetsPagination > div, #financeDepreciationPagination > div { min-width: 0; flex-wrap: wrap; }
-      #financeAssetsPageNumbers, #financeDepreciationPageNumbers { flex-wrap: wrap; }
+      .finance-layout { display: grid; gap: 14px; }
       .finance-layout[hidden] { display: none; }
       .finance-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
       .finance-period-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
@@ -432,7 +429,6 @@
       .products-grid--catalog { min-width: 640px; }
       .products-grid--detail th:first-child { width: 42%; text-align: left; }
       .products-grid--detail td { font-weight: 600; }
-      #productDetailContent th, #inventoryItemDetailContent th, #financeAssetDetailContent th { overflow-wrap: anywhere; }
       .products-grid--recipe th:first-child, .products-grid--recipe td:first-child { width: 70%; text-align: left; }
       .products-grid--recipe th:last-child, .products-grid--recipe td:last-child { width: 30%; text-align: right; }
       .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: 700; text-align: left; }
@@ -587,7 +583,7 @@
         #dashboardPanelPerformance #performanceSignalGrid .performance-signal-primary { min-width: 0; margin: 7px 0 0; font-size: 18px; font-weight: 700; line-height: 20px; letter-spacing: -.01em; white-space: nowrap; }
         #dashboardPanelPerformance .performance-signal-status { min-width: 0; margin: 7px 0 0; font-size: 12px; font-weight: 600; line-height: 12px; white-space: nowrap; }
         #dashboardPanelPerformance .performance-signal-meta { min-width: 0; margin: 7px 0 0; color: var(--text-muted); font-size: 12px; font-weight: 500; line-height: 12px; white-space: normal; }
-        #dashboardPanelPerformance .performance-snapshot-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+        #dashboardPanelPerformance .performance-snapshot-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 16px; }
         #dashboardPanelPerformance .performance-insight-card { min-width: 0; min-height: 80px; padding: 10px; border: 1px solid var(--card-border); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); display: flex; flex-direction: column; justify-content: space-between; }
         #dashboardPanelPerformance .performance-insight-label { color: var(--text-muted); font-size: 11px; font-weight: 700; letter-spacing: .05em; }
         #dashboardPanelPerformance .performance-insight-name { margin-top: 8px; overflow: hidden; color: var(--text-primary); font-size: 15px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
@@ -2087,7 +2083,6 @@
         #dashboardPanelPerformance #performanceDecisionRow { grid-column: 1 / -1; grid-template-columns: minmax(0, 1fr); }
         #dashboardPanelPerformance #expenseChartSection > .performance-expense-layout { grid-template-columns: minmax(0, 1fr); }
         #dashboardPanelPerformance #performanceSignalGrid { grid-template-rows: none; }
-        #dashboardPanelPerformance .performance-snapshot-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         .hf-kpi-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         .hf-overview-evidence { display: grid; grid-template-columns: minmax(0, 1fr); }
         #businessOverview > :last-child { grid-column: 1 / -1; }
@@ -2126,9 +2121,7 @@
         #dashboardPanelOverview #mainChartWrapper { height: 220px; min-height: 220px; max-height: 220px; }
         #dashboardPanelPerformance .performance-chart-shell,
         #dashboardPanelPerformance .performance-chart-shell-primary { height: 220px; min-height: 220px; max-height: 220px; }
-        #dashboardPanelPerformance .performance-snapshot-grid,
         #dashboardPanelPerformance .hot-cold-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        #dashboardPanelPerformance .performance-snapshot-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         #dashboardPanelPerformance #performanceSignalGrid { grid-template-columns: minmax(0, 1fr); }
       }
 
@@ -2531,11 +2524,11 @@
         #dashboardPanelOverview .hf-analytics-card-header { flex-wrap: wrap !important; }
         #dashboardPanelOverview #dateFilterControls { width: 100% !important; flex-basis: 100% !important; justify-content: flex-start !important; }
       }
-      html.numlock-phone { --numlock-phone-scale: 1.6; width: 100%; max-width: 100%; overflow-x: clip; }
+      html.numlock-phone { width: 100%; max-width: 100%; overflow-x: clip; }
       html.numlock-phone body { width: 100%; max-width: 100%; overflow-x: clip !important; }
-      html.numlock-phone #appShell { width: calc(100% / var(--numlock-phone-scale)); max-width: none; height: calc(100dvh / var(--numlock-phone-scale)); min-height: 0; transform: scale(var(--numlock-phone-scale)); transform-origin: top left; }
+      html.numlock-phone #appShell { width: 100%; max-width: 100%; height: 100dvh; min-height: 0; }
       html.numlock-phone #mainContent { width: 100% !important; max-width: 100% !important; min-height: 0; margin-left: 0 !important; overflow: visible !important; }
-      html.numlock-phone #dashboardSidebar { width: calc((100vw - 32px) / var(--numlock-phone-scale)); }
+      html.numlock-phone #dashboardSidebar { width: calc(100vw - 32px); }
       html.numlock-phone #dashboardSidebar .sidebar-brand { gap: 4px; }
       html.numlock-phone #dashboardSidebar .sidebar-brand > div:first-child { gap: 8px; }
       html.numlock-phone #dashboardSidebar .sidebar-brand .text-xl { font-size: 16px; }
@@ -2596,7 +2589,7 @@
       }
 
       /* Final application-wide interaction visual suppression. */
-      #appShell#appShell#appShell#appShell :where(button, a, input, select, textarea, [role="button"], [role="tab"], [tabindex]):is(:focus, :focus-visible, :active),
+      #appShell#appShell#appShell#appShell :where(button, a, input, select, textarea, [role="button"], [tabindex]):is(:focus, :focus-visible, :active),
       #appShell#appShell#appShell#appShell :where(.ui-custom-select):focus-within {
         outline: none !important;
         outline-offset: 0 !important;
@@ -2627,7 +2620,71 @@
         #dashboardPanelOverview .hf-kpi-card { grid-template-columns: 32px minmax(0, 1fr) !important; column-gap: 8px !important; padding-left: 12px !important; padding-right: 12px !important; }
         #dashboardPanelOverview .hf-kpi-icon { width: 32px !important; height: 32px !important; font-size: 15px !important; }
       }
-
+      /* Visual parity measured against Dashboard tabs, chart filters and Transactions pagination. */
+      #productsTabList { height: 46px; min-height: 46px; width: max-content; max-width: 100%; gap: 0; padding: 0; align-items: center; }
+      #productsTabList [role="tab"] { display: flex; height: 45px; align-items: center; justify-content: center; padding: 0 18px; border-radius: 8px 8px 0 0; font-size: 14px; font-weight: 600; line-height: 18px; }
+      #transactions #transactionsIsActive, #transactions #transactionsPageSizeFooter, .cogs-recipe-controls select, #productsPpCategoryFilter, #productsPpTypeFilter, #productsPpPageSize { height: 30px !important; min-height: 30px !important; border: 1px solid var(--card-border); border-radius: 9px !important; padding: 0 12px 0 14px; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 500 !important; line-height: 18px; }
+      #productsCatalogPagination, #inventoryItemsPagination { flex-wrap: wrap; padding: 7px 12px; gap: 12px; }
+      #productsCatalogPagination button, #inventoryItemsPagination button { min-height: 36px; border-radius: 8px; padding: 5px 12px; gap: 7px; background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 500; line-height: 21px; }
+      #productsCatalogPagination button:not([data-page]), #inventoryItemsPagination button:not([data-page]) { min-width: 92px; }
+      #productsCatalogPagination button[aria-current="page"], #inventoryItemsPagination button[aria-current="page"] { background: var(--brand); color: white; }
+      #productsCatalogPagination > div, #inventoryItemsPagination > div { flex-wrap: wrap; }
+      #productDetail { max-height: none; overflow: visible; }
+      .product-recipe-composition { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      @media (min-width: 1024px) { .product-recipe-composition { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+      .product-recipe-composition table { min-width: 0; table-layout: fixed; }
+      .product-recipe-composition td, .product-recipe-composition th { overflow-wrap: anywhere; }
+      #productsPanelRecipe .cogs-recipe-content { overflow: visible; }
+      #productsPanelRecipe, #productsPanelRecipe > section, .cogs-recipe-controls label { min-width: 0; }
+      .cogs-recipe-controls { flex-wrap: wrap; }
+      .cogs-recipe-controls label { flex: 1 1 180px; }
+      #productsPanelProfitability .pp-toolbar { width: 100%; flex-wrap: wrap; gap: 12px; }
+      #productsPpSearchInput { flex: 1 1 260px; min-width: 0; }
+      #productsPpCategoryFilter, #productsPpTypeFilter { width: 166px; }
+      #transactionEntryOverlay :is(input, select, textarea):focus-visible { background-color: var(--brand-soft) !important; }
+      #products, .products-tab-panel { min-width: 0; }
+      #productsCatalogPagination > div, #inventoryItemsPagination > div { min-width: 0; max-width: 100%; }
+      #productsCatalogPageNumbers, #inventoryItemsPageNumbers { flex-wrap: wrap; }
+      #transactionsTabList { align-items: center !important; overflow: hidden !important; }
+      #purchaseEntryQty { height: 48px !important; min-height: 48px !important; }
+      #standardCostConfigurationBody .standard-cost-input { height: 48px; min-height: 48px; padding: 10px 4px; border-radius: 8px; font-size: 16px; font-weight: 700; line-height: 24px; }
+      #productsPanelRecipe .products-grid-scroll { max-height: none; height: auto; }
+      #productsPanelProfitability .hf-kpi-card { display: grid; grid-template-columns: 32px minmax(0, 1fr); grid-template-rows: 18px 32px auto; column-gap: 8px; min-width: 0; min-height: 88px; padding: 8px 12px; border-radius: 14px; }
+      #productsPanelProfitability .hf-kpi-card > span:first-child { display: contents; }
+      #productsPanelProfitability .hf-kpi-icon { display: flex; grid-column: 1; grid-row: 1 / span 2; width: 32px; height: 32px; border-radius: 11px; font-size: 15px; }
+      #productsPanelProfitability .hf-section-label { grid-column: 2; grid-row: 1; font-size: 13px; font-weight: 500; line-height: 18px; }
+      #productsPanelProfitability .overview-kpi-value { grid-column: 2; grid-row: 2; margin: 0; font-size: clamp(18px, 1.6vw, 23px); font-weight: 700; line-height: 30px; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+      #productsPanelProfitability .hf-kpi-comparison { grid-column: 1 / -1; grid-row: 3; margin: 0; padding-top: 4px; }
+      @media (max-width: 767px) {
+        #productsPanelProfitability .hf-kpi-card { min-height: 160px; padding: 16px; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: auto auto auto; }
+        #productsPanelProfitability .hf-kpi-icon { width: 48px; height: 48px; font-size: 20px; }
+        #productsPanelProfitability .overview-kpi-value { font-size: 32px; line-height: 39px; }
+        #productsPanelProfitability .hf-kpi-comparison { font-size: 15px; line-height: 22px; }
+      }
+      #transactionEntryOverlay#transactionEntryOverlay :is(input, select, textarea):focus { outline: none !important; box-shadow: none !important; border-color: var(--card-border) !important; }
+      #transactionEntryOverlay#transactionEntryOverlay :is(input, select, textarea):focus-visible { background-color: var(--brand-soft) !important; }
+      #productProfitabilityPagination, #productProfitabilityPagination .pagination-controls { min-width: 0; flex-wrap: wrap; }
+      #productsPpPageNumbers { flex-wrap: wrap; }
+      @media (min-width: 768px) and (max-width: 1023px) {
+        #transactionsTabList, #productsTabList { height: 47px !important; min-height: 47px !important; }
+      }
+      @media (max-width: 1023px) {
+        #productsPanelProfitability .hf-kpi-card { display: block; grid-template-rows: none; min-height: 130px; padding: 17px 18px; border-radius: 12px; }
+        #productsPanelProfitability .hf-kpi-card > span:first-child { display: flex; }
+        #productsPanelProfitability .hf-kpi-icon { width: 38px; height: 38px; border-radius: 10px; font-size: 16px; }
+        #productsPanelProfitability .overview-kpi-value { margin-top: 8px; }
+        #productsPanelProfitability .hf-kpi-comparison { margin-top: 8px; padding-top: 0; }
+      }
+      @media (max-width: 767px) {
+        #transactionsTabList, #productsTabList { height: 54px !important; min-height: 54px !important; overflow-x: auto !important; flex-shrink: 0 !important; }
+        #transactionsControls { flex-wrap: wrap; }
+        #transactions #transactionsIsActive, #transactions #transactionsPageSizeFooter, .cogs-recipe-controls select, #productsPpCategoryFilter, #productsPpTypeFilter, #productsPpPageSize { height: 48px !important; min-height: 48px !important; font-size: 16px; line-height: 23px; }
+        #transactionsTabList [role="tab"], #productsTabList [role="tab"] { height: 52px !important; padding: 0 10px !important; font-size: 16px !important; line-height: 22px !important; }
+        #productsPanelProfitability .hf-kpi-card { min-height: 160px; padding: 16px; }
+        #productsPanelProfitability .hf-kpi-icon { width: 48px; height: 48px; flex-basis: 48px; font-size: 20px; }
+      }
+      #appShell#appShell#appShell#appShell :is(input, select, textarea):focus-visible { background-color: var(--brand-soft); }
+      #appShell#appShell#appShell#appShell [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; }
       /* 560px chart + card padding; Business Mix needs two 312px tracks. */
       #dashboardPanelPerformance { container: performance-layout / inline-size; }
       @media (min-width: 1024px) {
@@ -4095,7 +4152,7 @@
           <div id="productDetailContent" class="mt-3" hidden></div>
         </aside>
         <section class="hf-secondary-surface order-2 min-w-0 p-4 lg:order-1 lg:flex-1" aria-labelledby="productsListHeading">
-          <h2 id="productsListHeading" class="hf-section-heading">Product Catalog</h2>
+          <h2 id="productsListHeading" class="sr-only">Product Catalog</h2>
           <p id="productsLoading" class="mt-3 text-sm ui-theme-secondary" role="status">Loading products…</p>
           <p id="productsEmpty" class="mt-3 text-sm ui-theme-secondary" role="status" hidden>No products are available.</p>
           <p id="productsError" class="mt-3 text-sm text-red-700" role="alert" hidden>Products could not be loaded.</p>
@@ -4122,8 +4179,8 @@
       </div>
       <div id="productsPanelRecipe" class="products-tab-panel cogs-recipe-layout" role="tabpanel" aria-labelledby="productsTabRecipe" hidden>
         <section class="hf-secondary-surface p-4" aria-labelledby="cogsRecipeHeading">
-          <h2 id="cogsRecipeHeading" class="hf-section-heading">COGS &amp; Recipe simulation</h2>
-          <p id="cogsRecipePeriod" class="mt-1 text-sm ui-theme-secondary"></p>
+          <h2 id="cogsRecipeHeading" class="sr-only">COGS &amp; Recipe simulation</h2>
+          <p id="cogsRecipePeriod" hidden></p>
           <div class="cogs-recipe-controls mt-3">
             <label>Kind<select id="cogsRecipeKind" aria-label="Kind"></select></label>
             <label>Product<select id="cogsRecipeProduct" aria-label="Product"></select></label>
@@ -4183,7 +4240,7 @@
       </div>
       <div id="productsPanelInventory" class="products-tab-panel inventory-items-layout" role="tabpanel" aria-labelledby="productsTabInventory" hidden>
         <section class="inventory-items-panel hf-secondary-surface min-w-0 p-4" aria-labelledby="inventoryItemsHeading">
-          <h2 id="inventoryItemsHeading" class="hf-section-heading">Inventory Items</h2>
+          <h2 id="inventoryItemsHeading" class="sr-only">Inventory Items</h2>
           <p id="inventoryItemsLoading" class="mt-3 text-sm ui-theme-secondary" role="status" hidden>Loading inventory items…</p>
           <p id="inventoryItemsEmpty" class="mt-3 text-sm ui-theme-secondary" role="status" hidden>No inventory items are available.</p>
           <p id="inventoryItemsError" class="mt-3 text-sm text-red-700" role="alert" hidden>Inventory items could not be loaded.</p>
@@ -4215,7 +4272,7 @@
       </div>
     <div id="productsPanelProfitability" class="products-tab-panel" role="tabpanel" aria-labelledby="productsTabProfitability" hidden>
       <section class="hf-secondary-surface min-w-0 p-4" aria-labelledby="productProfitabilityHeading">
-        <h2 id="productProfitabilityHeading" class="hf-section-heading mb-3">Product Profitability</h2>
+        <h2 id="productProfitabilityHeading" class="sr-only">Product Profitability</h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4" role="region" aria-label="Product Profitability KPIs">
           <article class="hf-kpi-card px-4 py-3 text-left" aria-labelledby="ppKpiRevenueLabel">
             <span class="flex items-center gap-2">
@@ -4253,12 +4310,12 @@
             <span id="productsPpKpiUnitsDelta" class="hf-kpi-comparison"><span>vs prior</span><strong>—</strong></span>
           </article>
           <article class="hf-kpi-card px-4 py-3 text-left" aria-labelledby="ppKpiProductsLabel">
-            <span class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--brand-soft);color:var(--brand)"><i class="fas fa-boxes" aria-hidden="true"></i></span><span id="ppKpiProductsLabel" class="hf-section-label">Products</span></span>
+            <span class="flex items-center gap-2"><span class="hf-kpi-icon" style="background:var(--brand-soft);color:var(--brand)"><i class="fas fa-tags" aria-hidden="true"></i></span><span id="ppKpiProductsLabel" class="hf-section-label">Products</span></span>
             <strong id="productsPpKpiProductsValue" class="overview-kpi-value mt-2 block text-[28px] font-extrabold leading-8 tracking-tight text-slate-900">—</strong>
             <span id="productsPpKpiProductsDelta" class="hf-kpi-comparison"><span>Variants</span><strong>—</strong></span>
           </article>
         </div>
-        <div class="flex items-center gap-2 mb-4">
+        <div class="pp-toolbar flex items-center gap-2 mb-4">
           <label for="productsPpSearchInput" class="sr-only">Search products</label>
           <input type="text" id="productsPpSearchInput" class="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs" placeholder="Search products..." oninput="filterProductsTabProfitabilityTable()">
           <label for="productsPpCategoryFilter" class="text-xs text-slate-500">Category:</label>
@@ -5495,10 +5552,10 @@
 
     var productsDataLoaded = false;
     var productsReadModel = [];
-    var productsCatalogPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
+    var productsCatalogPagination = { currentPage: 1, pageSize: 15, totalItems: 0, filteredItems: [] };
     var inventoryItemsDataLoaded = false;
     var inventoryItemsReadModel = [];
-    var inventoryItemsPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
+    var inventoryItemsPagination = { currentPage: 1, pageSize: 15, totalItems: 0, filteredItems: [] };
     var financeAssetsDataLoaded = false;
     var financeAssetsReadModel = [];
     var financeAssetsPagination = { currentPage: 1, pageSize: 16, totalItems: 0, filteredItems: [] };
@@ -5769,36 +5826,7 @@
     function recalculatePageSizes()
     {
       var elements = initializeStableDashboardElements();
-      var tableRegion = elements.productsTableRegion;
-      if (tableRegion && !tableRegion.hidden) {
-        var row = tableRegion.querySelector("tbody tr");
-        if (row) {
-          var rowHeight = row.getBoundingClientRect().height;
-          var containerHeight = tableRegion.clientHeight;
-          var headerHeight = tableRegion.querySelector("thead") ? tableRegion.querySelector("thead").getBoundingClientRect().height : 40;
-          var newPageSize = calculatePageSize(containerHeight, rowHeight, headerHeight, 24);
-          if (newPageSize !== productsCatalogPagination.pageSize) {
-            productsCatalogPagination.pageSize = newPageSize;
-            productsCatalogPagination.currentPage = 1;
-            renderProductsListPage();
-          }
-        }
-      }
-      var invTableRegion = elements.inventoryItemsTableRegion;
-      if (invTableRegion && !invTableRegion.hidden) {
-        var invRow = invTableRegion.querySelector("tbody tr");
-        if (invRow) {
-          var invRowHeight = invRow.getBoundingClientRect().height;
-          var invContainerHeight = invTableRegion.clientHeight;
-          var invHeaderHeight = invTableRegion.querySelector("thead") ? invTableRegion.querySelector("thead").getBoundingClientRect().height : 40;
-          var newInvPageSize = calculatePageSize(invContainerHeight, invRowHeight, invHeaderHeight, 24);
-          if (newInvPageSize !== inventoryItemsPagination.pageSize) {
-            inventoryItemsPagination.pageSize = newInvPageSize;
-            inventoryItemsPagination.currentPage = 1;
-            renderInventoryItemsListPage();
-          }
-        }
-      }
+      // Catalog and inventory keep fixed 15-row pages across viewport changes.
       var assetsTableRegion = elements.financeAssetsTableRegion;
       if (assetsTableRegion && !assetsTableRegion.hidden) {
         var assetsRow = assetsTableRegion.querySelector("tbody tr");
@@ -6086,7 +6114,12 @@
         elements.proposedSellingPrice.value = "";
         var sp = variant.sellingPrice;
         if (sp != null) elements.proposedSellingPrice.value = formatIndonesianPrice(Number(sp));
-        elements.proposedSellingPrice.oninput = function() { renderStandardCostPreview(variant); updateApplyButtonState(variant); };
+        elements.proposedSellingPrice.oninput = function(event) {
+          if (event && event.isComposing) return;
+          formatIndonesianPriceInput(elements.proposedSellingPrice);
+          renderStandardCostPreview(variant);
+          updateApplyButtonState(variant);
+        };
         elements.proposedSellingPrice.onblur = function() {
           var raw = elements.proposedSellingPrice.value;
           if (raw !== "") {
@@ -6097,6 +6130,29 @@
       }
       renderStandardCostPreview(variant);
       updateApplyButtonState(variant);
+    }
+
+    function formatIndonesianPriceInput(input)
+    {
+      var raw = input.value;
+      // Keep decimal and invalid drafts intact for existing parsing and validation.
+      if (!/^\d[\d.]*$/.test(raw)) return;
+      var start = input.selectionStart, end = input.selectionEnd;
+      var direction = input.selectionDirection;
+      var formatted = raw.replace(/\./g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      function position(offset) {
+        var digits = raw.slice(0, offset).replace(/\./g, "").length;
+        if (!digits) return 0;
+        var seen = 0;
+        for (var i = 0; i < formatted.length; i++) {
+          if (/\d/.test(formatted[i]) && ++seen === digits) return i + 1;
+        }
+        return formatted.length;
+      }
+      if (formatted !== raw) {
+        input.value = formatted;
+        if (start != null) input.setSelectionRange(position(start), position(end), direction);
+      }
     }
 
     function formatIndonesianPrice(num)
@@ -6423,14 +6479,14 @@
       heading.className = "font-semibold ui-theme-primary";
       heading.innerText = "Recipe Composition";
       section.appendChild(heading);
-      var scroll = document.createElement("div");
-      scroll.className = "products-grid-scroll mt-3";
-      var table = document.createElement("table");
-      table.className = "products-grid products-grid--recipe";
-      table.innerHTML = '<tbody></tbody>';
-      var body = table.tBodies[0];
+      var composition = document.createElement("div");
+      composition.className = "product-recipe-composition mt-3";
       ["Cold", "Hot"].forEach(function(type)
       {
+        var table = document.createElement("table");
+        table.className = "products-grid products-grid--recipe";
+        table.innerHTML = '<tbody></tbody>';
+        var body = table.tBodies[0];
         var groupHeading = body.insertRow();
         var groupHeadingCell = groupHeading.insertCell();
         groupHeadingCell.colSpan = 2;
@@ -6453,9 +6509,9 @@
           row.insertCell().innerText = component ? component.ingredientName : "—";
           row.insertCell().innerText = component ? String(component.UsageQty) + " " + component.BaseUOM : "—";
         });
+        composition.appendChild(table);
       });
-      scroll.appendChild(table);
-      section.appendChild(scroll);
+      section.appendChild(composition);
       container.appendChild(section);
     }
 

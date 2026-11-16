@@ -2501,14 +2501,34 @@
       document.getElementById("productsPpKpiUnitsValue").innerText = formatProductProfitabilityNumber(totalUnits);
       document.getElementById("productsPpKpiProductsValue").innerText = formatProductProfitabilityNumber(totalProducts);
 
-      // Delta calculations are currently not in scope or provided in the original context,
-      // so we will leave them as '—'.
-      document.getElementById("productsPpKpiRevenueDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
-      document.getElementById("productsPpKpiCogsDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
-      document.getElementById("productsPpKpiGrossProfitDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
-      document.getElementById("productsPpKpiGrossMarginDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
-      document.getElementById("productsPpKpiUnitsDelta").innerHTML = '<span>vs prior</span><strong>—</strong>';
-      document.getElementById("productsPpKpiProductsDelta").innerHTML = '<span>Variants</span><strong>—</strong>';
+      // Compare the displayed product cohort only; incomplete prior data is unavailable, not zero.
+      var complete = products.length > 0 && products.every(function(p) {
+        return typeof p.comparisonRevenue === "number" && isFinite(p.comparisonRevenue) &&
+          typeof p.comparisonGrossProfit === "number" && isFinite(p.comparisonGrossProfit);
+      });
+      var priorRevenue = 0, priorProfit = 0;
+      if (complete) products.forEach(function(p) {
+        priorRevenue += p.comparisonRevenue;
+        priorProfit += p.comparisonGrossProfit;
+      });
+      function change(current, prior) {
+        return complete && prior !== 0 ? ((current - prior) / prior) * 100 : null;
+      }
+      var comparisons = {
+        Revenue: change(totalRevenue, priorRevenue),
+        Cogs: change(totalCogs, priorRevenue - priorProfit),
+        GrossProfit: change(totalGrossProfit, priorProfit),
+        GrossMargin: complete && priorRevenue !== 0 && totalRevenue !== 0 ? totalGrossMargin - priorProfit / priorRevenue * 100 : null,
+        Units: null,
+        Products: null
+      };
+      Object.keys(comparisons).forEach(function(key) {
+        var value = comparisons[key];
+        var element = document.getElementById("productsPpKpi" + key + "Delta");
+        var text = value != null && isFinite(value) ? (value > 0 ? "+" : "") + value.toFixed(1) + (key === "GrossMargin" ? " pp" : "%") : "N/A";
+        element.innerHTML = '<span>vs prior</span><strong>' + text + '</strong>';
+        element.title = text === "N/A" ? "Complete prior-period comparison unavailable or denominator is zero." : "Prior period for the displayed product cohort.";
+      });
     }
 
     function filterProductsTabProfitabilityTable()
