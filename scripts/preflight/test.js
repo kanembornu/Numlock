@@ -241,6 +241,10 @@ test('edits, delegation and external boundaries are explicit', () => {
     assert.equal(evaluate('edit', 'file.js', BASELINE, overrides(name)),
       readonly ? 'deny' : 'allow');
     assert.equal(evaluate('external_directory', '/outside/*',
+      BASELINE, overrides(name)), 'ask');
+    assert.equal(evaluate('external_directory', '/usr/local/bin/*',
+      BASELINE, overrides(name)), 'allow');
+    assert.equal(evaluate('edit', '/usr/local/bin/clasp',
       BASELINE, overrides(name)), 'deny');
     assert.equal(evaluate('subagent', 'numlock-light', BASELINE, overrides(name)),
       'deny');

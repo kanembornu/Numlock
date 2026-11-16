@@ -195,6 +195,14 @@ Unknown reasoning is reported with evidence and a required decision.
 Historical documents may name former agents; those references record past
 execution and do not establish active routing or current authorization.
 
+### Permission capability preflight
+
+Before NUMLOCK workflow execution, run `node scripts/preflight/preflight.js` and
+`python3 scripts/preflight/permission-smoke.py` from the repository root. The latter
+uses explicit project location and a fresh empty `numlock` session; no model,
+command execution, saved grants or production writes. See
+`docs/OPENCODE-WORKSPACE.md` for paths, permission boundaries and recovery.
+
 ### Development shell and production boundary
 
 Normal compound/piped local commands are permitted by project policy.

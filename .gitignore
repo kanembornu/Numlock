@@ -20,3 +20,6 @@ docs/agent-archive/2026-11-02/reference-inventory.json
 docs/agent-archive/2026-11-02/resolved-permission-matrix.json
 docs/agent-archive/2026-11-02/source-manifest.json
 tests/browser/harness/assembled.html
+
+# Task-local release packages, screenshots, permission evidence; tracked files preserved.
+/tests/tmp/

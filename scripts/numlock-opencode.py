@@ -35,7 +35,7 @@ PROBES = (
     ('read', '.env', 'deny'),
     ('read', '.clasp.json', 'ask'),
     ('edit', '.clasp.json', 'deny'),
-    ('external_directory', '/outside/*', 'deny'),
+    ('external_directory', '/outside/*', 'ask'),
     ('subagent', 'numlock-heavy', 'deny'),
 )
 

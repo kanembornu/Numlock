@@ -39,7 +39,10 @@
     {"action": "read", "resource": "*.pem", "effect": "deny"},
     {"action": "read", "resource": "*.key", "effect": "deny"},
     {"action": "read", "resource": "*.clasp.json", "effect": "ask"},
-    {"action": "external_directory", "resource": "*", "effect": "deny"},
+    {"action": "external_directory", "resource": "*", "effect": "ask"},
+    {"action": "external_directory", "resource": "/usr/local/bin/*", "effect": "allow"},
+    {"action": "external_directory", "resource": "/usr/local/lib/node_modules/@google/clasp/*", "effect": "allow"},
+    {"action": "external_directory", "resource": "/Applications/Google Chrome.app/*", "effect": "allow"},
     {"action": "subagent", "resource": "*", "effect": "deny"},
     {"action": "webfetch", "resource": "*", "effect": "deny"},
     {"action": "websearch", "resource": "*", "effect": "deny"},
@@ -82,6 +85,9 @@
     {"action": "edit", "resource": "*auth.json", "effect": "deny"},
     {"action": "edit", "resource": "*.pem", "effect": "deny"},
     {"action": "edit", "resource": "*.key", "effect": "deny"},
-    {"action": "edit", "resource": "*.clasp.json", "effect": "deny"}
+    {"action": "edit", "resource": "*.clasp.json", "effect": "deny"},
+    {"action": "edit", "resource": "/usr/local/bin/*", "effect": "deny"},
+    {"action": "edit", "resource": "/usr/local/lib/node_modules/@google/clasp/*", "effect": "deny"},
+    {"action": "edit", "resource": "/Applications/Google Chrome.app/*", "effect": "deny"}
   ]
 }

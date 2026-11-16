@@ -25,7 +25,10 @@ const BASELINE = [
   rule("read", "*.pem", "deny"),
   rule("read", "*.key", "deny"),
   rule("read", "*.clasp.json", "ask"),
-  rule("external_directory", "*", "deny"),
+  rule("external_directory", "*", "ask"),
+  rule("external_directory", "/usr/local/bin/*", "allow"),
+  rule("external_directory", "/usr/local/lib/node_modules/@google/clasp/*", "allow"),
+  rule("external_directory", "/Applications/Google Chrome.app/*", "allow"),
   rule("subagent", "*", "deny"),
   rule("webfetch", "*", "deny"),
   rule("websearch", "*", "deny"),
@@ -68,7 +71,10 @@ const BASELINE = [
   rule("edit", "*auth.json", "deny"),
   rule("edit", "*.pem", "deny"),
   rule("edit", "*.key", "deny"),
-  rule("edit", "*.clasp.json", "deny")
+  rule("edit", "*.clasp.json", "deny"),
+  rule("edit", "/usr/local/bin/*", "deny"),
+  rule("edit", "/usr/local/lib/node_modules/@google/clasp/*", "deny"),
+  rule("edit", "/Applications/Google Chrome.app/*", "deny")
 ];
 
 function overrides(name) {
