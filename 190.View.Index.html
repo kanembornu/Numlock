@@ -2659,6 +2659,31 @@
         #productsPanelProfitability [aria-label="Product Profitability KPIs"] { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
         #productsPanelProfitability .hf-kpi-card { grid-template-rows: auto auto auto; }
       }
+      /* Desktop reference parity; keep Dashboard and narrow-screen contracts unchanged. */
+      @media (min-width: 1024px) {
+        #transactionsTabList, #productsTabList { height: 46px !important; min-height: 46px !important; flex-shrink: 0; overflow-x: auto !important; }
+        #transactionsControls #transactionsTabList [role="tab"], #productsTabList [role="tab"] { height: 45px !important; }
+        #appShell#appShell#appShell#appShell :is(#transactionsTabList, #productsTabList) [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; }
+        #productsPanelProfitability .hf-kpi-card { display: flex; flex-direction: column; padding: 8px 20px; }
+        #productsPanelProfitability .hf-kpi-card > span:first-child { display: flex; min-height: 38px; }
+        #productsPanelProfitability .hf-kpi-icon { width: 38px; height: 38px; flex-basis: 38px; font-size: 16px; }
+        #productsPanelProfitability .overview-kpi-value { min-width: 0; margin: 8px 0 0; flex: 1; white-space: normal; overflow-wrap: anywhere; }
+        #productsPanelProfitability .hf-kpi-comparison { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: baseline; margin: 0; padding-top: 4px; }
+      }
+      @media (min-width: 1024px) and (max-width: 1279px) {
+        #transactionsTabList, #productsTabList { height: 44px !important; min-height: 44px !important; }
+        #transactionsControls #transactionsTabList [role="tab"], #productsTabList [role="tab"] { height: 42px !important; }
+      }
+      @media (min-width: 1280px) {
+        #productsPanelProfitability .hf-kpi-card { display: grid; grid-template-columns: 50px minmax(0, 1fr); grid-template-rows: 18px minmax(32px, 1fr) auto; column-gap: 20px; }
+        #productsPanelProfitability .hf-kpi-card > span:first-child { display: contents; }
+        #productsPanelProfitability .hf-kpi-icon { width: 50px; height: 50px; flex-basis: 50px; font-size: 17px; }
+        #productsPanelProfitability .overview-kpi-value { margin: 0; }
+      }
+      @media (min-width: 1440px) {
+        #productsPanelProfitability .hf-kpi-card { grid-template-columns: 32px minmax(0, 1fr); column-gap: 8px; padding-right: 12px; padding-left: 12px; }
+        #productsPanelProfitability .hf-kpi-icon { width: 32px; height: 32px; flex-basis: 32px; font-size: 15px; }
+      }
       @media (max-width: 767px) {
         #productsPanelProfitability .hf-kpi-card { min-height: 160px; padding: 16px; grid-template-columns: 48px minmax(0, 1fr); grid-template-rows: auto auto auto; }
         #productsPanelProfitability .hf-kpi-icon { width: 48px; height: 48px; font-size: 20px; }
