@@ -20,6 +20,18 @@ for (const requirement of [
 ]) assert(patch.includes(requirement), requirement);
 assert(!patch.includes('#dashboardPanel'), 'Dashboard must remain unchanged');
 assert(!patch.includes('position: absolute'), 'No absolute comparison placement');
+// R02: 1024-1279 card must match the Dashboard KPI reference (block, 12px, 130px floor).
+const compact = patch.split('@media (min-width: 1024px) and (max-width: 1279px) {')[1];
+assert(compact, 'Compact desktop breakpoint missing');
+assert(compact.includes('#productsPanelProfitability .hf-kpi-card { display: block; min-height: 130px; border-radius: 12px; }'),
+  'R02 1024px card parity missing');
+assert(compact.includes('height: 44px !important; min-height: 44px !important;'), 'T01/P01 44px tabs lost');
+assert(compact.includes('height: 42px !important;'), 'T01/P01 42px tab children lost');
+// R04: comparison stays a two-track grid, never absolutely placed or clipped.
+assert(patch.includes('#productsPanelProfitability .hf-kpi-comparison { display: grid; grid-template-columns: minmax(0, 1fr) max-content; align-items: baseline;'),
+  'R04 comparison track missing');
+assert(!/#productsPanelProfitability \.overview-kpi-value[^}]*overflow:\s*hidden/.test(source), 'KPI value must not be clipped');
+assert(!/#productsPanelProfitability[^}]*text-overflow:\s*ellipsis/.test(source), 'KPI value must not be ellipsised');
 const region = source.split('role="region" aria-label="Product Profitability KPIs"')[1].split('<div class="pp-toolbar')[0];
 assert.equal((region.match(/class="hf-kpi-card /g) || []).length, 6);
 assert.equal(new Set([...region.matchAll(/class="fas ([^"]+)"/g)].map(x => x[1])).size, 6);

@@ -2673,6 +2673,8 @@
       @media (min-width: 1024px) and (max-width: 1279px) {
         #transactionsTabList, #productsTabList { height: 44px !important; min-height: 44px !important; }
         #transactionsControls #transactionsTabList [role="tab"], #productsTabList [role="tab"] { height: 42px !important; }
+        /* R02: Dashboard KPI reference at 1024px — block card, 12px radius, 130px floor. */
+        #productsPanelProfitability .hf-kpi-card { display: block; min-height: 130px; border-radius: 12px; }
       }
       @media (min-width: 1280px) {
         #productsPanelProfitability .hf-kpi-card { display: grid; grid-template-columns: 50px minmax(0, 1fr); grid-template-rows: 18px minmax(32px, 1fr) auto; column-gap: 20px; }
