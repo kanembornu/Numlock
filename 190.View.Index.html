@@ -130,12 +130,16 @@
       #financialModulesGroup { padding-left: 30px; }
       #financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }
       #financialModulesGroup .ui-sidebar-item { min-height: 35px; padding: 6px 10px; }
-      .finance-layout { display: grid; gap: 14px; }
+      .finance-layout { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .finance-layout > * { min-width: 0; }
+      #financeAssetsPagination, #financeDepreciationPagination, #financeAssetsPagination > div, #financeDepreciationPagination > div { min-width: 0; flex-wrap: wrap; }
+      #financeAssetsPageNumbers, #financeDepreciationPageNumbers { flex-wrap: wrap; }
       .finance-layout[hidden] { display: none; }
       .finance-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
       .finance-period-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
       .finance-policy, .finance-surface { border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); }
-      .finance-policy { display: flex; justify-content: space-between; gap: 16px; padding: 10px 14px; color: var(--text-secondary); font-size: 12px; }
+      .finance-policy { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding: 10px 14px; color: var(--text-secondary); font-size: 12px; }
+      .finance-policy > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
       .finance-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
       .finance-kpi { min-width: 0; padding: 14px; }
       .finance-kpi dt { color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 15px; }
@@ -146,7 +150,7 @@
       .finance-statement, .finance-expenses { padding: 12px; }
       .finance-statement-list { margin-top: 10px; }
       .finance-statement-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--divider); }
-      .finance-statement-row dd { font-variant-numeric: tabular-nums; text-align: right; }
+      .finance-statement-row dd { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; text-align: right; }
       .finance-statement-row.finance-total { font-weight: 750; }
       .finance-table-scroll { max-width: 100%; overflow-x: auto; }
       .finance-expense-table { width: 100%; min-width: 600px; margin-top: 8px; border-collapse: collapse; }
@@ -177,7 +181,7 @@
       #financeDepPolicySource { min-width: 0; overflow-wrap: anywhere; }
       @media (max-width: 480px) {
         #finance .finance-kpis, #finance .finance-equity-bridge { grid-template-columns: minmax(0, 1fr); }
-        #finance .finance-kpi dd, #finance .finance-equity-bridge dd { overflow-wrap: normal; white-space: nowrap; }
+        #finance .finance-equity-bridge dd { overflow-wrap: normal; white-space: nowrap; }
       }
       @media (min-width: 768px) {
         .finance-layout { gap: 12px; }
@@ -385,15 +389,15 @@
       .transactions-row-action--resolve:hover { filter: brightness(.96); }
       .transactions-row-action--void { --transaction-action-bg: var(--critical-soft); color: var(--critical); }
       .transactions-row-action--void:hover { filter: brightness(.96); }
-      #transactionsPagination, #productProfitabilityPagination { min-height: 44px; border-top: 1px solid var(--divider); padding: 7px 12px; }
-      #transactionsPagination button, .pagination-nav-btn { display: inline-flex; min-width: 92px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 5px 12px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
-      #transactionsPagination button:disabled, .pagination-nav-btn:disabled { cursor: default; opacity: .45; }
+      #transactionsPagination, #productProfitabilityPagination, #productsCatalogPagination, #inventoryItemsPagination { min-height: 44px; border-top: 1px solid var(--divider); padding: 7px 12px; }
+      #transactionsPagination button, #productsCatalogPagination button, #inventoryItemsPagination button, .pagination-nav-btn { display: inline-flex; min-width: 92px; min-height: 36px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--card-border); border-radius: 8px; padding: 5px 12px; color: var(--text-secondary); font-size: 14px; font-weight: 500; }
+      #transactionsPagination button:disabled, #productsCatalogPagination button:disabled, #inventoryItemsPagination button:disabled, .pagination-nav-btn:disabled { cursor: default; opacity: .45; }
       .pagination-nav-btn:hover:not(:disabled) { background: var(--hover); color: var(--text-primary); }
       .pagination-btn { display: inline-flex; min-width: 72px; min-height: 32px; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--card-border); border-radius: 6px; padding: 4px 10px; color: var(--text-secondary); font-size: 13px; font-weight: 500; background: var(--surface-1); }
       .pagination-btn:hover:not(:disabled) { background: var(--hover); color: var(--text-primary); }
       .pagination-btn:disabled { cursor: default; opacity: .45; }
-      #transactionsPageIndicator, #productsPpPageIndicator { color: var(--text-primary); font-size: 14px; font-weight: 500; }
-      #transactionsRangeSummary, #productsPpPageInfo { color: var(--text-primary); font-size: 14px; }
+      #transactionsPageIndicator, #productsPpPageIndicator, #productsCatalogPageIndicator, #inventoryItemsPageIndicator { color: var(--text-primary); font-size: 14px; font-weight: 500; }
+      #transactionsRangeSummary, #productsPpPageInfo, #productsCatalogPageInfo, #inventoryItemsPageInfo { color: var(--text-primary); font-size: 14px; }
       .transactions-pagination-controls, .pagination-controls { display: flex; align-items: center; justify-content: flex-end; gap: 12px; }
       .transactions-pagination-controls label, .pagination-controls label { display: inline-flex; align-items: center; gap: 8px; color: var(--text-primary); font-size: 14px; white-space: nowrap; }
       .transactions-pagination-controls select, .pagination-controls select { height: 36px; border: 1px solid var(--card-border); border-radius: 8px; padding: 4px 9px; background: var(--surface-1); color: var(--text-primary); font-size: 14px; }
@@ -429,6 +433,7 @@
       .products-grid--catalog { min-width: 640px; }
       .products-grid--detail th:first-child { width: 42%; text-align: left; }
       .products-grid--detail td { font-weight: 600; }
+      #productDetailContent th, #inventoryItemDetailContent th, #financeAssetDetailContent th { overflow-wrap: anywhere; }
       .products-grid--recipe th:first-child, .products-grid--recipe td:first-child { width: 70%; text-align: left; }
       .products-grid--recipe th:last-child, .products-grid--recipe td:last-child { width: 30%; text-align: right; }
       .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: 700; text-align: left; }
@@ -1909,7 +1914,7 @@
         #dashboardPanelInsights .business-maturity-scale { margin-top: 20px; }
         #dashboardPanelInsights .business-maturity-node { position: relative; z-index: 2; display: block; width: 8px; height: 8px; margin: 0 auto 10px; border-radius: 9999px; background: var(--border-strong); }
         #dashboardPanelInsights .business-maturity-node--active { background: #f59e0b; }
-        #dashboardPanelInsights .business-maturity-stage-label { font-size: 14px; font-weight: 700; line-height: 18px; }
+        #dashboardPanelInsights .business-maturity-stage-label { font-size: 14px; font-weight: 700; line-height: 18px; overflow-wrap: anywhere; }
         #dashboardPanelInsights .action-roadmap-grid::before { position: absolute; top: 13px; right: 12.5%; left: 12.5%; height: 2px; background: color-mix(in srgb, var(--brand) 28%, transparent); content: ""; }
         #dashboardPanelInsights .action-roadmap-title { font-size: 18px; font-weight: 700; line-height: 28px; }
         #dashboardPanelInsights .action-roadmap-node { position: relative; z-index: 1; }
@@ -2623,12 +2628,8 @@
       /* Visual parity measured against Dashboard tabs, chart filters and Transactions pagination. */
       #productsTabList { height: 46px; min-height: 46px; width: max-content; max-width: 100%; gap: 0; padding: 0; align-items: center; }
       #productsTabList [role="tab"] { display: flex; height: 45px; align-items: center; justify-content: center; padding: 0 18px; border-radius: 8px 8px 0 0; font-size: 14px; font-weight: 600; line-height: 18px; }
-      #transactions #transactionsIsActive, #transactions #transactionsPageSizeFooter, .cogs-recipe-controls select, #productsPpCategoryFilter, #productsPpTypeFilter, #productsPpPageSize { height: 30px !important; min-height: 30px !important; border: 1px solid var(--card-border); border-radius: 9px !important; padding: 0 12px 0 14px; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 500 !important; line-height: 18px; }
-      #productsCatalogPagination, #inventoryItemsPagination { flex-wrap: wrap; padding: 7px 12px; gap: 12px; }
-      #productsCatalogPagination button, #inventoryItemsPagination button { min-height: 36px; border-radius: 8px; padding: 5px 12px; gap: 7px; background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 500; line-height: 21px; }
-      #productsCatalogPagination button:not([data-page]), #inventoryItemsPagination button:not([data-page]) { min-width: 92px; }
-      #productsCatalogPagination button[aria-current="page"], #inventoryItemsPagination button[aria-current="page"] { background: var(--brand); color: white; }
-      #productsCatalogPagination > div, #inventoryItemsPagination > div { flex-wrap: wrap; }
+      #transactions #transactionsIsActive, #transactions #transactionsPageSizeFooter, #productsCatalogPageSize, #inventoryItemsPageSize, .cogs-recipe-controls select, #productsPpCategoryFilter, #productsPpTypeFilter, #productsPpPageSize { height: 30px !important; min-height: 30px !important; border: 1px solid var(--card-border); border-radius: 9px !important; padding: 0 12px 0 14px; background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 500 !important; line-height: 18px; }
+      #productsCatalogPagination, #inventoryItemsPagination { flex-wrap: wrap; gap: 12px; }
       #productDetail { max-height: none; overflow: visible; }
       .product-recipe-composition { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
       @media (min-width: 1024px) { .product-recipe-composition { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -2644,7 +2645,6 @@
       #transactionEntryOverlay :is(input, select, textarea):focus-visible { background-color: var(--brand-soft) !important; }
       #products, .products-tab-panel { min-width: 0; }
       #productsCatalogPagination > div, #inventoryItemsPagination > div { min-width: 0; max-width: 100%; }
-      #productsCatalogPageNumbers, #inventoryItemsPageNumbers { flex-wrap: wrap; }
       #transactionsTabList { align-items: center !important; overflow: hidden !important; }
       #purchaseEntryQty { height: 48px !important; min-height: 48px !important; }
       #standardCostConfigurationBody .standard-cost-input { height: 48px; min-height: 48px; padding: 10px 4px; border-radius: 8px; font-size: 16px; font-weight: 700; line-height: 24px; }
@@ -2716,15 +2716,68 @@
       }
       #appShell#appShell#appShell#appShell :is(input, select, textarea):focus-visible { background-color: var(--brand-soft); }
       #appShell#appShell#appShell#appShell [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; }
-      /* 560px chart + card padding; Business Mix needs two 312px tracks. */
-      #dashboardPanelPerformance { container: performance-layout / inline-size; }
-      @media (min-width: 1024px) {
-      @container performance-layout (max-width: 1256px) {
+
+      @media screen and (min-width: 1024px) {
+        /* Give Chart.js a layout-sized parent without letting the canvas size its own grid track. */
+        #mainChartWrapper > canvas,
+        #productProfitabilityWrapper > canvas,
+        #expenseWrapper > canvas { position: absolute; inset: 0; }
+        #dashboardPanelOverview:not([hidden]) {
+          grid-template-rows: max-content max-content auto auto;
+          align-content: start;
+        }
+        #dashboardPanelOverview #revenueChartSection { padding-left: 16px !important; }
+        #dashboardPanelOverview #mainChartWrapper {
+          min-height: clamp(260px, calc(100dvh - 500px), 460px) !important;
+          padding-left: 0 !important;
+        }
+        #dashboardPanelPerformance #expenseWrapper { min-height: 209px; }
+        #dashboardPanelPerformance #performanceDecisionRow,
+        #dashboardPanelPerformance #performanceDecisionRow > section,
+        #dashboardPanelPerformance #performanceSignalGrid { height: auto; }
+        #dashboardPanelPerformance #performanceSignalGrid { grid-template-rows: repeat(2, auto); }
+        #dashboardPanelPerformance .performance-insights-header p { white-space: normal; }
+        #dashboardPanelPerformance .performance-insights-header { flex-basis: auto; }
+      }
+      /* Reserve the 560px plot at the narrowest content width
+       * (expanded sidebar, dashboard gutters, grid gap and card padding). */
+      @media screen and (1024px <= width < 1626px) {
         #dashboardPanelPerformance #productProfitabilitySection,
         #dashboardPanelPerformance #performanceSecondaryGrid { grid-column: 1 / -1; }
         #dashboardPanelPerformance #productProfitabilityWrapper { height: 300px; min-height: 300px; }
-        #dashboardPanelPerformance #performanceSecondaryGrid { contain: none; height: auto; grid-template-columns: repeat(auto-fit, minmax(min(100%, 312px), 1fr)); }
+        #dashboardPanelPerformance #performanceSecondaryGrid { contain: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #dashboardPanelPerformance #performanceSnapshotGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       }
+      @media screen and (min-width: 1626px) {
+        #dashboardPanelPerformance #performanceSnapshotGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+      }
+      @media screen and (1024px <= width < 1200px) {
+        #dashboardPanelOverview #businessOverview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #dashboardPanelOverview #dateFilterControls { flex-basis: 100%; justify-content: flex-start; }
+        #dashboardPanelPerformance #performanceDecisionRow { grid-template-columns: minmax(0, 1fr); }
+      }
+      @media screen and (1200px <= width < 1440px) {
+        #dashboardPanelOverview #businessOverview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      }
+      /* Transactions responsive controls */
+      @media (max-width: 1023px) {
+        #transactionsControls { height: auto; min-height: 44px; flex-wrap: wrap; row-gap: 8px; }
+        #transactionsControls #transactionsTabList { width: auto; max-width: 100%; min-width: 0; flex: 1 1 auto; overflow-x: auto; overflow-y: hidden; }
+        #transactionsControls #transactionsEntryActionRow { flex: 0 0 auto; }
+        #transactionsToolbar > .transactions-toolbar-controls { flex-wrap: wrap; row-gap: 8px; }
+        #transactionsToolbar .transactions-search { width: 100%; min-width: 0; flex: 1 1 100%; }
+        #transactionsToolbar .transaction-lifecycle-filter,
+        #transactionsToolbar #exportCsvButton { flex: 0 0 auto; }
+        #transactionsPagination, #productsCatalogPagination, #inventoryItemsPagination { flex-wrap: wrap; row-gap: 8px; }
+        #transactionsPagination .transactions-pagination-controls,
+        #productsCatalogPagination .transactions-pagination-controls,
+        #inventoryItemsPagination .transactions-pagination-controls { min-width: 0; flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
+        #transactionsRangeSummary, #productsCatalogPageInfo, #inventoryItemsPageInfo { min-width: 0; }
+      }
+      /* Products responsive summaries */
+      @media (max-width: 639px) {
+        #productsPanelRecipe .cogs-summary,
+        #financeCashFlowContent .cogs-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       }
     </style>
   </head>
@@ -4194,18 +4247,19 @@
               <tbody id="productsTableBody"></tbody>
             </table>
           </div>
-          <nav id="productsCatalogPagination" class="mt-3 flex items-center justify-between gap-3" hidden aria-label="Product Catalog pagination">
-            <div class="flex items-center gap-2" aria-live="polite">
-              <span id="productsCatalogPageInfo" class="text-sm ui-theme-secondary"></span>
+          <div id="productsCatalogPagination" class="flex items-center justify-between gap-3" hidden>
+            <span id="productsCatalogPageInfo">Showing 0–0 of 0 products</span>
+            <div class="transactions-pagination-controls">
+              <label for="productsCatalogPageSize">Rows per page
+                <select id="productsCatalogPageSize" onchange="setProductsCatalogPageSize(this.value)">
+                  <option value="15">15</option><option value="25">25</option><option value="50">50</option>
+                </select>
+              </label>
+              <span id="productsCatalogPageIndicator">Page 1 of 1</span>
+              <button id="productsCatalogPrevPage" type="button" onclick="changeProductsCatalogPage(-1)"><i class="fas fa-chevron-left" aria-hidden="true"></i><span>Previous</span></button>
+              <button id="productsCatalogNextPage" type="button" onclick="changeProductsCatalogPage(1)"><span>Next</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
             </div>
-            <div class="flex items-center gap-2" role="group" aria-label="Catalog page navigation">
-              <button id="productsCatalogFirstPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="First page" disabled>First</button>
-              <button id="productsCatalogPrevPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Previous page" disabled>Previous</button>
-              <div id="productsCatalogPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
-              <button id="productsCatalogNextPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Next page" disabled>Next</button>
-              <button id="productsCatalogLastPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Last page" disabled>Last</button>
-            </div>
-          </nav>
+          </div>
         </section>
       </div>
       <div id="productsPanelRecipe" class="products-tab-panel cogs-recipe-layout" role="tabpanel" aria-labelledby="productsTabRecipe" hidden>
@@ -4282,18 +4336,19 @@
               <tbody id="inventoryItemsTableBody"></tbody>
             </table>
           </div>
-          <nav id="inventoryItemsPagination" class="mt-3 flex items-center justify-between gap-3" hidden aria-label="Inventory Items pagination">
-            <div class="flex items-center gap-2" aria-live="polite">
-              <span id="inventoryItemsPageInfo" class="text-sm ui-theme-secondary"></span>
+          <div id="inventoryItemsPagination" class="flex items-center justify-between gap-3" hidden>
+            <span id="inventoryItemsPageInfo">Showing 0–0 of 0 items</span>
+            <div class="transactions-pagination-controls">
+              <label for="inventoryItemsPageSize">Rows per page
+                <select id="inventoryItemsPageSize" onchange="setInventoryItemsPageSize(this.value)">
+                  <option value="15">15</option><option value="25">25</option><option value="50">50</option>
+                </select>
+              </label>
+              <span id="inventoryItemsPageIndicator">Page 1 of 1</span>
+              <button id="inventoryItemsPrevPage" type="button" onclick="changeInventoryItemsPage(-1)"><i class="fas fa-chevron-left" aria-hidden="true"></i><span>Previous</span></button>
+              <button id="inventoryItemsNextPage" type="button" onclick="changeInventoryItemsPage(1)"><span>Next</span><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
             </div>
-            <div class="flex items-center gap-2" role="group" aria-label="Inventory page navigation">
-              <button id="inventoryItemsFirstPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="First page" disabled>First</button>
-              <button id="inventoryItemsPrevPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Previous page" disabled>Previous</button>
-              <div id="inventoryItemsPageNumbers" class="flex items-center gap-1" aria-label="Page numbers"></div>
-              <button id="inventoryItemsNextPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Next page" disabled>Next</button>
-              <button id="inventoryItemsLastPage" type="button" class="pagination-btn rounded-md border px-3 py-1.5 text-sm" aria-label="Last page" disabled>Last</button>
-            </div>
-          </nav>
+          </div>
         </section>
         <aside id="inventoryItemDetail" class="inventory-items-panel hf-secondary-surface p-4" aria-labelledby="inventoryItemDetailHeading">
           <h2 id="inventoryItemDetailHeading" class="hf-section-heading">Item detail</h2>
@@ -4781,8 +4836,8 @@
         "sidebarDataStatus", "products", "productsHeading", "productsTabCatalog", "productsTabRecipe", "productsTabInventory", "productsTabProfitability",
         "productsPanelCatalog", "productsPanelRecipe", "productsPanelInventory", "productsPanelProfitability", "productsLoading", "productsEmpty", "productsError", "productsTableRegion",
         "productsTableBody", "productDetailEmpty", "productDetailContent", "productsCatalogPagination",
-        "productsCatalogFirstPage", "productsCatalogPrevPage", "productsCatalogNextPage", "productsCatalogLastPage",
-        "productsCatalogPageInfo", "productsCatalogPageNumbers", "cogsRecipePeriod", "cogsRecipeKind", "cogsRecipeProduct", "cogsRecipeVariant",
+        "productsCatalogPrevPage", "productsCatalogNextPage",
+        "productsCatalogPageInfo", "productsCatalogPageIndicator", "productsCatalogPageSize", "cogsRecipePeriod", "cogsRecipeKind", "cogsRecipeProduct", "cogsRecipeVariant",
         "cogsRecipeLoading", "cogsRecipeEmpty", "cogsRecipeError",
         "cogsRecipeResult", "cogsRecipeTableBody",
         "cogsRecipeComputedCogs", "cogsRecipeSellingPrice", "cogsRecipeMargin", "cogsRecipeMarginPercent", "standardCostConfigurationBody",
@@ -4790,8 +4845,8 @@
         "proposedSellingPrice", "standardCostApplyButton", "inventoryItemsLoading", "inventoryItemsEmpty",
         "inventoryItemsError", "inventoryItemsTableRegion", "inventoryItemsTableBody", "inventoryItemDetailEmpty",
         "inventoryItemDetailContent", "inventoryItemsPagination",
-        "inventoryItemsFirstPage", "inventoryItemsPrevPage", "inventoryItemsNextPage", "inventoryItemsLastPage",
-        "inventoryItemsPageInfo", "inventoryItemsPageNumbers",
+        "inventoryItemsPrevPage", "inventoryItemsNextPage",
+        "inventoryItemsPageInfo", "inventoryItemsPageIndicator", "inventoryItemsPageSize",
         "dashboardTabList", "dashboardTabPanels",
         "dashboardSectionStaging", "newTransactionButton",
         "dateFilterLabel", "transactionCountLabel", "latestDataLabel", "freshnessStatusBadge",
@@ -4981,12 +5036,11 @@
         productDetailEmpty: required.productDetailEmpty,
         productDetailContent: required.productDetailContent,
         productsCatalogPagination: required.productsCatalogPagination,
-        productsCatalogFirstPage: required.productsCatalogFirstPage,
         productsCatalogPrevPage: required.productsCatalogPrevPage,
         productsCatalogNextPage: required.productsCatalogNextPage,
-        productsCatalogLastPage: required.productsCatalogLastPage,
         productsCatalogPageInfo: required.productsCatalogPageInfo,
-        productsCatalogPageNumbers: required.productsCatalogPageNumbers,
+        productsCatalogPageIndicator: required.productsCatalogPageIndicator,
+        productsCatalogPageSize: required.productsCatalogPageSize,
         inventoryItemsLoading: required.inventoryItemsLoading,
         inventoryItemsEmpty: required.inventoryItemsEmpty,
         inventoryItemsError: required.inventoryItemsError,
@@ -4995,12 +5049,11 @@
         inventoryItemDetailEmpty: required.inventoryItemDetailEmpty,
         inventoryItemDetailContent: required.inventoryItemDetailContent,
         inventoryItemsPagination: required.inventoryItemsPagination,
-        inventoryItemsFirstPage: required.inventoryItemsFirstPage,
         inventoryItemsPrevPage: required.inventoryItemsPrevPage,
         inventoryItemsNextPage: required.inventoryItemsNextPage,
-        inventoryItemsLastPage: required.inventoryItemsLastPage,
         inventoryItemsPageInfo: required.inventoryItemsPageInfo,
-        inventoryItemsPageNumbers: required.inventoryItemsPageNumbers,
+        inventoryItemsPageIndicator: required.inventoryItemsPageIndicator,
+        inventoryItemsPageSize: required.inventoryItemsPageSize,
         dashboardTabList: required.dashboardTabList,
         dashboardTabPanels: required.dashboardTabPanels,
         dashboardSectionStaging: required.dashboardSectionStaging,
@@ -5317,51 +5370,6 @@
         });
       });
 
-      elements.productsCatalogFirstPage.addEventListener("click", function() {
-        productsCatalogPagination.currentPage = 1;
-        renderProductsListPage();
-      });
-      elements.productsCatalogPrevPage.addEventListener("click", function() {
-        if (productsCatalogPagination.currentPage > 1) {
-          productsCatalogPagination.currentPage--;
-          renderProductsListPage();
-        }
-      });
-      elements.productsCatalogNextPage.addEventListener("click", function() {
-        var totalPages = Math.max(1, Math.ceil(productsCatalogPagination.filteredItems.length / productsCatalogPagination.pageSize));
-        if (productsCatalogPagination.currentPage < totalPages) {
-          productsCatalogPagination.currentPage++;
-          renderProductsListPage();
-        }
-      });
-      elements.productsCatalogLastPage.addEventListener("click", function() {
-        var totalPages = Math.max(1, Math.ceil(productsCatalogPagination.filteredItems.length / productsCatalogPagination.pageSize));
-        productsCatalogPagination.currentPage = totalPages;
-        renderProductsListPage();
-      });
-
-      elements.inventoryItemsFirstPage.addEventListener("click", function() {
-        inventoryItemsPagination.currentPage = 1;
-        renderInventoryItemsListPage();
-      });
-      elements.inventoryItemsPrevPage.addEventListener("click", function() {
-        if (inventoryItemsPagination.currentPage > 1) {
-          inventoryItemsPagination.currentPage--;
-          renderInventoryItemsListPage();
-        }
-      });
-      elements.inventoryItemsNextPage.addEventListener("click", function() {
-        var totalPages = Math.max(1, Math.ceil(inventoryItemsPagination.filteredItems.length / inventoryItemsPagination.pageSize));
-        if (inventoryItemsPagination.currentPage < totalPages) {
-          inventoryItemsPagination.currentPage++;
-          renderInventoryItemsListPage();
-        }
-      });
-      elements.inventoryItemsLastPage.addEventListener("click", function() {
-        var totalPages = Math.max(1, Math.ceil(inventoryItemsPagination.filteredItems.length / inventoryItemsPagination.pageSize));
-        inventoryItemsPagination.currentPage = totalPages;
-        renderInventoryItemsListPage();
-      });
 
       elements.financeAssetsFirstPage.addEventListener("click", function() {
         financeAssetsPagination.currentPage = 1;
@@ -5585,6 +5593,8 @@
     var productsDataLoading = false;
     var productsReadModel = [];
     var productsCatalogPagination = { currentPage: 1, pageSize: 15, totalItems: 0, filteredItems: [] };
+    var PRODUCTS_LIST_DEFAULT_PAGE_SIZE = 15;
+    var PRODUCTS_LIST_ALLOWED_PAGE_SIZES = { 15: true, 25: true, 50: true };
     var inventoryItemsDataLoaded = false;
     var inventoryItemsReadModel = [];
     var inventoryItemsPagination = { currentPage: 1, pageSize: 15, totalItems: 0, filteredItems: [] };
@@ -5603,21 +5613,77 @@
       return size;
     }
 
+    function setProductsCatalogPageSize(value)
+    {
+      var elements = initializeStableDashboardElements();
+      var pageSize = Number(value);
+      productsCatalogPagination.pageSize = PRODUCTS_LIST_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : PRODUCTS_LIST_DEFAULT_PAGE_SIZE;
+      elements.productsCatalogPageSize.value = String(productsCatalogPagination.pageSize);
+      productsCatalogPagination.currentPage = 1;
+      try { window.localStorage.setItem("numlock.productsCatalog.pageSize", String(productsCatalogPagination.pageSize)); } catch (error) {}
+      renderProductsListPage();
+    }
+
+    function initializeProductsCatalogPageSize()
+    {
+      var saved = "";
+      try { saved = window.localStorage.getItem("numlock.productsCatalog.pageSize") || ""; } catch (error) {}
+      var pageSize = Number(saved);
+      productsCatalogPagination.pageSize = PRODUCTS_LIST_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : PRODUCTS_LIST_DEFAULT_PAGE_SIZE;
+      initializeStableDashboardElements().productsCatalogPageSize.value = String(productsCatalogPagination.pageSize);
+    }
+
+    function changeProductsCatalogPage(delta)
+    {
+      var totalPages = Math.max(1, Math.ceil(productsCatalogPagination.filteredItems.length / productsCatalogPagination.pageSize));
+      var page = Math.min(Math.max(1, productsCatalogPagination.currentPage + Number(delta || 0)), totalPages);
+      if (page === productsCatalogPagination.currentPage) return;
+      productsCatalogPagination.currentPage = page;
+      renderProductsListPage();
+    }
+
+    function setInventoryItemsPageSize(value)
+    {
+      var elements = initializeStableDashboardElements();
+      var pageSize = Number(value);
+      inventoryItemsPagination.pageSize = PRODUCTS_LIST_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : PRODUCTS_LIST_DEFAULT_PAGE_SIZE;
+      elements.inventoryItemsPageSize.value = String(inventoryItemsPagination.pageSize);
+      inventoryItemsPagination.currentPage = 1;
+      try { window.localStorage.setItem("numlock.inventoryItems.pageSize", String(inventoryItemsPagination.pageSize)); } catch (error) {}
+      renderInventoryItemsListPage();
+    }
+
+    function initializeInventoryItemsPageSize()
+    {
+      var saved = "";
+      try { saved = window.localStorage.getItem("numlock.inventoryItems.pageSize") || ""; } catch (error) {}
+      var pageSize = Number(saved);
+      inventoryItemsPagination.pageSize = PRODUCTS_LIST_ALLOWED_PAGE_SIZES[pageSize] ? pageSize : PRODUCTS_LIST_DEFAULT_PAGE_SIZE;
+      initializeStableDashboardElements().inventoryItemsPageSize.value = String(inventoryItemsPagination.pageSize);
+    }
+
+    function changeInventoryItemsPage(delta)
+    {
+      var totalPages = Math.max(1, Math.ceil(inventoryItemsPagination.filteredItems.length / inventoryItemsPagination.pageSize));
+      var page = Math.min(Math.max(1, inventoryItemsPagination.currentPage + Number(delta || 0)), totalPages);
+      if (page === inventoryItemsPagination.currentPage) return;
+      inventoryItemsPagination.currentPage = page;
+      renderInventoryItemsListPage();
+    }
+
     function updateProductsCatalogPagination()
     {
       var elements = initializeStableDashboardElements();
       var pagination = productsCatalogPagination;
       var totalPages = Math.max(1, Math.ceil(pagination.filteredItems.length / pagination.pageSize));
       if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
-      var start = (pagination.currentPage - 1) * pagination.pageSize + 1;
+      var start = pagination.filteredItems.length ? (pagination.currentPage - 1) * pagination.pageSize + 1 : 0;
       var end = Math.min(pagination.currentPage * pagination.pageSize, pagination.filteredItems.length);
-      elements.productsCatalogPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length;
-      elements.productsCatalogFirstPage.disabled = pagination.currentPage === 1;
-      elements.productsCatalogPrevPage.disabled = pagination.currentPage === 1;
-      elements.productsCatalogNextPage.disabled = pagination.currentPage === totalPages;
-      elements.productsCatalogLastPage.disabled = pagination.currentPage === totalPages;
-      elements.productsCatalogPagination.hidden = pagination.filteredItems.length <= pagination.pageSize;
-      renderPageNumbers(elements.productsCatalogPageNumbers, pagination.currentPage, totalPages, "productsCatalog");
+      elements.productsCatalogPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length + " products";
+      elements.productsCatalogPageIndicator.innerText = "Page " + pagination.currentPage + " of " + totalPages;
+      elements.productsCatalogPrevPage.disabled = pagination.currentPage <= 1;
+      elements.productsCatalogNextPage.disabled = pagination.currentPage >= totalPages;
+      elements.productsCatalogPagination.hidden = false;
     }
 
     function updateInventoryItemsPagination()
@@ -5626,15 +5692,13 @@
       var pagination = inventoryItemsPagination;
       var totalPages = Math.max(1, Math.ceil(pagination.filteredItems.length / pagination.pageSize));
       if (pagination.currentPage > totalPages) pagination.currentPage = totalPages;
-      var start = (pagination.currentPage - 1) * pagination.pageSize + 1;
+      var start = pagination.filteredItems.length ? (pagination.currentPage - 1) * pagination.pageSize + 1 : 0;
       var end = Math.min(pagination.currentPage * pagination.pageSize, pagination.filteredItems.length);
-      elements.inventoryItemsPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length;
-      elements.inventoryItemsFirstPage.disabled = pagination.currentPage === 1;
-      elements.inventoryItemsPrevPage.disabled = pagination.currentPage === 1;
-      elements.inventoryItemsNextPage.disabled = pagination.currentPage === totalPages;
-      elements.inventoryItemsLastPage.disabled = pagination.currentPage === totalPages;
-      elements.inventoryItemsPagination.hidden = pagination.filteredItems.length <= pagination.pageSize;
-      renderPageNumbers(elements.inventoryItemsPageNumbers, pagination.currentPage, totalPages, "inventoryItems");
+      elements.inventoryItemsPageInfo.innerText = "Showing " + start + "–" + end + " of " + pagination.filteredItems.length + " items";
+      elements.inventoryItemsPageIndicator.innerText = "Page " + pagination.currentPage + " of " + totalPages;
+      elements.inventoryItemsPrevPage.disabled = pagination.currentPage <= 1;
+      elements.inventoryItemsNextPage.disabled = pagination.currentPage >= totalPages;
+      elements.inventoryItemsPagination.hidden = false;
     }
 
     function updateFinanceAssetsPagination()
@@ -5693,13 +5757,7 @@
         }
         btn.addEventListener("click", function(page) {
           return function() {
-            if (prefix === "productsCatalog") {
-              productsCatalogPagination.currentPage = page;
-              renderProductsListPage();
-            } else if (prefix === "inventoryItems") {
-              inventoryItemsPagination.currentPage = page;
-              renderInventoryItemsListPage();
-            } else if (prefix === "financeAssets") {
+            if (prefix === "financeAssets") {
               financeAssetsPagination.currentPage = page;
               renderFinanceAssetsListPage();
             } else if (prefix === "financeDepreciation") {
@@ -5860,7 +5918,7 @@
       var elements = initializeStableDashboardElements();
       // Catalog and inventory keep fixed 15-row pages across viewport changes.
       var assetsTableRegion = elements.financeAssetsTableRegion;
-      if (assetsTableRegion && !assetsTableRegion.hidden) {
+      if (assetsTableRegion && !assetsTableRegion.hidden && assetsTableRegion.getClientRects().length > 0) {
         var assetsRow = assetsTableRegion.querySelector("tbody tr");
         if (assetsRow) {
           var assetsRowHeight = assetsRow.getBoundingClientRect().height;
@@ -5875,7 +5933,7 @@
         }
       }
       var depTableRegion = elements.financeDepreciationTableRegion;
-      if (depTableRegion && !depTableRegion.hidden) {
+      if (depTableRegion && !depTableRegion.hidden && depTableRegion.getClientRects().length > 0) {
         var depRow = depTableRegion.querySelector("tbody tr");
         if (depRow) {
           var depRowHeight = depRow.getBoundingClientRect().height;
@@ -6308,6 +6366,7 @@
     function renderInventoryItemsList()
     {
       var elements = initializeStableDashboardElements();
+      initializeInventoryItemsPageSize();
       inventoryItemsPagination.filteredItems = inventoryItemsReadModel;
       inventoryItemsPagination.totalItems = inventoryItemsReadModel.length;
       inventoryItemsPagination.currentPage = 1;
@@ -6471,6 +6530,7 @@
     function renderProductsList()
     {
       var elements = initializeStableDashboardElements();
+      initializeProductsCatalogPageSize();
       productsCatalogPagination.filteredItems = productsReadModel;
       productsCatalogPagination.totalItems = productsReadModel.length;
       productsCatalogPagination.currentPage = 1;
