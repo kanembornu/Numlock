@@ -564,6 +564,9 @@
 
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 12px; }
         #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 0; }
+        @media (max-width: 480px) {
+          #transactionsTabList { padding: 0; }
+        }
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 8px; }
         #dashboardPanelOverview #executiveSummarySection { min-height: 120px; }
         #dashboardPanelOverview .hf-kpi-card { min-height: 130px; }
@@ -2877,9 +2880,9 @@
         --palette-accent-strong: #B04A00;
         --palette-accent-soft: #FFE9D8;
         --canvas: var(--palette-cream);
-        --sidebar: var(--palette-navy);
-        --sidebar-hover: #25376B;
-        --sidebar-divider: #2E4076;
+        --sidebar: var(--palette-cream);
+        --sidebar-hover: var(--palette-navy-soft);
+        --sidebar-divider: var(--border-subtle);
         --surface-1: var(--palette-cream-card);
         --surface-2: var(--palette-cream-inset);
         --surface-3: var(--palette-cream-deep);
@@ -2918,8 +2921,8 @@
         --print-canvas: #FFFFFF;
         --print-text: var(--palette-navy);
         --print-border: #CFC1AC;
-        --print-chart-axis: #6B7699;
-        --print-chart-grid: #E3D9C9;
+        --print-chart-axis: var(--border-subtle);
+        --print-chart-grid: var(--border-subtle);
         --print-tooltip-bg: var(--palette-navy);
         --print-tooltip-text: var(--palette-cream);
         --chart-series-1: #1C2B5A;
@@ -2948,7 +2951,7 @@
       .bg-white, .bg-white\/40, .bg-white\/50 { background-color: var(--surface-1) !important; }
       .bg-slate-950 { background-color: var(--palette-navy) !important; }
       .bg-slate-950\/60 { background-color: rgba(28, 43, 90, 0.6) !important; }
-      .hover\:bg-slate-800:hover { background-color: #25376B !important; }
+      .hover\:bg-slate-800:hover { background-color: var(--palette-navy-soft) !important; }
       .border-slate-200 { border-color: var(--border-subtle) !important; }
       .border-transparent { border-color: transparent !important; }
       .text-white, .text-slate-300 { color: var(--palette-cream) !important; }
