@@ -460,14 +460,14 @@
       .transaction-type { display: inline-flex; min-height: 24px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 2px 8px; font-size: var(--text-caption-size); font-weight: var(--font-weight-bold); line-height: var(--text-caption-line); }
       .transaction-type--sales { border-color: var(--success); background: var(--success-soft); color: var(--success); }
       .transaction-type--expense { border-color: var(--critical); background: var(--critical-soft); color: var(--critical); }
-      .transaction-type--purchase { border-color: #6366f1; background: #eef2ff; color: #4f46e5; }
-      .transaction-type--receipt { border-color: #0d9488; background: #f0fdfa; color: #0f766e; }
+      .transaction-type--purchase { border-color: #3F4F7D; background: #E4E7EF; color: #1C2B5A; }
+      .transaction-type--receipt { border-color: #1C2B5A; background: #E1E5EF; color: #1C2B5A; }
       .transaction-status-badge { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 1px 8px; font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
-      .transaction-status-badge--active { border-color: #10b981; background: #d1fae5; color: #065f46; }
-      .transaction-status-badge--voided { border-color: #ef4444; background: #fee2e2; color: #991b1b; }
-      .transaction-status-badge--pending { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
-      .transaction-status-badge--resolved { border-color: #10b981; background: #d1fae5; color: #065f46; }
-      .transaction-status-badge--corrected { border-color: #6366f1; background: #eef2ff; color: #4338ca; }
+      .transaction-status-badge--active { border-color: #3F4F7D; background: #E4E7EF; color: #1C2B5A; }
+      .transaction-status-badge--voided { border-color: #B3261E; background: #FBE3E0; color: #8C1D18; }
+      .transaction-status-badge--pending { border-color: #FF7A1A; background: #FFE9D8; color: #B04A00; }
+      .transaction-status-badge--resolved { border-color: #3F4F7D; background: #E4E7EF; color: #1C2B5A; }
+      .transaction-status-badge--corrected { border-color: #3F4F7D; background: #E4E7EF; color: #1C2B5A; }
       .products-grid-scroll { width: 100%; max-width: 100%; overflow-x: auto; }
       .products-grid { width: 100%; table-layout: fixed; border-collapse: collapse; }
       .products-grid thead { background: var(--surface-2); }
@@ -490,13 +490,13 @@
       .products-grid--recipe th:first-child, .products-grid--recipe td:first-child { width: 70%; text-align: left; }
       .products-grid--recipe th:last-child, .products-grid--recipe td:last-child { width: 30%; text-align: right; }
       .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: var(--font-weight-bold); text-align: center; }
-      .products-grid--recipe .product-recipe-group-heading--cold { background: #eff6ff; color: #1d4ed8; }
-      .products-grid--recipe .product-recipe-group-heading--hot { background: #fef2f2; color: #b91c1c; }
+      .products-grid--recipe .product-recipe-group-heading--cold { background: #E4E7EF; color: #1C2B5A; }
+      .products-grid--recipe .product-recipe-group-heading--hot { background: #FBE3E0; color: #8C1D18; }
       .product-grid-link { width: 100%; height: 40px; color: var(--brand); font-weight: var(--font-weight-semibold); text-align: left; }
       .product-grid-badges { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px; }
       .product-variant-badge { display: inline-flex; min-height: 22px; align-items: center; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 1px 8px; font-size: var(--text-caption-size); font-weight: var(--font-weight-semibold); line-height: var(--text-caption-line); }
-      .product-variant-badge--cold { border-color: #bfdbfe; background: #eff6ff; color: #1d4ed8; text-align: center; }
-      .product-variant-badge--hot { border-color: #fecaca; background: #fef2f2; color: #b91c1c; text-align: center; }
+      .product-variant-badge--cold { border-color: #C7CEE0; background: #E4E7EF; color: #1C2B5A; text-align: center; }
+      .product-variant-badge--hot { border-color: #F3C9C2; background: #FBE3E0; color: #8C1D18; text-align: center; }
       .products-tab-panel[hidden] { display: none; }
       .inventory-items-layout { display: grid; min-height: 0; grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr); gap: 16px; }
       .inventory-items-panel { min-height: 0; overflow-y: auto; }
@@ -631,13 +631,13 @@
         #dashboardPanelPerformance #forecastSection { grid-column: auto; }
         #dashboardPanelPerformance #productConcentrationSection { display: contents; }
         #dashboardPanelPerformance #productConcentrationSection > .performance-signal-card { grid-column: auto; }
-        #dashboardPanelPerformance #performanceSignalGrid .performance-signal-card { box-sizing: border-box; display: grid; min-width: 0; min-height: 0; height: auto; grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; align-items: start; padding: 12px 12px 4px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-1); box-shadow: 0 1px 3px rgba(15, 23, 42, .05); overflow: hidden; }
+        #dashboardPanelPerformance #performanceSignalGrid .performance-signal-card { box-sizing: border-box; display: grid; min-width: 0; min-height: 0; height: auto; grid-template-columns: 40px minmax(0, 1fr); column-gap: 10px; align-items: start; padding: 12px 12px 4px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-1); box-shadow: 0 1px 3px rgba(28, 43, 90, .06); overflow: hidden; }
         #dashboardPanelPerformance .performance-signal-icon { display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center; border-radius: 10px; }
         #dashboardPanelPerformance .performance-signal-icon i { font-size: var(--icon-glyph-size); line-height: 1; }
-        #dashboardPanelPerformance .performance-signal-icon--forecast { color: #188038; background: #e6f4ea; }
-        #dashboardPanelPerformance .performance-signal-icon--dependency { color: #9333ea; background: #f3e8fd; }
-        #dashboardPanelPerformance .performance-signal-icon--concentration { color: #ea6b10; background: #feefe3; }
-        #dashboardPanelPerformance .performance-signal-icon--margin { color: #1a73e8; background: #e8f0fe; }
+        #dashboardPanelPerformance .performance-signal-icon--forecast { color: #1C2B5A; background: #E4E7EF; }
+        #dashboardPanelPerformance .performance-signal-icon--dependency { color: #3F4F7D; background: #E4E7EF; }
+        #dashboardPanelPerformance .performance-signal-icon--concentration { color: #B04A00; background: #FFE9D8; }
+        #dashboardPanelPerformance .performance-signal-icon--margin { color: #1C2B5A; background: #E4E7EF; }
         #dashboardPanelPerformance .performance-signal-content { display: flex; width: 100%; min-width: 0; min-height: 0; height: 100%; flex-direction: column; align-self: stretch; }
         #dashboardPanelPerformance .performance-signal-top,
         #dashboardPanelPerformance .performance-signal-bottom { display: contents; }
@@ -652,7 +652,7 @@
         #dashboardPanelPerformance .performance-insight-value { margin-top: 4px; color: var(--text-primary); font-size: var(--type-subtitle-size); font-weight: var(--font-weight-bold); line-height: var(--type-subtitle-line); }
 
         /* Phase 7B.3 — Row 1 KPI visual reconciliation */
-        #dashboardPanelPerformance .performance-insight-card { padding: 15px 16px; gap: 5px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-1); box-shadow: 0 1px 3px rgba(15, 23, 42, .05); }
+        #dashboardPanelPerformance .performance-insight-card { padding: 15px 16px; gap: 5px; border: 1px solid var(--card-border); border-radius: 12px; background: var(--surface-1); box-shadow: 0 1px 3px rgba(28, 43, 90, .06); }
         #dashboardPanelPerformance .performance-kpi-header { display: flex; min-width: 0; align-items: flex-start; gap: 8px; margin-bottom: 0; }
         #dashboardPanelPerformance .performance-kpi-icon { display: inline-flex; width: 40px; height: 40px; flex: 0 0 40px; align-items: center; justify-content: center; border-radius: 10px; }
         #dashboardPanelPerformance .performance-kpi-icon > i { font-size: var(--icon-glyph-size); line-height: 1; }
@@ -664,25 +664,25 @@
         #dashboardPanelPerformance .performance-kpi-footer { display: flex; min-height: 20px; align-items: flex-end; margin-top: auto; padding-top: 4px; }
         #dashboardPanelPerformance .performance-kpi-badge { display: inline-flex; min-height: 24px; max-width: 100%; align-items: center; border-radius: 999px; padding: 4px 10px; font-size: var(--type-chart-label-size); font-weight: var(--font-weight-semibold); line-height: var(--type-chart-label-line); white-space: nowrap; }
         #dashboardPanelPerformance .performance-insight-meta { margin-top: 4px; color: var(--text-muted); font-size: var(--type-chart-label-size); line-height: var(--type-chart-label-line); }
-        #dashboardPanelPerformance .performance-kpi-icon--blue { background: #e8f0fe; color: #1a73e8; }
-        #dashboardPanelPerformance .performance-kpi-icon--green { background: #e6f4ea; color: #188038; }
-        #dashboardPanelPerformance .performance-kpi-icon--purple { background: #f3e8fd; color: #9333ea; }
-        #dashboardPanelPerformance .performance-kpi-icon--orange { background: #feefe3; color: #ea6b10; }
-        #dashboardPanelPerformance .performance-kpi-icon--teal { background: #e0f2f1; color: #00796b; }
-        #dashboardPanelPerformance .performance-kpi-icon--pink { background: #fce7f3; color: #db2777; }
-        #dashboardPanelPerformance .performance-kpi-value--blue { color: #1a73e8; }
-        #dashboardPanelPerformance .performance-kpi-value--green { color: #188038; }
-        #dashboardPanelPerformance .performance-kpi-value--purple { color: #9333ea; }
-        #dashboardPanelPerformance .performance-kpi-value--orange { color: #ea6b10; }
-        #dashboardPanelPerformance .performance-kpi-value--teal { color: #00796b; }
-        #dashboardPanelPerformance .performance-kpi-value--pink { color: #db2777; }
-        #dashboardPanelPerformance .performance-kpi-badge--blue { background: #e8f0fe; color: #1a73e8; }
-        #dashboardPanelPerformance .performance-kpi-badge--green { background: #e6f4ea; color: #188038; }
-        #dashboardPanelPerformance .performance-kpi-badge--purple { background: #f3e8fd; color: #9333ea; }
-        #dashboardPanelPerformance .performance-kpi-badge--orange { background: #feefe3; color: #ea6b10; }
-        #dashboardPanelPerformance .performance-kpi-badge--teal { background: #e0f2f1; color: #00796b; }
-        #dashboardPanelPerformance .performance-kpi-badge--pink { background: #fce7f3; color: #db2777; }
-        #dashboardPanelPerformance .performance-kpi-badge--red { background: #fce8e6; color: #c5221f; }
+        #dashboardPanelPerformance .performance-kpi-icon--blue { background: #E4E7EF; color: #1C2B5A; }
+        #dashboardPanelPerformance .performance-kpi-icon--green { background: #E4E7EF; color: #1C2B5A; }
+        #dashboardPanelPerformance .performance-kpi-icon--purple { background: #E4E7EF; color: #3F4F7D; }
+        #dashboardPanelPerformance .performance-kpi-icon--orange { background: #FFE9D8; color: #B04A00; }
+        #dashboardPanelPerformance .performance-kpi-icon--teal { background: #E4E7EF; color: #3F4F7D; }
+        #dashboardPanelPerformance .performance-kpi-icon--pink { background: #FFE9D8; color: #B04A00; }
+        #dashboardPanelPerformance .performance-kpi-value--blue { color: #1C2B5A; }
+        #dashboardPanelPerformance .performance-kpi-value--green { color: #1C2B5A; }
+        #dashboardPanelPerformance .performance-kpi-value--purple { color: #3F4F7D; }
+        #dashboardPanelPerformance .performance-kpi-value--orange { color: #B04A00; }
+        #dashboardPanelPerformance .performance-kpi-value--teal { color: #3F4F7D; }
+        #dashboardPanelPerformance .performance-kpi-value--pink { color: #B04A00; }
+        #dashboardPanelPerformance .performance-kpi-badge--blue { background: #E4E7EF; color: #1C2B5A; }
+        #dashboardPanelPerformance .performance-kpi-badge--green { background: #E4E7EF; color: #1C2B5A; }
+        #dashboardPanelPerformance .performance-kpi-badge--purple { background: #E4E7EF; color: #3F4F7D; }
+        #dashboardPanelPerformance .performance-kpi-badge--orange { background: #FFE9D8; color: #B04A00; }
+        #dashboardPanelPerformance .performance-kpi-badge--teal { background: #E4E7EF; color: #3F4F7D; }
+        #dashboardPanelPerformance .performance-kpi-badge--pink { background: #FFE9D8; color: #B04A00; }
+        #dashboardPanelPerformance .performance-kpi-badge--red { background: #FBE3E0; color: #8C1D18; }
         #dashboardPanelPerformance .performance-kpi-badge--neutral { background: var(--surface-3); color: var(--text-muted); }
         #dashboardPanelPerformance .category-mix-center { position: absolute; top: 50%; left: 50%; width: 112px; transform: translate(-50%, -50%); color: var(--text-primary); text-align: center; pointer-events: none; }
         #dashboardPanelPerformance .performance-detail-list { display: grid; gap: 6px; margin-top: 10px; }
@@ -703,12 +703,12 @@
         #dashboardPanelPerformance .serving-type-margin-value { font-size: var(--text-component-size); }
         #dashboardPanelPerformance .serving-type-margin-value { line-height: 20px; }
         #dashboardPanelPerformance .serving-type-metric-label { color: var(--text-muted); font-size: var(--type-chart-label-size); font-weight: var(--font-weight-medium); line-height: var(--type-chart-label-line); }
-        #dashboardPanelPerformance .hot-cold-card:nth-child(1) .hot-cold-label { background: #fff7ed; color: #ea580c; }
-        #dashboardPanelPerformance .hot-cold-card:nth-child(2) .hot-cold-label { background: #eff6ff; color: var(--brand); }
-        #dashboardPanelPerformance .hot-cold-meter { width: 100%; height: 6px; margin: 0; align-self: end; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
+        #dashboardPanelPerformance .hot-cold-card:nth-child(1) .hot-cold-label { background: #FFE9D8; color: #B04A00; }
+        #dashboardPanelPerformance .hot-cold-card:nth-child(2) .hot-cold-label { background: #E4E7EF; color: var(--brand); }
+        #dashboardPanelPerformance .hot-cold-meter { width: 100%; height: 6px; margin: 0; align-self: end; overflow: hidden; border-radius: 999px; background: #E3D9C9; }
         #dashboardPanelPerformance .serving-type-meter-slot { display: flex; height: 6px; align-items: flex-end; }
-        #dashboardPanelPerformance .hot-cold-meter > span { display: block; height: 100%; border-radius: inherit; background: #2563eb; }
-        #dashboardPanelPerformance .hot-cold-card:nth-child(1) .hot-cold-meter > span { background: #f97316; }
+        #dashboardPanelPerformance .hot-cold-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--palette-navy); }
+        #dashboardPanelPerformance .hot-cold-card:nth-child(1) .hot-cold-meter > span { background: var(--palette-accent); }
         #dashboardPanelPerformance .hot-cold-performance { height: 42px; min-height: 42px; max-height: 42px; flex: 0 0 42px; }
         #dashboardPanelPerformance .hot-cold-performance-grid { box-sizing: border-box; display: grid; height: 42px; min-height: 42px; max-height: 42px; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--border-subtle); border-radius: 8px; background: var(--surface-1); }
         #dashboardPanelPerformance .serving-comparison-item { display: grid; min-width: 0; grid-template-rows: repeat(2, 16px); align-content: center; padding: 1px 10px; }
@@ -1970,7 +1970,7 @@
         #dashboardPanelInsights .action-roadmap-grid { margin-top: 16px; }
         #dashboardPanelInsights .business-maturity-scale { margin-top: 20px; }
         #dashboardPanelInsights .business-maturity-node { position: relative; z-index: 2; display: block; width: 8px; height: 8px; margin: 0 auto 10px; border-radius: 9999px; background: var(--border-strong); }
-        #dashboardPanelInsights .business-maturity-node--active { background: #f59e0b; }
+        #dashboardPanelInsights .business-maturity-node--active { background: #FF7A1A; }
         #dashboardPanelInsights .business-maturity-stage-label { font-size: var(--text-body-size); font-weight: var(--font-weight-bold); line-height: var(--text-body-line); }
         #dashboardPanelInsights .action-roadmap-grid::before { position: absolute; top: 13px; right: 12.5%; left: 12.5%; height: 2px; background: color-mix(in srgb, var(--brand) 28%, transparent); content: ""; }
         #dashboardPanelInsights .action-roadmap-title { font-size: var(--text-section-size); font-weight: var(--font-weight-bold); line-height: var(--text-section-line); }
@@ -2863,6 +2863,108 @@
           --text-kpi-line: 1.625rem;
         }
       }
+
+      /* Palette standard: 60% cream #F7F2EA, 30% navy #1C2B5A, 10% accent #FF7A1A. */
+      :root {
+        --palette-cream: #F7F2EA;
+        --palette-cream-card: #FFFCF6;
+        --palette-cream-inset: #F2EADF;
+        --palette-cream-deep: #E9DFD0;
+        --palette-navy: #1C2B5A;
+        --palette-navy-mid: #3F4F7D;
+        --palette-navy-soft: #E4E7EF;
+        --palette-accent: #FF7A1A;
+        --palette-accent-strong: #B04A00;
+        --palette-accent-soft: #FFE9D8;
+        --canvas: var(--palette-cream);
+        --sidebar: var(--palette-navy);
+        --sidebar-hover: #25376B;
+        --sidebar-divider: #2E4076;
+        --surface-1: var(--palette-cream-card);
+        --surface-2: var(--palette-cream-inset);
+        --surface-3: var(--palette-cream-deep);
+        --border-subtle: #E3D9C9;
+        --border-strong: #CFC1AC;
+        --divider: #E3D9C9;
+        --text-primary: var(--palette-navy);
+        --text-secondary: var(--palette-navy-mid);
+        --text-muted: #6B7699;
+        --text-on-dark: var(--palette-cream);
+        --brand: var(--palette-accent);
+        --brand-hover: #E86A0C;
+        --brand-soft: var(--palette-accent-soft);
+        --accent-strong: var(--palette-accent-strong);
+        --success: var(--palette-navy);
+        --success-soft: var(--palette-navy-soft);
+        --info: var(--palette-navy-mid);
+        --info-soft: var(--palette-navy-soft);
+        --warning: var(--palette-accent-strong);
+        --warning-soft: var(--palette-accent-soft);
+        --critical: #B3261E;
+        --critical-soft: #FBE3E0;
+        --hover: #F0E7DA;
+        --focus: var(--palette-accent);
+        --selected: var(--palette-accent-soft);
+        --active: var(--palette-accent-soft);
+        --disabled-bg: #EFE7DA;
+        --disabled-text: #9AA3B8;
+        --stale: var(--palette-accent-strong);
+        --stale-soft: var(--palette-accent-soft);
+        --unavailable: #9AA3B8;
+        --skeleton-start: #EFE7DA;
+        --skeleton-middle: #F7F1E7;
+        --tooltip-bg: var(--palette-navy);
+        --tooltip-text: var(--palette-cream);
+        --print-canvas: #FFFFFF;
+        --print-text: var(--palette-navy);
+        --print-border: #CFC1AC;
+        --print-chart-axis: #6B7699;
+        --print-chart-grid: #E3D9C9;
+        --print-tooltip-bg: var(--palette-navy);
+        --print-tooltip-text: var(--palette-cream);
+        --chart-series-1: #1C2B5A;
+        --chart-series-2: #3F4F7D;
+        --chart-series-3: #6B7AA5;
+        --chart-series-4: #9AA6C4;
+        --chart-series-5: #FF7A1A;
+        --chart-series-6: #FF9E52;
+        --chart-series-7: #C25400;
+        --chart-series-8: #B3261E;
+        --print-chart-series-1: #1C2B5A;
+        --print-chart-series-2: #3F4F7D;
+        --print-chart-series-3: #6B7AA5;
+        --print-chart-series-4: #9AA6C4;
+        --chart-grid: #E3D9C9;
+        --chart-axis: #6B7699;
+        --chart-point-ring: var(--palette-cream);
+        --chart-point-stroke: var(--palette-accent);
+        --chart-revenue-fill: rgba(255, 122, 26, 0.12);
+        --chart-revenue-fill-transparent: rgba(255, 122, 26, 0);
+        --print-chart-revenue-fill: rgba(255, 122, 26, 0.12);
+        --shadow-1: 0 1px 2px rgba(28, 43, 90, 0.08);
+        --shadow-2: 0 10px 28px rgba(28, 43, 90, 0.14);
+      }
+      /* Palette mapping for Tailwind utility classes still present in markup. */
+      .bg-white, .bg-white\/40, .bg-white\/50 { background-color: var(--surface-1) !important; }
+      .bg-slate-950 { background-color: var(--palette-navy) !important; }
+      .bg-slate-950\/60 { background-color: rgba(28, 43, 90, 0.6) !important; }
+      .hover\:bg-slate-800:hover { background-color: #25376B !important; }
+      .border-slate-200 { border-color: var(--border-subtle) !important; }
+      .border-transparent { border-color: transparent !important; }
+      .text-white, .text-slate-300 { color: var(--palette-cream) !important; }
+      .bg-indigo-600 { background-color: var(--palette-accent) !important; }
+      .text-indigo-700 { color: var(--accent-strong) !important; }
+      .border-indigo-600 { border-color: var(--palette-accent) !important; }
+      .border-indigo-200 { border-color: #FFD3B0 !important; }
+      .border-indigo-300 { border-color: #FFB27A !important; }
+      .focus\:ring-indigo-400:focus, .focus\:ring-indigo-500:focus { --tw-ring-color: var(--palette-accent) !important; }
+      .text-red-700 { color: var(--critical) !important; }
+      /* Contrast guard: accent fills carry navy text, accent text on cream uses the strong tone. */
+      #dashboardSidebar, #dashboardSidebar a, #dashboardSidebar button { color: var(--palette-cream); }
+      .ui-theme-primary { color: var(--text-primary) !important; }
+      .ui-theme-secondary { color: var(--text-secondary) !important; }
+      .ui-theme-muted { color: var(--text-muted) !important; }
+
 </style>
   </head>
 
