@@ -36,7 +36,12 @@
         document.documentElement.setAttribute("data-effective-theme", "light");
       })();
     </script>
-    <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?></style>
+    <style><?!= HtmlService.createHtmlOutputFromFile('189.View.Tailwind').getContent(); ?>
+      #transactionLifecycleContent { min-width: 0; overflow-wrap: anywhere; }
+      #transactionLifecycleContent p { max-width: 100%; overflow-wrap: anywhere; }
+      #transactionLifecycleContent table { width: 100%; table-layout: fixed; }
+      #transactionLifecycleContent th, #transactionLifecycleContent td { padding: 6px; vertical-align: top; text-align: left; overflow-wrap: anywhere; }
+</style>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -130,16 +135,12 @@
       #financialModulesGroup { padding-left: 30px; }
       #financialModulesGroup .ui-future-module { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 10px; padding-left: 10px; }
       #financialModulesGroup .ui-sidebar-item { min-height: 35px; padding: 6px 10px; }
-      .finance-layout { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr); gap: 14px; }
-      .finance-layout > * { min-width: 0; }
-      #financeAssetsPagination, #financeDepreciationPagination, #financeAssetsPagination > div, #financeDepreciationPagination > div { min-width: 0; flex-wrap: wrap; }
-      #financeAssetsPageNumbers, #financeDepreciationPageNumbers { flex-wrap: wrap; }
+      .finance-layout { display: grid; gap: 14px; }
       .finance-layout[hidden] { display: none; }
       .finance-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
       .finance-period-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
       .finance-policy, .finance-surface { border: 1px solid var(--border-subtle); border-radius: var(--radius-card); background: var(--surface-1); box-shadow: var(--card-shadow); }
-      .finance-policy { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding: 10px 14px; color: var(--text-secondary); font-size: 12px; }
-      .finance-policy > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+      .finance-policy { display: flex; justify-content: space-between; gap: 16px; padding: 10px 14px; color: var(--text-secondary); font-size: 12px; }
       .finance-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
       .finance-kpi { min-width: 0; padding: 14px; }
       .finance-kpi dt { color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 15px; }
@@ -150,7 +151,7 @@
       .finance-statement, .finance-expenses { padding: 12px; }
       .finance-statement-list { margin-top: 10px; }
       .finance-statement-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 9px 2px; border-bottom: 1px solid var(--divider); }
-      .finance-statement-row dd { min-width: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; text-align: right; }
+      .finance-statement-row dd { font-variant-numeric: tabular-nums; text-align: right; }
       .finance-statement-row.finance-total { font-weight: 750; }
       .finance-table-scroll { max-width: 100%; overflow-x: auto; }
       .finance-expense-table { width: 100%; min-width: 600px; margin-top: 8px; border-collapse: collapse; }
@@ -181,7 +182,7 @@
       #financeDepPolicySource { min-width: 0; overflow-wrap: anywhere; }
       @media (max-width: 480px) {
         #finance .finance-kpis, #finance .finance-equity-bridge { grid-template-columns: minmax(0, 1fr); }
-        #finance .finance-equity-bridge dd { overflow-wrap: normal; white-space: nowrap; }
+        #finance .finance-kpi dd, #finance .finance-equity-bridge dd { overflow-wrap: normal; white-space: nowrap; }
       }
       @media (min-width: 768px) {
         .finance-layout { gap: 12px; }
@@ -378,6 +379,51 @@
       #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(1) { width: auto; min-width: 360px; }
       #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(8),
       #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(8) { width: auto; min-width: 372px; padding: 0 10px; }
+
+      /* U7: responsive purchase table — stacked at ≤1023px, 2-column at 1024–1439px */
+      @media (max-width: 1023px) {
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll table { min-width: 0; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th,
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td { min-width: 0; max-width: 100%; font-size: 12px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(1),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(1) { min-width: 140px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(2),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(2) { min-width: 56px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(3),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(3) { min-width: 72px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(4),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(4) { min-width: 120px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(5),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(5) { min-width: 40px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(6),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(6) { min-width: 72px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(7),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(7) { min-width: 48px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(8),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(8) { min-width: 100px; }
+      }
+
+      @media (min-width: 1024px) and (max-width: 1439px) {
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll table { min-width: 0; table-layout: auto; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th,
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td { min-width: 0; max-width: 20%; font-size: 13px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(1),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(1) { min-width: 140px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(2),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(2) { min-width: 56px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(3),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(3) { min-width: 80px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(4),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(4) { min-width: 130px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(5),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(5) { min-width: 44px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(6),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(6) { min-width: 76px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(7),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(7) { min-width: 52px; }
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll th:nth-child(8),
+        #transactionsTableCard.is-purchase-mode #transactionsTableScroll td:nth-child(8) { min-width: 110px; }
+      }
       .transactions-row-actions { display: flex; flex-wrap: nowrap; min-height: 40px; align-items: center; justify-content: center; gap: 6px; }
       .transactions-row-action { position: relative; isolation: isolate; display: inline-flex; height: 32px; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 8px; padding: 0 10px; background: transparent; font-size: 14px; font-weight: 500; line-height: 18px; white-space: nowrap; }
       .transactions-row-action::before { position: absolute; z-index: -1; inset: 0; border-radius: 8px; background: var(--transaction-action-bg); content: ""; }
@@ -430,13 +476,20 @@
       .products-grid td { height: 40px; padding: 0 10px; border-bottom: 1px solid var(--divider); color: var(--text-primary); font-size: 14px; line-height: 20px; vertical-align: middle; overflow: hidden; }
       .products-grid tbody tr:last-child > * { border-bottom: 0; }
       .products-grid tbody tr:hover { background: var(--surface-2); }
-      .products-grid--catalog { min-width: 640px; }
+      .products-grid--catalog { min-width: 560px; }
+      @media (min-width: 1024px) {
+        #productsPanelCatalog > #productDetail { flex: 0 0 38%; width: 38%; max-width: 38%; }
+        #productsPanelCatalog > section { flex: 1 1 0; min-width: 0; }
+      }
+      #productDetailContent td.product-recipe-group-heading { text-align: center; }
+      #productsTableRegion { margin-top: 0; }
+      #productsTableRegion th:first-child { width: 46%; }
+      #productsTableRegion td:not(:first-child) { text-align: center; }
       .products-grid--detail th:first-child { width: 42%; text-align: left; }
       .products-grid--detail td { font-weight: 600; }
-      #productDetailContent th, #inventoryItemDetailContent th, #financeAssetDetailContent th { overflow-wrap: anywhere; }
       .products-grid--recipe th:first-child, .products-grid--recipe td:first-child { width: 70%; text-align: left; }
       .products-grid--recipe th:last-child, .products-grid--recipe td:last-child { width: 30%; text-align: right; }
-      .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: 700; text-align: left; }
+      .products-grid--recipe .product-recipe-group-heading { height: 32px; padding: 0 10px; font-weight: 700; text-align: center; }
       .products-grid--recipe .product-recipe-group-heading--cold { background: #eff6ff; color: #1d4ed8; }
       .products-grid--recipe .product-recipe-group-heading--hot { background: #fef2f2; color: #b91c1c; }
       .product-grid-link { width: 100%; height: 40px; color: var(--brand); font-weight: 600; text-align: left; }
@@ -453,7 +506,11 @@
       .cogs-recipe-controls label { display: grid; min-width: 240px; gap: 6px; color: var(--text-secondary); font-size: 13px; font-weight: 700; }
       .cogs-recipe-controls select { min-height: 40px; border: 1px solid var(--card-border); border-radius: 8px; padding: 6px 10px; background: var(--surface-1); color: var(--text-primary); }
       .cogs-recipe-content { min-height: 0; overflow-y: auto; }
-      .products-grid--cogs { min-width: 720px; }
+      .products-grid--cogs { min-width: 620px; }
+      .products-grid--cogs thead th:first-child { width: 34%; }
+      .products-grid--cogs td:first-child { white-space: normal; overflow-wrap: anywhere; }
+      .products-grid--cogs tbody tr { height: auto; }
+      .products-grid--cogs td { padding-top: 8px; padding-bottom: 8px; }
       .products-grid--cogs th:first-child, .products-grid--cogs td:first-child { text-align: left; }
       .products-grid--cogs td:not(:first-child) { text-align: right; }
       .cogs-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; overflow: hidden; border: 1px solid var(--divider); border-radius: 8px; background: var(--divider); }
@@ -504,7 +561,7 @@
         #dashboardTabPanels { min-height: 0; overflow: visible; }
         .dashboard-tab-panel:not(#dashboardPanelOverview) { min-height: 0; overflow-y: auto; }
         #dashboardPanelOverview { min-height: 0; overflow: visible; container-type: inline-size; }
-        
+
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 12px; }
         #dashboardTabPanels:has(#dashboardPanelOverview:not([hidden])) { padding-top: 0; }
         #dashboardPanelOverview #executiveSummarySection { margin-bottom: 8px; }
@@ -1914,7 +1971,7 @@
         #dashboardPanelInsights .business-maturity-scale { margin-top: 20px; }
         #dashboardPanelInsights .business-maturity-node { position: relative; z-index: 2; display: block; width: 8px; height: 8px; margin: 0 auto 10px; border-radius: 9999px; background: var(--border-strong); }
         #dashboardPanelInsights .business-maturity-node--active { background: #f59e0b; }
-        #dashboardPanelInsights .business-maturity-stage-label { font-size: 14px; font-weight: 700; line-height: 18px; overflow-wrap: anywhere; }
+        #dashboardPanelInsights .business-maturity-stage-label { font-size: 14px; font-weight: 700; line-height: 18px; }
         #dashboardPanelInsights .action-roadmap-grid::before { position: absolute; top: 13px; right: 12.5%; left: 12.5%; height: 2px; background: color-mix(in srgb, var(--brand) 28%, transparent); content: ""; }
         #dashboardPanelInsights .action-roadmap-title { font-size: 18px; font-weight: 700; line-height: 28px; }
         #dashboardPanelInsights .action-roadmap-node { position: relative; z-index: 1; }
@@ -2716,68 +2773,43 @@
       }
       #appShell#appShell#appShell#appShell :is(input, select, textarea):focus-visible { background-color: var(--brand-soft); }
       #appShell#appShell#appShell#appShell [role="tab"]:focus-visible { outline: 2px solid var(--focus) !important; outline-offset: -3px !important; }
-
-      @media screen and (min-width: 1024px) {
-        /* Give Chart.js a layout-sized parent without letting the canvas size its own grid track. */
-        #mainChartWrapper > canvas,
-        #productProfitabilityWrapper > canvas,
-        #expenseWrapper > canvas { position: absolute; inset: 0; }
-        #dashboardPanelOverview:not([hidden]) {
-          grid-template-rows: max-content max-content auto auto;
-          align-content: start;
-        }
-        #dashboardPanelOverview #revenueChartSection { padding-left: 16px !important; }
-        #dashboardPanelOverview #mainChartWrapper {
-          min-height: clamp(260px, calc(100dvh - 500px), 460px) !important;
-          padding-left: 0 !important;
-        }
-        #dashboardPanelPerformance #expenseWrapper { min-height: 209px; }
-        #dashboardPanelPerformance #performanceDecisionRow,
-        #dashboardPanelPerformance #performanceDecisionRow > section,
-        #dashboardPanelPerformance #performanceSignalGrid { height: auto; }
-        #dashboardPanelPerformance #performanceSignalGrid { grid-template-rows: repeat(2, auto); }
-        #dashboardPanelPerformance .performance-insights-header p { white-space: normal; }
-        #dashboardPanelPerformance .performance-insights-header { flex-basis: auto; }
-      }
-      /* Reserve the 560px plot at the narrowest content width
-       * (expanded sidebar, dashboard gutters, grid gap and card padding). */
-      @media screen and (1024px <= width < 1626px) {
+      /* 560px chart + card padding; Business Mix needs two 312px tracks. */
+      #dashboardPanelPerformance { container: performance-layout / inline-size; }
+      @media (min-width: 1024px) {
+      @container performance-layout (max-width: 1256px) {
         #dashboardPanelPerformance #productProfitabilitySection,
         #dashboardPanelPerformance #performanceSecondaryGrid { grid-column: 1 / -1; }
         #dashboardPanelPerformance #productProfitabilityWrapper { height: 300px; min-height: 300px; }
-        #dashboardPanelPerformance #performanceSecondaryGrid { contain: none; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        #dashboardPanelPerformance #performanceSnapshotGrid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        #dashboardPanelPerformance #performanceSecondaryGrid { contain: none; height: auto; grid-template-columns: repeat(auto-fit, minmax(min(100%, 312px), 1fr)); }
       }
-      @media screen and (min-width: 1626px) {
-        #dashboardPanelPerformance #performanceSnapshotGrid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
       }
-      @media screen and (1024px <= width < 1200px) {
-        #dashboardPanelOverview #businessOverview { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-        #dashboardPanelOverview #dateFilterControls { flex-basis: 100%; justify-content: flex-start; }
-        #dashboardPanelPerformance #performanceDecisionRow { grid-template-columns: minmax(0, 1fr); }
-      }
-      @media screen and (1200px <= width < 1440px) {
-        #dashboardPanelOverview #businessOverview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-      }
-      /* Transactions responsive controls */
+      /* Keep every transaction control reachable without page-wide clipping. */
+      #transactionsTableScroll td.transaction-id-cell { overflow-wrap: anywhere; white-space: normal; }
+      #transactionsTableScroll .transaction-item-identity { display: block; color: var(--text-secondary); font-size: 12px; }
       @media (max-width: 1023px) {
         #transactionsControls { height: auto; min-height: 44px; flex-wrap: wrap; row-gap: 8px; }
         #transactionsControls #transactionsTabList { width: auto; max-width: 100%; min-width: 0; flex: 1 1 auto; overflow-x: auto; overflow-y: hidden; }
         #transactionsControls #transactionsEntryActionRow { flex: 0 0 auto; }
         #transactionsToolbar > .transactions-toolbar-controls { flex-wrap: wrap; row-gap: 8px; }
-        #transactionsToolbar .transactions-search { width: 100%; min-width: 0; flex: 1 1 100%; }
+        #transactionsToolbar .transactions-search { width: 100%; min-width: 0; flex: 1 1 100%; flex-wrap: wrap; }
+        #transactionsToolbar .transactions-search input { flex: 1 1 100%; }
         #transactionsToolbar .transaction-lifecycle-filter,
         #transactionsToolbar #exportCsvButton { flex: 0 0 auto; }
         #transactionsPagination, #productsCatalogPagination, #inventoryItemsPagination { flex-wrap: wrap; row-gap: 8px; }
-        #transactionsPagination .transactions-pagination-controls,
+        #transactionsPagination .transactions-pagination-controls { min-width: 0; width: 100%; flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
+
         #productsCatalogPagination .transactions-pagination-controls,
         #inventoryItemsPagination .transactions-pagination-controls { min-width: 0; flex-wrap: wrap; justify-content: flex-start; row-gap: 8px; }
         #transactionsRangeSummary, #productsCatalogPageInfo, #inventoryItemsPageInfo { min-width: 0; }
       }
-      /* Products responsive summaries */
-      @media (max-width: 639px) {
-        #productsPanelRecipe .cogs-summary,
-        #financeCashFlowContent .cogs-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      @media (max-width: 767px) {
+        #transactionsControls { height: auto; gap: 8px; }
+        #transactionsControls #transactionsTabList { flex: 1 1 100%; width: 100%; }
+        #transactionsControls #transactionsEntryActionRow { width: 100%; justify-content: flex-end; }
+      }
+      @media (max-width: 399px) {
+        #transactionsControls #transactionsTabList { display: grid !important; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 !important; padding: 2px 0 0 !important; }
+        #transactionsControls #transactionsTabList [role="tab"] { min-width: 0 !important; padding: 0 4px !important; font-size: 13px !important; }
       }
     </style>
   </head>
@@ -3676,6 +3708,7 @@
                 <div class="transactions-search">
                   <input id="transactionsSearch" type="search" autocomplete="off" placeholder="Search ID, item, or date" oninput="scheduleTransactionsSearch(this.value)">
                   <button id="clearTransactionsSearch" type="button" onclick="clearTransactionsSearch()" disabled><i class="fas fa-xmark" aria-hidden="true"></i><span>Clear</span></button>
+                  <button id="resetTransactionsFilters" type="button" onclick="resetTransactionsFilters()" class="min-h-10 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700" aria-label="Reset all transaction filters" title="Resets status to Active, clears search and drilldown"><i class="fas fa-undo" aria-hidden="true"></i><span>Reset</span></button>
                 </div>
                 <label class="transaction-lifecycle-filter" for="transactionsIsActive"><span>Status</span><select id="transactionsIsActive" name="isActive" onchange="setTransactionsLifecycleState(this.value)"><option value="active" selected>Active</option><option value="all">All</option><option value="voided">Voided</option></select></label>
                 <div id="transactionDrilldownSummary" class="hidden flex items-center gap-2 border-l border-indigo-200 pl-3" role="status" aria-live="polite" aria-atomic="true">
@@ -4230,7 +4263,7 @@
         <button id="productsTabProfitability" type="button" role="tab" aria-selected="false" aria-controls="productsPanelProfitability">Product Profitability</button>
       </nav>
       <div id="productsPanelCatalog" class="products-tab-panel flex flex-col gap-4 lg:flex-row lg:self-start" role="tabpanel" aria-labelledby="productsTabCatalog">
-        <aside id="productDetail" class="hf-secondary-surface order-1 p-4 lg:order-2 lg:w-1/3 lg:sticky lg:top-4 lg:self-start" aria-labelledby="productDetailHeading">
+        <aside id="productDetail" class="hf-secondary-surface order-1 p-4 lg:order-2 lg:sticky lg:top-4 lg:self-start" aria-labelledby="productDetailHeading">
           <h2 id="productDetailHeading" class="hf-section-heading">Product detail</h2>
           <p id="productDetailEmpty" class="mt-3 text-sm ui-theme-secondary">Select a product to view details.</p>
           <div id="productDetailContent" class="mt-3" hidden></div>
@@ -4243,7 +4276,7 @@
           <div id="productsTableRegion" class="products-grid-scroll mt-3" hidden>
             <table class="products-grid products-grid--catalog">
               <caption class="sr-only">Authoritative Products records</caption>
-              <thead><tr><th scope="col" class="text-left" style="min-width: 200px;">Product name</th><th scope="col" style="min-width: 120px; text-align: center;">Category</th><th scope="col" style="min-width: 120px; text-align: center;">Kind</th><th scope="col" style="min-width: 120px; text-align: center;">Status</th></tr></thead>
+              <thead><tr><th scope="col" class="text-left">Product name</th><th scope="col">Category</th><th scope="col">Kind</th><th scope="col">Status</th></tr></thead>
               <tbody id="productsTableBody"></tbody>
             </table>
           </div>
@@ -4278,7 +4311,7 @@
           <p id="cogsRecipeError" class="text-sm text-red-700" role="alert" hidden>COGS and recipe data could not be loaded.</p>
           <div id="cogsRecipeResult" hidden>
             <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:flex-start;">
-              <div style="flex:1 1 320px;min-width:0;">
+              <div style="flex:1.5 1 460px;min-width:0;">
                 <h3 class="hf-section-heading">Recipe Components</h3>
                 <p class="mt-1 text-sm ui-theme-secondary">Current recipe usage and authoritative Standard Cost by component.</p>
                 <div class="products-grid-scroll mt-3">
@@ -4289,7 +4322,7 @@
                   </table>
                 </div>
               </div>
-              <div style="flex:1 1 400px;min-width:0;">
+              <div style="flex:1 1 340px;min-width:0;">
                 <h3 id="standardCostConfigurationHeading" class="hf-section-heading">Simulation Configuration</h3>
                 <p class="mt-1 text-sm ui-theme-secondary">Proposed Usage and Standard Cost simulation only — does not persist.</p>
                 <div class="products-grid-scroll mt-3">
@@ -4302,11 +4335,11 @@
               </div>
             </div>
             <div style="display:flex;gap:1.5rem;flex-wrap:wrap;margin-top:1rem;align-items:flex-start;">
-              <div style="flex:1 1 320px;min-width:0;">
+              <div style="flex:1.5 1 460px;min-width:0;">
                 <h4 class="text-sm font-semibold ui-theme-primary">Current</h4>
                 <dl class="cogs-summary mt-2" style="text-align:center;"><div><dt>Computed COGS</dt><dd id="cogsRecipeComputedCogs">Unavailable</dd></div><div><dt>Selling Price</dt><dd id="cogsRecipeSellingPrice">—</dd></div><div><dt>Margin</dt><dd id="cogsRecipeMargin">Unavailable</dd></div><div><dt>Margin %</dt><dd id="cogsRecipeMarginPercent">Unavailable</dd></div></dl>
               </div>
-              <div style="flex:1 1 400px;min-width:0;">
+              <div style="flex:1 1 340px;min-width:0;">
                 <h4 class="text-sm font-semibold ui-theme-primary">Preview</h4>
                 <dl class="cogs-summary mt-2" style="text-align:center;"><div><dt>Preview COGS</dt><dd id="standardCostPreviewCogs">Unavailable</dd></div><div><dt>Selling Price</dt><dd id="standardCostPreviewSellingPrice">—</dd></div><div><dt>Preview Margin</dt><dd id="standardCostPreviewMargin">Unavailable</dd></div><div><dt>Preview Margin %</dt><dd id="standardCostPreviewMarginPercent">—</dd></div></dl>
                 <div class="mt-3" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
@@ -5918,7 +5951,7 @@
       var elements = initializeStableDashboardElements();
       // Catalog and inventory keep fixed 15-row pages across viewport changes.
       var assetsTableRegion = elements.financeAssetsTableRegion;
-      if (assetsTableRegion && !assetsTableRegion.hidden && assetsTableRegion.getClientRects().length > 0) {
+      if (assetsTableRegion && !assetsTableRegion.hidden) {
         var assetsRow = assetsTableRegion.querySelector("tbody tr");
         if (assetsRow) {
           var assetsRowHeight = assetsRow.getBoundingClientRect().height;
@@ -5933,7 +5966,7 @@
         }
       }
       var depTableRegion = elements.financeDepreciationTableRegion;
-      if (depTableRegion && !depTableRegion.hidden && depTableRegion.getClientRects().length > 0) {
+      if (depTableRegion && !depTableRegion.hidden) {
         var depRow = depTableRegion.querySelector("tbody tr");
         if (depRow) {
           var depRowHeight = depRow.getBoundingClientRect().height;
@@ -6463,7 +6496,7 @@
     function renderProductsTabProfitability(response)
     {
       if (!response || !response.products) return;
-      
+
       // Use the Dashboard render logic but targeting the Products tab panel elements
       // We can temporarily swap the global IDs or create a scoped render.
       // Scoped is better.
